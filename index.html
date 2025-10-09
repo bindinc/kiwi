@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klantenservice Portal - Magazine Abonnementen</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>📞 Klantenservice Portal</h1>
+                <div class="user-info">
+                    <span class="agent-name">Agent: <strong id="agentName">Jan Vos</strong></span>
+                    <span class="time" id="currentTime"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Left Panel: Search & Actions -->
+            <aside class="left-panel">
+                <!-- Quick Search -->
+                <section class="card search-card">
+                    <h2>🔍 Klant Zoeken</h2>
+                    <div class="search-form">
+                        <div class="form-group">
+                            <label for="searchName">Naam</label>
+                            <input type="text" id="searchName" placeholder="Achternaam, Voornaam">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="searchPostalCode">Postcode</label>
+                                <input type="text" id="searchPostalCode" placeholder="1234AB">
+                            </div>
+                            <div class="form-group">
+                                <label for="searchHouseNumber">Huisnr.</label>
+                                <input type="text" id="searchHouseNumber" placeholder="12">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="searchCustomer()">
+                            <span>Zoeken</span>
+                        </button>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div id="searchResults" class="search-results" style="display: none;">
+                        <h3>Resultaten</h3>
+                        <div id="resultsContainer"></div>
+                    </div>
+                </section>
+
+                <!-- Quick Actions -->
+                <section class="card actions-card">
+                    <h2>⚡ Snelle Acties</h2>
+                    <button class="btn btn-action" onclick="showNewSubscription()">
+                        <span>➕ Nieuw Abonnement</span>
+                    </button>
+                    <button class="btn btn-action" onclick="showResendMagazine()">
+                        <span>📮 Editie Verzenden</span>
+                    </button>
+                    <button class="btn btn-action" onclick="showWinbackFlow()">
+                        <span>🎯 Winback Flow</span>
+                    </button>
+                </section>
+            </aside>
+
+            <!-- Center Panel: Customer Details & Forms -->
+            <main class="center-panel">
+                <!-- Welcome Message -->
+                <div id="welcomeMessage" class="welcome-message">
+                    <div class="empty-state">
+                        <span class="empty-icon">👤</span>
+                        <h2>Welkom bij Klantenservice</h2>
+                        <p>Zoek een klant of start een nieuwe actie</p>
+                    </div>
+                </div>
+
+                <!-- Customer Detail View -->
+                <div id="customerDetail" class="customer-detail" style="display: none;">
+                    <div class="card">
+                        <div class="customer-header">
+                            <div class="customer-info">
+                                <h2 id="customerName"></h2>
+                                <p class="customer-meta">
+                                    <span id="customerAddress"></span> • 
+                                    <span id="customerEmail"></span> • 
+                                    <span id="customerPhone"></span>
+                                </p>
+                            </div>
+                            <div class="customer-actions">
+                                <button class="btn btn-small" onclick="editCustomer()">✏️ Bewerken</button>
+                            </div>
+                        </div>
+
+                        <!-- Subscription Overview -->
+                        <div class="subscriptions-section">
+                            <h3>📰 Actieve Abonnementen</h3>
+                            <div id="subscriptionsList" class="subscriptions-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- New Subscription Form -->
+                <div id="newSubscriptionForm" class="form-container" style="display: none;">
+                    <div class="card">
+                        <div class="form-header">
+                            <h2>➕ Nieuw Abonnement Aanmaken</h2>
+                            <button class="btn-close" onclick="closeForm('newSubscriptionForm')">✕</button>
+                        </div>
+                        <form id="subscriptionForm" onsubmit="createSubscription(event)">
+                            <div class="form-group">
+                                <label for="subFirstName">Voornaam *</label>
+                                <input type="text" id="subFirstName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="subLastName">Achternaam *</label>
+                                <input type="text" id="subLastName" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="subPostalCode">Postcode *</label>
+                                    <input type="text" id="subPostalCode" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="subHouseNumber">Huisnummer *</label>
+                                    <input type="text" id="subHouseNumber" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="subAddress">Straat *</label>
+                                <input type="text" id="subAddress" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="subCity">Plaats *</label>
+                                <input type="text" id="subCity" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="subEmail">E-mail *</label>
+                                <input type="email" id="subEmail" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="subPhone">Telefoon *</label>
+                                <input type="tel" id="subPhone" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="subMagazine">Magazine *</label>
+                                <select id="subMagazine" required>
+                                    <option value="">Selecteer magazine...</option>
+                                    <option value="Avrobode">Avrobode</option>
+                                    <option value="Mikrogids">Mikrogids</option>
+                                    <option value="Ncrvgids">Ncrvgids</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="subStartDate">Startdatum *</label>
+                                <input type="date" id="subStartDate" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('newSubscriptionForm')">Annuleren</button>
+                                <button type="submit" class="btn btn-primary">Abonnement Aanmaken</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Edit Customer Form -->
+                <div id="editCustomerForm" class="form-container" style="display: none;">
+                    <div class="card">
+                        <div class="form-header">
+                            <h2>✏️ Klantgegevens Bewerken</h2>
+                            <button class="btn-close" onclick="closeForm('editCustomerForm')">✕</button>
+                        </div>
+                        <form id="customerEditForm" onsubmit="saveCustomerEdit(event)">
+                            <input type="hidden" id="editCustomerId">
+                            <div class="form-group">
+                                <label for="editFirstName">Voornaam</label>
+                                <input type="text" id="editFirstName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editLastName">Achternaam</label>
+                                <input type="text" id="editLastName" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="editPostalCode">Postcode</label>
+                                    <input type="text" id="editPostalCode" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="editHouseNumber">Huisnummer</label>
+                                    <input type="text" id="editHouseNumber" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="editAddress">Straat</label>
+                                <input type="text" id="editAddress" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editCity">Plaats</label>
+                                <input type="text" id="editCity" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editEmail">E-mail</label>
+                                <input type="email" id="editEmail" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editPhone">Telefoon</label>
+                                <input type="tel" id="editPhone" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('editCustomerForm')">Annuleren</button>
+                                <button type="submit" class="btn btn-primary">Opslaan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Resend Magazine Form -->
+                <div id="resendMagazineForm" class="form-container" style="display: none;">
+                    <div class="card">
+                        <div class="form-header">
+                            <h2>📮 Editie Opnieuw Verzenden</h2>
+                            <button class="btn-close" onclick="closeForm('resendMagazineForm')">✕</button>
+                        </div>
+                        <div class="resend-form">
+                            <p class="info-text">Selecteer het abonnement waarvoor de laatste editie opnieuw moet worden verzonden.</p>
+                            <div class="form-group">
+                                <label for="resendSubscription">Abonnement</label>
+                                <select id="resendSubscription">
+                                    <option value="">Selecteer abonnement...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="resendReason">Reden</label>
+                                <select id="resendReason">
+                                    <option value="not_received">Niet ontvangen</option>
+                                    <option value="damaged">Beschadigd</option>
+                                    <option value="lost">Kwijt</option>
+                                    <option value="other">Anders</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('resendMagazineForm')">Annuleren</button>
+                                <button type="button" class="btn btn-primary" onclick="resendMagazine()">Editie Verzenden</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Winback Flow -->
+                <div id="winbackFlow" class="form-container" style="display: none;">
+                    <div class="card">
+                        <div class="form-header">
+                            <h2>🎯 Winback Flow - Opzegverzoek</h2>
+                            <button class="btn-close" onclick="closeForm('winbackFlow')">✕</button>
+                        </div>
+                        <div class="winback-container">
+                            <!-- Step Indicator -->
+                            <div class="steps-indicator">
+                                <div class="step active" data-step="1">
+                                    <span class="step-number">1</span>
+                                    <span class="step-label">Reden</span>
+                                </div>
+                                <div class="step" data-step="2">
+                                    <span class="step-number">2</span>
+                                    <span class="step-label">Aanbod</span>
+                                </div>
+                                <div class="step" data-step="3">
+                                    <span class="step-number">3</span>
+                                    <span class="step-label">Bevestiging</span>
+                                </div>
+                            </div>
+
+                            <!-- Step 1: Cancellation Reason -->
+                            <div id="winbackStep1" class="winback-step">
+                                <h3>Waarom wilt u het abonnement opzeggen?</h3>
+                                <div class="script-box">
+                                    <p><strong>Script:</strong> "Het spijt me te horen dat u het abonnement wilt opzeggen. Mag ik vragen wat de belangrijkste reden is?"</p>
+                                </div>
+                                <div class="form-group">
+                                    <label>Selecteer reden:</label>
+                                    <div class="radio-group">
+                                        <label class="radio-option">
+                                            <input type="radio" name="cancelReason" value="price">
+                                            <span>Te duur</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="cancelReason" value="content">
+                                            <span>Inhoud niet interessant</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="cancelReason" value="delivery">
+                                            <span>Leveringsproblemen</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="cancelReason" value="other">
+                                            <span>Anders</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" onclick="winbackNextStep(2)">Volgende →</button>
+                            </div>
+
+                            <!-- Step 2: Offer -->
+                            <div id="winbackStep2" class="winback-step" style="display: none;">
+                                <h3>Beschikbare Winback Aanbiedingen</h3>
+                                <div id="winbackOffers" class="offers-container"></div>
+                                <div class="form-actions">
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep(1)">← Terug</button>
+                                    <button class="btn btn-primary" onclick="winbackNextStep(3)">Aanbod Presenteren →</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Confirmation -->
+                            <div id="winbackStep3" class="winback-step" style="display: none;">
+                                <h3>Resultaat</h3>
+                                <div class="script-box">
+                                    <p id="winbackScript"></p>
+                                </div>
+                                <div class="form-group">
+                                    <label>Resultaat:</label>
+                                    <div class="radio-group">
+                                        <label class="radio-option">
+                                            <input type="radio" name="winbackResult" value="accepted">
+                                            <span>✅ Klant accepteert aanbod</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="winbackResult" value="declined">
+                                            <span>❌ Klant wijst af, opzeggen</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep(2)">← Terug</button>
+                                    <button class="btn btn-success" onclick="completeWinback()">Afronden</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Panel: Contact History -->
+            <aside class="right-panel">
+                <section class="card history-card">
+                    <h2>📋 Contact Geschiedenis</h2>
+                    <div id="contactHistory" class="contact-history">
+                        <div class="empty-state-small">
+                            <p>Selecteer een klant om geschiedenis te zien</p>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
