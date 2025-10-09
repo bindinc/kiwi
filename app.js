@@ -227,6 +227,54 @@ function initializeData() {
                         description: 'Abonnement Avrobode aangemaakt via telefonische bestelling.'
                     }
                 ]
+            },
+            {
+                id: 4,
+                salutation: 'Dhr.',
+                firstName: 'H.',
+                middleName: 'van',
+                lastName: 'Dijk',
+                postalCode: '3512JE',
+                houseNumber: '23',
+                address: 'Oudegracht 23',
+                city: 'Utrecht',
+                email: 'h.vandijk@email.nl',
+                phone: '06-98765432',
+                optinEmail: 'yes',
+                optinPhone: 'yes',
+                optinPost: 'yes',
+                subscriptions: [
+                    {
+                        id: 6,
+                        magazine: 'Avrobode',
+                        duration: '1-jaar-maandelijks',
+                        startDate: '2023-11-01',
+                        status: 'active',
+                        lastEdition: '2024-10-01'
+                    },
+                    {
+                        id: 7,
+                        magazine: 'Mikrogids',
+                        duration: '2-jaar',
+                        startDate: '2023-05-15',
+                        status: 'active',
+                        lastEdition: '2024-10-01'
+                    }
+                ],
+                contactHistory: [
+                    {
+                        id: 1,
+                        type: 'Extra abonnement',
+                        date: '2023-11-01 14:45',
+                        description: 'Tweede abonnement (Avrobode) toegevoegd.'
+                    },
+                    {
+                        id: 2,
+                        type: 'Nieuw abonnement',
+                        date: '2023-05-15 16:20',
+                        description: 'Abonnement Mikrogids aangemaakt voor 2 jaar.'
+                    }
+                ]
             }
         ];
         saveCustomers();
@@ -894,6 +942,16 @@ function showWinbackFlow() {
         return;
     }
 
+    // If no subscription is selected yet, use the first active subscription
+    if (!window.cancellingSubscriptionId && currentCustomer.subscriptions.length > 0) {
+        const activeSubscription = currentCustomer.subscriptions.find(s => s.status === 'Actief');
+        if (activeSubscription) {
+            window.cancellingSubscriptionId = activeSubscription.id;
+        } else if (currentCustomer.subscriptions.length > 0) {
+            window.cancellingSubscriptionId = currentCustomer.subscriptions[0].id;
+        }
+    }
+
     // Reset winback flow
     document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
     document.getElementById('winbackStep1').style.display = 'block';
@@ -911,6 +969,12 @@ function winbackNextStep(stepNumber) {
         const selectedReason = document.querySelector('input[name="cancelReason"]:checked');
         if (!selectedReason) {
             showToast('Selecteer een reden', 'error');
+            return;
+        }
+        
+        // Special handling for deceased
+        if (selectedReason.value === 'deceased') {
+            winbackHandleDeceased();
             return;
         }
         
@@ -941,7 +1005,15 @@ function winbackNextStep(stepNumber) {
 
 // Winback Previous Step
 function winbackPrevStep(stepNumber) {
-    winbackNextStep(stepNumber);
+    if (stepNumber === '1b') {
+        document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
+        document.getElementById('winbackStep1b').style.display = 'block';
+    } else if (typeof stepNumber === 'string') {
+        document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
+        document.getElementById(`winbackStep${stepNumber}`).style.display = 'block';
+    } else {
+        winbackNextStep(stepNumber);
+    }
 }
 
 // Generate Winback Offers
@@ -1043,6 +1115,358 @@ function generateWinbackScript() {
     `;
 }
 
+// Handle Deceased Options - Show all subscriptions
+function winbackHandleDeceased() {
+    const activeSubscriptions = currentCustomer.subscriptions.filter(s => s.status === 'active');
+    
+    if (activeSubscriptions.length === 0) {
+        showToast('Geen actieve abonnementen gevonden', 'error');
+        return;
+    }
+    
+    // Update count
+    document.getElementById('deceasedSubCount').textContent = activeSubscriptions.length;
+    
+    // Generate subscription cards
+    const container = document.getElementById('deceasedSubscriptionsList');
+    container.innerHTML = activeSubscriptions.map(sub => `
+        <div class="deceased-subscription-card" data-sub-id="${sub.id}">
+            <div class="deceased-sub-header">
+                <h4>📰 ${sub.magazine}</h4>
+                <span class="sub-start-date">Start: ${formatDate(sub.startDate)}</span>
+            </div>
+            <div class="form-group">
+                <label>Actie voor dit abonnement:</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="action_${sub.id}" value="cancel_refund" required>
+                        <span>Opzeggen met restitutie</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="action_${sub.id}" value="transfer" required>
+                        <span>Overzetten op andere persoon</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
+    document.getElementById('winbackStep1b').style.display = 'block';
+}
+
+// Process Deceased Subscriptions
+function processDeceasedSubscriptions() {
+    const activeSubscriptions = currentCustomer.subscriptions.filter(s => s.status === 'active');
+    const subscriptionActions = [];
+    
+    // Collect all actions
+    for (const sub of activeSubscriptions) {
+        const selectedAction = document.querySelector(`input[name="action_${sub.id}"]:checked`);
+        if (!selectedAction) {
+            showToast(`Selecteer een actie voor ${sub.magazine}`, 'error');
+            return;
+        }
+        subscriptionActions.push({
+            subscription: sub,
+            action: selectedAction.value
+        });
+    }
+    
+    // Store for later processing
+    window.deceasedSubscriptionActions = subscriptionActions;
+    
+    // Check if we need transfer form (if any subscription needs transfer)
+    const needsTransfer = subscriptionActions.some(sa => sa.action === 'transfer');
+    const needsRefund = subscriptionActions.some(sa => sa.action === 'cancel_refund');
+    
+    if (needsTransfer && needsRefund) {
+        // Both actions needed, show combined form
+        showDeceasedCombinedForm();
+    } else if (needsTransfer) {
+        // Only transfer
+        showDeceasedTransferForm();
+    } else {
+        // Only refund
+        showDeceasedRefundForm();
+    }
+}
+
+// Show Deceased Refund Form
+function showDeceasedRefundForm() {
+    const refundSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'cancel_refund');
+    
+    const listHtml = `
+        <p><strong>Op te zeggen abonnementen:</strong></p>
+        <ul>
+            ${refundSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
+        </ul>
+    `;
+    document.getElementById('refundSubscriptionsList').innerHTML = listHtml;
+    
+    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
+    document.getElementById('winbackStep1c').style.display = 'block';
+    
+    // Pre-fill email placeholder
+    const refundEmailInput = document.getElementById('refundEmail');
+    if (currentCustomer.email) {
+        refundEmailInput.placeholder = `Bijv. ${currentCustomer.email} of ander e-mailadres`;
+    }
+}
+
+// Show Deceased Transfer Form
+function showDeceasedTransferForm() {
+    const transferSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'transfer');
+    
+    const listHtml = `
+        <p><strong>Over te zetten abonnementen:</strong></p>
+        <ul>
+            ${transferSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
+        </ul>
+    `;
+    document.getElementById('transferSubscriptionsList').innerHTML = listHtml;
+    
+    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
+    document.getElementById('winbackStep1d').style.display = 'block';
+    
+    setupTransferForm();
+}
+
+// Show Deceased Combined Form
+function showDeceasedCombinedForm() {
+    const transferSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'transfer');
+    const refundSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'cancel_refund');
+    
+    const transferListHtml = `
+        <p><strong>Over te zetten abonnementen:</strong></p>
+        <ul>
+            ${transferSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
+        </ul>
+    `;
+    document.getElementById('combinedTransferList').innerHTML = transferListHtml;
+    
+    const refundListHtml = `
+        <p><strong>Op te zeggen abonnementen:</strong></p>
+        <ul>
+            ${refundSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
+        </ul>
+    `;
+    document.getElementById('combinedRefundList').innerHTML = refundListHtml;
+    
+    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
+    document.getElementById('winbackStep1e').style.display = 'block';
+    
+    setupTransferForm2();
+}
+
+// Setup Transfer Form
+function setupTransferForm() {
+    const sameAddressCheckbox = document.getElementById('transferSameAddress');
+    const addressFields = document.getElementById('transferAddressFields');
+    
+    // Remove old event listener if exists
+    const newCheckbox = sameAddressCheckbox.cloneNode(true);
+    sameAddressCheckbox.parentNode.replaceChild(newCheckbox, sameAddressCheckbox);
+    
+    newCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            addressFields.style.display = 'none';
+            // Pre-fill with current customer address
+            document.getElementById('transferPostalCode').value = currentCustomer.postalCode;
+            document.getElementById('transferHouseNumber').value = currentCustomer.houseNumber;
+            document.getElementById('transferAddress').value = currentCustomer.address;
+            document.getElementById('transferCity').value = currentCustomer.city;
+        } else {
+            addressFields.style.display = 'block';
+        }
+    });
+}
+
+// Setup Transfer Form 2 (for combined form)
+function setupTransferForm2() {
+    const sameAddressCheckbox = document.getElementById('transferSameAddress2');
+    const addressFields = document.getElementById('transferAddressFields2');
+    
+    // Remove old event listener if exists
+    const newCheckbox = sameAddressCheckbox.cloneNode(true);
+    sameAddressCheckbox.parentNode.replaceChild(newCheckbox, sameAddressCheckbox);
+    
+    newCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            addressFields.style.display = 'none';
+            // Pre-fill with current customer address
+            document.getElementById('transferPostalCode2').value = currentCustomer.postalCode;
+            document.getElementById('transferHouseNumber2').value = currentCustomer.houseNumber;
+            document.getElementById('transferAddress2').value = currentCustomer.address;
+            document.getElementById('transferCity2').value = currentCustomer.city;
+        } else {
+            addressFields.style.display = 'block';
+        }
+    });
+}
+
+// Complete All Deceased Actions
+function completeAllDeceasedActions() {
+    // Determine which form is active
+    const step1c = document.getElementById('winbackStep1c');
+    const step1d = document.getElementById('winbackStep1d');
+    const step1e = document.getElementById('winbackStep1e');
+    
+    let transferData = null;
+    let refundData = null;
+    
+    // Get the active form and extract data
+    if (step1e.style.display !== 'none') {
+        // Combined form
+        transferData = getTransferDataFromForm(2);
+        refundData = getRefundDataFromForm(2);
+    } else if (step1d.style.display !== 'none') {
+        // Only transfer
+        transferData = getTransferDataFromForm(1);
+    } else if (step1c.style.display !== 'none') {
+        // Only refund
+        refundData = getRefundDataFromForm(1);
+    }
+    
+    // Validate transfer data if needed
+    const transferActions = window.deceasedSubscriptionActions.filter(sa => sa.action === 'transfer');
+    if (transferActions.length > 0 && transferData) {
+        if (!validateTransferData(transferData)) {
+            return; // Validation error already shown
+        }
+    }
+    
+    // Validate refund data if needed
+    const refundActions = window.deceasedSubscriptionActions.filter(sa => sa.action === 'cancel_refund');
+    if (refundActions.length > 0 && refundData) {
+        if (!validateRefundData(refundData)) {
+            return; // Validation error already shown
+        }
+    }
+    
+    // Process all actions
+    const processedMagazines = [];
+    
+    // Process transfers
+    for (const action of transferActions) {
+        action.subscription.transferredTo = {
+            ...transferData,
+            transferDate: new Date().toISOString()
+        };
+        processedMagazines.push(`${action.subscription.magazine} (overgezet)`);
+    }
+    
+    // Process refunds (remove subscriptions)
+    for (const action of refundActions) {
+        currentCustomer.subscriptions = currentCustomer.subscriptions.filter(s => s.id !== action.subscription.id);
+        processedMagazines.push(`${action.subscription.magazine} (opgezegd)`);
+    }
+    
+    // Create contact history entry
+    let historyDescription = `Abonnementen verwerkt i.v.m. overlijden:\n`;
+    
+    if (transferActions.length > 0) {
+        const newCustomerName = transferData.middleName 
+            ? `${transferData.salutation} ${transferData.firstName} ${transferData.middleName} ${transferData.lastName}`
+            : `${transferData.salutation} ${transferData.firstName} ${transferData.lastName}`;
+        historyDescription += `\nOvergezet naar ${newCustomerName} (${transferData.email}):\n`;
+        historyDescription += transferActions.map(a => `- ${a.subscription.magazine}`).join('\n');
+    }
+    
+    if (refundActions.length > 0) {
+        historyDescription += `\n\nOpgezegd met restitutie naar ${refundData.email}:\n`;
+        historyDescription += refundActions.map(a => `- ${a.subscription.magazine}`).join('\n');
+        if (refundData.notes) {
+            historyDescription += `\nNotities: ${refundData.notes}`;
+        }
+    }
+    
+    currentCustomer.contactHistory.unshift({
+        id: currentCustomer.contactHistory.length + 1,
+        type: 'Overlijden - Meerdere Abonnementen',
+        date: new Date().toISOString(),
+        description: historyDescription
+    });
+    
+    saveCustomers();
+    closeForm('winbackFlow');
+    
+    // Refresh display
+    selectCustomer(currentCustomer.id);
+    
+    showToast(`${processedMagazines.length} abonnement(en) verwerkt. Bevestigingen worden verstuurd.`, 'success');
+    
+    // Reset
+    window.deceasedSubscriptionActions = null;
+}
+
+// Get Transfer Data from Form
+function getTransferDataFromForm(formVersion) {
+    const suffix = formVersion === 2 ? '2' : '';
+    const sameAddress = document.getElementById(`transferSameAddress${suffix}`).checked;
+    
+    return {
+        salutation: document.getElementById(`transferSalutation${suffix}`).value,
+        firstName: document.getElementById(`transferFirstName${suffix}`).value.trim(),
+        middleName: document.getElementById(`transferMiddleName${suffix}`).value.trim(),
+        lastName: document.getElementById(`transferLastName${suffix}`).value.trim(),
+        email: document.getElementById(`transferEmail${suffix}`).value.trim(),
+        phone: document.getElementById(`transferPhone${suffix}`).value.trim(),
+        postalCode: sameAddress ? currentCustomer.postalCode : document.getElementById(`transferPostalCode${suffix}`).value.trim(),
+        houseNumber: sameAddress ? currentCustomer.houseNumber : document.getElementById(`transferHouseNumber${suffix}`).value.trim(),
+        address: sameAddress ? currentCustomer.address : document.getElementById(`transferAddress${suffix}`).value.trim(),
+        city: sameAddress ? currentCustomer.city : document.getElementById(`transferCity${suffix}`).value.trim()
+    };
+}
+
+// Get Refund Data from Form
+function getRefundDataFromForm(formVersion) {
+    const suffix = formVersion === 2 ? '2' : '';
+    return {
+        email: document.getElementById(`refundEmail${suffix}`).value.trim(),
+        notes: document.getElementById(`refundNotes${suffix}`).value.trim()
+    };
+}
+
+// Validate Transfer Data
+function validateTransferData(data) {
+    if (!data.firstName || !data.lastName || !data.email || !data.phone) {
+        showToast('Vul alle verplichte velden in voor de nieuwe abonnee', 'error');
+        return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+        showToast('Voer een geldig e-mailadres in voor de nieuwe abonnee', 'error');
+        return false;
+    }
+    
+    if (!data.postalCode || !data.houseNumber || !data.address || !data.city) {
+        showToast('Vul alle adresvelden in voor de nieuwe abonnee', 'error');
+        return false;
+    }
+    
+    return true;
+}
+
+// Validate Refund Data
+function validateRefundData(data) {
+    if (!data.email) {
+        showToast('Voer een e-mailadres in voor de restitutiebevestiging', 'error');
+        return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+        showToast('Voer een geldig e-mailadres in voor de restitutie', 'error');
+        return false;
+    }
+    
+    return true;
+}
+
+
+
 // Complete Winback
 function completeWinback() {
     const result = document.querySelector('input[name="winbackResult"]:checked');
@@ -1121,8 +1545,8 @@ document.addEventListener('keydown', (e) => {
     if (e.key === DEBUG_KEY) {
         debugKeySequence.push(Date.now());
         
-        // Keep only recent keypresses (within 2 seconds)
-        debugKeySequence = debugKeySequence.filter(time => Date.now() - time < 2000);
+        // Keep only recent keypresses (within 10 seconds)
+        debugKeySequence = debugKeySequence.filter(time => Date.now() - time < 10000);
         
         // Check if we have 4 presses
         if (debugKeySequence.length >= DEBUG_KEY_COUNT) {

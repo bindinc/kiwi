@@ -438,12 +438,216 @@
                                             <span>Leveringsproblemen</span>
                                         </label>
                                         <label class="radio-option">
+                                            <input type="radio" name="cancelReason" value="deceased">
+                                            <span>Overleden</span>
+                                        </label>
+                                        <label class="radio-option">
                                             <input type="radio" name="cancelReason" value="other">
                                             <span>Anders</span>
                                         </label>
                                     </div>
                                 </div>
                                 <button class="btn btn-primary" onclick="winbackNextStep(2)">Volgende →</button>
+                            </div>
+
+                            <!-- Step 1b: Deceased - Select Subscriptions -->
+                            <div id="winbackStep1b" class="winback-step" style="display: none;">
+                                <h3>Abonnementen bij Overlijden</h3>
+                                <div class="script-box">
+                                    <p><strong>Script:</strong> "Wat vervelend om te horen. Ik zie dat er <span id="deceasedSubCount"></span> actieve abonnement(en) zijn. Voor elk abonnement kunt u aangeven wat u wilt doen."</p>
+                                </div>
+                                <div id="deceasedSubscriptionsList" class="deceased-subscriptions-list">
+                                    <!-- Subscriptions will be dynamically inserted here -->
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep(1)">← Terug</button>
+                                    <button class="btn btn-primary" onclick="processDeceasedSubscriptions()">Verwerken →</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 1c: Cancel with Refund -->
+                            <div id="winbackStep1c" class="winback-step" style="display: none;">
+                                <h3>Opzeggen met Restitutie</h3>
+                                <div id="refundSubscriptionsList" class="info-box">
+                                    <!-- Will show which subscriptions are being cancelled -->
+                                </div>
+                                <div class="form-group">
+                                    <label for="refundEmail">E-mailadres voor bevestiging:</label>
+                                    <input type="email" id="refundEmail" class="form-control" placeholder="naam@email.nl">
+                                    <small class="form-text">De opzegbevestiging en restitutie-informatie wordt naar dit adres gestuurd</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="refundNotes">Notities (optioneel):</label>
+                                    <textarea id="refundNotes" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc."></textarea>
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')">← Terug</button>
+                                    <button class="btn btn-danger" onclick="completeAllDeceasedActions()">Verwerken</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 1d: Transfer Subscription -->
+                            <div id="winbackStep1d" class="winback-step" style="display: none;">
+                                <h3>Abonnement(en) Overzetten</h3>
+                                <div id="transferSubscriptionsList" class="info-box">
+                                    <!-- Will show which subscriptions are being transferred -->
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="transferSalutation">Aanhef *</label>
+                                        <select id="transferSalutation" class="form-control" required>
+                                            <option value="Dhr.">Dhr.</option>
+                                            <option value="Mevr.">Mevr.</option>
+                                            <option value="Anders">Anders</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transferFirstName">Voornaam *</label>
+                                        <input type="text" id="transferFirstName" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="transferMiddleName">Tussenvoegsel</label>
+                                        <input type="text" id="transferMiddleName" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transferLastName">Achternaam *</label>
+                                        <input type="text" id="transferLastName" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transferEmail">E-mail *</label>
+                                    <input type="email" id="transferEmail" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transferPhone">Telefoonnummer *</label>
+                                    <input type="tel" id="transferPhone" class="form-control" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="transferSameAddress">
+                                        Zelfde adres als originele abonnee
+                                    </label>
+                                </div>
+                                
+                                <div id="transferAddressFields">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="transferPostalCode">Postcode *</label>
+                                            <input type="text" id="transferPostalCode" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="transferHouseNumber">Huisnummer *</label>
+                                            <input type="text" id="transferHouseNumber" class="form-control" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transferAddress">Straat en nummer *</label>
+                                        <input type="text" id="transferAddress" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transferCity">Plaats *</label>
+                                        <input type="text" id="transferCity" class="form-control" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')">← Terug</button>
+                                    <button class="btn btn-success" onclick="completeAllDeceasedActions()">Verwerken</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Step 1e: Combined Form (Transfer + Refund) -->
+                            <div id="winbackStep1e" class="winback-step" style="display: none;">
+                                <h3>Alle Abonnementen Verwerken</h3>
+                                
+                                <div id="combinedTransferList" class="info-box">
+                                    <!-- Transfer subscriptions -->
+                                </div>
+                                
+                                <h4>Nieuwe abonnee gegevens</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="transferSalutation2">Aanhef *</label>
+                                        <select id="transferSalutation2" class="form-control" required>
+                                            <option value="Dhr.">Dhr.</option>
+                                            <option value="Mevr.">Mevr.</option>
+                                            <option value="Anders">Anders</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transferFirstName2">Voornaam *</label>
+                                        <input type="text" id="transferFirstName2" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="transferMiddleName2">Tussenvoegsel</label>
+                                        <input type="text" id="transferMiddleName2" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transferLastName2">Achternaam *</label>
+                                        <input type="text" id="transferLastName2" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transferEmail2">E-mail *</label>
+                                    <input type="email" id="transferEmail2" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transferPhone2">Telefoonnummer *</label>
+                                    <input type="tel" id="transferPhone2" class="form-control" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="transferSameAddress2">
+                                        Zelfde adres als originele abonnee
+                                    </label>
+                                </div>
+                                
+                                <div id="transferAddressFields2">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="transferPostalCode2">Postcode *</label>
+                                            <input type="text" id="transferPostalCode2" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="transferHouseNumber2">Huisnummer *</label>
+                                            <input type="text" id="transferHouseNumber2" class="form-control" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transferAddress2">Straat en nummer *</label>
+                                        <input type="text" id="transferAddress2" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transferCity2">Plaats *</label>
+                                        <input type="text" id="transferCity2" class="form-control" required>
+                                    </div>
+                                </div>
+                                
+                                <div id="combinedRefundList" class="info-box" style="margin-top: 2rem;">
+                                    <!-- Refund subscriptions -->
+                                </div>
+                                
+                                <h4>Restitutie gegevens</h4>
+                                <div class="form-group">
+                                    <label for="refundEmail2">E-mailadres voor bevestiging:</label>
+                                    <input type="email" id="refundEmail2" class="form-control" placeholder="naam@email.nl">
+                                    <small class="form-text">De opzegbevestiging en restitutie-informatie wordt naar dit adres gestuurd</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="refundNotes2">Notities (optioneel):</label>
+                                    <textarea id="refundNotes2" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc."></textarea>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')">← Terug</button>
+                                    <button class="btn btn-success" onclick="completeAllDeceasedActions()">Alles Verwerken</button>
+                                </div>
                             </div>
 
                             <!-- Step 2: Offer -->
