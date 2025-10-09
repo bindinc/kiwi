@@ -175,10 +175,10 @@ function updateCustomerActionButtons() {
     const winbackBtn = document.getElementById('winbackFlowBtn');
     
     if (resendBtn) {
-        resendBtn.style.display = hasCustomer ? 'block' : 'none';
+        resendBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
     }
     if (winbackBtn) {
-        winbackBtn.style.display = hasCustomer ? 'block' : 'none';
+        winbackBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
     }
 }
 

@@ -59,12 +59,6 @@
                     <button class="btn btn-action" onclick="showNewSubscription()">
                         <span>➕ Nieuw Abonnement</span>
                     </button>
-                    <button id="resendMagazineBtn" class="btn btn-action" onclick="showResendMagazine()" style="display: none;">
-                        <span>📮 Editie Verzenden</span>
-                    </button>
-                    <button id="winbackFlowBtn" class="btn btn-action" onclick="showWinbackFlow()" style="display: none;">
-                        <span>🎯 Winback Flow</span>
-                    </button>
                 </section>
             </aside>
 
@@ -93,12 +87,14 @@
                             </div>
                             <div class="customer-actions">
                                 <button class="btn btn-small" onclick="editCustomer()">✏️ Bewerken</button>
+                                <button id="resendMagazineBtn" class="btn btn-small btn-action-inline" onclick="showResendMagazine()">📮 Editie Verzenden</button>
+                                <button id="winbackFlowBtn" class="btn btn-small btn-action-inline" onclick="showWinbackFlow()">🎯 Winback</button>
                             </div>
                         </div>
 
                         <!-- Subscription Overview -->
                         <div class="subscriptions-section">
-                            <h3>📰 Actieve Abonnementen</h3>
+                            <h3>📰 Abonnementen</h3>
                             <div id="subscriptionsList" class="subscriptions-list"></div>
                         </div>
                     </div>
