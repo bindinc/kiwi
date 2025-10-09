@@ -1092,7 +1092,10 @@ function completeWinback() {
 
 // Close Form
 function closeForm(formId) {
-    document.getElementById(formId).style.display = 'none';
+    const form = document.getElementById(formId);
+    if (form) {
+        form.style.display = 'none';
+    }
 }
 
 // Show Toast Notification
@@ -1107,10 +1110,40 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
+// Debug Mode - Secret Key Sequence
+let debugKeySequence = [];
+const DEBUG_KEY = ']';
+const DEBUG_KEY_COUNT = 4;
+
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-    // Escape to close forms
+    // Debug mode activation - press ']' 4 times
+    if (e.key === DEBUG_KEY) {
+        debugKeySequence.push(Date.now());
+        
+        // Keep only recent keypresses (within 2 seconds)
+        debugKeySequence = debugKeySequence.filter(time => Date.now() - time < 2000);
+        
+        // Check if we have 4 presses
+        if (debugKeySequence.length >= DEBUG_KEY_COUNT) {
+            openDebugModal();
+            debugKeySequence = []; // Reset sequence
+        }
+    } else {
+        // Reset sequence on any other key
+        debugKeySequence = [];
+    }
+    
+    // Escape to close forms and modals
     if (e.key === 'Escape') {
+        // Close debug modal if open
+        const debugModal = document.getElementById('debugModal');
+        if (debugModal.classList.contains('show')) {
+            closeDebugModal();
+            return;
+        }
+        
+        // Close forms
         document.querySelectorAll('.form-container').forEach(form => {
             if (form.style.display === 'flex') {
                 form.style.display = 'none';
@@ -1122,6 +1155,128 @@ document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         document.getElementById('searchName').focus();
+    }
+});
+
+// Debug Modal Functions
+function openDebugModal() {
+    const modal = document.getElementById('debugModal');
+    modal.classList.add('show');
+    
+    // Populate known callers dynamically
+    populateKnownCallers();
+    
+    console.log('🔧 Debug mode activated');
+}
+
+// Populate Known Callers List
+function populateKnownCallers() {
+    const container = document.getElementById('knownCallersContainer');
+    
+    if (customers.length === 0) {
+        container.innerHTML = '<p class="empty-state-small" style="margin: 0.5rem 0; color: var(--text-secondary);">Geen klanten beschikbaar</p>';
+        return;
+    }
+    
+    // Generate buttons for each customer
+    container.innerHTML = customers.map(customer => {
+        const fullName = customer.middleName 
+            ? `${customer.firstName} ${customer.middleName} ${customer.lastName}`
+            : `${customer.firstName} ${customer.lastName}`;
+        
+        // Get active subscriptions
+        const activeSubscriptions = customer.subscriptions
+            .filter(s => s.status === 'active')
+            .map(s => s.magazine)
+            .join(', ') || 'Geen actieve abonnementen';
+        
+        return `
+            <button class="btn btn-secondary btn-block" onclick="mimicKnownCaller(${customer.id})">
+                📞 ${fullName}<br>
+                <small style="font-size: 0.85em; opacity: 0.8;">${activeSubscriptions}</small>
+            </button>
+        `;
+    }).join('');
+}
+
+function closeDebugModal() {
+    const modal = document.getElementById('debugModal');
+    modal.classList.remove('show');
+}
+
+// Full Reset - Clear all local storage and reload
+function fullReset() {
+    if (confirm('⚠️ Dit zal alle lokale data wissen en de pagina herladen. Weet je het zeker?')) {
+        // Clear local storage
+        localStorage.clear();
+        
+        // Show toast
+        showToast('Lokale opslag gewist. Pagina wordt herladen...', 'info');
+        
+        // Reload after short delay
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    }
+}
+
+// Mimic Anonymous Caller
+function mimicAnonymousCaller() {
+    // End current session
+    endSession();
+    
+    // Clear search fields
+    document.getElementById('searchName').value = '';
+    document.getElementById('searchPostalCode').value = '';
+    document.getElementById('searchHouseNumber').value = '';
+    
+    // Close debug modal
+    closeDebugModal();
+    
+    // Show toast
+    showToast('📞 Anonieme beller gesimuleerd - Voer zoekgegevens in', 'info');
+    
+    // Focus on name field
+    setTimeout(() => {
+        document.getElementById('searchName').focus();
+    }, 500);
+}
+
+// Mimic Known Caller - Select any customer from the database
+function mimicKnownCaller(customerId) {
+    // Find the customer
+    const customer = customers.find(c => c.id === customerId);
+    
+    if (!customer) {
+        showToast('Klant niet gevonden', 'error');
+        return;
+    }
+    
+    // End current session
+    endSession();
+    
+    // Close debug modal
+    closeDebugModal();
+    
+    // Build full name for toast
+    const fullName = customer.middleName 
+        ? `${customer.firstName} ${customer.middleName} ${customer.lastName}`
+        : `${customer.firstName} ${customer.lastName}`;
+    
+    // Show toast
+    showToast(`📞 Bekende beller ${fullName} gesimuleerd`, 'success');
+    
+    // Directly select the customer (skip search, open immediately)
+    setTimeout(() => {
+        selectCustomer(customerId);
+    }, 500);
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('debugModal');
+    if (e.target === modal) {
+        closeDebugModal();
     }
 });
 

@@ -502,6 +502,34 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
 
+    <!-- Debug Mode Modal -->
+    <div id="debugModal" class="modal">
+        <div class="modal-content debug-modal-content">
+            <div class="modal-header">
+                <h2>🔧 Debug Mode</h2>
+                <button class="modal-close" onclick="closeDebugModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="debug-section">
+                    <h3>System Reset</h3>
+                    <button class="btn btn-danger btn-block" onclick="fullReset()">
+                        🗑️ Purge Localstorage & Full Reset
+                    </button>
+                </div>
+                
+                <div class="debug-section">
+                    <h3>Mimic Avaya Bellers</h3>
+                    <button class="btn btn-secondary btn-block" onclick="mimicAnonymousCaller()">
+                        📞 Anonieme Beller
+                    </button>
+                    <div id="knownCallersContainer">
+                        <!-- Dynamic known caller buttons will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
