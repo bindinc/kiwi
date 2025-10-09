@@ -29,16 +29,16 @@
                     <div class="search-form">
                         <div class="form-group">
                             <label for="searchName">Naam</label>
-                            <input type="text" id="searchName" placeholder="Achternaam, Voornaam">
+                            <input type="text" id="searchName" placeholder="Achternaam, Voornaam" onkeypress="handleSearchKeyPress(event)">
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="searchPostalCode">Postcode</label>
-                                <input type="text" id="searchPostalCode" placeholder="1234AB">
+                                <input type="text" id="searchPostalCode" placeholder="1234AB" onkeypress="handleSearchKeyPress(event)">
                             </div>
                             <div class="form-group">
                                 <label for="searchHouseNumber">Huisnr.</label>
-                                <input type="text" id="searchHouseNumber" placeholder="12">
+                                <input type="text" id="searchHouseNumber" placeholder="12" onkeypress="handleSearchKeyPress(event)">
                             </div>
                         </div>
                         <button class="btn btn-primary" onclick="searchCustomer()">
@@ -156,6 +156,23 @@
                                 </select>
                             </div>
                             <div class="form-group">
+                                <label for="subDuration">Duur & Betaling *</label>
+                                <select id="subDuration" required>
+                                    <option value="">Selecteer optie...</option>
+                                    <optgroup label="Jaarlijks Betaald">
+                                        <option value="1-jaar">1 jaar - €52,00 per jaar</option>
+                                        <option value="2-jaar">2 jaar - €98,00 totaal (5% korting)</option>
+                                        <option value="3-jaar">3 jaar - €140,00 totaal (10% korting)</option>
+                                    </optgroup>
+                                    <optgroup label="Maandelijks Betaald">
+                                        <option value="1-jaar-maandelijks">1 jaar - €4,50 per maand (€54,00 totaal)</option>
+                                        <option value="2-jaar-maandelijks">2 jaar - €4,35 per maand (€104,40 totaal)</option>
+                                        <option value="3-jaar-maandelijks">3 jaar - €4,20 per maand (€151,20 totaal)</option>
+                                    </optgroup>
+                                </select>
+                                <small class="form-hint">Maandelijkse betaling heeft een kleine toeslag</small>
+                            </div>
+                            <div class="form-group">
                                 <label for="subStartDate">Startdatum *</label>
                                 <input type="date" id="subStartDate" required>
                             </div>
@@ -213,6 +230,69 @@
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" onclick="closeForm('editCustomerForm')">Annuleren</button>
                                 <button type="submit" class="btn btn-primary">Opslaan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Edit Subscription Form -->
+                <div id="editSubscriptionForm" class="form-container" style="display: none;">
+                    <div class="card">
+                        <div class="form-header">
+                            <h2>✏️ Abonnement Bewerken</h2>
+                            <button class="btn-close" onclick="closeForm('editSubscriptionForm')">✕</button>
+                        </div>
+                        <form id="subscriptionEditForm" onsubmit="saveSubscriptionEdit(event)">
+                            <input type="hidden" id="editSubId">
+                            
+                            <div class="info-box">
+                                <strong>Let op:</strong> Wijzigingen aan het abonnement worden direct doorgevoerd.
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="editSubMagazine">Magazine *</label>
+                                <select id="editSubMagazine" required>
+                                    <option value="">Selecteer magazine...</option>
+                                    <option value="Avrobode">Avrobode</option>
+                                    <option value="Mikrogids">Mikrogids</option>
+                                    <option value="Ncrvgids">Ncrvgids</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="editSubDuration">Duur & Betaling *</label>
+                                <select id="editSubDuration" required>
+                                    <option value="">Selecteer optie...</option>
+                                    <optgroup label="Jaarlijks Betaald">
+                                        <option value="1-jaar">1 jaar - €52,00 per jaar</option>
+                                        <option value="2-jaar">2 jaar - €98,00 totaal (5% korting)</option>
+                                        <option value="3-jaar">3 jaar - €140,00 totaal (10% korting)</option>
+                                    </optgroup>
+                                    <optgroup label="Maandelijks Betaald">
+                                        <option value="1-jaar-maandelijks">1 jaar - €4,50 per maand (€54,00 totaal)</option>
+                                        <option value="2-jaar-maandelijks">2 jaar - €4,35 per maand (€104,40 totaal)</option>
+                                        <option value="3-jaar-maandelijks">3 jaar - €4,20 per maand (€151,20 totaal)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="editSubStartDate">Startdatum *</label>
+                                <input type="date" id="editSubStartDate" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="editSubStatus">Status *</label>
+                                <select id="editSubStatus" required>
+                                    <option value="active">Actief</option>
+                                    <option value="paused">Gepauzeerd</option>
+                                    <option value="cancelled">Opgezegd</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('editSubscriptionForm')">Annuleren</button>
+                                <button type="submit" class="btn btn-primary">Wijzigingen Opslaan</button>
                             </div>
                         </form>
                     </div>

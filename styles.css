@@ -154,6 +154,26 @@ body {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+/* Form hint text */
+.form-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Optgroup styling */
+select optgroup {
+    font-weight: 600;
+    font-style: normal;
+    color: var(--text-primary);
+}
+
+select option {
+    padding: 0.5rem;
+}
+
 .form-row {
     display: grid;
     grid-template-columns: 1fr 60px;
@@ -450,6 +470,21 @@ body {
     margin-top: 1.5rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--border-color);
+}
+
+/* Info box for forms */
+.info-box {
+    background-color: #e0f2fe;
+    border-left: 4px solid var(--primary-color);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.info-box strong {
+    color: var(--primary-color);
 }
 
 /* Right Panel - Contact History */

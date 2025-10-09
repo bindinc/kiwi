@@ -7,17 +7,29 @@ Een moderne, lichtgewicht webinterface voor klantenservice medewerkers om magazi
 ### 🔍 Klant Zoeken
 - Zoeken op naam (voor- en achternaam)
 - Zoeken op postcode en huisnummer
+- **Enter toets** voor snelle zoekopdrachten
 - Directe toegang tot klantgegevens
 
 ### ➕ Nieuw Abonnement Aanmaken
 - Volledige klantregistratie tijdens telefoongesprek
+- **Automatisch voorinvullen** van klantgegevens bij bestaande klanten
 - Keuze uit magazines: Avrobode, Mikrogids, Ncrvgids
+- **Flexibele abonnementsduur en betaalopties:**
+  - Jaarlijks betalen: 1, 2 (5% korting), of 3 jaar (10% korting)
+  - Maandelijks betalen: 1, 2, of 3 jaar
+  - Transparante prijsweergave
+- Extra abonnementen toevoegen aan bestaande klanten
 - Directe startdatum instelling
 
 ### ✏️ Gegevens Beheren
 - Klantgegevens wijzigen
-- Abonnementsgegevens aanpassen
+- **Volledige abonnementbewerking:**
+  - Magazine type aanpassen
+  - Duur en betaalfrequentie wijzigen
+  - Status beheren (actief/gepauzeerd/opgezegd)
+  - Startdatum aanpassen
 - Adreswijzigingen verwerken
+- Wijzigingen worden automatisch gelogd
 
 ### 📋 Contact Geschiedenis
 - Verticale tijdlijn met alle contactmomenten

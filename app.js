@@ -3,6 +3,23 @@ let customers = [];
 let currentCustomer = null;
 let selectedOffer = null;
 
+// Subscription Pricing Information
+const subscriptionPricing = {
+    '1-jaar': { price: 52.00, perMonth: 4.33, description: '1 jaar - Jaarlijks betaald' },
+    '2-jaar': { price: 98.00, perMonth: 4.08, description: '2 jaar - Jaarlijks betaald (5% korting)' },
+    '3-jaar': { price: 140.00, perMonth: 3.89, description: '3 jaar - Jaarlijks betaald (10% korting)' },
+    '1-jaar-maandelijks': { price: 54.00, perMonth: 4.50, description: '1 jaar - Maandelijks betaald' },
+    '2-jaar-maandelijks': { price: 104.40, perMonth: 4.35, description: '2 jaar - Maandelijks betaald' },
+    '3-jaar-maandelijks': { price: 151.20, perMonth: 4.20, description: '3 jaar - Maandelijks betaald' }
+};
+
+// Helper function to get pricing display
+function getPricingDisplay(duration) {
+    const pricing = subscriptionPricing[duration];
+    if (!pricing) return '';
+    return `€${pricing.perMonth.toFixed(2)}/maand (${pricing.description})`;
+}
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     initializeData();
@@ -31,6 +48,7 @@ function initializeData() {
                     {
                         id: 1,
                         magazine: 'Avrobode',
+                        duration: '1-jaar',
                         startDate: '2023-01-15',
                         status: 'active',
                         lastEdition: '2024-10-01'
@@ -71,6 +89,7 @@ function initializeData() {
                     {
                         id: 2,
                         magazine: 'Mikrogids',
+                        duration: '2-jaar',
                         startDate: '2022-06-01',
                         status: 'active',
                         lastEdition: '2024-09-28'
@@ -78,6 +97,7 @@ function initializeData() {
                     {
                         id: 3,
                         magazine: 'Ncrvgids',
+                        duration: '1-jaar-maandelijks',
                         startDate: '2023-03-10',
                         status: 'active',
                         lastEdition: '2024-09-28'
@@ -112,6 +132,7 @@ function initializeData() {
                     {
                         id: 4,
                         magazine: 'Avrobode',
+                        duration: '3-jaar',
                         startDate: '2024-02-01',
                         status: 'active',
                         lastEdition: '2024-10-01'
@@ -172,6 +193,14 @@ function searchCustomer() {
     });
 
     displaySearchResults(results);
+}
+
+// Handle Enter key press in search fields
+function handleSearchKeyPress(event) {
+    if (event.key === 'Enter' || event.keyCode === 13) {
+        event.preventDefault();
+        searchCustomer();
+    }
 }
 
 // Display Search Results
@@ -237,22 +266,27 @@ function displaySubscriptions() {
         return;
     }
 
-    subscriptionsList.innerHTML = currentCustomer.subscriptions.map(sub => `
-        <div class="subscription-item">
-            <div class="subscription-info">
-                <div class="subscription-name">📰 ${sub.magazine}</div>
-                <div class="subscription-details">
-                    Start: ${formatDate(sub.startDate)} • 
-                    Laatste editie: ${formatDate(sub.lastEdition)}
+    subscriptionsList.innerHTML = currentCustomer.subscriptions.map(sub => {
+        const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
+        
+        return `
+            <div class="subscription-item">
+                <div class="subscription-info">
+                    <div class="subscription-name">📰 ${sub.magazine}</div>
+                    <div class="subscription-details">
+                        Start: ${formatDate(sub.startDate)} • 
+                        Laatste editie: ${formatDate(sub.lastEdition)}<br>
+                        ${pricingInfo}
+                    </div>
+                </div>
+                <div class="subscription-actions">
+                    <span class="subscription-status status-active">Actief</span>
+                    <button class="icon-btn" onclick="editSubscription(${sub.id})" title="Bewerken">✏️</button>
+                    <button class="icon-btn" onclick="cancelSubscription(${sub.id})" title="Opzeggen">🚫</button>
                 </div>
             </div>
-            <div class="subscription-actions">
-                <span class="subscription-status status-active">Actief</span>
-                <button class="icon-btn" onclick="editSubscription(${sub.id})" title="Bewerken">✏️</button>
-                <button class="icon-btn" onclick="cancelSubscription(${sub.id})" title="Opzeggen">🚫</button>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Display Contact History
@@ -317,18 +351,38 @@ function formatDateTime(dateString) {
 
 // Show New Subscription Form
 function showNewSubscription() {
-    document.getElementById('newSubscriptionForm').style.display = 'flex';
     // Set today's date as default start date
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('subStartDate').value = today;
+    
+    // Prefill customer data if a customer is currently selected
+    if (currentCustomer) {
+        document.getElementById('subFirstName').value = currentCustomer.firstName;
+        document.getElementById('subLastName').value = currentCustomer.lastName;
+        document.getElementById('subPostalCode').value = currentCustomer.postalCode;
+        document.getElementById('subHouseNumber').value = currentCustomer.houseNumber;
+        
+        // Extract street name from address (remove house number)
+        const streetName = currentCustomer.address.replace(/\s+\d+.*$/, '');
+        document.getElementById('subAddress').value = streetName;
+        
+        document.getElementById('subCity').value = currentCustomer.city;
+        document.getElementById('subEmail').value = currentCustomer.email;
+        document.getElementById('subPhone').value = currentCustomer.phone;
+    } else {
+        // Clear form if no customer selected (new customer)
+        document.getElementById('subscriptionForm').reset();
+        document.getElementById('subStartDate').value = today;
+    }
+    
+    document.getElementById('newSubscriptionForm').style.display = 'flex';
 }
 
 // Create Subscription
 function createSubscription(event) {
     event.preventDefault();
 
-    const newCustomer = {
-        id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
+    const formData = {
         firstName: document.getElementById('subFirstName').value,
         lastName: document.getElementById('subLastName').value,
         postalCode: document.getElementById('subPostalCode').value.toUpperCase(),
@@ -337,36 +391,81 @@ function createSubscription(event) {
         city: document.getElementById('subCity').value,
         email: document.getElementById('subEmail').value,
         phone: document.getElementById('subPhone').value,
-        subscriptions: [
-            {
-                id: Date.now(),
-                magazine: document.getElementById('subMagazine').value,
-                startDate: document.getElementById('subStartDate').value,
-                status: 'active',
-                lastEdition: new Date().toISOString().split('T')[0]
-            }
-        ],
-        contactHistory: [
-            {
-                id: 1,
-                type: 'Nieuw abonnement',
-                date: new Date().toISOString(),
-                description: `Abonnement ${document.getElementById('subMagazine').value} aangemaakt via telefonische bestelling.`
-            }
-        ]
+        magazine: document.getElementById('subMagazine').value,
+        duration: document.getElementById('subDuration').value,
+        startDate: document.getElementById('subStartDate').value
     };
 
-    customers.push(newCustomer);
-    saveCustomers();
+    // Check if this is for an existing customer
+    if (currentCustomer) {
+        // Add subscription to existing customer
+        const newSubscription = {
+            id: Date.now(),
+            magazine: formData.magazine,
+            duration: formData.duration,
+            startDate: formData.startDate,
+            status: 'active',
+            lastEdition: new Date().toISOString().split('T')[0]
+        };
+        
+        currentCustomer.subscriptions.push(newSubscription);
+        
+        currentCustomer.contactHistory.unshift({
+            id: currentCustomer.contactHistory.length + 1,
+            type: 'Extra abonnement',
+            date: new Date().toISOString(),
+            description: `Extra abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) toegevoegd.`
+        });
+        
+        saveCustomers();
+        closeForm('newSubscriptionForm');
+        showToast('Extra abonnement succesvol toegevoegd!', 'success');
+        
+        // Refresh display
+        selectCustomer(currentCustomer.id);
+    } else {
+        // Create new customer with subscription
+        const newCustomer = {
+            id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            postalCode: formData.postalCode,
+            houseNumber: formData.houseNumber,
+            address: formData.address,
+            city: formData.city,
+            email: formData.email,
+            phone: formData.phone,
+            subscriptions: [
+                {
+                    id: Date.now(),
+                    magazine: formData.magazine,
+                    duration: formData.duration,
+                    startDate: formData.startDate,
+                    status: 'active',
+                    lastEdition: new Date().toISOString().split('T')[0]
+                }
+            ],
+            contactHistory: [
+                {
+                    id: 1,
+                    type: 'Nieuw abonnement',
+                    date: new Date().toISOString(),
+                    description: `Abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) aangemaakt via telefonische bestelling.`
+                }
+            ]
+        };
 
-    closeForm('newSubscriptionForm');
-    showToast('Nieuw abonnement succesvol aangemaakt!', 'success');
+        customers.push(newCustomer);
+        saveCustomers();
+        closeForm('newSubscriptionForm');
+        showToast('Nieuw abonnement succesvol aangemaakt!', 'success');
+        
+        // Select the new customer
+        selectCustomer(newCustomer.id);
+    }
     
     // Reset form
     document.getElementById('subscriptionForm').reset();
-    
-    // Select the new customer
-    selectCustomer(newCustomer.id);
 }
 
 // Edit Customer
@@ -473,8 +572,85 @@ function resendMagazine() {
 }
 
 // Edit Subscription
+// Edit Subscription
 function editSubscription(subId) {
-    showToast('Abonnement bewerken functie komt binnenkort', 'error');
+    if (!currentCustomer) return;
+    
+    const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
+    if (!subscription) {
+        showToast('Abonnement niet gevonden', 'error');
+        return;
+    }
+    
+    // Populate form with current subscription data
+    document.getElementById('editSubId').value = subId;
+    document.getElementById('editSubMagazine').value = subscription.magazine;
+    document.getElementById('editSubDuration').value = subscription.duration || '1-jaar';
+    document.getElementById('editSubStartDate').value = subscription.startDate;
+    document.getElementById('editSubStatus').value = subscription.status || 'active';
+    
+    // Show form
+    document.getElementById('editSubscriptionForm').style.display = 'flex';
+}
+
+// Save Subscription Edit
+function saveSubscriptionEdit(event) {
+    event.preventDefault();
+    
+    if (!currentCustomer) return;
+    
+    const subId = parseInt(document.getElementById('editSubId').value);
+    const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
+    
+    if (!subscription) {
+        showToast('Abonnement niet gevonden', 'error');
+        return;
+    }
+    
+    // Store old values for history
+    const oldMagazine = subscription.magazine;
+    const oldDuration = subscription.duration;
+    const oldStatus = subscription.status;
+    
+    // Update subscription
+    subscription.magazine = document.getElementById('editSubMagazine').value;
+    subscription.duration = document.getElementById('editSubDuration').value;
+    subscription.startDate = document.getElementById('editSubStartDate').value;
+    subscription.status = document.getElementById('editSubStatus').value;
+    
+    // Build change description
+    let changes = [];
+    if (oldMagazine !== subscription.magazine) {
+        changes.push(`Magazine gewijzigd van ${oldMagazine} naar ${subscription.magazine}`);
+    }
+    if (oldDuration !== subscription.duration) {
+        const oldPricing = subscriptionPricing[oldDuration]?.description || 'onbekend';
+        const newPricing = subscriptionPricing[subscription.duration]?.description || 'onbekend';
+        changes.push(`Duur gewijzigd van ${oldPricing} naar ${newPricing}`);
+    }
+    if (oldStatus !== subscription.status) {
+        const statusNames = {
+            'active': 'Actief',
+            'paused': 'Gepauzeerd',
+            'cancelled': 'Opgezegd'
+        };
+        changes.push(`Status gewijzigd van ${statusNames[oldStatus]} naar ${statusNames[subscription.status]}`);
+    }
+    
+    // Add to contact history
+    currentCustomer.contactHistory.unshift({
+        id: currentCustomer.contactHistory.length + 1,
+        type: 'Abonnement gewijzigd',
+        date: new Date().toISOString(),
+        description: `Abonnement bewerkt. ${changes.join('. ')}.`
+    });
+    
+    saveCustomers();
+    closeForm('editSubscriptionForm');
+    showToast('Abonnement succesvol bijgewerkt!', 'success');
+    
+    // Refresh display
+    selectCustomer(currentCustomer.id);
 }
 
 // Cancel Subscription (triggers winback flow)
