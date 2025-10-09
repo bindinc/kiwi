@@ -64,6 +64,9 @@
                     <button class="btn btn-action" onclick="showNewSubscription()">
                         <span>➕ Nieuw Abonnement</span>
                     </button>
+                    <button class="btn btn-action" onclick="showArticleSale()">
+                        <span>🛒 Artikel verkoop</span>
+                    </button>
                 </section>
             </aside>
 
@@ -101,6 +104,12 @@
                         <div class="subscriptions-section">
                             <h3>📰 Abonnementen</h3>
                             <div id="subscriptionsList" class="subscriptions-list"></div>
+                        </div>
+
+                        <!-- Articles Overview -->
+                        <div class="articles-section">
+                            <h3>🛒 Artikelen</h3>
+                            <div id="articlesList" class="articles-list"></div>
                         </div>
                     </div>
                 </div>
@@ -221,6 +230,112 @@
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" onclick="closeForm('newSubscriptionForm')">Annuleren</button>
                                 <button type="submit" class="btn btn-primary">Abonnement Aanmaken</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Article Sale Form -->
+                <div id="articleSaleForm" class="form-container" style="display: none;">
+                    <div class="card onepager-container">
+                        <div class="form-header">
+                            <h2>🛒 Artikel Verkoop</h2>
+                            <button class="btn-close" onclick="closeForm('articleSaleForm')">✕</button>
+                        </div>
+                        <form id="articleForm" class="form-section" onsubmit="createArticleSale(event)">
+                            <h3 class="form-subtitle">Klantgegevens *</h3>
+                            <div class="aanhef-row">
+                                <label><input type="radio" name="articleSalutation" value="Dhr." required checked> Dhr.</label>
+                                <label><input type="radio" name="articleSalutation" value="Mevr."> Mevr.</label>
+                                <label><input type="radio" name="articleSalutation" value="Anders"> Anders</label>
+                            </div>
+                            
+                            <div class="form-row">
+                                <input type="text" id="articleInitials" placeholder="Voorletters*" required>
+                                <input type="text" id="articleMiddleName" placeholder="Tussenvoegsel">
+                                <input type="text" id="articleLastName" placeholder="Achternaam*" required>
+                            </div>
+                            
+                            <div class="form-row">
+                                <input type="text" id="articlePostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
+                                <input type="text" id="articleHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required>
+                                <input type="text" id="articleHouseExt" placeholder="Toevoeging" maxlength="10">
+                            </div>
+                            
+                            <div class="form-row">
+                                <input type="text" id="articleAddress" placeholder="Straat*" required>
+                                <input type="text" id="articleCity" placeholder="Plaats*" required>
+                            </div>
+                            
+                            <div class="form-row">
+                                <input type="tel" id="articlePhone" placeholder="Telefoonnummer*" required>
+                                <input type="email" id="articleEmail" placeholder="E-mailadres*" required>
+                            </div>
+                            
+                            <h3 class="form-subtitle">Artikelgegevens</h3>
+                            <div class="form-row">
+                                <select id="articleName" required onchange="updateArticlePrice()">
+                                    <option value="">Selecteer artikel...</option>
+                                    <option value="Jaargang bundel 2023" data-price="29.95">Jaargang bundel 2023 - €29,95</option>
+                                    <option value="TV Gids Premium bundel" data-price="49.95">TV Gids Premium bundel - €49,95</option>
+                                    <option value="Speciale editie 50 jaar" data-price="19.95">Speciale editie 50 jaar - €19,95</option>
+                                    <option value="Kookboek recepten" data-price="24.95">Kookboek recepten - €24,95</option>
+                                    <option value="Extra TV gids week editie" data-price="3.95">Extra TV gids week editie - €3,95</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="articleQuantity">Aantal</label>
+                                    <input type="number" id="articleQuantity" min="1" value="1" required onchange="updateArticlePrice()">
+                                </div>
+                                <div class="form-group">
+                                    <label for="articlePrice">Totaalprijs</label>
+                                    <input type="text" id="articlePrice" readonly placeholder="€0,00">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="articleExpectedDelivery">Verwachte leverdatum *</label>
+                                    <input type="date" id="articleExpectedDelivery" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <textarea id="articleNotes" placeholder="Bezorginstructies of opmerkingen (optioneel)" rows="3"></textarea>
+                            </div>
+                            
+                            <h3 class="form-subtitle">Betaalmethode *</h3>
+                            <div class="form-row">
+                                <div class="payment-methods">
+                                    <div class="payment-option">
+                                        <input type="radio" id="articlePaymentIdeal" name="articlePayment" value="iDEAL" checked>
+                                        <label for="articlePaymentIdeal">
+                                            <span class="payment-icon">💳</span>
+                                            <span class="payment-text">iDEAL</span>
+                                        </label>
+                                    </div>
+                                    <div class="payment-option">
+                                        <input type="radio" id="articlePaymentCard" name="articlePayment" value="Creditcard">
+                                        <label for="articlePaymentCard">
+                                            <span class="payment-icon">💳</span>
+                                            <span class="payment-text">Creditcard</span>
+                                        </label>
+                                    </div>
+                                    <div class="payment-option">
+                                        <input type="radio" id="articlePaymentTransfer" name="articlePayment" value="Bankoverschrijving">
+                                        <label for="articlePaymentTransfer">
+                                            <span class="payment-icon">🏦</span>
+                                            <span class="payment-text">Bankoverschrijving</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('articleSaleForm')">Annuleren</button>
+                                <button type="submit" class="btn btn-primary">Bestelling Plaatsen</button>
                             </div>
                         </form>
                     </div>

@@ -30,6 +30,7 @@ function endSession() {
     
     // Close any open forms
     closeForm('newSubscriptionForm');
+    closeForm('articleSaleForm');
     closeForm('editCustomerForm');
     closeForm('editSubscriptionForm');
     closeForm('resendMagazineForm');
@@ -111,6 +112,40 @@ function initializeData() {
                         lastEdition: '2024-10-01'
                     }
                 ],
+                articles: [
+                    {
+                        id: 1,
+                        articleName: 'Jaargang bundel 2023',
+                        quantity: 1,
+                        price: 29.95,
+                        orderDate: '2024-09-15',
+                        expectedDeliveryDate: '2024-09-25',
+                        deliveryStatus: 'delivered',
+                        trackingNumber: '3SABCD1234567890NL',
+                        paymentStatus: 'paid',
+                        paymentMethod: 'iDEAL',
+                        paymentDate: '2024-09-15',
+                        actualDeliveryDate: '2024-09-24',
+                        returnDeadline: '2024-10-08',
+                        notes: ''
+                    },
+                    {
+                        id: 2,
+                        articleName: 'Extra TV gids week editie',
+                        quantity: 2,
+                        price: 7.90,
+                        orderDate: '2024-10-01',
+                        expectedDeliveryDate: '2024-10-12',
+                        deliveryStatus: 'in_transit',
+                        trackingNumber: '3SABCD9876543210NL',
+                        paymentStatus: 'paid',
+                        paymentMethod: 'iDEAL',
+                        paymentDate: '2024-10-01',
+                        actualDeliveryDate: null,
+                        returnDeadline: null,
+                        notes: 'Bezorgen bij buren indien niet thuis'
+                    }
+                ],
                 contactHistory: [
                     {
                         id: 1,
@@ -172,6 +207,7 @@ function initializeData() {
                         lastEdition: '2024-09-28'
                     }
                 ],
+                articles: [],
                 contactHistory: [
                     {
                         id: 1,
@@ -219,6 +255,7 @@ function initializeData() {
                         lastEdition: '2024-10-01'
                     }
                 ],
+                articles: [],
                 contactHistory: [
                     {
                         id: 1,
@@ -261,6 +298,7 @@ function initializeData() {
                         lastEdition: '2024-10-01'
                     }
                 ],
+                articles: [],
                 contactHistory: [
                     {
                         id: 1,
@@ -433,6 +471,9 @@ function selectCustomer(customerId) {
 
     // Display subscriptions
     displaySubscriptions();
+
+    // Display articles
+    displayArticles();
 
     // Display contact history
     displayContactHistory();
@@ -1538,6 +1579,265 @@ function completeWinback() {
     // Reset
     selectedOffer = null;
     window.cancellingSubscriptionId = null;
+}
+
+// ========== ARTICLE SALES FUNCTIONS ==========
+
+// Display Articles
+function displayArticles() {
+    const articlesList = document.getElementById('articlesList');
+    
+    if (!currentCustomer || !currentCustomer.articles || currentCustomer.articles.length === 0) {
+        articlesList.innerHTML = '<p class="empty-state-small">Geen artikelen</p>';
+        return;
+    }
+
+    // Sort articles by order date (newest first)
+    const sortedArticles = [...currentCustomer.articles].sort((a, b) => 
+        new Date(b.orderDate) - new Date(a.orderDate)
+    );
+
+    let html = '<div class="articles-group">';
+    html += sortedArticles.map(article => {
+        const deliveryStatusClass = {
+            'ordered': 'status-ordered',
+            'in_transit': 'status-transit',
+            'delivered': 'status-delivered',
+            'returned': 'status-returned'
+        }[article.deliveryStatus] || 'status-ordered';
+        
+        const deliveryStatusText = {
+            'ordered': 'Besteld',
+            'in_transit': 'Onderweg',
+            'delivered': 'Afgeleverd',
+            'returned': 'Geretourneerd'
+        }[article.deliveryStatus] || 'Besteld';
+        
+        const paymentStatusClass = {
+            'pending': 'status-pending',
+            'paid': 'status-paid',
+            'refunded': 'status-refunded'
+        }[article.paymentStatus] || 'status-pending';
+        
+        const paymentStatusText = {
+            'pending': 'In behandeling',
+            'paid': 'Betaald',
+            'refunded': 'Terugbetaald'
+        }[article.paymentStatus] || 'In behandeling';
+        
+        // Calculate if return is still possible
+        const returnPossible = article.returnDeadline && new Date(article.returnDeadline) > new Date();
+        
+        return `
+            <div class="article-item">
+                <div class="article-info">
+                    <div class="article-name">🛒 ${article.articleName}</div>
+                    <div class="article-details">
+                        <strong>Besteld:</strong> ${formatDate(article.orderDate)} • 
+                        <strong>Aantal:</strong> ${article.quantity} • 
+                        <strong>Prijs:</strong> €${article.price.toFixed(2)}<br>
+                        <strong>Verwachte levering:</strong> ${formatDate(article.expectedDeliveryDate)}
+                        ${article.actualDeliveryDate ? ` • <strong>Geleverd:</strong> ${formatDate(article.actualDeliveryDate)}` : ''}
+                        ${article.trackingNumber ? `<br><strong>Track & Trace:</strong> ${article.trackingNumber}` : ''}
+                        ${article.notes ? `<br><strong>Opmerking:</strong> ${article.notes}` : ''}
+                        ${returnPossible ? `<br><strong>Retour mogelijk tot:</strong> ${formatDate(article.returnDeadline)}` : ''}
+                    </div>
+                </div>
+                <div class="article-actions">
+                    <span class="article-status ${deliveryStatusClass}">${deliveryStatusText}</span>
+                    <span class="article-status ${paymentStatusClass}">${paymentStatusText}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+    html += '</div>';
+
+    articlesList.innerHTML = html;
+}
+
+// Show Article Sale Form
+function showArticleSale() {
+    // Set tomorrow's date as default expected delivery date
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    document.getElementById('articleExpectedDelivery').value = tomorrowStr;
+    
+    // Prefill customer data if a customer is currently selected
+    if (currentCustomer) {
+        const salutation = currentCustomer.salutation || 'Dhr.';
+        document.querySelector(`input[name="articleSalutation"][value="${salutation}"]`).checked = true;
+        
+        document.getElementById('articleInitials').value = currentCustomer.firstName;
+        document.getElementById('articleMiddleName').value = currentCustomer.middleName || '';
+        document.getElementById('articleLastName').value = currentCustomer.lastName;
+        document.getElementById('articlePostalCode').value = currentCustomer.postalCode;
+        
+        // Handle house number
+        const houseNumberMatch = currentCustomer.houseNumber?.match(/^(\d+)(.*)$/);
+        if (houseNumberMatch) {
+            document.getElementById('articleHouseNumber').value = houseNumberMatch[1];
+            document.getElementById('articleHouseExt').value = houseNumberMatch[2] || '';
+        } else {
+            document.getElementById('articleHouseNumber').value = currentCustomer.houseNumber;
+        }
+        
+        // Extract street name from address (remove house number)
+        const streetName = currentCustomer.address.replace(/\s+\d+.*$/, '');
+        document.getElementById('articleAddress').value = streetName;
+        
+        document.getElementById('articleCity').value = currentCustomer.city;
+        document.getElementById('articleEmail').value = currentCustomer.email;
+        document.getElementById('articlePhone').value = currentCustomer.phone;
+    } else {
+        // Clear form if no customer selected
+        document.getElementById('articleForm').reset();
+        document.getElementById('articleExpectedDelivery').value = tomorrowStr;
+    }
+    
+    document.getElementById('articleSaleForm').style.display = 'flex';
+}
+
+// Update Article Price
+function updateArticlePrice() {
+    const articleSelect = document.getElementById('articleName');
+    const quantityInput = document.getElementById('articleQuantity');
+    const priceInput = document.getElementById('articlePrice');
+    
+    if (!articleSelect.value) {
+        priceInput.value = '€0,00';
+        return;
+    }
+    
+    const selectedOption = articleSelect.options[articleSelect.selectedIndex];
+    const unitPrice = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+    const quantity = parseInt(quantityInput.value) || 1;
+    const totalPrice = unitPrice * quantity;
+    
+    priceInput.value = `€${totalPrice.toFixed(2).replace('.', ',')}`;
+}
+
+// Create Article Sale
+function createArticleSale(event) {
+    event.preventDefault();
+
+    const salutation = document.querySelector('input[name="articleSalutation"]:checked').value;
+    const initials = document.getElementById('articleInitials').value;
+    const middleName = document.getElementById('articleMiddleName').value;
+    const lastName = document.getElementById('articleLastName').value;
+    const houseNumber = document.getElementById('articleHouseNumber').value;
+    const houseExt = document.getElementById('articleHouseExt').value;
+    
+    const articleSelect = document.getElementById('articleName');
+    const selectedOption = articleSelect.options[articleSelect.selectedIndex];
+    const unitPrice = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+    const quantity = parseInt(document.getElementById('articleQuantity').value) || 1;
+    const totalPrice = unitPrice * quantity;
+    
+    const formData = {
+        salutation: salutation,
+        firstName: initials,
+        middleName: middleName,
+        lastName: lastName,
+        postalCode: document.getElementById('articlePostalCode').value.toUpperCase(),
+        houseNumber: houseExt ? `${houseNumber}${houseExt}` : houseNumber,
+        address: `${document.getElementById('articleAddress').value} ${houseNumber}${houseExt}`,
+        city: document.getElementById('articleCity').value,
+        email: document.getElementById('articleEmail').value,
+        phone: document.getElementById('articlePhone').value,
+        articleName: document.getElementById('articleName').value,
+        quantity: quantity,
+        price: totalPrice,
+        expectedDeliveryDate: document.getElementById('articleExpectedDelivery').value,
+        paymentMethod: document.querySelector('input[name="articlePayment"]:checked').value,
+        notes: document.getElementById('articleNotes').value
+    };
+
+    // Generate tracking number
+    const trackingNumber = '3SABCD' + Math.random().toString().substr(2, 10) + 'NL';
+    
+    // Calculate return deadline (14 days after expected delivery)
+    const returnDeadline = new Date(formData.expectedDeliveryDate);
+    returnDeadline.setDate(returnDeadline.getDate() + 14);
+    const returnDeadlineStr = returnDeadline.toISOString().split('T')[0];
+
+    const newArticle = {
+        id: Date.now(),
+        articleName: formData.articleName,
+        quantity: formData.quantity,
+        price: formData.price,
+        orderDate: new Date().toISOString().split('T')[0],
+        expectedDeliveryDate: formData.expectedDeliveryDate,
+        deliveryStatus: 'ordered',
+        trackingNumber: trackingNumber,
+        paymentStatus: 'paid', // Assume immediate payment via iDEAL/card
+        paymentMethod: formData.paymentMethod,
+        paymentDate: new Date().toISOString().split('T')[0],
+        actualDeliveryDate: null,
+        returnDeadline: returnDeadlineStr,
+        notes: formData.notes
+    };
+
+    // Check if this is for an existing customer
+    if (currentCustomer) {
+        // Add article to existing customer
+        if (!currentCustomer.articles) {
+            currentCustomer.articles = [];
+        }
+        currentCustomer.articles.push(newArticle);
+        
+        currentCustomer.contactHistory.unshift({
+            id: currentCustomer.contactHistory.length + 1,
+            type: 'Artikel bestelling',
+            date: new Date().toISOString(),
+            description: `Artikel bestelling: ${formData.articleName} (${formData.quantity}x) - €${formData.price.toFixed(2)}. Verwachte levering: ${formatDate(formData.expectedDeliveryDate)}.`
+        });
+        
+        saveCustomers();
+        closeForm('articleSaleForm');
+        showToast('Artikel bestelling succesvol aangemaakt!', 'success');
+        
+        // Refresh display
+        selectCustomer(currentCustomer.id);
+    } else {
+        // Create new customer with article
+        const fullLastName = middleName ? `${middleName} ${lastName}` : lastName;
+        
+        const newCustomer = {
+            id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
+            salutation: formData.salutation,
+            firstName: formData.firstName,
+            middleName: formData.middleName,
+            lastName: fullLastName,
+            postalCode: formData.postalCode,
+            houseNumber: formData.houseNumber,
+            address: formData.address,
+            city: formData.city,
+            email: formData.email,
+            phone: formData.phone,
+            subscriptions: [],
+            articles: [newArticle],
+            contactHistory: [
+                {
+                    id: 1,
+                    type: 'Artikel bestelling',
+                    date: new Date().toISOString(),
+                    description: `Artikel bestelling: ${formData.articleName} (${formData.quantity}x) - €${formData.price.toFixed(2)}. Verwachte levering: ${formatDate(formData.expectedDeliveryDate)}.`
+                }
+            ]
+        };
+
+        customers.push(newCustomer);
+        saveCustomers();
+        closeForm('articleSaleForm');
+        showToast('Nieuwe klant en artikel bestelling succesvol aangemaakt!', 'success');
+        
+        // Select the new customer
+        selectCustomer(newCustomer.id);
+    }
+    
+    // Reset form
+    document.getElementById('articleForm').reset();
 }
 
 // Close Form
