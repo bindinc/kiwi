@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeData();
     updateTime();
     setInterval(updateTime, 1000);
+    updateCustomerActionButtons();
 });
 
 // Initialize Demo Data
@@ -36,14 +37,19 @@ function initializeData() {
         customers = [
             {
                 id: 1,
-                firstName: 'Jan',
-                lastName: 'de Vries',
+                salutation: 'Dhr.',
+                firstName: 'J.',
+                middleName: 'de',
+                lastName: 'Vries',
                 postalCode: '1012AB',
                 houseNumber: '42',
                 address: 'Damstraat 42',
                 city: 'Amsterdam',
                 email: 'jan.devries@email.nl',
                 phone: '06-12345678',
+                optinEmail: 'yes',
+                optinPhone: 'yes',
+                optinPost: 'no',
                 subscriptions: [
                     {
                         id: 1,
@@ -77,7 +83,9 @@ function initializeData() {
             },
             {
                 id: 2,
-                firstName: 'Maria',
+                salutation: 'Mevr.',
+                firstName: 'M.',
+                middleName: '',
                 lastName: 'Jansen',
                 postalCode: '3011BD',
                 houseNumber: '15',
@@ -85,6 +93,9 @@ function initializeData() {
                 city: 'Rotterdam',
                 email: 'maria.jansen@email.nl',
                 phone: '06-87654321',
+                optinEmail: 'yes',
+                optinPhone: 'no',
+                optinPost: 'yes',
                 subscriptions: [
                     {
                         id: 2,
@@ -157,6 +168,20 @@ function saveCustomers() {
     localStorage.setItem('customers', JSON.stringify(customers));
 }
 
+// Update Customer Action Buttons visibility
+function updateCustomerActionButtons() {
+    const hasCustomer = currentCustomer !== null;
+    const resendBtn = document.getElementById('resendMagazineBtn');
+    const winbackBtn = document.getElementById('winbackFlowBtn');
+    
+    if (resendBtn) {
+        resendBtn.style.display = hasCustomer ? 'block' : 'none';
+    }
+    if (winbackBtn) {
+        winbackBtn.style.display = hasCustomer ? 'block' : 'none';
+    }
+}
+
 // Update Time Display
 function updateTime() {
     const now = new Date();
@@ -214,15 +239,21 @@ function displaySearchResults(results) {
         return;
     }
 
-    resultsContainer.innerHTML = results.map(customer => `
-        <div class="result-item" onclick="selectCustomer(${customer.id})">
-            <div class="result-name">${customer.firstName} ${customer.lastName}</div>
-            <div class="result-details">
-                ${customer.address}, ${customer.postalCode} ${customer.city}<br>
-                ${customer.subscriptions.length} actief abonnement(en)
+    resultsContainer.innerHTML = results.map(customer => {
+        const fullName = customer.middleName 
+            ? `${customer.firstName} ${customer.middleName} ${customer.lastName}`
+            : `${customer.firstName} ${customer.lastName}`;
+        
+        return `
+            <div class="result-item" onclick="selectCustomer(${customer.id})">
+                <div class="result-name">${fullName}</div>
+                <div class="result-details">
+                    ${customer.address}, ${customer.postalCode} ${customer.city}<br>
+                    ${customer.subscriptions.length} actief abonnement(en)
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
     
     searchResults.style.display = 'block';
 }
@@ -240,8 +271,11 @@ function selectCustomer(customerId) {
     customerDetail.style.display = 'block';
 
     // Populate customer info
-    document.getElementById('customerName').textContent = 
-        `${currentCustomer.firstName} ${currentCustomer.lastName}`;
+    const fullName = currentCustomer.middleName 
+        ? `${currentCustomer.salutation || ''} ${currentCustomer.firstName} ${currentCustomer.middleName} ${currentCustomer.lastName}`.trim()
+        : `${currentCustomer.salutation || ''} ${currentCustomer.firstName} ${currentCustomer.lastName}`.trim();
+    
+    document.getElementById('customerName').textContent = fullName;
     document.getElementById('customerAddress').textContent = 
         `${currentCustomer.address}, ${currentCustomer.postalCode} ${currentCustomer.city}`;
     document.getElementById('customerEmail').textContent = currentCustomer.email;
@@ -252,6 +286,9 @@ function selectCustomer(customerId) {
 
     // Display contact history
     displayContactHistory();
+
+    // Update action buttons visibility
+    updateCustomerActionButtons();
 
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -382,18 +419,36 @@ function showNewSubscription() {
 function createSubscription(event) {
     event.preventDefault();
 
+    const salutation = document.querySelector('input[name="subSalutation"]:checked').value;
+    const initials = document.getElementById('subInitials').value;
+    const middleName = document.getElementById('subMiddleName').value;
+    const lastName = document.getElementById('subLastName').value;
+    const houseNumber = document.getElementById('subHouseNumber').value;
+    const houseExt = document.getElementById('subHouseExt').value;
+    
+    // Construct full name
+    const firstName = initials;
+    const fullLastName = middleName ? `${middleName} ${lastName}` : lastName;
+    
     const formData = {
-        firstName: document.getElementById('subFirstName').value,
-        lastName: document.getElementById('subLastName').value,
+        salutation: salutation,
+        firstName: firstName,
+        middleName: middleName,
+        lastName: fullLastName,
         postalCode: document.getElementById('subPostalCode').value.toUpperCase(),
-        houseNumber: document.getElementById('subHouseNumber').value,
-        address: `${document.getElementById('subAddress').value} ${document.getElementById('subHouseNumber').value}`,
+        houseNumber: houseExt ? `${houseNumber}${houseExt}` : houseNumber,
+        address: `${document.getElementById('subAddress').value} ${houseNumber}${houseExt}`,
         city: document.getElementById('subCity').value,
         email: document.getElementById('subEmail').value,
         phone: document.getElementById('subPhone').value,
         magazine: document.getElementById('subMagazine').value,
         duration: document.getElementById('subDuration').value,
-        startDate: document.getElementById('subStartDate').value
+        startDate: document.getElementById('subStartDate').value,
+        paymentMethod: document.querySelector('input[name="subPayment"]:checked').value,
+        iban: document.getElementById('subIBAN')?.value || '',
+        optinEmail: document.querySelector('input[name="subOptinEmail"]:checked').value,
+        optinPhone: document.querySelector('input[name="subOptinPhone"]:checked').value,
+        optinPost: document.querySelector('input[name="subOptinPost"]:checked').value
     };
 
     // Check if this is for an existing customer
@@ -473,14 +528,36 @@ function editCustomer() {
     if (!currentCustomer) return;
 
     document.getElementById('editCustomerId').value = currentCustomer.id;
-    document.getElementById('editFirstName').value = currentCustomer.firstName;
+    
+    // Set salutation
+    const salutation = currentCustomer.salutation || 'Dhr.';
+    document.querySelector(`input[name="editSalutation"][value="${salutation}"]`).checked = true;
+    
+    // Handle name fields
+    document.getElementById('editInitials').value = currentCustomer.firstName;
+    document.getElementById('editMiddleName').value = currentCustomer.middleName || '';
     document.getElementById('editLastName').value = currentCustomer.lastName;
+    
+    // Handle address fields
     document.getElementById('editPostalCode').value = currentCustomer.postalCode;
-    document.getElementById('editHouseNumber').value = currentCustomer.houseNumber;
-    document.getElementById('editAddress').value = currentCustomer.address.replace(/ \d+$/, '');
+    const houseNumberMatch = currentCustomer.houseNumber?.match(/^(\d+)(.*)$/);
+    document.getElementById('editHouseNumber').value = houseNumberMatch ? houseNumberMatch[1] : currentCustomer.houseNumber;
+    document.getElementById('editHouseExt').value = houseNumberMatch && houseNumberMatch[2] ? houseNumberMatch[2] : '';
+    document.getElementById('editAddress').value = currentCustomer.address.replace(/ \d+.*$/, '');
     document.getElementById('editCity').value = currentCustomer.city;
+    
+    // Contact info
     document.getElementById('editEmail').value = currentCustomer.email;
     document.getElementById('editPhone').value = currentCustomer.phone;
+    
+    // Set optin preferences (default to 'yes' if not set)
+    const optinEmail = currentCustomer.optinEmail || 'yes';
+    const optinPhone = currentCustomer.optinPhone || 'yes';
+    const optinPost = currentCustomer.optinPost || 'yes';
+    
+    document.querySelector(`input[name="editOptinEmail"][value="${optinEmail}"]`).checked = true;
+    document.querySelector(`input[name="editOptinPhone"][value="${optinPhone}"]`).checked = true;
+    document.querySelector(`input[name="editOptinPost"][value="${optinPost}"]`).checked = true;
 
     document.getElementById('editCustomerForm').style.display = 'flex';
 }
@@ -494,14 +571,25 @@ function saveCustomerEdit(event) {
     
     if (!customer) return;
 
-    customer.firstName = document.getElementById('editFirstName').value;
+    // Get form values
+    customer.salutation = document.querySelector('input[name="editSalutation"]:checked').value;
+    customer.firstName = document.getElementById('editInitials').value;
+    customer.middleName = document.getElementById('editMiddleName').value;
     customer.lastName = document.getElementById('editLastName').value;
     customer.postalCode = document.getElementById('editPostalCode').value.toUpperCase();
-    customer.houseNumber = document.getElementById('editHouseNumber').value;
+    
+    const houseNumber = document.getElementById('editHouseNumber').value;
+    const houseExt = document.getElementById('editHouseExt').value;
+    customer.houseNumber = houseExt ? `${houseNumber}${houseExt}` : houseNumber;
     customer.address = `${document.getElementById('editAddress').value} ${customer.houseNumber}`;
     customer.city = document.getElementById('editCity').value;
     customer.email = document.getElementById('editEmail').value;
     customer.phone = document.getElementById('editPhone').value;
+    
+    // Save optin preferences
+    customer.optinEmail = document.querySelector('input[name="editOptinEmail"]:checked').value;
+    customer.optinPhone = document.querySelector('input[name="editOptinPhone"]:checked').value;
+    customer.optinPost = document.querySelector('input[name="editOptinPost"]:checked').value;
 
     // Add to contact history
     customer.contactHistory.unshift({
@@ -898,5 +986,21 @@ document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         document.getElementById('searchName').focus();
+    }
+});
+
+// Handle payment method selection - show/hide IBAN field
+document.addEventListener('change', (e) => {
+    if (e.target.name === 'subPayment' || e.target.name === 'editPayment') {
+        const additionalInput = e.target.closest('.payment-option').querySelector('.additional-input');
+        if (additionalInput) {
+            // Payment selected, IBAN field is shown via CSS
+            const ibanInput = additionalInput.querySelector('input[type="text"]');
+            if (ibanInput && e.target.value === 'automatisch') {
+                ibanInput.setAttribute('required', 'required');
+            } else if (ibanInput) {
+                ibanInput.removeAttribute('required');
+            }
+        }
     }
 });

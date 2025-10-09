@@ -59,10 +59,10 @@
                     <button class="btn btn-action" onclick="showNewSubscription()">
                         <span>➕ Nieuw Abonnement</span>
                     </button>
-                    <button class="btn btn-action" onclick="showResendMagazine()">
+                    <button id="resendMagazineBtn" class="btn btn-action" onclick="showResendMagazine()" style="display: none;">
                         <span>📮 Editie Verzenden</span>
                     </button>
-                    <button class="btn btn-action" onclick="showWinbackFlow()">
+                    <button id="winbackFlowBtn" class="btn btn-action" onclick="showWinbackFlow()" style="display: none;">
                         <span>🎯 Winback Flow</span>
                     </button>
                 </section>
@@ -106,48 +106,43 @@
 
                 <!-- New Subscription Form -->
                 <div id="newSubscriptionForm" class="form-container" style="display: none;">
-                    <div class="card">
+                    <div class="card onepager-container">
                         <div class="form-header">
                             <h2>➕ Nieuw Abonnement Aanmaken</h2>
                             <button class="btn-close" onclick="closeForm('newSubscriptionForm')">✕</button>
                         </div>
-                        <form id="subscriptionForm" onsubmit="createSubscription(event)">
-                            <div class="form-group">
-                                <label for="subFirstName">Voornaam *</label>
-                                <input type="text" id="subFirstName" required>
+                        <form id="subscriptionForm" class="form-section" onsubmit="createSubscription(event)">
+                            <h3 class="form-subtitle">Aanhef *</h3>
+                            <div class="aanhef-row">
+                                <label><input type="radio" name="subSalutation" value="Dhr." required checked> Dhr.</label>
+                                <label><input type="radio" name="subSalutation" value="Mevr."> Mevr.</label>
+                                <label><input type="radio" name="subSalutation" value="Anders"> Anders</label>
                             </div>
-                            <div class="form-group">
-                                <label for="subLastName">Achternaam *</label>
-                                <input type="text" id="subLastName" required>
-                            </div>
+                            
                             <div class="form-row">
-                                <div class="form-group">
-                                    <label for="subPostalCode">Postcode *</label>
-                                    <input type="text" id="subPostalCode" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="subHouseNumber">Huisnummer *</label>
-                                    <input type="text" id="subHouseNumber" required>
-                                </div>
+                                <input type="text" id="subInitials" placeholder="Voorletters*" required>
+                                <input type="text" id="subMiddleName" placeholder="Tussenvoegsel">
+                                <input type="text" id="subLastName" placeholder="Achternaam*" required>
                             </div>
-                            <div class="form-group">
-                                <label for="subAddress">Straat *</label>
-                                <input type="text" id="subAddress" required>
+                            
+                            <div class="form-row">
+                                <input type="text" id="subPostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
+                                <input type="text" id="subHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required>
+                                <input type="text" id="subHouseExt" placeholder="Toevoeging" maxlength="10">
                             </div>
-                            <div class="form-group">
-                                <label for="subCity">Plaats *</label>
-                                <input type="text" id="subCity" required>
+                            
+                            <div class="form-row">
+                                <input type="text" id="subAddress" placeholder="Straat*" required>
+                                <input type="text" id="subCity" placeholder="Plaats*" required>
                             </div>
-                            <div class="form-group">
-                                <label for="subEmail">E-mail *</label>
-                                <input type="email" id="subEmail" required>
+                            
+                            <div class="form-row">
+                                <input type="tel" id="subPhone" placeholder="Telefoonnummer">
+                                <input type="email" id="subEmail" placeholder="E-mailadres*" required>
                             </div>
-                            <div class="form-group">
-                                <label for="subPhone">Telefoon *</label>
-                                <input type="tel" id="subPhone" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="subMagazine">Magazine *</label>
+                            
+                            <h3 class="form-subtitle">Abonnementsgegevens</h3>
+                            <div class="form-row">
                                 <select id="subMagazine" required>
                                     <option value="">Selecteer magazine...</option>
                                     <option value="Avrobode">Avrobode</option>
@@ -155,10 +150,10 @@
                                     <option value="Ncrvgids">Ncrvgids</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label for="subDuration">Duur & Betaling *</label>
+                            
+                            <div class="form-row">
                                 <select id="subDuration" required>
-                                    <option value="">Selecteer optie...</option>
+                                    <option value="">Selecteer duur & betaling...</option>
                                     <optgroup label="Jaarlijks Betaald">
                                         <option value="1-jaar">1 jaar - €52,00 per jaar</option>
                                         <option value="2-jaar">2 jaar - €98,00 totaal (5% korting)</option>
@@ -170,12 +165,58 @@
                                         <option value="3-jaar-maandelijks">3 jaar - €4,20 per maand (€151,20 totaal)</option>
                                     </optgroup>
                                 </select>
-                                <small class="form-hint">Maandelijkse betaling heeft een kleine toeslag</small>
                             </div>
-                            <div class="form-group">
-                                <label for="subStartDate">Startdatum *</label>
+                            
+                            <div class="form-row">
                                 <input type="date" id="subStartDate" required>
                             </div>
+                            
+                            <h3 class="form-subtitle">Betaalmethode *</h3>
+                            <div class="form-row">
+                                <div class="payment-methods">
+                                    <div class="payment-option">
+                                        <input type="radio" id="subPaymentAuto" name="subPayment" value="automatisch" checked>
+                                        <label for="subPaymentAuto">
+                                            <span class="payment-icon">
+                                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none">
+                                                    <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="2"/>
+                                                    <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                                                </svg>
+                                            </span>
+                                            <span class="payment-text">Automatisch incasso</span>
+                                        </label>
+                                        <div class="additional-input">
+                                            <input type="text" id="subIBAN" placeholder="IBAN rekeningnummer" 
+                                                pattern="^(NL[0-9]{2}[A-Z]{4}[0-9]{10}|BE[0-9]{2}[0-9]{12})$" 
+                                                title="Vul hier een geldig IBAN nummer in. Alleen Nederlandse (NL) en Belgische (BE) rekeningen worden ondersteund.">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3 class="form-subtitle">Marketing voorkeuren</h3>
+                            <div class="optin-row">
+                                <label class="optin-label">E-mail contact:</label>
+                                <div class="optin-options">
+                                    <label><input type="radio" name="subOptinEmail" value="yes" checked> Ja</label>
+                                    <label><input type="radio" name="subOptinEmail" value="no"> Nee</label>
+                                </div>
+                            </div>
+                            <div class="optin-row">
+                                <label class="optin-label">Telefonisch contact:</label>
+                                <div class="optin-options">
+                                    <label><input type="radio" name="subOptinPhone" value="yes" checked> Ja</label>
+                                    <label><input type="radio" name="subOptinPhone" value="no"> Nee</label>
+                                </div>
+                            </div>
+                            <div class="optin-row">
+                                <label class="optin-label">Direct marketing:</label>
+                                <div class="optin-options">
+                                    <label><input type="radio" name="subOptinPost" value="yes" checked> Ja</label>
+                                    <label><input type="radio" name="subOptinPost" value="no"> Nee</label>
+                                </div>
+                            </div>
+                            
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" onclick="closeForm('newSubscriptionForm')">Annuleren</button>
                                 <button type="submit" class="btn btn-primary">Abonnement Aanmaken</button>
@@ -186,47 +227,66 @@
 
                 <!-- Edit Customer Form -->
                 <div id="editCustomerForm" class="form-container" style="display: none;">
-                    <div class="card">
+                    <div class="card onepager-container">
                         <div class="form-header">
                             <h2>✏️ Klantgegevens Bewerken</h2>
                             <button class="btn-close" onclick="closeForm('editCustomerForm')">✕</button>
                         </div>
-                        <form id="customerEditForm" onsubmit="saveCustomerEdit(event)">
+                        <form id="customerEditForm" class="form-section" onsubmit="saveCustomerEdit(event)">
                             <input type="hidden" id="editCustomerId">
-                            <div class="form-group">
-                                <label for="editFirstName">Voornaam</label>
-                                <input type="text" id="editFirstName" required>
+                            
+                            <h3 class="form-subtitle">Aanhef *</h3>
+                            <div class="aanhef-row">
+                                <label><input type="radio" name="editSalutation" value="Dhr." required> Dhr.</label>
+                                <label><input type="radio" name="editSalutation" value="Mevr."> Mevr.</label>
+                                <label><input type="radio" name="editSalutation" value="Anders"> Anders</label>
                             </div>
-                            <div class="form-group">
-                                <label for="editLastName">Achternaam</label>
-                                <input type="text" id="editLastName" required>
-                            </div>
+                            
                             <div class="form-row">
-                                <div class="form-group">
-                                    <label for="editPostalCode">Postcode</label>
-                                    <input type="text" id="editPostalCode" required>
+                                <input type="text" id="editInitials" placeholder="Voorletters*" required>
+                                <input type="text" id="editMiddleName" placeholder="Tussenvoegsel">
+                                <input type="text" id="editLastName" placeholder="Achternaam*" required>
+                            </div>
+                            
+                            <div class="form-row">
+                                <input type="text" id="editPostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
+                                <input type="text" id="editHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in" required>
+                                <input type="text" id="editHouseExt" placeholder="Toevoeging" maxlength="10">
+                            </div>
+                            
+                            <div class="form-row">
+                                <input type="text" id="editAddress" placeholder="Straat*" required>
+                                <input type="text" id="editCity" placeholder="Plaats*" required>
+                            </div>
+                            
+                            <div class="form-row">
+                                <input type="tel" id="editPhone" placeholder="Telefoonnummer">
+                                <input type="email" id="editEmail" placeholder="E-mailadres*" required>
+                            </div>
+                            
+                            <h3 class="form-subtitle">Marketing voorkeuren</h3>
+                            <div class="optin-row">
+                                <label class="optin-label">E-mail contact:</label>
+                                <div class="optin-options">
+                                    <label><input type="radio" name="editOptinEmail" value="yes"> Ja</label>
+                                    <label><input type="radio" name="editOptinEmail" value="no"> Nee</label>
                                 </div>
-                                <div class="form-group">
-                                    <label for="editHouseNumber">Huisnummer</label>
-                                    <input type="text" id="editHouseNumber" required>
+                            </div>
+                            <div class="optin-row">
+                                <label class="optin-label">Telefonisch contact:</label>
+                                <div class="optin-options">
+                                    <label><input type="radio" name="editOptinPhone" value="yes"> Ja</label>
+                                    <label><input type="radio" name="editOptinPhone" value="no"> Nee</label>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="editAddress">Straat</label>
-                                <input type="text" id="editAddress" required>
+                            <div class="optin-row">
+                                <label class="optin-label">Direct marketing:</label>
+                                <div class="optin-options">
+                                    <label><input type="radio" name="editOptinPost" value="yes"> Ja</label>
+                                    <label><input type="radio" name="editOptinPost" value="no"> Nee</label>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="editCity">Plaats</label>
-                                <input type="text" id="editCity" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="editEmail">E-mail</label>
-                                <input type="email" id="editEmail" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="editPhone">Telefoon</label>
-                                <input type="tel" id="editPhone" required>
-                            </div>
+                            
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" onclick="closeForm('editCustomerForm')">Annuleren</button>
                                 <button type="submit" class="btn btn-primary">Opslaan</button>
