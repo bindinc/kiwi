@@ -484,8 +484,8 @@ function displaySubscriptions() {
                     </div>
                     <div class="subscription-actions">
                         <span class="subscription-status ${statusClass}">${statusText}</span>
-                        <button class="btn btn-small btn-winback" onclick="startWinbackForSubscription(${sub.id})" title="Winback aanbieden">
-                            🎯 Winback
+                        <button class="btn btn-small btn-winback" onclick="startWinbackForSubscription(${sub.id})" title="Winback/Opzegging">
+                            🎯 Winback/Opzegging
                         </button>
                     </div>
                 </div>
