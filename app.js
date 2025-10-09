@@ -56,6 +56,15 @@ function initializeData() {
                         magazine: 'Avrobode',
                         duration: '1-jaar',
                         startDate: '2023-01-15',
+                        endDate: '2024-01-15',
+                        status: 'ended',
+                        lastEdition: '2024-01-01'
+                    },
+                    {
+                        id: 5,
+                        magazine: 'Mikrogids',
+                        duration: '2-jaar',
+                        startDate: '2024-03-01',
                         status: 'active',
                         lastEdition: '2024-10-01'
                     }
@@ -63,18 +72,24 @@ function initializeData() {
                 contactHistory: [
                     {
                         id: 1,
-                        type: 'Telefoongesprek',
-                        date: '2024-10-05 14:30',
-                        description: 'Klant belt over niet ontvangen editie. Magazine opnieuw verzonden.'
+                        type: 'Nieuw abonnement',
+                        date: '2024-03-01 10:30',
+                        description: 'Abonnement Mikrogids aangemaakt. Start per direct.'
                     },
                     {
                         id: 2,
-                        type: 'Adreswijziging',
-                        date: '2024-09-12 10:15',
-                        description: 'Adres gewijzigd van Kerkstraat 10 naar Damstraat 42.'
+                        type: 'Abonnement beëindigd',
+                        date: '2024-01-15 14:20',
+                        description: 'Abonnement Avrobode beëindigd na reguliere looptijd van 1 jaar.'
                     },
                     {
                         id: 3,
+                        type: 'Adreswijziging',
+                        date: '2023-09-12 10:15',
+                        description: 'Adres gewijzigd van Kerkstraat 10 naar Damstraat 42.'
+                    },
+                    {
+                        id: 4,
                         type: 'Nieuw abonnement',
                         date: '2023-01-15 09:45',
                         description: 'Abonnement Avrobode aangemaakt. Start per direct.'
@@ -102,8 +117,9 @@ function initializeData() {
                         magazine: 'Mikrogids',
                         duration: '2-jaar',
                         startDate: '2022-06-01',
-                        status: 'active',
-                        lastEdition: '2024-09-28'
+                        endDate: '2024-06-01',
+                        status: 'ended',
+                        lastEdition: '2024-05-28'
                     },
                     {
                         id: 3,
@@ -123,9 +139,21 @@ function initializeData() {
                     },
                     {
                         id: 2,
+                        type: 'Abonnement beëindigd',
+                        date: '2024-06-01 09:15',
+                        description: 'Abonnement Mikrogids beëindigd na reguliere looptijd van 2 jaar.'
+                    },
+                    {
+                        id: 3,
                         type: 'Extra abonnement',
                         date: '2023-03-10 15:30',
                         description: 'Tweede abonnement (Ncrvgids) toegevoegd.'
+                    },
+                    {
+                        id: 4,
+                        type: 'Nieuw abonnement',
+                        date: '2022-06-01 14:45',
+                        description: 'Abonnement Mikrogids aangemaakt voor 2 jaar.'
                     }
                 ]
             },
@@ -244,12 +272,18 @@ function displaySearchResults(results) {
             ? `${customer.firstName} ${customer.middleName} ${customer.lastName}`
             : `${customer.firstName} ${customer.lastName}`;
         
+        const activeCount = customer.subscriptions.filter(s => s.status === 'active').length;
+        const totalCount = customer.subscriptions.length;
+        const subscriptionText = activeCount === totalCount 
+            ? `${totalCount} abonnement(en)`
+            : `${activeCount} actief, ${totalCount - activeCount} beëindigd`;
+        
         return `
             <div class="result-item" onclick="selectCustomer(${customer.id})">
                 <div class="result-name">${fullName}</div>
                 <div class="result-details">
                     ${customer.address}, ${customer.postalCode} ${customer.city}<br>
-                    ${customer.subscriptions.length} actief abonnement(en)
+                    ${subscriptionText}
                 </div>
             </div>
         `;
@@ -299,31 +333,75 @@ function displaySubscriptions() {
     const subscriptionsList = document.getElementById('subscriptionsList');
     
     if (currentCustomer.subscriptions.length === 0) {
-        subscriptionsList.innerHTML = '<p class="empty-state-small">Geen actieve abonnementen</p>';
+        subscriptionsList.innerHTML = '<p class="empty-state-small">Geen abonnementen</p>';
         return;
     }
 
-    subscriptionsList.innerHTML = currentCustomer.subscriptions.map(sub => {
-        const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
-        
-        return `
-            <div class="subscription-item">
-                <div class="subscription-info">
-                    <div class="subscription-name">📰 ${sub.magazine}</div>
-                    <div class="subscription-details">
-                        Start: ${formatDate(sub.startDate)} • 
-                        Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                        ${pricingInfo}
+    // Separate active and ended subscriptions
+    const activeSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'active');
+    const endedSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'ended' || sub.status === 'cancelled');
+
+    let html = '';
+
+    // Display active subscriptions
+    if (activeSubscriptions.length > 0) {
+        html += '<div class="subscription-group"><h4 class="subscription-group-title">Actieve Abonnementen</h4>';
+        html += activeSubscriptions.map(sub => {
+            const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
+            
+            return `
+                <div class="subscription-item">
+                    <div class="subscription-info">
+                        <div class="subscription-name">📰 ${sub.magazine}</div>
+                        <div class="subscription-details">
+                            Start: ${formatDate(sub.startDate)} • 
+                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
+                            ${pricingInfo}
+                        </div>
+                    </div>
+                    <div class="subscription-actions">
+                        <span class="subscription-status status-active">Actief</span>
+                        <button class="icon-btn" onclick="editSubscription(${sub.id})" title="Bewerken">✏️</button>
+                        <button class="icon-btn" onclick="cancelSubscription(${sub.id})" title="Opzeggen">🚫</button>
                     </div>
                 </div>
-                <div class="subscription-actions">
-                    <span class="subscription-status status-active">Actief</span>
-                    <button class="icon-btn" onclick="editSubscription(${sub.id})" title="Bewerken">✏️</button>
-                    <button class="icon-btn" onclick="cancelSubscription(${sub.id})" title="Opzeggen">🚫</button>
+            `;
+        }).join('');
+        html += '</div>';
+    }
+
+    // Display ended subscriptions
+    if (endedSubscriptions.length > 0) {
+        html += '<div class="subscription-group"><h4 class="subscription-group-title">Beëindigde Abonnementen</h4>';
+        html += endedSubscriptions.map(sub => {
+            const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
+            const statusClass = sub.status === 'cancelled' ? 'status-cancelled' : 'status-ended';
+            const statusText = sub.status === 'cancelled' ? 'Opgezegd' : 'Beëindigd';
+            
+            return `
+                <div class="subscription-item subscription-ended">
+                    <div class="subscription-info">
+                        <div class="subscription-name">📰 ${sub.magazine}</div>
+                        <div class="subscription-details">
+                            Start: ${formatDate(sub.startDate)} • 
+                            ${sub.endDate ? `Einde: ${formatDate(sub.endDate)} • ` : ''}
+                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
+                            ${pricingInfo}
+                        </div>
+                    </div>
+                    <div class="subscription-actions">
+                        <span class="subscription-status ${statusClass}">${statusText}</span>
+                        <button class="btn btn-small btn-winback" onclick="startWinbackForSubscription(${sub.id})" title="Winback aanbieden">
+                            🎯 Winback
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+        html += '</div>';
+    }
+
+    subscriptionsList.innerHTML = html;
 }
 
 // Display Contact History
@@ -748,6 +826,19 @@ function cancelSubscription(subId) {
     
     // Store subscription ID for winback flow
     window.cancellingSubscriptionId = subId;
+    showWinbackFlow();
+}
+
+// Start Winback Flow for an Ended Subscription
+function startWinbackForSubscription(subId) {
+    if (!currentCustomer) return;
+    
+    const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
+    if (!subscription) return;
+    
+    // Store subscription ID for winback flow
+    window.cancellingSubscriptionId = subId;
+    window.isWinbackForEndedSub = true;
     showWinbackFlow();
 }
 

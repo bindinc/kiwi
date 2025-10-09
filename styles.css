@@ -395,7 +395,24 @@ select option {
 .subscriptions-list {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
+}
+
+.subscription-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.subscription-group-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
 }
 
 .subscription-item {
@@ -406,6 +423,11 @@ select option {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     background-color: var(--bg-primary);
+}
+
+.subscription-item.subscription-ended {
+    opacity: 0.75;
+    background-color: rgba(249, 250, 251, 0.5);
 }
 
 .subscription-info {
@@ -434,9 +456,20 @@ select option {
     color: var(--success-color);
 }
 
+.status-ended {
+    background-color: rgba(156, 163, 175, 0.1);
+    color: #6b7280;
+}
+
+.status-cancelled {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
 .subscription-actions {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
 }
 
 .icon-btn {
@@ -452,6 +485,21 @@ select option {
 .icon-btn:hover {
     background-color: var(--bg-primary);
     border-color: var(--primary-color);
+}
+
+.btn-winback {
+    background-color: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.btn-winback:hover {
+    background-color: rgba(139, 92, 246, 0.2);
+    border-color: #7c3aed;
+    color: #6d28d9;
 }
 
 /* Form Container */
