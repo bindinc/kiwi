@@ -362,18 +362,44 @@ function displaySearchResults(results) {
             ? `${customer.firstName} ${customer.middleName} ${customer.lastName}`
             : `${customer.firstName} ${customer.lastName}`;
         
-        const activeCount = customer.subscriptions.filter(s => s.status === 'active').length;
-        const totalCount = customer.subscriptions.length;
-        const subscriptionText = activeCount === totalCount 
-            ? `${totalCount} abonnement(en)`
-            : `${activeCount} actief, ${totalCount - activeCount} beëindigd`;
+        const activeSubscriptions = customer.subscriptions.filter(s => s.status === 'active');
+        const inactiveSubscriptions = customer.subscriptions.filter(s => s.status !== 'active');
+        
+        // Build subscription titles display
+        let subscriptionDetails = '';
+        if (activeSubscriptions.length > 0) {
+            const activeTitles = activeSubscriptions.map(s => s.magazine).join(', ');
+            subscriptionDetails = `<strong>Actief:</strong> ${activeTitles}`;
+        }
+        if (inactiveSubscriptions.length > 0) {
+            // Find the most recent ended subscription based on endDate
+            const mostRecentEnded = inactiveSubscriptions.reduce((latest, current) => {
+                const latestDate = latest.endDate ? new Date(latest.endDate) : new Date(0);
+                const currentDate = current.endDate ? new Date(current.endDate) : new Date(0);
+                return currentDate > latestDate ? current : latest;
+            });
+            
+            const endedCount = inactiveSubscriptions.length;
+            const endedLabel = endedCount > 1 
+                ? `<strong>Beëindigd:</strong> ${mostRecentEnded.magazine} (+${endedCount - 1} meer)`
+                : `<strong>Beëindigd:</strong> ${mostRecentEnded.magazine}`;
+            
+            if (subscriptionDetails) {
+                subscriptionDetails += `<br>${endedLabel}`;
+            } else {
+                subscriptionDetails = endedLabel;
+            }
+        }
+        if (!subscriptionDetails) {
+            subscriptionDetails = 'Geen abonnementen';
+        }
         
         return `
             <div class="result-item" onclick="selectCustomer(${customer.id})">
                 <div class="result-name">${fullName}</div>
                 <div class="result-details">
                     ${customer.address}, ${customer.postalCode} ${customer.city}<br>
-                    ${subscriptionText}
+                    ${subscriptionDetails}
                 </div>
             </div>
         `;
