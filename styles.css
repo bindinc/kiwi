@@ -1421,6 +1421,40 @@ select option {
     padding: 1.5rem;
 }
 
+.modal-body label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-body textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    resize: vertical;
+    margin-bottom: 1rem;
+}
+
+.modal-body textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
 .debug-section {
     margin-bottom: 1.5rem;
 }
@@ -1462,6 +1496,93 @@ select option {
     display: block;
     margin-top: 0.25rem;
     font-weight: normal;
+}
+
+/* Delivery Remarks Shortcuts */
+.delivery-remarks-shortcuts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.remark-shortcut {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.remark-shortcut:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.remark-shortcut:active {
+    transform: translateY(0);
+}
+
+#articleNotes {
+    min-height: 120px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+/* Customer Status Warning */
+.customer-status-warning {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.status-deceased {
+    background-color: #fee;
+    color: #c00;
+    border: 2px solid #c00;
+}
+
+/* Customer Delivery Info */
+.customer-delivery-info {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.customer-delivery-info h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+}
+
+.delivery-remarks-display {
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+}
+
+.remark-text {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 @keyframes fadeIn {

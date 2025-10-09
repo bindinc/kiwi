@@ -93,6 +93,17 @@ function initializeData() {
                 optinEmail: 'yes',
                 optinPhone: 'yes',
                 optinPost: 'no',
+                deliveryRemarks: {
+                    default: 'Bezorgen bij de buren indien niet thuis',
+                    lastUpdated: '2024-09-10T10:30:00.000Z',
+                    history: [
+                        {
+                            date: '2024-09-10T10:30:00.000Z',
+                            remark: 'Bezorgen bij de buren indien niet thuis',
+                            updatedBy: 'Agent Jan Vos'
+                        }
+                    ]
+                },
                 subscriptions: [
                     {
                         id: 1,
@@ -119,7 +130,7 @@ function initializeData() {
                         quantity: 1,
                         price: 29.95,
                         orderDate: '2024-09-15',
-                        expectedDeliveryDate: '2024-09-25',
+                        desiredDeliveryDate: '2024-09-25',
                         deliveryStatus: 'delivered',
                         trackingNumber: '3SABCD1234567890NL',
                         paymentStatus: 'paid',
@@ -135,7 +146,7 @@ function initializeData() {
                         quantity: 2,
                         price: 7.90,
                         orderDate: '2024-10-01',
-                        expectedDeliveryDate: '2024-10-12',
+                        desiredDeliveryDate: '2024-10-12',
                         deliveryStatus: 'in_transit',
                         trackingNumber: '3SABCD9876543210NL',
                         paymentStatus: 'paid',
@@ -468,6 +479,9 @@ function selectCustomer(customerId) {
         `${currentCustomer.address}, ${currentCustomer.postalCode} ${currentCustomer.city}`;
     document.getElementById('customerEmail').textContent = currentCustomer.email;
     document.getElementById('customerPhone').textContent = currentCustomer.phone;
+
+    // Display delivery remarks
+    displayDeliveryRemarks();
 
     // Display subscriptions
     displaySubscriptions();
@@ -1636,7 +1650,7 @@ function displayArticles() {
                         <strong>Besteld:</strong> ${formatDate(article.orderDate)} • 
                         <strong>Aantal:</strong> ${article.quantity} • 
                         <strong>Prijs:</strong> €${article.price.toFixed(2)}<br>
-                        <strong>Verwachte levering:</strong> ${formatDate(article.expectedDeliveryDate)}
+                        <strong>Gewenste levering:</strong> ${formatDate(article.desiredDeliveryDate)}
                         ${article.actualDeliveryDate ? ` • <strong>Geleverd:</strong> ${formatDate(article.actualDeliveryDate)}` : ''}
                         ${article.trackingNumber ? `<br><strong>Track & Trace:</strong> ${article.trackingNumber}` : ''}
                         ${article.notes ? `<br><strong>Opmerking:</strong> ${article.notes}` : ''}
@@ -1657,11 +1671,11 @@ function displayArticles() {
 
 // Show Article Sale Form
 function showArticleSale() {
-    // Set tomorrow's date as default expected delivery date
+    // Set tomorrow's date as default desired delivery date
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
-    document.getElementById('articleExpectedDelivery').value = tomorrowStr;
+    document.getElementById('articleDesiredDelivery').value = tomorrowStr;
     
     // Prefill customer data if a customer is currently selected
     if (currentCustomer) {
@@ -1689,13 +1703,36 @@ function showArticleSale() {
         document.getElementById('articleCity').value = currentCustomer.city;
         document.getElementById('articleEmail').value = currentCustomer.email;
         document.getElementById('articlePhone').value = currentCustomer.phone;
+        
+        // Prefill delivery remarks from customer profile if available
+        if (currentCustomer.deliveryRemarks && currentCustomer.deliveryRemarks.default) {
+            document.getElementById('articleNotes').value = currentCustomer.deliveryRemarks.default;
+        }
     } else {
         // Clear form if no customer selected
         document.getElementById('articleForm').reset();
-        document.getElementById('articleExpectedDelivery').value = tomorrowStr;
+        document.getElementById('articleDesiredDelivery').value = tomorrowStr;
     }
     
     document.getElementById('articleSaleForm').style.display = 'flex';
+}
+
+// Add Delivery Remark
+function addDeliveryRemark(remark) {
+    const notesField = document.getElementById('articleNotes');
+    const currentValue = notesField.value.trim();
+    
+    if (currentValue) {
+        // Append to existing notes
+        notesField.value = currentValue + '\n' + remark;
+    } else {
+        // Set as first note
+        notesField.value = remark;
+    }
+    
+    // Visual feedback
+    notesField.focus();
+    notesField.scrollTop = notesField.scrollHeight;
 }
 
 // Update Article Price
@@ -1748,7 +1785,7 @@ function createArticleSale(event) {
         articleName: document.getElementById('articleName').value,
         quantity: quantity,
         price: totalPrice,
-        expectedDeliveryDate: document.getElementById('articleExpectedDelivery').value,
+        desiredDeliveryDate: document.getElementById('articleDesiredDelivery').value,
         paymentMethod: document.querySelector('input[name="articlePayment"]:checked').value,
         notes: document.getElementById('articleNotes').value
     };
@@ -1756,8 +1793,8 @@ function createArticleSale(event) {
     // Generate tracking number
     const trackingNumber = '3SABCD' + Math.random().toString().substr(2, 10) + 'NL';
     
-    // Calculate return deadline (14 days after expected delivery)
-    const returnDeadline = new Date(formData.expectedDeliveryDate);
+    // Calculate return deadline (14 days after desired delivery)
+    const returnDeadline = new Date(formData.desiredDeliveryDate);
     returnDeadline.setDate(returnDeadline.getDate() + 14);
     const returnDeadlineStr = returnDeadline.toISOString().split('T')[0];
 
@@ -1767,7 +1804,7 @@ function createArticleSale(event) {
         quantity: formData.quantity,
         price: formData.price,
         orderDate: new Date().toISOString().split('T')[0],
-        expectedDeliveryDate: formData.expectedDeliveryDate,
+        desiredDeliveryDate: formData.desiredDeliveryDate,
         deliveryStatus: 'ordered',
         trackingNumber: trackingNumber,
         paymentStatus: 'paid', // Assume immediate payment via iDEAL/card
@@ -1790,7 +1827,7 @@ function createArticleSale(event) {
             id: currentCustomer.contactHistory.length + 1,
             type: 'Artikel bestelling',
             date: new Date().toISOString(),
-            description: `Artikel bestelling: ${formData.articleName} (${formData.quantity}x) - €${formData.price.toFixed(2)}. Verwachte levering: ${formatDate(formData.expectedDeliveryDate)}.`
+            description: `Artikel bestelling: ${formData.articleName} (${formData.quantity}x) - €${formData.price.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
         });
         
         saveCustomers();
@@ -1822,7 +1859,7 @@ function createArticleSale(event) {
                     id: 1,
                     type: 'Artikel bestelling',
                     date: new Date().toISOString(),
-                    description: `Artikel bestelling: ${formData.articleName} (${formData.quantity}x) - €${formData.price.toFixed(2)}. Verwachte levering: ${formatDate(formData.expectedDeliveryDate)}.`
+                    description: `Artikel bestelling: ${formData.articleName} (${formData.quantity}x) - €${formData.price.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
                 }
             ]
         };
@@ -1838,6 +1875,114 @@ function createArticleSale(event) {
     
     // Reset form
     document.getElementById('articleForm').reset();
+}
+
+// Display Delivery Remarks
+function displayDeliveryRemarks() {
+    const deliveryInfoSection = document.getElementById('customerDeliveryInfo');
+    const remarksDisplay = document.getElementById('customerDeliveryRemarks');
+    
+    if (currentCustomer && currentCustomer.deliveryRemarks && currentCustomer.deliveryRemarks.default) {
+        deliveryInfoSection.style.display = 'block';
+        remarksDisplay.textContent = currentCustomer.deliveryRemarks.default;
+    } else {
+        deliveryInfoSection.style.display = 'block';
+        remarksDisplay.textContent = 'Geen bezorgvoorkeuren ingesteld';
+    }
+}
+
+// Edit Delivery Remarks
+function editDeliveryRemarks() {
+    if (!currentCustomer) return;
+    
+    const modal = document.getElementById('editDeliveryRemarksModal');
+    const customerName = document.getElementById('editRemarksCustomerName');
+    const remarksTextarea = document.getElementById('editCustomerDeliveryRemarks');
+    
+    // Set customer name
+    const fullName = currentCustomer.middleName 
+        ? `${currentCustomer.firstName} ${currentCustomer.middleName} ${currentCustomer.lastName}`
+        : `${currentCustomer.firstName} ${currentCustomer.lastName}`;
+    customerName.textContent = fullName;
+    
+    // Set current remarks
+    remarksTextarea.value = currentCustomer.deliveryRemarks?.default || '';
+    
+    // Show modal
+    modal.style.display = 'flex';
+}
+
+// Add Delivery Remark to Modal
+function addDeliveryRemarkToModal(remark) {
+    const notesField = document.getElementById('editCustomerDeliveryRemarks');
+    const currentValue = notesField.value.trim();
+    
+    if (currentValue) {
+        // Append to existing notes
+        notesField.value = currentValue + '\n' + remark;
+    } else {
+        // Set as first note
+        notesField.value = remark;
+    }
+    
+    // Visual feedback
+    notesField.focus();
+    notesField.scrollTop = notesField.scrollHeight;
+}
+
+// Save Delivery Remarks
+function saveDeliveryRemarks() {
+    if (!currentCustomer) return;
+    
+    const newRemarks = document.getElementById('editCustomerDeliveryRemarks').value.trim();
+    
+    // Initialize deliveryRemarks object if it doesn't exist
+    if (!currentCustomer.deliveryRemarks) {
+        currentCustomer.deliveryRemarks = {
+            default: '',
+            lastUpdated: null,
+            history: []
+        };
+    }
+    
+    // Save to history
+    if (currentCustomer.deliveryRemarks.default !== newRemarks) {
+        currentCustomer.deliveryRemarks.history.unshift({
+            date: new Date().toISOString(),
+            remark: newRemarks,
+            updatedBy: document.getElementById('agentName').textContent
+        });
+        
+        // Add to contact history
+        currentCustomer.contactHistory.unshift({
+            id: currentCustomer.contactHistory.length + 1,
+            type: 'Bezorgvoorkeuren gewijzigd',
+            date: new Date().toISOString(),
+            description: `Bezorgvoorkeuren bijgewerkt: "${newRemarks || '(leeg)'}"`
+        });
+    }
+    
+    // Update current remarks
+    currentCustomer.deliveryRemarks.default = newRemarks;
+    currentCustomer.deliveryRemarks.lastUpdated = new Date().toISOString();
+    
+    // Save to storage
+    saveCustomers();
+    
+    // Update display
+    displayDeliveryRemarks();
+    displayContactHistory();
+    
+    // Close modal
+    closeEditRemarksModal();
+    
+    showToast('Bezorgvoorkeuren opgeslagen!', 'success');
+}
+
+// Close Edit Remarks Modal
+function closeEditRemarksModal() {
+    const modal = document.getElementById('editDeliveryRemarksModal');
+    modal.style.display = 'none';
 }
 
 // Close Form

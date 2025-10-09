@@ -100,6 +100,19 @@
                             </div>
                         </div>
 
+                        <!-- Delivery Preferences -->
+                        <div class="customer-delivery-info" id="customerDeliveryInfo" style="display: none;">
+                            <h3>📦 Bezorgvoorkeuren</h3>
+                            <div class="delivery-remarks-display">
+                                <div class="remark-text" id="customerDeliveryRemarks">
+                                    Geen bezorgvoorkeuren ingesteld
+                                </div>
+                                <button class="btn btn-small" onclick="editDeliveryRemarks()">
+                                    ✏️ Bewerken
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Subscription Overview -->
                         <div class="subscriptions-section">
                             <h3>📰 Abonnementen</h3>
@@ -297,13 +310,42 @@
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="articleExpectedDelivery">Verwachte leverdatum *</label>
-                                    <input type="date" id="articleExpectedDelivery" required>
+                                    <label for="articleDesiredDelivery">Gewenste leverdatum *</label>
+                                    <input type="date" id="articleDesiredDelivery" required>
                                 </div>
                             </div>
                             
                             <div class="form-row">
-                                <textarea id="articleNotes" placeholder="Bezorginstructies of opmerkingen (optioneel)" rows="3"></textarea>
+                                <div class="form-group">
+                                    <label for="articleNotes">Bezorginstructies</label>
+                                    <div class="delivery-remarks-shortcuts">
+                                        <button type="button" class="remark-shortcut" 
+                                                onclick="addDeliveryRemark('Bezorgen bij de buren indien niet thuis')">
+                                            👥 Bij buren
+                                        </button>
+                                        <button type="button" class="remark-shortcut" 
+                                                onclick="addDeliveryRemark('Achterdeur of zijdeur gebruiken')">
+                                            🚪 Achterdeur
+                                        </button>
+                                        <button type="button" class="remark-shortcut" 
+                                                onclick="addDeliveryRemark('Niet vóór 12:00 uur bezorgen')">
+                                            🕐 Na 12:00
+                                        </button>
+                                        <button type="button" class="remark-shortcut" 
+                                                onclick="addDeliveryRemark('Bellen voor levering')">
+                                            📞 Bel eerst
+                                        </button>
+                                        <button type="button" class="remark-shortcut" 
+                                                onclick="addDeliveryRemark('Pakketbrievenbus aanwezig')">
+                                            📮 Brievenbus
+                                        </button>
+                                        <button type="button" class="remark-shortcut" 
+                                                onclick="addDeliveryRemark('Voorzichtig behandelen - breekbaar')">
+                                            ⚠️ Breekbaar
+                                        </button>
+                                    </div>
+                                    <textarea id="articleNotes" placeholder="Bezorginstructies of opmerkingen (optioneel)" rows="5"></textarea>
+                                </div>
                             </div>
                             
                             <h3 class="form-subtitle">Betaalmethode *</h3>
@@ -820,6 +862,59 @@
 
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
+
+    <!-- Edit Delivery Remarks Modal -->
+    <div id="editDeliveryRemarksModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📦 Bezorgvoorkeuren bewerken</h2>
+                <button class="modal-close" onclick="closeEditRemarksModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Klant: <strong id="editRemarksCustomerName"></strong></p>
+                
+                <!-- Quick selection buttons -->
+                <div class="delivery-remarks-shortcuts">
+                    <button type="button" class="remark-shortcut" 
+                            onclick="addDeliveryRemarkToModal('Bezorgen bij de buren indien niet thuis')">
+                        👥 Bij buren
+                    </button>
+                    <button type="button" class="remark-shortcut" 
+                            onclick="addDeliveryRemarkToModal('Achterdeur of zijdeur gebruiken')">
+                        🚪 Achterdeur
+                    </button>
+                    <button type="button" class="remark-shortcut" 
+                            onclick="addDeliveryRemarkToModal('Niet vóór 12:00 uur bezorgen')">
+                        🕐 Na 12:00
+                    </button>
+                    <button type="button" class="remark-shortcut" 
+                            onclick="addDeliveryRemarkToModal('Bellen voor levering')">
+                        📞 Bel eerst
+                    </button>
+                    <button type="button" class="remark-shortcut" 
+                            onclick="addDeliveryRemarkToModal('Pakketbrievenbus aanwezig')">
+                        📮 Brievenbus
+                    </button>
+                    <button type="button" class="remark-shortcut" 
+                            onclick="addDeliveryRemarkToModal('Voorzichtig behandelen - breekbaar')">
+                        ⚠️ Breekbaar
+                    </button>
+                </div>
+                
+                <label for="editCustomerDeliveryRemarks">Standaard bezorginstructies</label>
+                <textarea id="editCustomerDeliveryRemarks" 
+                          rows="4" 
+                          placeholder="Voer bezorginstructies in..."></textarea>
+                
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeEditRemarksModal()">Annuleren</button>
+                    <button class="btn btn-primary" onclick="saveDeliveryRemarks()">
+                        Opslaan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Debug Mode Modal -->
     <div id="debugModal" class="modal">
