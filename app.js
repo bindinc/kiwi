@@ -3,6 +3,48 @@ let customers = [];
 let currentCustomer = null;
 let selectedOffer = null;
 
+// End Session - Close current customer and return to clean slate
+function endSession() {
+    // Clear current customer
+    currentCustomer = null;
+    selectedOffer = null;
+    
+    // Hide customer detail
+    document.getElementById('customerDetail').style.display = 'none';
+    
+    // Show welcome message
+    document.getElementById('welcomeMessage').style.display = 'block';
+    
+    // Hide end session button
+    document.getElementById('endSessionBtn').style.display = 'none';
+    
+    // Clear search form
+    document.getElementById('searchName').value = '';
+    document.getElementById('searchPostalCode').value = '';
+    document.getElementById('searchHouseNumber').value = '';
+    
+    // Hide search results
+    const searchResults = document.getElementById('searchResults');
+    searchResults.style.display = 'none';
+    document.getElementById('resultsContainer').innerHTML = '';
+    
+    // Close any open forms
+    closeForm('newSubscriptionForm');
+    closeForm('editCustomerForm');
+    closeForm('editSubscriptionForm');
+    closeForm('resendMagazineForm');
+    closeForm('winbackFlowForm');
+    
+    // Update action buttons
+    updateCustomerActionButtons();
+    
+    // Scroll to top for clean start
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Optional: Show a brief confirmation
+    console.log('Session ended - Ready for next customer');
+}
+
 // Subscription Pricing Information
 const subscriptionPricing = {
     '1-jaar': { price: 52.00, perMonth: 4.33, description: '1 jaar - Jaarlijks betaald' },
@@ -323,6 +365,9 @@ function selectCustomer(customerId) {
 
     // Update action buttons visibility
     updateCustomerActionButtons();
+
+    // Show end session button in header
+    document.getElementById('endSessionBtn').style.display = 'block';
 
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });

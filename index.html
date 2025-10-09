@@ -12,9 +12,14 @@
         <header class="header">
             <div class="header-content">
                 <h1>📞 Klantenservice Portal</h1>
-                <div class="user-info">
-                    <span class="agent-name">Agent: <strong id="agentName">Jan Vos</strong></span>
-                    <span class="time" id="currentTime"></span>
+                <div class="header-right">
+                    <div class="user-info">
+                        <span class="agent-name">Agent: <strong id="agentName">Jan Vos</strong></span>
+                        <span class="time" id="currentTime"></span>
+                    </div>
+                    <button id="endSessionBtn" class="btn-end-session-header" onclick="endSession()" title="Beëindig deze sessie en start opnieuw" style="display: none;">
+                        ✕ Sessie Afsluiten
+                    </button>
                 </div>
             </div>
         </header>
