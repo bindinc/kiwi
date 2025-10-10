@@ -447,7 +447,7 @@
                                                id="couponCode" 
                                                placeholder="Voer kortingscode in..." 
                                                maxlength="20"
-                                               onkeyup="if(event.key==='Enter') applyCoupon()">
+                                               onkeydown="if(event.key==='Enter') { event.preventDefault(); applyCoupon(); }">
                                         <button type="button" 
                                                 class="btn btn-secondary btn-apply-coupon" 
                                                 onclick="applyCoupon()">
