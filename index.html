@@ -148,6 +148,13 @@
                                 </p>
                             </div>
                             <div class="customer-actions">
+                                <!-- PHASE 4: Identify Caller Button (only visible during anonymous call) -->
+                                <button id="identifyCallerBtn" 
+                                        class="btn btn-small btn-primary" 
+                                        onclick="identifyCurrentCustomerAsCaller()"
+                                        style="display: none;">
+                                    👤 Dit is de persoon die belt
+                                </button>
                                 <button class="btn btn-small" onclick="editCustomer()">✏️ Bewerken</button>
                                 <button id="resendMagazineBtn" class="btn btn-small btn-action-inline" onclick="showResendMagazine()">📮 Editie Verzenden</button>
                                 <button id="winbackFlowBtn" class="btn btn-small btn-action-inline" onclick="showWinbackFlow()">🎯 Winback/Opzegging</button>

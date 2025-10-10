@@ -453,6 +453,25 @@ function updateIdentifyCallerButtons() {
     }
 }
 
+// Identify Current Customer as Caller (from customer detail view)
+function identifyCurrentCustomerAsCaller() {
+    if (currentCustomer) {
+        identifyCallerAsCustomer(currentCustomer.id);
+    }
+}
+
+// PHASE 4: Show Success Identification Prompt after creating new customer
+function showSuccessIdentificationPrompt(customerId, customerName) {
+    if (callSession.active && callSession.callerType === 'anonymous') {
+        // Use a timeout to show the prompt after the success toast
+        setTimeout(() => {
+            if (confirm(`✅ ${customerName} is succesvol aangemaakt.\n\nIs dit de persoon die belt?`)) {
+                identifyCallerAsCustomer(customerId);
+            }
+        }, 800);
+    }
+}
+
 // ============================================================================
 // PHASE 1B: AGENT STATUS MANAGEMENT
 // ============================================================================
@@ -903,12 +922,26 @@ function displaySearchResults(results) {
             subscriptionDetails = 'Geen abonnementen';
         }
         
+        // Show identify button only during anonymous call
+        const showIdentifyBtn = callSession.active && callSession.callerType === 'anonymous';
+        
         return `
-            <div class="result-item" onclick="selectCustomer(${customer.id})">
-                <div class="result-name">${fullName}</div>
-                <div class="result-details">
-                    ${customer.address}, ${customer.postalCode} ${customer.city}<br>
-                    ${subscriptionDetails}
+            <div class="result-item">
+                <div class="result-content" onclick="selectCustomer(${customer.id})">
+                    <div class="result-name">${fullName}</div>
+                    <div class="result-details">
+                        ${customer.address}, ${customer.postalCode} ${customer.city}<br>
+                        ${subscriptionDetails}
+                    </div>
+                </div>
+                <div class="result-actions">
+                    <button class="btn btn-small" onclick="selectCustomer(${customer.id})">Bekijken</button>
+                    ${showIdentifyBtn ? `
+                        <button class="btn btn-small btn-primary btn-identify-caller" 
+                                onclick="event.stopPropagation(); identifyCallerAsCustomer(${customer.id})">
+                            👤 Dit is de beller
+                        </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -954,9 +987,14 @@ function selectCustomer(customerId) {
 
     // Update action buttons visibility
     updateCustomerActionButtons();
+    
+    // Update identify caller button visibility
+    updateIdentifyCallerButtons();
 
-    // Show end session button in header
-    document.getElementById('endSessionBtn').style.display = 'block';
+    // Show end session button in header only if caller is identified
+    if (callSession.active && callSession.callerType === 'identified') {
+        document.getElementById('endSessionBtn').style.display = 'block';
+    }
 
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1340,6 +1378,9 @@ function createSubscription(event) {
         
         // Select the new customer
         selectCustomer(newCustomer.id);
+        
+        // PHASE 4: Show identification prompt if anonymous call active
+        showSuccessIdentificationPrompt(newCustomer.id, `${formData.firstName} ${formData.lastName}`);
     }
     
     // Reset form
@@ -2616,6 +2657,9 @@ function createArticleSale(event) {
         
         // Select the new customer
         selectCustomer(newCustomer.id);
+        
+        // PHASE 4: Show identification prompt if anonymous call active
+        showSuccessIdentificationPrompt(newCustomer.id, `${formData.firstName} ${fullLastName}`);
     }
     
     // Reset form
