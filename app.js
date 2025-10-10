@@ -69,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTime();
     setInterval(updateTime, 1000);
     updateCustomerActionButtons();
+    // Initialize Phase 3 components
+    initDeliveryDatePicker();
+    initArticleSearch();
 });
 
 // Initialize Demo Data
@@ -1671,12 +1674,6 @@ function displayArticles() {
 
 // Show Article Sale Form
 function showArticleSale() {
-    // Set tomorrow's date as default desired delivery date
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
-    document.getElementById('articleDesiredDelivery').value = tomorrowStr;
-    
     // Prefill customer data if a customer is currently selected
     if (currentCustomer) {
         const salutation = currentCustomer.salutation || 'Dhr.';
@@ -1711,8 +1708,15 @@ function showArticleSale() {
     } else {
         // Clear form if no customer selected
         document.getElementById('articleForm').reset();
-        document.getElementById('articleDesiredDelivery').value = tomorrowStr;
     }
+    
+    // Initialize delivery date picker with recommended date
+    initDeliveryDatePicker();
+    
+    // Clear article search
+    document.getElementById('articleSearch').value = '';
+    document.getElementById('articleName').value = '';
+    document.getElementById('articlePrice').value = '€0,00';
     
     document.getElementById('articleSaleForm').style.display = 'flex';
 }
@@ -1735,24 +1739,7 @@ function addDeliveryRemark(remark) {
     notesField.scrollTop = notesField.scrollHeight;
 }
 
-// Update Article Price
-function updateArticlePrice() {
-    const articleSelect = document.getElementById('articleName');
-    const quantityInput = document.getElementById('articleQuantity');
-    const priceInput = document.getElementById('articlePrice');
-    
-    if (!articleSelect.value) {
-        priceInput.value = '€0,00';
-        return;
-    }
-    
-    const selectedOption = articleSelect.options[articleSelect.selectedIndex];
-    const unitPrice = parseFloat(selectedOption.getAttribute('data-price')) || 0;
-    const quantity = parseInt(quantityInput.value) || 1;
-    const totalPrice = unitPrice * quantity;
-    
-    priceInput.value = `€${totalPrice.toFixed(2).replace('.', ',')}`;
-}
+// Update Article Price - handled by article-search.js
 
 // Create Article Sale
 function createArticleSale(event) {
@@ -1765,9 +1752,10 @@ function createArticleSale(event) {
     const houseNumber = document.getElementById('articleHouseNumber').value;
     const houseExt = document.getElementById('articleHouseExt').value;
     
-    const articleSelect = document.getElementById('articleName');
-    const selectedOption = articleSelect.options[articleSelect.selectedIndex];
-    const unitPrice = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+    // Get article data from new search system
+    const articleNameInput = document.getElementById('articleName');
+    const articlePriceInput = document.getElementById('articleNamePrice');
+    const unitPrice = parseFloat(articlePriceInput?.value || 0);
     const quantity = parseInt(document.getElementById('articleQuantity').value) || 1;
     const totalPrice = unitPrice * quantity;
     
