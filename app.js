@@ -797,9 +797,6 @@ function selectCustomer(customerId) {
     document.getElementById('customerEmail').textContent = currentCustomer.email;
     document.getElementById('customerPhone').textContent = currentCustomer.phone;
 
-    // Display delivery remarks
-    displayDeliveryRemarks();
-
     // Display subscriptions
     displaySubscriptions();
 
@@ -2236,20 +2233,6 @@ function createArticleSale(event) {
     document.getElementById('articleForm').reset();
 }
 
-// Display Delivery Remarks
-function displayDeliveryRemarks() {
-    const deliveryInfoSection = document.getElementById('customerDeliveryInfo');
-    const remarksDisplay = document.getElementById('customerDeliveryRemarks');
-    
-    if (currentCustomer && currentCustomer.deliveryRemarks && currentCustomer.deliveryRemarks.default) {
-        deliveryInfoSection.style.display = 'block';
-        remarksDisplay.textContent = currentCustomer.deliveryRemarks.default;
-    } else {
-        deliveryInfoSection.style.display = 'block';
-        remarksDisplay.textContent = 'Geen bezorgvoorkeuren ingesteld';
-    }
-}
-
 // Edit Delivery Remarks
 function editDeliveryRemarks() {
     if (!currentCustomer) return;
@@ -2329,7 +2312,6 @@ function saveDeliveryRemarks() {
     saveCustomers();
     
     // Update display
-    displayDeliveryRemarks();
     displayContactHistory();
     
     // Close modal

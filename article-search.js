@@ -170,6 +170,9 @@ function renderArticleDropdown(filteredArticles, query) {
     
     let html = '';
     
+    // Add "browse all" link at top
+    html += '<div class="article-browse-all"><button type="button" onclick="showAllArticles()" class="browse-all-link">📚 Blader door alle artikelen</button></div>';
+    
     // Group by magazine
     const groupedByMagazine = {};
     filteredArticles.forEach(article => {
@@ -197,10 +200,7 @@ function renderArticleDropdown(filteredArticles, query) {
             `;
         });
     });
-    
-    // Add "browse all" link at bottom
-    html += '<div class="article-browse-all"><button type="button" onclick="showAllArticles()" class="browse-all-link">📚 Blader door alle artikelen</button></div>';
-    
+
     dropdown.innerHTML = html;
 }
 

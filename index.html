@@ -50,7 +50,7 @@
                         </div>
                         <div class="session-wait">
                             <span class="wait-icon">⏳</span>
-                            <span>Wacht: </span>
+                            <span>Gewacht: </span>
                             <span id="sessionWaitTime">0:00</span>
                         </div>
                         <div class="session-caller">
@@ -151,19 +151,6 @@
                                 <button class="btn btn-small" onclick="editCustomer()">✏️ Bewerken</button>
                                 <button id="resendMagazineBtn" class="btn btn-small btn-action-inline" onclick="showResendMagazine()">📮 Editie Verzenden</button>
                                 <button id="winbackFlowBtn" class="btn btn-small btn-action-inline" onclick="showWinbackFlow()">🎯 Winback/Opzegging</button>
-                            </div>
-                        </div>
-
-                        <!-- Delivery Preferences -->
-                        <div class="customer-delivery-info" id="customerDeliveryInfo" style="display: none;">
-                            <h3>📦 Bezorgvoorkeuren</h3>
-                            <div class="delivery-remarks-display">
-                                <div class="remark-text" id="customerDeliveryRemarks">
-                                    Geen bezorgvoorkeuren ingesteld
-                                </div>
-                                <button class="btn btn-small" onclick="editDeliveryRemarks()">
-                                    ✏️ Bewerken
-                                </button>
                             </div>
                         </div>
 
@@ -408,6 +395,10 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('articleSaleForm')">Annuleren</button>
+                                <button type="submit" class="btn btn-primary">Bestelling Plaatsen</button>
+                            </div>                            
                                 </div>
                                 <div class="article-sale-right">
             <h3 class="form-subtitle">Artikelgegevens</h3>
@@ -483,10 +474,6 @@
                                 </div>
                             </div>
                             
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('articleSaleForm')">Annuleren</button>
-                                <button type="submit" class="btn btn-primary">Bestelling Plaatsen</button>
-                            </div>
                         </form>
                     </div>
                 </div>
