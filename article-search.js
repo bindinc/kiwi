@@ -427,8 +427,194 @@ function updateArticlePrice() {
     }
     
     const unitPrice = parseFloat(priceHidden?.value || 0);
-    const quantity = parseInt(quantityInput.value) || 1;
-    const totalPrice = unitPrice * quantity;
     
-    priceInput.value = `€${totalPrice.toFixed(2).replace('.', ',')}`;
+    priceInput.value = `€${unitPrice.toFixed(2).replace('.', ',')}`;
+}
+
+// Global order items array
+let orderItems = [];
+
+// Add article to order
+function addArticleToOrder() {
+    const hiddenInput = document.getElementById('articleName');
+    const articleId = hiddenInput.getAttribute('data-article-id');
+    const quantityInput = document.getElementById('articleQuantity');
+    const priceHidden = document.getElementById('articleNamePrice');
+    
+    if (!hiddenInput.value || !articleId) {
+        showToast('Selecteer eerst een artikel', 'error');
+        return;
+    }
+    
+    const quantity = parseInt(quantityInput.value) || 1;
+    if (quantity < 1) {
+        showToast('Aantal moet minimaal 1 zijn', 'error');
+        return;
+    }
+    
+    const article = articles.find(a => a.id === parseInt(articleId));
+    if (!article) {
+        showToast('Artikel niet gevonden', 'error');
+        return;
+    }
+    
+    // Check if article already in order
+    const existingItem = orderItems.find(item => item.articleId === article.id);
+    if (existingItem) {
+        existingItem.quantity += quantity;
+    } else {
+        orderItems.push({
+            articleId: article.id,
+            code: article.code,
+            name: article.name,
+            unitPrice: article.price,
+            quantity: quantity,
+            magazine: article.magazine
+        });
+    }
+    
+    // Clear selection
+    document.getElementById('articleSearch').value = '';
+    document.getElementById('articleName').value = '';
+    document.getElementById('articleQuantity').value = '1';
+    document.getElementById('articlePrice').value = '€0,00';
+    
+    // Update display
+    renderOrderItems();
+    showToast(`${article.name} toegevoegd aan bestelling`, 'success');
+}
+
+// Remove article from order
+function removeArticleFromOrder(articleId) {
+    orderItems = orderItems.filter(item => item.articleId !== articleId);
+    renderOrderItems();
+    showToast('Artikel verwijderd uit bestelling', 'success');
+}
+
+// Calculate discounts based on order
+function calculateDiscounts() {
+    let discounts = [];
+    let totalDiscount = 0;
+    
+    // Calculate subtotal
+    const subtotal = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    
+    // 1. Volume Discount: 10% off when ordering 5+ of the same item
+    orderItems.forEach(item => {
+        if (item.quantity >= 5) {
+            const itemTotal = item.unitPrice * item.quantity;
+            const discount = itemTotal * 0.10;
+            discounts.push({
+                type: 'Stapelkorting',
+                description: `10% korting op ${item.name} (${item.quantity}x)`,
+                amount: discount
+            });
+            totalDiscount += discount;
+        }
+    });
+    
+    // 2. Bundle Discount: 15% off when ordering items from all 3 magazines
+    const magazines = [...new Set(orderItems.map(item => item.magazine))];
+    if (magazines.length === 3 && orderItems.length >= 3) {
+        const bundleDiscount = subtotal * 0.15;
+        // Remove volume discounts and apply bundle discount instead if it's better
+        if (bundleDiscount > totalDiscount) {
+            discounts = [{
+                type: 'Bundelkorting',
+                description: '15% korting bij artikelen van alle 3 magazines',
+                amount: bundleDiscount
+            }];
+            totalDiscount = bundleDiscount;
+        }
+    }
+    
+    // 3. Order Total Discount: 5% off orders over €100
+    if (subtotal >= 100 && totalDiscount === 0) {
+        const orderDiscount = subtotal * 0.05;
+        discounts.push({
+            type: 'Actiekorting',
+            description: '5% korting bij bestellingen vanaf €100',
+            amount: orderDiscount
+        });
+        totalDiscount += orderDiscount;
+    }
+    
+    return {
+        discounts: discounts,
+        totalDiscount: totalDiscount
+    };
+}
+
+// Render order items
+function renderOrderItems() {
+    const section = document.getElementById('orderItemsSection');
+    const list = document.getElementById('orderItemsList');
+    
+    if (orderItems.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    
+    section.style.display = 'block';
+    
+    // Calculate totals and discounts
+    const subtotal = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    const { discounts, totalDiscount } = calculateDiscounts();
+    const total = subtotal - totalDiscount;
+    
+    // Render items
+    let html = '';
+    orderItems.forEach(item => {
+        const itemTotal = item.unitPrice * item.quantity;
+        
+        // Check if this item has volume discount
+        const hasVolumeDiscount = item.quantity >= 5 && discounts.some(d => d.type === 'Stapelkorting' && d.description.includes(item.name));
+        
+        html += `
+            <div class="order-item">
+                <div class="order-item-details">
+                    <div class="order-item-name">${item.name}</div>
+                    <div class="order-item-meta">${item.code} • ${item.magazine} • €${item.unitPrice.toFixed(2).replace('.', ',')} per stuk</div>
+                    ${hasVolumeDiscount ? '<div class="order-item-discount">✨ Stapelkorting actief (10%)<span class="order-item-discount-badge">KORTING</span></div>' : ''}
+                </div>
+                <div class="order-item-quantity">${item.quantity}x</div>
+                <div class="order-item-price">€${itemTotal.toFixed(2).replace('.', ',')}</div>
+                <button class="order-item-remove" onclick="removeArticleFromOrder(${item.articleId})" type="button">🗑️</button>
+            </div>
+        `;
+    });
+    
+    list.innerHTML = html;
+    
+    // Update summary
+    document.getElementById('orderSubtotal').textContent = `€${subtotal.toFixed(2).replace('.', ',')}`;
+    document.getElementById('orderTotal').innerHTML = `<strong>€${total.toFixed(2).replace('.', ',')}</strong>`;
+    
+    // Show/hide discount row
+    const discountRow = document.getElementById('discountRow');
+    if (totalDiscount > 0) {
+        discountRow.style.display = 'flex';
+        
+        // Build discount label
+        let discountLabel = discounts.map(d => d.type).join(' + ');
+        document.getElementById('discountLabel').textContent = discountLabel + ':';
+        document.getElementById('orderDiscount').textContent = `-€${totalDiscount.toFixed(2).replace('.', ',')}`;
+    } else {
+        discountRow.style.display = 'none';
+    }
+}
+
+// Get order data for submission
+function getOrderData() {
+    const subtotal = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    const { discounts, totalDiscount } = calculateDiscounts();
+    const total = subtotal - totalDiscount;
+    
+    return {
+        items: orderItems,
+        subtotal: subtotal,
+        discounts: discounts,
+        totalDiscount: totalDiscount,
+        total: total
+    };
 }

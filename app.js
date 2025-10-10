@@ -1615,49 +1615,73 @@ function displayArticles() {
     );
 
     let html = '<div class="articles-group">';
-    html += sortedArticles.map(article => {
+    html += sortedArticles.map(order => {
         const deliveryStatusClass = {
             'ordered': 'status-ordered',
             'in_transit': 'status-transit',
             'delivered': 'status-delivered',
             'returned': 'status-returned'
-        }[article.deliveryStatus] || 'status-ordered';
+        }[order.deliveryStatus] || 'status-ordered';
         
         const deliveryStatusText = {
             'ordered': 'Besteld',
             'in_transit': 'Onderweg',
             'delivered': 'Afgeleverd',
             'returned': 'Geretourneerd'
-        }[article.deliveryStatus] || 'Besteld';
+        }[order.deliveryStatus] || 'Besteld';
         
         const paymentStatusClass = {
             'pending': 'status-pending',
             'paid': 'status-paid',
             'refunded': 'status-refunded'
-        }[article.paymentStatus] || 'status-pending';
+        }[order.paymentStatus] || 'status-pending';
         
         const paymentStatusText = {
             'pending': 'In behandeling',
             'paid': 'Betaald',
             'refunded': 'Terugbetaald'
-        }[article.paymentStatus] || 'In behandeling';
+        }[order.paymentStatus] || 'In behandeling';
         
         // Calculate if return is still possible
-        const returnPossible = article.returnDeadline && new Date(article.returnDeadline) > new Date();
+        const returnPossible = order.returnDeadline && new Date(order.returnDeadline) > new Date();
+        
+        // Check if this is a multi-item order (new format) or single item (old format)
+        const isMultiItemOrder = order.items && Array.isArray(order.items);
+        
+        let itemsDisplay = '';
+        let priceDisplay = '';
+        
+        if (isMultiItemOrder) {
+            // New format: multiple items with discounts
+            itemsDisplay = order.items.map(item => 
+                `${item.name} (${item.quantity}x à €${item.unitPrice.toFixed(2)})`
+            ).join('<br>');
+            
+            priceDisplay = `
+                <strong>Subtotaal:</strong> €${order.subtotal.toFixed(2)}<br>
+                ${order.totalDiscount > 0 ? `<strong>Korting:</strong> <span style="color: #059669;">-€${order.totalDiscount.toFixed(2)}</span> 
+                (${order.discounts.map(d => d.type).join(', ')})<br>` : ''}
+                <strong>Totaal:</strong> €${order.total.toFixed(2)}
+            `;
+        } else {
+            // Old format: single item (backward compatibility)
+            itemsDisplay = `${order.articleName || 'Artikel'} (${order.quantity}x)`;
+            priceDisplay = `<strong>Prijs:</strong> €${order.price.toFixed(2)}`;
+        }
         
         return `
             <div class="article-item">
                 <div class="article-info">
-                    <div class="article-name">🛒 ${article.articleName}</div>
+                    <div class="article-name">🛒 Bestelling #${order.id}</div>
                     <div class="article-details">
-                        <strong>Besteld:</strong> ${formatDate(article.orderDate)} • 
-                        <strong>Aantal:</strong> ${article.quantity} • 
-                        <strong>Prijs:</strong> €${article.price.toFixed(2)}<br>
-                        <strong>Gewenste levering:</strong> ${formatDate(article.desiredDeliveryDate)}
-                        ${article.actualDeliveryDate ? ` • <strong>Geleverd:</strong> ${formatDate(article.actualDeliveryDate)}` : ''}
-                        ${article.trackingNumber ? `<br><strong>Track & Trace:</strong> ${article.trackingNumber}` : ''}
-                        ${article.notes ? `<br><strong>Opmerking:</strong> ${article.notes}` : ''}
-                        ${returnPossible ? `<br><strong>Retour mogelijk tot:</strong> ${formatDate(article.returnDeadline)}` : ''}
+                        <strong>Artikelen:</strong><br>${itemsDisplay}<br>
+                        ${priceDisplay}<br>
+                        <strong>Besteld:</strong> ${formatDate(order.orderDate)} • 
+                        <strong>Gewenste levering:</strong> ${formatDate(order.desiredDeliveryDate)}
+                        ${order.actualDeliveryDate ? `<br><strong>Geleverd:</strong> ${formatDate(order.actualDeliveryDate)}` : ''}
+                        ${order.trackingNumber ? `<br><strong>Track & Trace:</strong> ${order.trackingNumber}` : ''}
+                        ${order.notes ? `<br><strong>Opmerking:</strong> ${order.notes}` : ''}
+                        ${returnPossible ? `<br><strong>Retour mogelijk tot:</strong> ${formatDate(order.returnDeadline)}` : ''}
                     </div>
                 </div>
                 <div class="article-actions">
@@ -1713,10 +1737,12 @@ function showArticleSale() {
     // Initialize delivery date picker with recommended date
     initDeliveryDatePicker();
     
-    // Clear article search
+    // Clear article search and order items
     document.getElementById('articleSearch').value = '';
     document.getElementById('articleName').value = '';
     document.getElementById('articlePrice').value = '€0,00';
+    orderItems = [];
+    renderOrderItems();
     
     document.getElementById('articleSaleForm').style.display = 'flex';
 }
@@ -1745,6 +1771,12 @@ function addDeliveryRemark(remark) {
 function createArticleSale(event) {
     event.preventDefault();
 
+    // Check if there are items in the order
+    if (!orderItems || orderItems.length === 0) {
+        showToast('Voeg minimaal één artikel toe aan de bestelling', 'error');
+        return;
+    }
+
     const salutation = document.querySelector('input[name="articleSalutation"]:checked').value;
     const initials = document.getElementById('articleInitials').value;
     const middleName = document.getElementById('articleMiddleName').value;
@@ -1752,12 +1784,8 @@ function createArticleSale(event) {
     const houseNumber = document.getElementById('articleHouseNumber').value;
     const houseExt = document.getElementById('articleHouseExt').value;
     
-    // Get article data from new search system
-    const articleNameInput = document.getElementById('articleName');
-    const articlePriceInput = document.getElementById('articleNamePrice');
-    const unitPrice = parseFloat(articlePriceInput?.value || 0);
-    const quantity = parseInt(document.getElementById('articleQuantity').value) || 1;
-    const totalPrice = unitPrice * quantity;
+    // Get order data
+    const orderData = getOrderData();
     
     const formData = {
         salutation: salutation,
@@ -1770,9 +1798,6 @@ function createArticleSale(event) {
         city: document.getElementById('articleCity').value,
         email: document.getElementById('articleEmail').value,
         phone: document.getElementById('articlePhone').value,
-        articleName: document.getElementById('articleName').value,
-        quantity: quantity,
-        price: totalPrice,
         desiredDeliveryDate: document.getElementById('articleDesiredDelivery').value,
         paymentMethod: document.querySelector('input[name="articlePayment"]:checked').value,
         notes: document.getElementById('articleNotes').value
@@ -1786,11 +1811,9 @@ function createArticleSale(event) {
     returnDeadline.setDate(returnDeadline.getDate() + 14);
     const returnDeadlineStr = returnDeadline.toISOString().split('T')[0];
 
-    const newArticle = {
+    // Create order object with all items
+    const newOrder = {
         id: Date.now(),
-        articleName: formData.articleName,
-        quantity: formData.quantity,
-        price: formData.price,
         orderDate: new Date().toISOString().split('T')[0],
         desiredDeliveryDate: formData.desiredDeliveryDate,
         deliveryStatus: 'ordered',
@@ -1800,32 +1823,51 @@ function createArticleSale(event) {
         paymentDate: new Date().toISOString().split('T')[0],
         actualDeliveryDate: null,
         returnDeadline: returnDeadlineStr,
-        notes: formData.notes
+        notes: formData.notes,
+        items: orderData.items,
+        subtotal: orderData.subtotal,
+        discounts: orderData.discounts,
+        totalDiscount: orderData.totalDiscount,
+        total: orderData.total
     };
 
+    // Build order description for contact history
+    const itemsDescription = orderData.items.map(item => 
+        `${item.name} (${item.quantity}x à €${item.unitPrice.toFixed(2)})`
+    ).join(', ');
+    
+    const discountDescription = orderData.discounts.length > 0 
+        ? ` Kortingen: ${orderData.discounts.map(d => `${d.type} -€${d.amount.toFixed(2)}`).join(', ')}.`
+        : '';
+    
     // Check if this is for an existing customer
     if (currentCustomer) {
-        // Add article to existing customer
+        // Add order to existing customer
         if (!currentCustomer.articles) {
             currentCustomer.articles = [];
         }
-        currentCustomer.articles.push(newArticle);
+        currentCustomer.articles.push(newOrder);
         
         currentCustomer.contactHistory.unshift({
             id: currentCustomer.contactHistory.length + 1,
             type: 'Artikel bestelling',
             date: new Date().toISOString(),
-            description: `Artikel bestelling: ${formData.articleName} (${formData.quantity}x) - €${formData.price.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
+            description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
         });
         
         saveCustomers();
+        
+        // Clear order items
+        orderItems = [];
+        renderOrderItems();
+        
         closeForm('articleSaleForm');
         showToast('Artikel bestelling succesvol aangemaakt!', 'success');
         
         // Refresh display
         selectCustomer(currentCustomer.id);
     } else {
-        // Create new customer with article
+        // Create new customer with order
         const fullLastName = middleName ? `${middleName} ${lastName}` : lastName;
         
         const newCustomer = {
@@ -1841,19 +1883,24 @@ function createArticleSale(event) {
             email: formData.email,
             phone: formData.phone,
             subscriptions: [],
-            articles: [newArticle],
+            articles: [newOrder],
             contactHistory: [
                 {
                     id: 1,
                     type: 'Artikel bestelling',
                     date: new Date().toISOString(),
-                    description: `Artikel bestelling: ${formData.articleName} (${formData.quantity}x) - €${formData.price.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
+                    description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
                 }
             ]
         };
 
         customers.push(newCustomer);
         saveCustomers();
+        
+        // Clear order items
+        orderItems = [];
+        renderOrderItems();
+        
         closeForm('articleSaleForm');
         showToast('Nieuwe klant en artikel bestelling succesvol aangemaakt!', 'success');
         

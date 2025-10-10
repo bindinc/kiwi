@@ -296,7 +296,7 @@
                            placeholder="Type artikel naam of code..." 
                            autocomplete="off"
                            oninput="filterArticles(this.value)">
-                    <input type="hidden" id="articleName" required>
+                    <input type="hidden" id="articleName">
                     <div class="article-dropdown" id="articleDropdown" style="display: none;">
                         <!-- Dropdown populated by JavaScript -->
                     </div>
@@ -307,8 +307,36 @@
                                     <input type="number" id="articleQuantity" min="1" value="1" required onchange="updateArticlePrice()">
                                 </div>
                                 <div class="form-group">
-                                    <label for="articlePrice">Totaalprijs</label>
+                                    <label for="articlePrice">Prijs per stuk</label>
                                     <input type="text" id="articlePrice" readonly placeholder="€0,00">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <button type="button" class="btn btn-success btn-block" onclick="addArticleToOrder()">
+                                    ➕ Artikel Toevoegen aan Bestelling
+                                </button>
+                            </div>
+                            
+                            <!-- Order Items List -->
+                            <div id="orderItemsSection" class="order-items-section" style="display: none;">
+                                <h3 class="form-subtitle">📋 Bestelling Overzicht</h3>
+                                <div id="orderItemsList" class="order-items-list">
+                                    <!-- Items will be added dynamically -->
+                                </div>
+                                <div class="order-summary">
+                                    <div class="order-summary-row">
+                                        <span>Subtotaal:</span>
+                                        <span id="orderSubtotal">€0,00</span>
+                                    </div>
+                                    <div class="order-summary-row discount-row" id="discountRow" style="display: none;">
+                                        <span id="discountLabel">Korting:</span>
+                                        <span id="orderDiscount" class="discount-amount">-€0,00</span>
+                                    </div>
+                                    <div class="order-summary-row total-row">
+                                        <span><strong>Totaal:</strong></span>
+                                        <span id="orderTotal"><strong>€0,00</strong></span>
+                                    </div>
                                 </div>
                             </div>
                             
