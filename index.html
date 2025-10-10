@@ -287,25 +287,21 @@
                                 <input type="email" id="articleEmail" placeholder="E-mailadres*" required>
                             </div>
                             
-                            <h3 class="form-subtitle">Artikelgegevens</h3>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="articleSearch">Artikel *</label>
-                                    <div class="article-selector">
-                                        <input type="text" 
-                                               id="articleSearch" 
-                                               placeholder="Type artikel naam of code..." 
-                                               autocomplete="off"
-                                               oninput="filterArticles(this.value)">
-                                        <input type="hidden" id="articleName" required>
-                                        <div class="article-dropdown" id="articleDropdown" style="display: none;">
-                                            <!-- Dropdown populated by JavaScript -->
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
+            <h3 class="form-subtitle">Artikelgegevens</h3>
+            <div class="form-group">
+                <label for="articleSearch">Artikel *</label>
+                <div class="article-selector">
+                    <input type="text" 
+                           id="articleSearch" 
+                           placeholder="Type artikel naam of code..." 
+                           autocomplete="off"
+                           oninput="filterArticles(this.value)">
+                    <input type="hidden" id="articleName" required>
+                    <div class="article-dropdown" id="articleDropdown" style="display: none;">
+                        <!-- Dropdown populated by JavaScript -->
+                    </div>
+                </div>
+            </div>                            <div class="form-row">
                                 <div class="form-group">
                                     <label for="articleQuantity">Aantal</label>
                                     <input type="number" id="articleQuantity" min="1" value="1" required onchange="updateArticlePrice()">
@@ -371,21 +367,14 @@
                                         <input type="radio" id="articlePaymentIdeal" name="articlePayment" value="iDEAL" checked>
                                         <label for="articlePaymentIdeal">
                                             <span class="payment-icon">💳</span>
-                                            <span class="payment-text">iDEAL</span>
-                                        </label>
-                                    </div>
-                                    <div class="payment-option">
-                                        <input type="radio" id="articlePaymentCard" name="articlePayment" value="Creditcard">
-                                        <label for="articlePaymentCard">
-                                            <span class="payment-icon">💳</span>
-                                            <span class="payment-text">Creditcard</span>
+                                            <span class="payment-text">iDEAL (Klant ontvangt buckaroo checkout link per e-mail)</span>
                                         </label>
                                     </div>
                                     <div class="payment-option">
                                         <input type="radio" id="articlePaymentTransfer" name="articlePayment" value="Bankoverschrijving">
                                         <label for="articlePaymentTransfer">
                                             <span class="payment-icon">🏦</span>
-                                            <span class="payment-text">Bankoverschrijving</span>
+                                            <span class="payment-text">Bankoverschrijving (klant ontvangt factuur per post)</span>
                                         </label>
                                     </div>
                                 </div>
