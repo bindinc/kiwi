@@ -3,8 +3,19 @@ let customers = [];
 let currentCustomer = null;
 let selectedOffer = null;
 
+// Call Simulation State
+let callActive = false;
+let callStartTime = null;
+let callTimerInterval = null;
+let currentCallerInfo = null;
+
 // End Session - Close current customer and return to clean slate
 function endSession() {
+    // End call if active
+    if (callActive) {
+        endCall();
+    }
+    
     // Clear current customer
     currentCustomer = null;
     selectedOffer = null;
@@ -2050,6 +2061,91 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
+// Call Simulation Functions
+function startCall(callerName, callerNumber) {
+    callActive = true;
+    callStartTime = Date.now();
+    currentCallerInfo = { name: callerName, number: callerNumber };
+    
+    // Start timer
+    if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+    }
+    callTimerInterval = setInterval(updateCallTimer, 1000);
+    
+    // Show call status in header
+    const callStatus = document.getElementById('callStatus');
+    callStatus.style.display = 'inline-block';
+    updateCallTimer();
+}
+
+function updateCallTimer() {
+    if (!callActive || !callStartTime) return;
+    
+    const elapsed = Date.now() - callStartTime;
+    const seconds = Math.floor(elapsed / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    const displaySeconds = seconds % 60;
+    const displayMinutes = minutes % 60;
+    
+    let timeString;
+    if (hours > 0) {
+        timeString = `${hours}:${String(displayMinutes).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`;
+    } else {
+        timeString = `${displayMinutes}:${String(displaySeconds).padStart(2, '0')}`;
+    }
+    
+    const callStatus = document.getElementById('callStatus');
+    callStatus.innerHTML = `
+        <span class="call-timer">⏱️ ${timeString}</span>
+        <span class="caller-info">📞 ${currentCallerInfo.name} • ${currentCallerInfo.number}</span>
+    `;
+}
+
+function endCall() {
+    if (!callActive) return;
+    
+    // Calculate call duration
+    const duration = Date.now() - callStartTime;
+    const seconds = Math.floor(duration / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    const displaySeconds = seconds % 60;
+    const displayMinutes = minutes % 60;
+    
+    let durationString;
+    if (hours > 0) {
+        durationString = `${hours}u ${displayMinutes}m ${displaySeconds}s`;
+    } else if (minutes > 0) {
+        durationString = `${displayMinutes}m ${displaySeconds}s`;
+    } else {
+        durationString = `${displaySeconds}s`;
+    }
+    
+    // Stop timer
+    callActive = false;
+    if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+    }
+    
+    // Show session report in header
+    const callStatus = document.getElementById('callStatus');
+    callStatus.innerHTML = `
+        <span class="call-report">✓ Gesprek beëindigd - Duur: ${durationString}</span>
+    `;
+    
+    // Hide report after 10 seconds
+    setTimeout(() => {
+        callStatus.style.display = 'none';
+        callStatus.innerHTML = '';
+        currentCallerInfo = null;
+    }, 10000);
+}
+
 // Debug Mode - Secret Key Sequence
 let debugKeySequence = [];
 const DEBUG_KEY = ']';
@@ -2173,6 +2269,9 @@ function mimicAnonymousCaller() {
     // Close debug modal
     closeDebugModal();
     
+    // Start call simulation for anonymous caller
+    startCall('Anoniem', 'Niet weergegeven');
+    
     // Show toast
     showToast('📞 Anonieme beller gesimuleerd - Voer zoekgegevens in', 'info');
     
@@ -2202,6 +2301,9 @@ function mimicKnownCaller(customerId) {
     const fullName = customer.middleName 
         ? `${customer.firstName} ${customer.middleName} ${customer.lastName}`
         : `${customer.firstName} ${customer.lastName}`;
+    
+    // Start call simulation with customer info
+    startCall(fullName, customer.phone || 'Onbekend nummer');
     
     // Show toast
     showToast(`📞 Bekende beller ${fullName} gesimuleerd`, 'success');

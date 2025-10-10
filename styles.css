@@ -83,6 +83,41 @@ body {
     opacity: 0.9;
 }
 
+/* Call Status Display */
+.call-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-sm);
+    backdrop-filter: blur(10px);
+}
+
+.call-timer {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fbbf24;
+    letter-spacing: 0.5px;
+}
+
+.caller-info {
+    font-size: 0.85rem;
+    opacity: 0.95;
+    white-space: nowrap;
+}
+
+.call-report {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #10b981;
+    padding: 0.25rem 0.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: var(--radius-sm);
+    color: #059669;
+}
+
 /* Main Content Layout */
 .main-content {
     display: grid;
