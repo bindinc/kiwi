@@ -83,7 +83,196 @@ body {
     opacity: 0.9;
 }
 
-/* Call Status Display */
+/* ============================================================================
+   PHASE 1B: AGENT STATUS WIDGET
+   ============================================================================ */
+
+.agent-status-widget {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(107, 114, 128, 0.2);
+    border-radius: var(--radius-sm);
+    cursor: default;
+    transition: background 0.2s;
+}
+
+.status-icon {
+    font-size: 1rem;
+}
+
+.status-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.status-dropdown-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: background 0.2s;
+}
+
+.status-dropdown-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.status-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    min-width: 180px;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+.status-menu-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.status-menu-item:hover {
+    background: var(--bg-primary);
+}
+
+/* ============================================================================
+   PHASE 2A: SESSION INFO DISPLAY
+   ============================================================================ */
+
+.session-info {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.session-service {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: bold;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+}
+
+.service-icon {
+    font-size: 1rem;
+}
+
+.service-number {
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.session-wait {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #ffd700;
+}
+
+.wait-icon {
+    font-size: 1rem;
+}
+
+.session-caller {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.session-duration {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.duration-icon {
+    font-size: 1rem;
+}
+
+.btn-end-session {
+    margin-left: auto;
+    padding: 0.4rem 1rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+    font-weight: 500;
+}
+
+.btn-end-session:hover {
+    background: #c82333;
+}
+
+/* ============================================================================
+   PHASE 2B: RECORDING INDICATOR
+   ============================================================================ */
+
+.recording-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.rec-icon {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.rec-text {
+    font-weight: bold;
+    color: #dc2626;
+}
+
+.rec-notice {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8rem;
+}
+
+/* ============================================================================
+   LEGACY CALL STATUS DISPLAY (To be deprecated)
+   ============================================================================ */
+
 .call-status {
     display: flex;
     flex-direction: column;
@@ -1624,6 +1813,41 @@ select option {
     color: var(--text-primary);
     border-bottom: 2px solid var(--border-color);
     padding-bottom: 0.5rem;
+}
+
+/* PHASE 3: Debug Call Simulation Controls */
+.debug-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.debug-row label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.debug-row select {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    background: white;
+    cursor: pointer;
+}
+
+.debug-row select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.debug-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .btn-block {

@@ -3,17 +3,72 @@ let customers = [];
 let currentCustomer = null;
 let selectedOffer = null;
 
-// Call Simulation State
-let callActive = false;
-let callStartTime = null;
-let callTimerInterval = null;
-let currentCallerInfo = null;
+// Phase 1A: Call Session State Management
+let callSession = {
+    active: false,              // Is er momenteel een actieve call?
+    callerType: 'anonymous',    // 'anonymous' of 'identified'
+    customerId: null,           // ID van geïdentificeerde klant
+    customerName: null,         // Naam van geïdentificeerde klant
+    serviceNumber: null,        // Welk service nummer werd gebeld
+    waitTime: 0,                // Wachttijd in seconden
+    startTime: null,            // Timestamp wanneer call startte
+    pendingIdentification: null, // Tijdelijke opslag voor klant die nog niet gekoppeld is
+    durationInterval: null,     // Timer interval voor gespreksduur
+    recordingActive: false,     // Is recording actief
+    totalHoldTime: 0            // Totale hold tijd
+};
+
+// Phase 1B: Agent Status State Management
+let agentStatus = {
+    current: 'offline',         // offline, ready, busy, acw, break
+    canReceiveCalls: false,
+    acwStartTime: null,
+    breakStartTime: null,
+    acwInterval: null
+};
+
+// Agent Status Definitions
+const agentStatuses = {
+    'offline': { label: 'Offline', color: '#6b7280', icon: '⚫' },
+    'ready': { label: 'Beschikbaar', color: '#10b981', icon: '🟢' },
+    'busy': { label: 'In Gesprek', color: '#ef4444', icon: '🔴' },
+    'acw': { label: 'Nabewerkingstijd', color: '#f59e0b', icon: '🟡' },
+    'break': { label: 'Pauze', color: '#3b82f6', icon: '🔵' }
+};
+
+// Phase 1A: Service Number Configuration
+const serviceNumbers = {
+    'AVROBODE': {
+        label: 'AVROBODE SERVICE',
+        phone: '088-0123456',
+        color: '#2563eb',
+        icon: '📘'
+    },
+    'MIKROGIDS': {
+        label: 'MIKROGIDS SERVICE',
+        phone: '088-0123457',
+        color: '#dc2626',
+        icon: '📕'
+    },
+    'NCRVGIDS': {
+        label: 'NCRVGIDS SERVICE',
+        phone: '088-0123458',
+        color: '#16a34a',
+        icon: '📗'
+    },
+    'ALGEMEEN': {
+        label: 'ALGEMEEN SERVICE',
+        phone: '088-0123459',
+        color: '#9333ea',
+        icon: '📞'
+    }
+};
 
 // End Session - Close current customer and return to clean slate
 function endSession() {
-    // End call if active
-    if (callActive) {
-        endCall();
+    // End call if active (using new system)
+    if (callSession.active) {
+        endCallSession();
     }
     
     // Clear current customer
@@ -72,6 +127,254 @@ function getPricingDisplay(duration) {
     const pricing = subscriptionPricing[duration];
     if (!pricing) return '';
     return `€${pricing.perMonth.toFixed(2)}/maand (${pricing.description})`;
+}
+
+// ============================================================================
+// PHASE 1: CALL SESSION MANAGEMENT
+// ============================================================================
+
+// Helper function to format time (seconds to HH:MM:SS or MM:SS)
+function formatTime(seconds) {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hrs > 0) {
+        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Helper function to add contact moment to customer history
+function addContactMoment(customerId, type, description) {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
+    
+    customer.contactHistory.unshift({
+        id: Date.now(),
+        type: type,
+        date: new Date().toISOString(),
+        description: description
+    });
+    
+    saveCustomers();
+    
+    // Update display if this is the current customer
+    if (currentCustomer && currentCustomer.id === customerId) {
+        displayContactHistory();
+    }
+}
+
+// Start Call Session
+function startCallSession() {
+    // Toon sessie info in bovenbalk
+    document.getElementById('sessionInfo').style.display = 'flex';
+    
+    // Update service nummer
+    const serviceLabels = {
+        'AVROBODE': 'AVROBODE SERVICE',
+        'MIKROGIDS': 'MIKROGIDS SERVICE',
+        'NCRVGIDS': 'NCRVGIDS SERVICE',
+        'ALGEMEEN': 'ALGEMEEN SERVICE'
+    };
+    document.getElementById('sessionServiceNumber').textContent = 
+        serviceLabels[callSession.serviceNumber] || callSession.serviceNumber;
+    
+    // Update wachttijd
+    document.getElementById('sessionWaitTime').textContent = 
+        formatTime(callSession.waitTime);
+    
+    // Update beller naam
+    document.getElementById('sessionCallerName').textContent = 
+        callSession.customerName || 'Anonieme Beller';
+    
+    // Toon/verberg sessie afsluiten knop
+    document.getElementById('endSessionBtn').style.display = 
+        callSession.callerType === 'identified' ? 'block' : 'none';
+    
+    // Update agent status naar Busy
+    autoSetAgentStatus('call_started');
+    
+    // Start gespreksduur timer
+    updateCallDuration();
+    callSession.durationInterval = setInterval(updateCallDuration, 1000);
+    
+    // Update "Dit is de beller" knoppen zichtbaarheid
+    updateIdentifyCallerButtons();
+}
+
+// Update Call Duration Timer
+function updateCallDuration() {
+    if (!callSession.active) return;
+    
+    const elapsed = Math.floor((Date.now() - callSession.startTime) / 1000);
+    document.getElementById('sessionDuration').textContent = formatTime(elapsed);
+}
+
+// End Call Session
+function endCallSession(forcedByCustomer = false) {
+    if (!callSession.active) return;
+    
+    const callDuration = Math.floor((Date.now() - callSession.startTime) / 1000);
+    
+    // Voeg contact moment toe als beller geïdentificeerd was
+    if (callSession.customerId) {
+        const endReason = forcedByCustomer ? 'call_ended_by_customer' : 'call_ended_by_agent';
+        addContactMoment(
+            callSession.customerId,
+            endReason,
+            `${callSession.serviceNumber} call beëindigd (duur: ${formatTime(callDuration)}, wacht: ${formatTime(callSession.waitTime)})`
+        );
+    }
+    
+    // Stop timer
+    if (callSession.durationInterval) {
+        clearInterval(callSession.durationInterval);
+    }
+    
+    // Reset session state
+    callSession = {
+        active: false,
+        callerType: 'anonymous',
+        customerId: null,
+        customerName: null,
+        serviceNumber: null,
+        waitTime: 0,
+        startTime: null,
+        pendingIdentification: null,
+        durationInterval: null,
+        recordingActive: false,
+        totalHoldTime: 0
+    };
+    
+    // Verberg UI elementen
+    document.getElementById('sessionInfo').style.display = 'none';
+    const debugEndBtn = document.getElementById('debugEndCallBtn');
+    if (debugEndBtn) {
+        debugEndBtn.style.display = 'none';
+    }
+    updateIdentifyCallerButtons();
+    
+    // Update agent status naar ACW (will be implemented in Phase 5)
+    autoSetAgentStatus('call_ended');
+    
+    if (!forcedByCustomer) {
+        showToast('Call sessie afgesloten', 'success');
+    }
+}
+
+// Identify Caller as Customer
+function identifyCallerAsCustomer(customerId) {
+    if (!callSession.active || callSession.callerType !== 'anonymous') {
+        return;
+    }
+    
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) {
+        showToast('Klant niet gevonden', 'error');
+        return;
+    }
+    
+    // Update sessie state
+    callSession.callerType = 'identified';
+    callSession.customerId = customerId;
+    callSession.customerName = `${customer.initials || customer.firstName} ${customer.middleName ? customer.middleName + ' ' : ''}${customer.lastName}`;
+    
+    // Update UI
+    document.getElementById('sessionCallerName').textContent = callSession.customerName;
+    document.getElementById('endSessionBtn').style.display = 'block';
+    
+    // Verberg alle "Dit is de beller" knoppen
+    updateIdentifyCallerButtons();
+    
+    // Voeg contact moment toe
+    addContactMoment(customerId, 'call_identified', 
+        `Beller geïdentificeerd tijdens ${callSession.serviceNumber} call`);
+    
+    showToast(`Beller geïdentificeerd als ${callSession.customerName}`, 'success');
+}
+
+// Update "Dit is de Beller" Button Visibility
+function updateIdentifyCallerButtons() {
+    const shouldShow = callSession.active && callSession.callerType === 'anonymous';
+    
+    // Update in search results
+    document.querySelectorAll('.btn-identify-caller').forEach(btn => {
+        btn.style.display = shouldShow ? 'inline-block' : 'none';
+    });
+    
+    // Update in customer detail
+    const identifyBtn = document.getElementById('identifyCallerBtn');
+    if (identifyBtn) {
+        identifyBtn.style.display = shouldShow ? 'inline-block' : 'none';
+    }
+}
+
+// ============================================================================
+// PHASE 1B: AGENT STATUS MANAGEMENT
+// ============================================================================
+
+// Set Agent Status
+function setAgentStatus(newStatus) {
+    // Validatie
+    if (callSession.active && newStatus === 'ready') {
+        showToast('Kan niet naar Beschikbaar tijdens actief gesprek', 'error');
+        return;
+    }
+    
+    const oldStatus = agentStatus.current;
+    agentStatus.current = newStatus;
+    
+    // Update UI
+    updateAgentStatusDisplay();
+    
+    // Update availability
+    agentStatus.canReceiveCalls = (newStatus === 'ready');
+    
+    // Log status change
+    console.log(`Agent status: ${oldStatus} → ${newStatus}`);
+    
+    // Close menu if open
+    const menu = document.getElementById('agentStatusMenu');
+    if (menu) {
+        menu.style.display = 'none';
+    }
+    
+    showToast(`Status gewijzigd naar: ${agentStatuses[newStatus].label}`, 'success');
+}
+
+// Update Agent Status Display
+function updateAgentStatusDisplay() {
+    const statusConfig = agentStatuses[agentStatus.current];
+    const indicator = document.getElementById('agentStatusIndicator');
+    
+    if (indicator) {
+        indicator.querySelector('.status-icon').textContent = statusConfig.icon;
+        indicator.querySelector('.status-label').textContent = statusConfig.label;
+        indicator.style.backgroundColor = statusConfig.color + '20'; // 20% opacity
+    }
+}
+
+// Toggle Status Menu
+function toggleStatusMenu() {
+    const menu = document.getElementById('agentStatusMenu');
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Auto Set Agent Status (during call flow)
+function autoSetAgentStatus(callState) {
+    if (callState === 'call_started') {
+        agentStatus.current = 'busy';
+        agentStatus.canReceiveCalls = false;
+        updateAgentStatusDisplay();
+    } else if (callState === 'call_ended') {
+        // For now, just set to ready. Phase 5 will implement ACW
+        agentStatus.current = 'ready';
+        agentStatus.canReceiveCalls = true;
+        updateAgentStatusDisplay();
+    }
 }
 
 // Initialize App
@@ -2061,91 +2364,6 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Call Simulation Functions
-function startCall(callerName, callerNumber) {
-    callActive = true;
-    callStartTime = Date.now();
-    currentCallerInfo = { name: callerName, number: callerNumber };
-    
-    // Start timer
-    if (callTimerInterval) {
-        clearInterval(callTimerInterval);
-    }
-    callTimerInterval = setInterval(updateCallTimer, 1000);
-    
-    // Show call status in header
-    const callStatus = document.getElementById('callStatus');
-    callStatus.style.display = 'inline-block';
-    updateCallTimer();
-}
-
-function updateCallTimer() {
-    if (!callActive || !callStartTime) return;
-    
-    const elapsed = Date.now() - callStartTime;
-    const seconds = Math.floor(elapsed / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    
-    const displaySeconds = seconds % 60;
-    const displayMinutes = minutes % 60;
-    
-    let timeString;
-    if (hours > 0) {
-        timeString = `${hours}:${String(displayMinutes).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`;
-    } else {
-        timeString = `${displayMinutes}:${String(displaySeconds).padStart(2, '0')}`;
-    }
-    
-    const callStatus = document.getElementById('callStatus');
-    callStatus.innerHTML = `
-        <span class="call-timer">⏱️ ${timeString}</span>
-        <span class="caller-info">📞 ${currentCallerInfo.name} • ${currentCallerInfo.number}</span>
-    `;
-}
-
-function endCall() {
-    if (!callActive) return;
-    
-    // Calculate call duration
-    const duration = Date.now() - callStartTime;
-    const seconds = Math.floor(duration / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    
-    const displaySeconds = seconds % 60;
-    const displayMinutes = minutes % 60;
-    
-    let durationString;
-    if (hours > 0) {
-        durationString = `${hours}u ${displayMinutes}m ${displaySeconds}s`;
-    } else if (minutes > 0) {
-        durationString = `${displayMinutes}m ${displaySeconds}s`;
-    } else {
-        durationString = `${displaySeconds}s`;
-    }
-    
-    // Stop timer
-    callActive = false;
-    if (callTimerInterval) {
-        clearInterval(callTimerInterval);
-        callTimerInterval = null;
-    }
-    
-    // Show session report in header
-    const callStatus = document.getElementById('callStatus');
-    callStatus.innerHTML = `
-        <span class="call-report">✓ Gesprek beëindigd - Duur: ${durationString}</span>
-    `;
-    
-    // Hide report after 10 seconds
-    setTimeout(() => {
-        callStatus.style.display = 'none';
-        callStatus.innerHTML = '';
-        currentCallerInfo = null;
-    }, 10000);
-}
-
 // Debug Mode - Secret Key Sequence
 let debugKeySequence = [];
 const DEBUG_KEY = ']';
@@ -2194,45 +2412,134 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// ============================================================================
+// PHASE 3: DEBUG MODAL - CALL SIMULATION
+// ============================================================================
+
+// Toggle Known Caller Select
+function toggleKnownCallerSelect() {
+    const callerType = document.getElementById('debugCallerType').value;
+    const knownCallerSelect = document.getElementById('debugKnownCallerSelect');
+    
+    if (callerType === 'known') {
+        knownCallerSelect.style.display = 'flex';
+        populateDebugKnownCustomers();
+    } else {
+        knownCallerSelect.style.display = 'none';
+    }
+}
+
+// Populate Known Customers Dropdown
+function populateDebugKnownCustomers() {
+    const select = document.getElementById('debugKnownCustomer');
+    
+    if (customers.length === 0) {
+        select.innerHTML = '<option value="">Geen klanten beschikbaar</option>';
+        return;
+    }
+    
+    select.innerHTML = customers.map(customer => {
+        const fullName = customer.middleName 
+            ? `${customer.initials || customer.firstName} ${customer.middleName} ${customer.lastName}`
+            : `${customer.initials || customer.firstName} ${customer.lastName}`;
+        return `<option value="${customer.id}">${fullName}</option>`;
+    }).join('');
+}
+
+// Debug: Start Call Simulation
+function debugStartCall() {
+    // Check if there's already an active call
+    if (callSession.active) {
+        if (confirm('⚠️ Er is al een actieve call. Wil je deze beëindigen en een nieuwe starten?')) {
+            endCallSession();
+        } else {
+            return;
+        }
+    }
+    
+    const serviceNumber = document.getElementById('debugServiceNumber').value;
+    const callerType = document.getElementById('debugCallerType').value;
+    const waitTimeOption = document.getElementById('debugWaitTime').value;
+    
+    // Bereken wachttijd
+    let waitTime;
+    if (waitTimeOption === 'random') {
+        waitTime = Math.floor(Math.random() * (90 - 15 + 1)) + 15;
+    } else {
+        waitTime = parseInt(waitTimeOption);
+    }
+    
+    // Initialize call session
+    callSession = {
+        active: true,
+        callerType: callerType,
+        serviceNumber: serviceNumber,
+        waitTime: waitTime,
+        startTime: Date.now(),
+        customerId: null,
+        customerName: null,
+        pendingIdentification: null,
+        durationInterval: null,
+        recordingActive: false,
+        totalHoldTime: 0
+    };
+    
+    // Voor bekende beller, koppel direct
+    if (callerType === 'known') {
+        const customerId = document.getElementById('debugKnownCustomer').value;
+        if (customerId) {
+            const customer = customers.find(c => c.id === parseInt(customerId));
+            if (customer) {
+                callSession.customerId = parseInt(customerId);
+                callSession.customerName = `${customer.initials || customer.firstName} ${customer.middleName ? customer.middleName + ' ' : ''}${customer.lastName}`;
+                callSession.callerType = 'identified';
+                
+                // Automatically open customer record
+                setTimeout(() => {
+                    selectCustomer(parseInt(customerId));
+                }, 500);
+            }
+        }
+    }
+    
+    // Start UI updates
+    startCallSession();
+    
+    // Show debug end call button
+    document.getElementById('debugEndCallBtn').style.display = 'block';
+    
+    closeDebugModal();
+    
+    showToast(
+        `Call simulatie gestart: ${serviceNumber} (wachttijd: ${formatTime(waitTime)})`,
+        'success'
+    );
+}
+
+// Debug: End Call Simulation
+function debugEndCall() {
+    if (!callSession.active) return;
+    
+    const callDuration = Math.floor((Date.now() - callSession.startTime) / 1000);
+    
+    if (confirm(`📞 Het telefoongesprek beëindigen?\n\nGespreksduur: ${formatTime(callDuration)}`)) {
+        endCallSession(true);
+        document.getElementById('debugEndCallBtn').style.display = 'none';
+    }
+}
+
 // Debug Modal Functions
 function openDebugModal() {
     const modal = document.getElementById('debugModal');
     modal.classList.add('show');
     
-    // Populate known callers dynamically
-    populateKnownCallers();
-    
-    console.log('🔧 Debug mode activated');
-}
-
-// Populate Known Callers List
-function populateKnownCallers() {
-    const container = document.getElementById('knownCallersContainer');
-    
-    if (customers.length === 0) {
-        container.innerHTML = '<p class="empty-state-small" style="margin: 0.5rem 0; color: var(--text-secondary);">Geen klanten beschikbaar</p>';
-        return;
+    // Update debug end call button visibility
+    const debugEndBtn = document.getElementById('debugEndCallBtn');
+    if (debugEndBtn) {
+        debugEndBtn.style.display = callSession.active ? 'block' : 'none';
     }
     
-    // Generate buttons for each customer
-    container.innerHTML = customers.map(customer => {
-        const fullName = customer.middleName 
-            ? `${customer.firstName} ${customer.middleName} ${customer.lastName}`
-            : `${customer.firstName} ${customer.lastName}`;
-        
-        // Get active subscriptions
-        const activeSubscriptions = customer.subscriptions
-            .filter(s => s.status === 'active')
-            .map(s => s.magazine)
-            .join(', ') || 'Geen actieve abonnementen';
-        
-        return `
-            <button class="btn btn-secondary btn-block" onclick="mimicKnownCaller(${customer.id})">
-                📞 ${fullName}<br>
-                <small style="font-size: 0.85em; opacity: 0.8;">${activeSubscriptions}</small>
-            </button>
-        `;
-    }).join('');
+    console.log('🔧 Debug mode activated');
 }
 
 function closeDebugModal() {
@@ -2254,64 +2561,6 @@ function fullReset() {
             window.location.reload();
         }, 1000);
     }
-}
-
-// Mimic Anonymous Caller
-function mimicAnonymousCaller() {
-    // End current session
-    endSession();
-    
-    // Clear search fields
-    document.getElementById('searchName').value = '';
-    document.getElementById('searchPostalCode').value = '';
-    document.getElementById('searchHouseNumber').value = '';
-    
-    // Close debug modal
-    closeDebugModal();
-    
-    // Start call simulation for anonymous caller
-    startCall('Anoniem', 'Niet weergegeven');
-    
-    // Show toast
-    showToast('📞 Anonieme beller gesimuleerd - Voer zoekgegevens in', 'info');
-    
-    // Focus on name field
-    setTimeout(() => {
-        document.getElementById('searchName').focus();
-    }, 500);
-}
-
-// Mimic Known Caller - Select any customer from the database
-function mimicKnownCaller(customerId) {
-    // Find the customer
-    const customer = customers.find(c => c.id === customerId);
-    
-    if (!customer) {
-        showToast('Klant niet gevonden', 'error');
-        return;
-    }
-    
-    // End current session
-    endSession();
-    
-    // Close debug modal
-    closeDebugModal();
-    
-    // Build full name for toast
-    const fullName = customer.middleName 
-        ? `${customer.firstName} ${customer.middleName} ${customer.lastName}`
-        : `${customer.firstName} ${customer.lastName}`;
-    
-    // Start call simulation with customer info
-    startCall(fullName, customer.phone || 'Onbekend nummer');
-    
-    // Show toast
-    showToast(`📞 Bekende beller ${fullName} gesimuleerd`, 'success');
-    
-    // Directly select the customer (skip search, open immediately)
-    setTimeout(() => {
-        selectCustomer(customerId);
-    }, 500);
 }
 
 // Close modal when clicking outside

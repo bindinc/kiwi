@@ -15,15 +15,65 @@
             <div class="header-content">
                 <h1>📞 Klantenservice Portal</h1>
                 <div class="header-right">
+                    <!-- Agent Status Widget -->
+                    <div class="agent-status-widget">
+                        <div class="status-indicator" id="agentStatusIndicator">
+                            <span class="status-icon">⚫</span>
+                            <span class="status-label">Offline</span>
+                        </div>
+                        <button class="status-dropdown-btn" onclick="toggleStatusMenu()">▼</button>
+                        <div class="status-menu" id="agentStatusMenu" style="display: none;">
+                            <div class="status-menu-item" onclick="setAgentStatus('ready')">
+                                🟢 Beschikbaar
+                            </div>
+                            <div class="status-menu-item" onclick="setAgentStatus('break')">
+                                🔵 Pauze
+                            </div>
+                            <div class="status-menu-item" onclick="setAgentStatus('offline')">
+                                ⚫ Offline
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="user-info">
                         <span class="agent-name">Agent: <strong id="agentName">Jan Vos</strong></span>
                         <span class="time" id="currentTime"></span>
-                        <!-- Call Status Display -->
+                        <!-- Legacy Call Status Display (will be deprecated) -->
                         <span id="callStatus" class="call-status" style="display: none;"></span>
                     </div>
-                    <button id="endSessionBtn" class="btn-end-session-header" onclick="endSession()" title="Beëindig deze sessie en start opnieuw" style="display: none;">
-                        ✕ Sessie Afsluiten
-                    </button>
+                    
+                    <!-- New Session Info Display -->
+                    <div id="sessionInfo" class="session-info" style="display: none;">
+                        <div class="session-service">
+                            <span class="service-icon">📞</span>
+                            <span id="sessionServiceNumber" class="service-number">AVROBODE SERVICE</span>
+                        </div>
+                        <div class="session-wait">
+                            <span class="wait-icon">⏳</span>
+                            <span>Wacht: </span>
+                            <span id="sessionWaitTime">0:00</span>
+                        </div>
+                        <div class="session-caller">
+                            <span>Gesprek met: </span>
+                            <span id="sessionCallerName">Anonieme Beller</span>
+                        </div>
+                        <div class="session-duration">
+                            <span class="duration-icon">⏱️</span>
+                            <span id="sessionDuration">00:00:00</span>
+                        </div>
+                        <button id="endSessionBtn" class="btn-end-session" 
+                                onclick="endCallSession()" 
+                                style="display: none;">
+                            📞 Sessie Afsluiten
+                        </button>
+                    </div>
+                    
+                    <!-- Recording Indicator -->
+                    <div class="recording-indicator" id="recordingIndicator" style="display: none;">
+                        <span class="rec-icon">🔴</span>
+                        <span class="rec-text">REC</span>
+                        <span class="rec-notice">Dit gesprek wordt opgenomen</span>
+                    </div>
                 </div>
             </div>
         </header>
@@ -982,21 +1032,65 @@
                 <button class="modal-close" onclick="closeDebugModal()">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- PHASE 3: Call Simulation Section -->
+                <div class="debug-section">
+                    <h3>📞 Call Simulation</h3>
+                    
+                    <div class="debug-row">
+                        <label>Service Nummer:</label>
+                        <select id="debugServiceNumber">
+                            <option value="AVROBODE">Avrobode Service</option>
+                            <option value="MIKROGIDS">Mikrogids Service</option>
+                            <option value="NCRVGIDS">NcrvGids Service</option>
+                            <option value="ALGEMEEN">Algemeen Service</option>
+                        </select>
+                    </div>
+                    
+                    <div class="debug-row">
+                        <label>Wachttijd simulatie:</label>
+                        <select id="debugWaitTime">
+                            <option value="random">Willekeurig (15-90 sec)</option>
+                            <option value="15">15 seconden</option>
+                            <option value="30">30 seconden</option>
+                            <option value="60">1 minuut</option>
+                            <option value="120">2 minuten</option>
+                            <option value="300">5 minuten</option>
+                        </select>
+                    </div>
+                    
+                    <div class="debug-row">
+                        <label>Beller type:</label>
+                        <select id="debugCallerType" onchange="toggleKnownCallerSelect()">
+                            <option value="anonymous">Anonieme Beller</option>
+                            <option value="known">Bekende Klant</option>
+                        </select>
+                    </div>
+                    
+                    <div id="debugKnownCallerSelect" class="debug-row" style="display: none;">
+                        <label>Selecteer klant:</label>
+                        <select id="debugKnownCustomer">
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
+                    
+                    <div class="debug-actions">
+                        <button class="btn btn-success btn-block" onclick="debugStartCall()">
+                            � Start Gesprek Simulatie
+                        </button>
+                        <button id="debugEndCallBtn" 
+                                class="btn btn-danger btn-block" 
+                                onclick="debugEndCall()"
+                                style="display: none;">
+                            ❌ Beëindig Telefoongesprek
+                        </button>
+                    </div>
+                </div>
+                
                 <div class="debug-section">
                     <h3>System Reset</h3>
                     <button class="btn btn-danger btn-block" onclick="fullReset()">
                         🗑️ Purge Localstorage & Full Reset
                     </button>
-                </div>
-                
-                <div class="debug-section">
-                    <h3>Mimic Avaya Bellers</h3>
-                    <button class="btn btn-secondary btn-block" onclick="mimicAnonymousCaller()">
-                        📞 Anonieme Beller
-                    </button>
-                    <div id="knownCallersContainer">
-                        <!-- Dynamic known caller buttons will be inserted here -->
-                    </div>
                 </div>
             </div>
         </div>
