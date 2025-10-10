@@ -235,6 +235,23 @@ body {
     background: #c82333;
 }
 
+.btn-end-anonymous-call {
+    margin-left: auto;
+    padding: 0.4rem 1rem;
+    background: #ffc107;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+    font-weight: 500;
+}
+
+.btn-end-anonymous-call:hover {
+    background: #e0a800;
+}
+
 /* ============================================================================
    PHASE 2B: RECORDING INDICATOR
    ============================================================================ */

@@ -81,8 +81,9 @@ function endSession() {
     // Show welcome message
     document.getElementById('welcomeMessage').style.display = 'block';
     
-    // Hide end session button
+    // Hide end session buttons
     document.getElementById('endSessionBtn').style.display = 'none';
+    document.getElementById('endAnonymousCallBtn').style.display = 'none';
     
     // Clear search form
     document.getElementById('searchName').value = '';
@@ -331,9 +332,13 @@ function startCallSession() {
     document.getElementById('sessionCallerName').textContent = 
         callSession.customerName || 'Anonieme Beller';
     
-    // Toon/verberg sessie afsluiten knop
+    // Toon/verberg sessie afsluiten knop (identified caller)
     document.getElementById('endSessionBtn').style.display = 
         callSession.callerType === 'identified' ? 'block' : 'none';
+    
+    // Toon/verberg beëindig gesprek knop (anonymous caller)
+    document.getElementById('endAnonymousCallBtn').style.display = 
+        callSession.callerType === 'anonymous' ? 'block' : 'none';
     
     // Update agent status naar Busy
     autoSetAgentStatus('call_started');
@@ -426,6 +431,7 @@ function identifyCallerAsCustomer(customerId) {
     // Update UI
     document.getElementById('sessionCallerName').textContent = callSession.customerName;
     document.getElementById('endSessionBtn').style.display = 'block';
+    document.getElementById('endAnonymousCallBtn').style.display = 'none';
     
     // Verberg alle "Dit is de beller" knoppen
     updateIdentifyCallerButtons();
