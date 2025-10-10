@@ -324,14 +324,32 @@
                                 <div id="orderItemsList" class="order-items-list">
                                     <!-- Items will be added dynamically -->
                                 </div>
+                                
+                                <!-- Coupon Code Section -->
+                                <div class="coupon-section">
+                                    <label for="couponCode">Kortingscode</label>
+                                    <div class="coupon-input-group">
+                                        <input type="text" 
+                                               id="couponCode" 
+                                               placeholder="Voer kortingscode in..." 
+                                               maxlength="20"
+                                               onkeyup="if(event.key==='Enter') applyCoupon()">
+                                        <button type="button" 
+                                                class="btn btn-secondary btn-apply-coupon" 
+                                                onclick="applyCoupon()">
+                                            Toepassen
+                                        </button>
+                                    </div>
+                                    <div id="couponMessage" class="coupon-message"></div>
+                                </div>
+                                
                                 <div class="order-summary">
                                     <div class="order-summary-row">
                                         <span>Subtotaal:</span>
                                         <span id="orderSubtotal">€0,00</span>
                                     </div>
-                                    <div class="order-summary-row discount-row" id="discountRow" style="display: none;">
-                                        <span id="discountLabel">Korting:</span>
-                                        <span id="orderDiscount" class="discount-amount">-€0,00</span>
+                                    <div id="discountsBreakdown" class="discounts-breakdown" style="display: none;">
+                                        <!-- Discount items will be added dynamically -->
                                     </div>
                                     <div class="order-summary-row total-row">
                                         <span><strong>Totaal:</strong></span>

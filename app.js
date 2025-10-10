@@ -1828,7 +1828,8 @@ function createArticleSale(event) {
         subtotal: orderData.subtotal,
         discounts: orderData.discounts,
         totalDiscount: orderData.totalDiscount,
-        total: orderData.total
+        total: orderData.total,
+        couponCode: orderData.couponCode
     };
 
     // Build order description for contact history
@@ -1836,9 +1837,18 @@ function createArticleSale(event) {
         `${item.name} (${item.quantity}x à €${item.unitPrice.toFixed(2)})`
     ).join(', ');
     
-    const discountDescription = orderData.discounts.length > 0 
-        ? ` Kortingen: ${orderData.discounts.map(d => `${d.type} -€${d.amount.toFixed(2)}`).join(', ')}.`
-        : '';
+    let discountDescription = '';
+    if (orderData.discounts.length > 0) {
+        const discountDetails = orderData.discounts.map(d => {
+            if (d.isCoupon) {
+                return `${d.type} "${d.description}" -€${d.amount.toFixed(2)}`;
+            }
+            return `${d.type} -€${d.amount.toFixed(2)}`;
+        }).join(', ');
+        discountDescription = ` Kortingen: ${discountDetails}.`;
+    }
+    
+    const couponNote = orderData.couponCode ? ` Kortingscode: ${orderData.couponCode}.` : '';
     
     // Check if this is for an existing customer
     if (currentCustomer) {
@@ -1852,7 +1862,7 @@ function createArticleSale(event) {
             id: currentCustomer.contactHistory.length + 1,
             type: 'Artikel bestelling',
             date: new Date().toISOString(),
-            description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
+            description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription}${couponNote} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
         });
         
         saveCustomers();
@@ -1889,7 +1899,7 @@ function createArticleSale(event) {
                     id: 1,
                     type: 'Artikel bestelling',
                     date: new Date().toISOString(),
-                    description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
+                    description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription}${couponNote} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
                 }
             ]
         };

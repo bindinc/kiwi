@@ -433,6 +433,18 @@ function updateArticlePrice() {
 
 // Global order items array
 let orderItems = [];
+let appliedCoupon = null;
+
+// Valid coupon codes
+const validCoupons = {
+    'WELKOM10': { type: 'fixed', amount: 10.00, description: 'Welkomstkorting' },
+    'KORTING10': { type: 'fixed', amount: 10.00, description: '€10 korting' },
+    'ZOMER15': { type: 'fixed', amount: 15.00, description: 'Zomeractie' },
+    'VOORJAAR20': { type: 'fixed', amount: 20.00, description: 'Voorjaarskorting' },
+    'LOYAL25': { type: 'fixed', amount: 25.00, description: 'Loyaliteitskorting' },
+    'VIP10': { type: 'percentage', amount: 10, description: 'VIP korting 10%' },
+    'SAVE15': { type: 'percentage', amount: 15, description: 'Bespaar 15%' }
+};
 
 // Add article to order
 function addArticleToOrder() {
@@ -491,6 +503,67 @@ function removeArticleFromOrder(articleId) {
     showToast('Artikel verwijderd uit bestelling', 'success');
 }
 
+// Apply coupon code
+function applyCoupon() {
+    const couponInput = document.getElementById('couponCode');
+    const couponCode = couponInput.value.trim().toUpperCase();
+    const messageEl = document.getElementById('couponMessage');
+    
+    if (!couponCode) {
+        messageEl.className = 'coupon-message error';
+        messageEl.textContent = 'Voer een kortingscode in';
+        return;
+    }
+    
+    if (orderItems.length === 0) {
+        messageEl.className = 'coupon-message error';
+        messageEl.textContent = 'Voeg eerst artikelen toe aan je bestelling';
+        return;
+    }
+    
+    const coupon = validCoupons[couponCode];
+    
+    if (!coupon) {
+        messageEl.className = 'coupon-message error';
+        messageEl.textContent = `Kortingscode "${couponCode}" is ongeldig`;
+        appliedCoupon = null;
+        renderOrderItems();
+        return;
+    }
+    
+    if (appliedCoupon && appliedCoupon.code === couponCode) {
+        messageEl.className = 'coupon-message info';
+        messageEl.textContent = 'Deze kortingscode is al toegepast';
+        return;
+    }
+    
+    appliedCoupon = {
+        code: couponCode,
+        ...coupon
+    };
+    
+    messageEl.className = 'coupon-message success';
+    if (coupon.type === 'fixed') {
+        messageEl.textContent = `✓ Kortingscode toegepast: €${coupon.amount.toFixed(2)} korting`;
+    } else {
+        messageEl.textContent = `✓ Kortingscode toegepast: ${coupon.amount}% korting`;
+    }
+    
+    renderOrderItems();
+    showToast('Kortingscode toegepast!', 'success');
+}
+
+// Remove applied coupon
+function removeCoupon() {
+    appliedCoupon = null;
+    document.getElementById('couponCode').value = '';
+    const messageEl = document.getElementById('couponMessage');
+    messageEl.className = 'coupon-message';
+    messageEl.style.display = 'none';
+    renderOrderItems();
+    showToast('Kortingscode verwijderd', 'success');
+}
+
 // Calculate discounts based on order
 function calculateDiscounts() {
     let discounts = [];
@@ -500,14 +573,17 @@ function calculateDiscounts() {
     const subtotal = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
     
     // 1. Volume Discount: 10% off when ordering 5+ of the same item
+    let volumeDiscounts = [];
     orderItems.forEach(item => {
         if (item.quantity >= 5) {
             const itemTotal = item.unitPrice * item.quantity;
             const discount = itemTotal * 0.10;
-            discounts.push({
+            volumeDiscounts.push({
                 type: 'Stapelkorting',
+                icon: '📦',
                 description: `10% korting op ${item.name} (${item.quantity}x)`,
-                amount: discount
+                amount: discount,
+                itemName: item.name
             });
             totalDiscount += discount;
         }
@@ -521,11 +597,16 @@ function calculateDiscounts() {
         if (bundleDiscount > totalDiscount) {
             discounts = [{
                 type: 'Bundelkorting',
-                description: '15% korting bij artikelen van alle 3 magazines',
+                icon: '🎁',
+                description: 'Artikelen van alle 3 magazines',
                 amount: bundleDiscount
             }];
             totalDiscount = bundleDiscount;
+        } else {
+            discounts = volumeDiscounts;
         }
+    } else {
+        discounts = volumeDiscounts;
     }
     
     // 3. Order Total Discount: 5% off orders over €100
@@ -533,10 +614,35 @@ function calculateDiscounts() {
         const orderDiscount = subtotal * 0.05;
         discounts.push({
             type: 'Actiekorting',
-            description: '5% korting bij bestellingen vanaf €100',
+            icon: '🎯',
+            description: 'Bij bestellingen vanaf €100',
             amount: orderDiscount
         });
         totalDiscount += orderDiscount;
+    }
+    
+    // 4. Apply Coupon Code (if any)
+    if (appliedCoupon) {
+        let couponDiscount = 0;
+        
+        if (appliedCoupon.type === 'fixed') {
+            // Fixed amount discount
+            couponDiscount = Math.min(appliedCoupon.amount, subtotal - totalDiscount);
+        } else if (appliedCoupon.type === 'percentage') {
+            // Percentage discount on subtotal after other discounts
+            couponDiscount = (subtotal - totalDiscount) * (appliedCoupon.amount / 100);
+        }
+        
+        if (couponDiscount > 0) {
+            discounts.push({
+                type: 'Kortingscode',
+                icon: '🎟️',
+                description: `${appliedCoupon.description} (${appliedCoupon.code})`,
+                amount: couponDiscount,
+                isCoupon: true
+            });
+            totalDiscount += couponDiscount;
+        }
     }
     
     return {
@@ -552,6 +658,11 @@ function renderOrderItems() {
     
     if (orderItems.length === 0) {
         section.style.display = 'none';
+        appliedCoupon = null;
+        document.getElementById('couponCode').value = '';
+        const messageEl = document.getElementById('couponMessage');
+        messageEl.className = 'coupon-message';
+        messageEl.style.display = 'none';
         return;
     }
     
@@ -568,7 +679,7 @@ function renderOrderItems() {
         const itemTotal = item.unitPrice * item.quantity;
         
         // Check if this item has volume discount
-        const hasVolumeDiscount = item.quantity >= 5 && discounts.some(d => d.type === 'Stapelkorting' && d.description.includes(item.name));
+        const hasVolumeDiscount = item.quantity >= 5 && discounts.some(d => d.type === 'Stapelkorting' && d.itemName === item.name);
         
         html += `
             <div class="order-item">
@@ -590,17 +701,35 @@ function renderOrderItems() {
     document.getElementById('orderSubtotal').textContent = `€${subtotal.toFixed(2).replace('.', ',')}`;
     document.getElementById('orderTotal').innerHTML = `<strong>€${total.toFixed(2).replace('.', ',')}</strong>`;
     
-    // Show/hide discount row
-    const discountRow = document.getElementById('discountRow');
-    if (totalDiscount > 0) {
-        discountRow.style.display = 'flex';
+    // Render discounts breakdown
+    const discountsBreakdown = document.getElementById('discountsBreakdown');
+    if (totalDiscount > 0 && discounts.length > 0) {
+        discountsBreakdown.style.display = 'block';
         
-        // Build discount label
-        let discountLabel = discounts.map(d => d.type).join(' + ');
-        document.getElementById('discountLabel').textContent = discountLabel + ':';
-        document.getElementById('orderDiscount').textContent = `-€${totalDiscount.toFixed(2).replace('.', ',')}`;
+        let discountsHtml = '';
+        discounts.forEach(discount => {
+            const badgeClass = discount.isCoupon ? 'coupon-applied' : '';
+            discountsHtml += `
+                <div class="discount-item">
+                    <div>
+                        <div class="discount-item-label">
+                            <span class="discount-icon">${discount.icon || '💰'}</span>
+                            <span class="discount-type">${discount.type}</span>
+                            ${discount.isCoupon ? '<span class="discount-badge ' + badgeClass + '">COUPON</span>' : '<span class="discount-badge">ACTIE</span>'}
+                        </div>
+                        <div class="discount-description">${discount.description}</div>
+                    </div>
+                    <div class="discount-item-amount">
+                        -€${discount.amount.toFixed(2).replace('.', ',')}
+                        ${discount.isCoupon ? '<button onclick="removeCoupon()" type="button" style="margin-left: 0.5rem; background: none; border: none; cursor: pointer; color: #dc2626; font-size: 1rem;" title="Verwijder kortingscode">✕</button>' : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        discountsBreakdown.innerHTML = discountsHtml;
     } else {
-        discountRow.style.display = 'none';
+        discountsBreakdown.style.display = 'none';
     }
 }
 
@@ -615,6 +744,7 @@ function getOrderData() {
         subtotal: subtotal,
         discounts: discounts,
         totalDiscount: totalDiscount,
-        total: total
+        total: total,
+        couponCode: appliedCoupon ? appliedCoupon.code : null
     };
 }
