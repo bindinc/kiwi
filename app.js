@@ -112,6 +112,149 @@ function endSession() {
     console.log('Session ended - Ready for next customer');
 }
 
+// ============================================================================
+// DRY: Reusable Customer Data Form Component
+// ============================================================================
+
+/**
+ * Renders a unified customer data form into a container
+ * @param {string} containerId - ID of the container element
+ * @param {string} prefix - Prefix for all form field IDs (e.g., 'sub', 'article', 'transfer')
+ * @param {object} config - Configuration options
+ * @param {boolean} config.includePhone - Include phone field (default: true)
+ * @param {boolean} config.includeEmail - Include email field (default: true)
+ * @param {boolean} config.phoneRequired - Make phone required (default: false)
+ * @param {boolean} config.emailRequired - Make email required (default: true)
+ * @param {boolean} config.showSameAddressCheckbox - Show "same address" checkbox (default: false)
+ */
+function renderCustomerForm(containerId, prefix, config = {}) {
+    const defaults = {
+        includePhone: true,
+        includeEmail: true,
+        phoneRequired: false,
+        emailRequired: true,
+        showSameAddressCheckbox: false
+    };
+    const cfg = { ...defaults, ...config };
+
+    const html = `
+        <h3 class="form-subtitle">Aanhef *</h3>
+        <div class="aanhef-row">
+            <label><input type="radio" name="${prefix}Salutation" value="Dhr." required checked> Dhr.</label>
+            <label><input type="radio" name="${prefix}Salutation" value="Mevr."> Mevr.</label>
+            <label><input type="radio" name="${prefix}Salutation" value="Anders"> Anders</label>
+        </div>
+        
+        <div class="form-row">
+            <input type="text" id="${prefix}Initials" placeholder="Voorletters*" required>
+            <input type="text" id="${prefix}MiddleName" placeholder="Tussenvoegsel">
+            <input type="text" id="${prefix}LastName" placeholder="Achternaam*" required>
+        </div>
+        
+        <div class="form-row">
+            <input type="text" id="${prefix}PostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
+            <input type="text" id="${prefix}HouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required>
+            <input type="text" id="${prefix}HouseExt" placeholder="Toevoeging" maxlength="10">
+        </div>
+        
+        <div class="form-row">
+            <input type="text" id="${prefix}Address" placeholder="Straat*" required>
+            <input type="text" id="${prefix}City" placeholder="Plaats*" required>
+        </div>
+        
+        ${cfg.includePhone || cfg.includeEmail ? `
+        <div class="form-row">
+            ${cfg.includePhone ? `<input type="tel" id="${prefix}Phone" placeholder="Telefoonnummer${cfg.phoneRequired ? '*' : ''}" ${cfg.phoneRequired ? 'required' : ''}>` : ''}
+            ${cfg.includeEmail ? `<input type="email" id="${prefix}Email" placeholder="E-mailadres${cfg.emailRequired ? '*' : ''}" ${cfg.emailRequired ? 'required' : ''}>` : ''}
+        </div>
+        ` : ''}
+        
+        ${cfg.showSameAddressCheckbox ? `
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="${prefix}SameAddress" onchange="toggleCustomerFormAddress('${prefix}')">
+                Zelfde adres als originele abonnee
+            </label>
+        </div>
+        ` : ''}
+    `;
+
+    document.getElementById(containerId).innerHTML = html;
+}
+
+/**
+ * Gets customer data from a rendered customer form
+ * @param {string} prefix - Prefix used when rendering the form
+ * @returns {object} Customer data object
+ */
+function getCustomerFormData(prefix) {
+    return {
+        salutation: document.querySelector(`input[name="${prefix}Salutation"]:checked`)?.value || '',
+        initials: document.getElementById(`${prefix}Initials`)?.value || '',
+        middleName: document.getElementById(`${prefix}MiddleName`)?.value || '',
+        lastName: document.getElementById(`${prefix}LastName`)?.value || '',
+        postalCode: document.getElementById(`${prefix}PostalCode`)?.value || '',
+        houseNumber: document.getElementById(`${prefix}HouseNumber`)?.value || '',
+        houseExt: document.getElementById(`${prefix}HouseExt`)?.value || '',
+        address: document.getElementById(`${prefix}Address`)?.value || '',
+        city: document.getElementById(`${prefix}City`)?.value || '',
+        phone: document.getElementById(`${prefix}Phone`)?.value || '',
+        email: document.getElementById(`${prefix}Email`)?.value || ''
+    };
+}
+
+/**
+ * Sets customer data in a rendered customer form
+ * @param {string} prefix - Prefix used when rendering the form
+ * @param {object} data - Customer data object
+ */
+function setCustomerFormData(prefix, data) {
+    if (data.salutation) {
+        const salutationRadio = document.querySelector(`input[name="${prefix}Salutation"][value="${data.salutation}"]`);
+        if (salutationRadio) salutationRadio.checked = true;
+    }
+    if (data.initials) document.getElementById(`${prefix}Initials`).value = data.initials;
+    if (data.middleName) document.getElementById(`${prefix}MiddleName`).value = data.middleName;
+    if (data.lastName) document.getElementById(`${prefix}LastName`).value = data.lastName;
+    if (data.postalCode) document.getElementById(`${prefix}PostalCode`).value = data.postalCode;
+    if (data.houseNumber) document.getElementById(`${prefix}HouseNumber`).value = data.houseNumber;
+    if (data.houseExt) document.getElementById(`${prefix}HouseExt`).value = data.houseExt;
+    if (data.address) document.getElementById(`${prefix}Address`).value = data.address;
+    if (data.city) document.getElementById(`${prefix}City`).value = data.city;
+    if (data.phone && document.getElementById(`${prefix}Phone`)) document.getElementById(`${prefix}Phone`).value = data.phone;
+    if (data.email && document.getElementById(`${prefix}Email`)) document.getElementById(`${prefix}Email`).value = data.email;
+}
+
+/**
+ * Toggles address fields visibility (for "same address" checkbox)
+ * @param {string} prefix - Prefix used when rendering the form
+ */
+function toggleCustomerFormAddress(prefix) {
+    const checkbox = document.getElementById(`${prefix}SameAddress`);
+    const addressFields = ['PostalCode', 'HouseNumber', 'HouseExt', 'Address', 'City'];
+    
+    addressFields.forEach(field => {
+        const element = document.getElementById(`${prefix}${field}`);
+        if (element) {
+            if (checkbox.checked) {
+                element.disabled = true;
+                element.removeAttribute('required');
+                element.style.opacity = '0.5';
+            } else {
+                element.disabled = false;
+                if (!field.includes('HouseExt') && !field.includes('MiddleName')) {
+                    element.setAttribute('required', '');
+                }
+                element.style.opacity = '1';
+            }
+        }
+    });
+}
+
+// ============================================================================
+// End of DRY Component
+// ============================================================================
+
 // Subscription Pricing Information
 const subscriptionPricing = {
     '1-jaar': { price: 52.00, perMonth: 4.33, description: '1 jaar - Jaarlijks betaald' },
@@ -797,6 +940,9 @@ function selectCustomer(customerId) {
     document.getElementById('customerEmail').textContent = currentCustomer.email;
     document.getElementById('customerPhone').textContent = currentCustomer.phone;
 
+    // Show deceased status banner if applicable
+    displayDeceasedStatusBanner();
+
     // Display subscriptions
     displaySubscriptions();
 
@@ -816,6 +962,44 @@ function selectCustomer(customerId) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Display Deceased Status Banner
+function displayDeceasedStatusBanner() {
+    // Remove any existing banner first
+    const existingBanner = document.querySelector('.deceased-status-banner');
+    if (existingBanner) {
+        existingBanner.remove();
+    }
+
+    // Check if customer is deceased by looking at contact history
+    if (!currentCustomer || !currentCustomer.contactHistory) return;
+    
+    const hasDeceasedEntry = currentCustomer.contactHistory.some(entry => 
+        entry.type.toLowerCase().includes('overlijden') || 
+        entry.description.toLowerCase().includes('overlijden')
+    );
+
+    if (hasDeceasedEntry) {
+        // Create and insert the banner
+        const banner = document.createElement('div');
+        banner.className = 'deceased-status-banner';
+        banner.innerHTML = `
+            <div class="deceased-banner-icon">⚠️</div>
+            <div class="deceased-banner-content">
+                <strong>Deze klant is overleden</strong>
+                <p>Let op bij het verwerken van abonnementen en bestellingen</p>
+            </div>
+        `;
+        
+        // Insert after customer header
+        const customerDetail = document.getElementById('customerDetail');
+        const customerHeader = customerDetail.querySelector('.customer-header');
+        if (customerHeader && customerHeader.parentNode) {
+            // Insert after the customer-header div
+            customerHeader.parentNode.insertBefore(banner, customerHeader.nextSibling);
+        }
+    }
+}
+
 // Display Subscriptions
 function displaySubscriptions() {
     const subscriptionsList = document.getElementById('subscriptionsList');
@@ -825,9 +1009,11 @@ function displaySubscriptions() {
         return;
     }
 
-    // Separate active and ended subscriptions
+    // Separate active, ended, restituted, and transferred subscriptions
     const activeSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'active');
     const endedSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'ended' || sub.status === 'cancelled');
+    const restitutedSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'restituted');
+    const transferredSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'transferred');
 
     let html = '';
 
@@ -882,6 +1068,68 @@ function displaySubscriptions() {
                         <button class="btn btn-small btn-winback" onclick="startWinbackForSubscription(${sub.id})" title="Winback/Opzegging">
                             🎯 Winback/Opzegging
                         </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        html += '</div>';
+    }
+
+    // Display restituted subscriptions (cancelled with refund due to deceased)
+    if (restitutedSubscriptions.length > 0) {
+        html += '<div class="subscription-group"><h4 class="subscription-group-title">Gerestitueerde Abonnementen</h4>';
+        html += restitutedSubscriptions.map(sub => {
+            const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
+            const refundInfo = sub.refundInfo ? `<br>Restitutie naar: ${sub.refundInfo.email}` : '';
+            
+            return `
+                <div class="subscription-item subscription-restituted">
+                    <div class="subscription-info">
+                        <div class="subscription-name">📰 ${sub.magazine}</div>
+                        <div class="subscription-details">
+                            Start: ${formatDate(sub.startDate)} • 
+                            ${sub.endDate ? `Einde: ${formatDate(sub.endDate)} • ` : ''}
+                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
+                            ${pricingInfo}${refundInfo}
+                        </div>
+                    </div>
+                    <div class="subscription-actions">
+                        <span class="subscription-status status-restituted">Gerestitueerd</span>
+                        <button class="btn btn-small btn-secondary" onclick="revertRestitution(${sub.id})" title="Overzetten naar andere persoon">
+                            🔄 Overzetten
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        html += '</div>';
+    }
+
+    // Display transferred subscriptions (transferred to another person due to deceased)
+    if (transferredSubscriptions.length > 0) {
+        html += '<div class="subscription-group"><h4 class="subscription-group-title">Overgezette Abonnementen</h4>';
+        html += transferredSubscriptions.map(sub => {
+            const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
+            let transferInfo = '';
+            if (sub.transferredTo) {
+                const transferName = sub.transferredTo.middleName 
+                    ? `${sub.transferredTo.firstName} ${sub.transferredTo.middleName} ${sub.transferredTo.lastName}`
+                    : `${sub.transferredTo.firstName} ${sub.transferredTo.lastName}`;
+                transferInfo = `<br>Overgezet naar: ${transferName} (${sub.transferredTo.email})`;
+            }
+            
+            return `
+                <div class="subscription-item subscription-transferred">
+                    <div class="subscription-info">
+                        <div class="subscription-name">� ${sub.magazine}</div>
+                        <div class="subscription-details">
+                            Start: ${formatDate(sub.startDate)} • 
+                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
+                            ${pricingInfo}${transferInfo}
+                        </div>
+                    </div>
+                    <div class="subscription-actions">
+                        <span class="subscription-status status-transferred">Overgezet</span>
                     </div>
                 </div>
             `;
@@ -960,18 +1208,27 @@ function showNewSubscription() {
     
     // Prefill customer data if a customer is currently selected
     if (currentCustomer) {
-        document.getElementById('subFirstName').value = currentCustomer.firstName;
-        document.getElementById('subLastName').value = currentCustomer.lastName;
-        document.getElementById('subPostalCode').value = currentCustomer.postalCode;
-        document.getElementById('subHouseNumber').value = currentCustomer.houseNumber;
+        const initialsEl = document.getElementById('subInitials');
+        const lastNameEl = document.getElementById('subLastName');
+        const postalCodeEl = document.getElementById('subPostalCode');
+        const houseNumberEl = document.getElementById('subHouseNumber');
+        const addressEl = document.getElementById('subAddress');
+        const cityEl = document.getElementById('subCity');
+        const emailEl = document.getElementById('subEmail');
+        const phoneEl = document.getElementById('subPhone');
+        
+        if (initialsEl) initialsEl.value = currentCustomer.firstName;
+        if (lastNameEl) lastNameEl.value = currentCustomer.lastName;
+        if (postalCodeEl) postalCodeEl.value = currentCustomer.postalCode;
+        if (houseNumberEl) houseNumberEl.value = currentCustomer.houseNumber;
         
         // Extract street name from address (remove house number)
         const streetName = currentCustomer.address.replace(/\s+\d+.*$/, '');
-        document.getElementById('subAddress').value = streetName;
+        if (addressEl) addressEl.value = streetName;
         
-        document.getElementById('subCity').value = currentCustomer.city;
-        document.getElementById('subEmail').value = currentCustomer.email;
-        document.getElementById('subPhone').value = currentCustomer.phone;
+        if (cityEl) cityEl.value = currentCustomer.city;
+        if (emailEl) emailEl.value = currentCustomer.email;
+        if (phoneEl) phoneEl.value = currentCustomer.phone;
     } else {
         // Clear form if no customer selected (new customer)
         document.getElementById('subscriptionForm').reset();
@@ -1624,7 +1881,25 @@ function showDeceasedTransferForm() {
     document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
     document.getElementById('winbackStep1d').style.display = 'block';
     
-    setupTransferForm();
+    // Render unified customer form
+    renderCustomerForm('transferCustomerForm', 'transfer', {
+        phoneRequired: true,
+        emailRequired: true,
+        showSameAddressCheckbox: true
+    });
+    
+    // Setup same address functionality
+    const checkbox = document.getElementById('transferSameAddress');
+    checkbox.addEventListener('change', function() {
+        if (this.checked && currentCustomer) {
+            setCustomerFormData('transfer', {
+                postalCode: currentCustomer.postalCode,
+                houseNumber: currentCustomer.houseNumber,
+                address: currentCustomer.address,
+                city: currentCustomer.city
+            });
+        }
+    });
 }
 
 // Show Deceased Combined Form
@@ -1651,53 +1926,150 @@ function showDeceasedCombinedForm() {
     document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
     document.getElementById('winbackStep1e').style.display = 'block';
     
-    setupTransferForm2();
-}
-
-// Setup Transfer Form
-function setupTransferForm() {
-    const sameAddressCheckbox = document.getElementById('transferSameAddress');
-    const addressFields = document.getElementById('transferAddressFields');
+    // Render unified customer form
+    renderCustomerForm('transfer2CustomerForm', 'transfer2', {
+        phoneRequired: true,
+        emailRequired: true,
+        showSameAddressCheckbox: true
+    });
     
-    // Remove old event listener if exists
-    const newCheckbox = sameAddressCheckbox.cloneNode(true);
-    sameAddressCheckbox.parentNode.replaceChild(newCheckbox, sameAddressCheckbox);
-    
-    newCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            addressFields.style.display = 'none';
-            // Pre-fill with current customer address
-            document.getElementById('transferPostalCode').value = currentCustomer.postalCode;
-            document.getElementById('transferHouseNumber').value = currentCustomer.houseNumber;
-            document.getElementById('transferAddress').value = currentCustomer.address;
-            document.getElementById('transferCity').value = currentCustomer.city;
-        } else {
-            addressFields.style.display = 'block';
+    // Setup same address functionality
+    const checkbox = document.getElementById('transfer2SameAddress');
+    checkbox.addEventListener('change', function() {
+        if (this.checked && currentCustomer) {
+            setCustomerFormData('transfer2', {
+                postalCode: currentCustomer.postalCode,
+                houseNumber: currentCustomer.houseNumber,
+                address: currentCustomer.address,
+                city: currentCustomer.city
+            });
         }
     });
 }
 
-// Setup Transfer Form 2 (for combined form)
-function setupTransferForm2() {
-    const sameAddressCheckbox = document.getElementById('transferSameAddress2');
-    const addressFields = document.getElementById('transferAddressFields2');
+// Legacy functions removed - now using renderCustomerForm() with unified component
+
+// Revert Restitution - Transfer subscription to another person (deceased cannot have active subscriptions)
+function revertRestitution(subscriptionId) {
+    const subscription = currentCustomer.subscriptions.find(s => s.id === subscriptionId);
+    if (!subscription || subscription.status !== 'restituted') {
+        showToast('Abonnement niet gevonden of niet gerestitueerd', 'error');
+        return;
+    }
     
-    // Remove old event listener if exists
-    const newCheckbox = sameAddressCheckbox.cloneNode(true);
-    sameAddressCheckbox.parentNode.replaceChild(newCheckbox, sameAddressCheckbox);
+    // Store the subscription ID for the transfer form
+    window.restitutionRevertSubId = subscriptionId;
     
-    newCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            addressFields.style.display = 'none';
-            // Pre-fill with current customer address
-            document.getElementById('transferPostalCode2').value = currentCustomer.postalCode;
-            document.getElementById('transferHouseNumber2').value = currentCustomer.houseNumber;
-            document.getElementById('transferAddress2').value = currentCustomer.address;
-            document.getElementById('transferCity2').value = currentCustomer.city;
-        } else {
-            addressFields.style.display = 'block';
-        }
+    // Open transfer form
+    showRestitutionTransferForm(subscription);
+}
+
+// Show Transfer Form for Restitution Revert
+function showRestitutionTransferForm(subscription) {
+    // Open the transfer form modal
+    document.getElementById('restitutionTransferForm').style.display = 'flex';
+    
+    // Update form title
+    document.getElementById('restitutionTransferTitle').textContent = `${subscription.magazine} Overzetten`;
+    
+    // Pre-fill same address checkbox as checked by default
+    document.getElementById('restitutionTransferSameAddress').checked = true;
+    toggleRestitutionTransferAddress();
+}
+
+// Toggle Address Fields for Restitution Transfer
+function toggleRestitutionTransferAddress() {
+    const sameAddress = document.getElementById('restitutionTransferSameAddress').checked;
+    const addressFields = document.getElementById('restitutionTransferAddressFields');
+    
+    if (sameAddress) {
+        addressFields.style.display = 'none';
+        // Remove required attribute
+        document.getElementById('restitutionTransferPostalCode').removeAttribute('required');
+        document.getElementById('restitutionTransferHouseNumber').removeAttribute('required');
+        document.getElementById('restitutionTransferAddress').removeAttribute('required');
+        document.getElementById('restitutionTransferCity').removeAttribute('required');
+    } else {
+        addressFields.style.display = 'block';
+        // Add required attribute
+        document.getElementById('restitutionTransferPostalCode').setAttribute('required', 'required');
+        document.getElementById('restitutionTransferHouseNumber').setAttribute('required', 'required');
+        document.getElementById('restitutionTransferAddress').setAttribute('required', 'required');
+        document.getElementById('restitutionTransferCity').setAttribute('required', 'required');
+    }
+}
+
+// Complete Restitution Transfer
+function completeRestitutionTransfer(event) {
+    event.preventDefault();
+    
+    const subscriptionId = window.restitutionRevertSubId;
+    const subscription = currentCustomer.subscriptions.find(s => s.id === subscriptionId);
+    
+    if (!subscription) {
+        showToast('Abonnement niet gevonden', 'error');
+        return;
+    }
+    
+    // Get form data
+    const sameAddress = document.getElementById('restitutionTransferSameAddress').checked;
+    const transferData = {
+        salutation: document.getElementById('restitutionTransferSalutation').value,
+        firstName: document.getElementById('restitutionTransferFirstName').value.trim(),
+        middleName: document.getElementById('restitutionTransferMiddleName').value.trim(),
+        lastName: document.getElementById('restitutionTransferLastName').value.trim(),
+        email: document.getElementById('restitutionTransferEmail').value.trim(),
+        phone: document.getElementById('restitutionTransferPhone').value.trim(),
+        postalCode: sameAddress ? currentCustomer.postalCode : document.getElementById('restitutionTransferPostalCode').value.trim(),
+        houseNumber: sameAddress ? currentCustomer.houseNumber : document.getElementById('restitutionTransferHouseNumber').value.trim(),
+        address: sameAddress ? currentCustomer.address : document.getElementById('restitutionTransferAddress').value.trim(),
+        city: sameAddress ? currentCustomer.city : document.getElementById('restitutionTransferCity').value.trim()
+    };
+    
+    // Validate
+    if (!transferData.firstName || !transferData.lastName || !transferData.email || !transferData.phone) {
+        showToast('Vul alle verplichte velden in', 'error');
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(transferData.email)) {
+        showToast('Voer een geldig e-mailadres in', 'error');
+        return;
+    }
+    
+    // Update subscription with transfer info
+    subscription.status = 'transferred';
+    subscription.transferredTo = {
+        ...transferData,
+        transferDate: new Date().toISOString()
+    };
+    delete subscription.refundInfo;
+    
+    // Add contact history entry
+    const newCustomerName = transferData.middleName 
+        ? `${transferData.salutation} ${transferData.firstName} ${transferData.middleName} ${transferData.lastName}`
+        : `${transferData.salutation} ${transferData.firstName} ${transferData.lastName}`;
+    
+    currentCustomer.contactHistory.unshift({
+        id: currentCustomer.contactHistory.length + 1,
+        type: 'Restitutie Ongedaan - Abonnement Overgezet',
+        date: new Date().toISOString(),
+        description: `Restitutie van ${subscription.magazine} ongedaan gemaakt. Abonnement overgezet naar ${newCustomerName} (${transferData.email}) op ${transferData.address}, ${transferData.postalCode} ${transferData.city}.`
     });
+    
+    saveCustomers();
+    
+    // Close form
+    closeForm('restitutionTransferForm');
+    
+    // Refresh display
+    selectCustomer(currentCustomer.id);
+    
+    showToast(`${subscription.magazine} overgezet naar ${newCustomerName}`, 'success');
+    
+    // Clear stored subscription ID
+    window.restitutionRevertSubId = null;
 }
 
 // Complete All Deceased Actions
@@ -1748,13 +2120,20 @@ function completeAllDeceasedActions() {
             ...transferData,
             transferDate: new Date().toISOString()
         };
+        action.subscription.status = 'transferred';
         processedMagazines.push(`${action.subscription.magazine} (overgezet)`);
     }
     
-    // Process refunds (remove subscriptions)
+    // Process refunds (mark as restituted instead of removing)
     for (const action of refundActions) {
-        currentCustomer.subscriptions = currentCustomer.subscriptions.filter(s => s.id !== action.subscription.id);
-        processedMagazines.push(`${action.subscription.magazine} (opgezegd)`);
+        action.subscription.status = 'restituted';
+        action.subscription.endDate = new Date().toISOString();
+        action.subscription.refundInfo = {
+            email: refundData.email,
+            notes: refundData.notes,
+            refundDate: new Date().toISOString()
+        };
+        processedMagazines.push(`${action.subscription.magazine} (gerestitueerd)`);
     }
     
     // Create contact history entry
@@ -1795,22 +2174,32 @@ function completeAllDeceasedActions() {
     window.deceasedSubscriptionActions = null;
 }
 
-// Get Transfer Data from Form
+// Get Transfer Data from Form (using unified customer form component)
 function getTransferDataFromForm(formVersion) {
-    const suffix = formVersion === 2 ? '2' : '';
-    const sameAddress = document.getElementById(`transferSameAddress${suffix}`).checked;
+    const prefix = formVersion === 2 ? 'transfer2' : 'transfer';
+    const data = getCustomerFormData(prefix);
+    const sameAddress = document.getElementById(`${prefix}SameAddress`)?.checked || false;
     
+    // If same address is checked, override with current customer address
+    if (sameAddress && currentCustomer) {
+        data.postalCode = currentCustomer.postalCode;
+        data.houseNumber = currentCustomer.houseNumber;
+        data.address = currentCustomer.address;
+        data.city = currentCustomer.city;
+    }
+    
+    // Convert initials to firstName for compatibility
     return {
-        salutation: document.getElementById(`transferSalutation${suffix}`).value,
-        firstName: document.getElementById(`transferFirstName${suffix}`).value.trim(),
-        middleName: document.getElementById(`transferMiddleName${suffix}`).value.trim(),
-        lastName: document.getElementById(`transferLastName${suffix}`).value.trim(),
-        email: document.getElementById(`transferEmail${suffix}`).value.trim(),
-        phone: document.getElementById(`transferPhone${suffix}`).value.trim(),
-        postalCode: sameAddress ? currentCustomer.postalCode : document.getElementById(`transferPostalCode${suffix}`).value.trim(),
-        houseNumber: sameAddress ? currentCustomer.houseNumber : document.getElementById(`transferHouseNumber${suffix}`).value.trim(),
-        address: sameAddress ? currentCustomer.address : document.getElementById(`transferAddress${suffix}`).value.trim(),
-        city: sameAddress ? currentCustomer.city : document.getElementById(`transferCity${suffix}`).value.trim()
+        salutation: data.salutation,
+        firstName: data.initials,
+        middleName: data.middleName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        postalCode: data.postalCode,
+        houseNumber: data.houseNumber,
+        address: data.address,
+        city: data.city
     };
 }
 

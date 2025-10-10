@@ -644,6 +644,88 @@
                     </div>
                 </div>
 
+                <!-- Restitution Transfer Form -->
+                <div id="restitutionTransferForm" class="form-container" style="display: none;">
+                    <div class="card">
+                        <div class="form-header">
+                            <h2 id="restitutionTransferTitle">🔄 Abonnement Overzetten</h2>
+                            <button class="btn-close" onclick="closeForm('restitutionTransferForm')">✕</button>
+                        </div>
+                        <form id="restitutionTransferFormElement" onsubmit="completeRestitutionTransfer(event)">
+                            <div class="info-box" style="background-color: rgba(239, 68, 68, 0.1); border-color: #ef4444;">
+                                <strong>Let op:</strong> Overleden personen kunnen geen actieve abonnementen hebben. Het abonnement moet worden overgezet naar een andere persoon.
+                            </div>
+                            
+                            <h3 class="form-subtitle">Nieuwe abonnee gegevens</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="restitutionTransferSalutation">Aanhef *</label>
+                                    <select id="restitutionTransferSalutation" class="form-control" required>
+                                        <option value="Dhr.">Dhr.</option>
+                                        <option value="Mevr.">Mevr.</option>
+                                        <option value="Anders">Anders</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="restitutionTransferFirstName">Voornaam *</label>
+                                    <input type="text" id="restitutionTransferFirstName" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="restitutionTransferMiddleName">Tussenvoegsel</label>
+                                    <input type="text" id="restitutionTransferMiddleName" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="restitutionTransferLastName">Achternaam *</label>
+                                    <input type="text" id="restitutionTransferLastName" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="restitutionTransferEmail">E-mail *</label>
+                                <input type="email" id="restitutionTransferEmail" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="restitutionTransferPhone">Telefoonnummer *</label>
+                                <input type="tel" id="restitutionTransferPhone" class="form-control" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="restitutionTransferSameAddress" onchange="toggleRestitutionTransferAddress()">
+                                    Zelfde adres als originele abonnee
+                                </label>
+                            </div>
+                            
+                            <div id="restitutionTransferAddressFields">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="restitutionTransferPostalCode">Postcode *</label>
+                                        <input type="text" id="restitutionTransferPostalCode" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="restitutionTransferHouseNumber">Huisnummer *</label>
+                                        <input type="text" id="restitutionTransferHouseNumber" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="restitutionTransferAddress">Straat en nummer *</label>
+                                    <input type="text" id="restitutionTransferAddress" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="restitutionTransferCity">Plaats *</label>
+                                    <input type="text" id="restitutionTransferCity" class="form-control" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('restitutionTransferForm')">Annuleren</button>
+                                <button type="submit" class="btn btn-success">Abonnement Overzetten</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Winback Flow -->
                 <div id="winbackFlow" class="form-container" style="display: none;">
                     <div class="card">
@@ -744,66 +826,9 @@
                                 <div id="transferSubscriptionsList" class="info-box">
                                     <!-- Will show which subscriptions are being transferred -->
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="transferSalutation">Aanhef *</label>
-                                        <select id="transferSalutation" class="form-control" required>
-                                            <option value="Dhr.">Dhr.</option>
-                                            <option value="Mevr.">Mevr.</option>
-                                            <option value="Anders">Anders</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transferFirstName">Voornaam *</label>
-                                        <input type="text" id="transferFirstName" class="form-control" required>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="transferMiddleName">Tussenvoegsel</label>
-                                        <input type="text" id="transferMiddleName" class="form-control">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transferLastName">Achternaam *</label>
-                                        <input type="text" id="transferLastName" class="form-control" required>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="transferEmail">E-mail *</label>
-                                    <input type="email" id="transferEmail" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="transferPhone">Telefoonnummer *</label>
-                                    <input type="tel" id="transferPhone" class="form-control" required>
-                                </div>
                                 
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="transferSameAddress">
-                                        Zelfde adres als originele abonnee
-                                    </label>
-                                </div>
-                                
-                                <div id="transferAddressFields">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="transferPostalCode">Postcode *</label>
-                                            <input type="text" id="transferPostalCode" class="form-control" required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="transferHouseNumber">Huisnummer *</label>
-                                            <input type="text" id="transferHouseNumber" class="form-control" required>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transferAddress">Straat en nummer *</label>
-                                        <input type="text" id="transferAddress" class="form-control" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transferCity">Plaats *</label>
-                                        <input type="text" id="transferCity" class="form-control" required>
-                                    </div>
-                                </div>
+                                <!-- Unified Customer Form -->
+                                <div id="transferCustomerForm"></div>
                                 
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" onclick="winbackPrevStep('1b')">← Terug</button>
@@ -820,66 +845,9 @@
                                 </div>
                                 
                                 <h4>Nieuwe abonnee gegevens</h4>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="transferSalutation2">Aanhef *</label>
-                                        <select id="transferSalutation2" class="form-control" required>
-                                            <option value="Dhr.">Dhr.</option>
-                                            <option value="Mevr.">Mevr.</option>
-                                            <option value="Anders">Anders</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transferFirstName2">Voornaam *</label>
-                                        <input type="text" id="transferFirstName2" class="form-control" required>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="transferMiddleName2">Tussenvoegsel</label>
-                                        <input type="text" id="transferMiddleName2" class="form-control">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transferLastName2">Achternaam *</label>
-                                        <input type="text" id="transferLastName2" class="form-control" required>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="transferEmail2">E-mail *</label>
-                                    <input type="email" id="transferEmail2" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="transferPhone2">Telefoonnummer *</label>
-                                    <input type="tel" id="transferPhone2" class="form-control" required>
-                                </div>
                                 
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="transferSameAddress2">
-                                        Zelfde adres als originele abonnee
-                                    </label>
-                                </div>
-                                
-                                <div id="transferAddressFields2">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="transferPostalCode2">Postcode *</label>
-                                            <input type="text" id="transferPostalCode2" class="form-control" required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="transferHouseNumber2">Huisnummer *</label>
-                                            <input type="text" id="transferHouseNumber2" class="form-control" required>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transferAddress2">Straat en nummer *</label>
-                                        <input type="text" id="transferAddress2" class="form-control" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transferCity2">Plaats *</label>
-                                        <input type="text" id="transferCity2" class="form-control" required>
-                                    </div>
-                                </div>
+                                <!-- Unified Customer Form -->
+                                <div id="transfer2CustomerForm"></div>
                                 
                                 <div id="combinedRefundList" class="info-box" style="margin-top: 2rem;">
                                     <!-- Refund subscriptions -->

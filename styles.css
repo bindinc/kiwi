@@ -646,6 +646,41 @@ select option {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* Deceased Status Banner */
+.deceased-status-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+    border: 2px solid #ef4444;
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.deceased-banner-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.deceased-banner-content {
+    flex: 1;
+}
+
+.deceased-banner-content strong {
+    display: block;
+    color: #dc2626;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.deceased-banner-content p {
+    color: #991b1b;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
 .customer-info h2 {
     margin-bottom: 0.5rem;
 }
@@ -751,6 +786,28 @@ select option {
 .status-cancelled {
     background-color: rgba(239, 68, 68, 0.1);
     color: #dc2626;
+}
+
+.status-restituted {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    font-weight: 500;
+}
+
+.subscription-restituted {
+    border-left: 3px solid #f59e0b;
+    background-color: rgba(245, 158, 11, 0.02);
+}
+
+.status-transferred {
+    background-color: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
+    font-weight: 500;
+}
+
+.subscription-transferred {
+    border-left: 3px solid #7c3aed;
+    background-color: rgba(139, 92, 246, 0.02);
 }
 
 .subscription-actions {
@@ -1661,6 +1718,114 @@ select option {
     border-top: 1px solid var(--border-color);
 }
 
+/* ============================================================================
+   Winback Step - Reuse onepager-container styling
+   ============================================================================ */
+
+.winback-step .form-subtitle {
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.winback-step .aanhef-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.winback-step .aanhef-row label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.winback-step .aanhef-row input {
+    margin-right: 0.5rem;
+}
+
+.winback-step .form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.winback-step .form-row input, 
+.winback-step .form-row select {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+    font-size: 0.95rem;
+}
+
+.winback-step .form-row input::placeholder {
+    color: #666;
+}
+
+.winback-step .form-row input:focus,
+.winback-step .form-row select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Special input sizing for name fields */
+.winback-step .form-row input[id*="Initials"] {
+    flex: 0.8;
+}
+
+.winback-step .form-row input[id*="MiddleName"] {
+    flex: 1;
+}
+
+.winback-step .form-row input[id*="LastName"] {
+    flex: 2;
+}
+
+/* Address fields sizing */
+.winback-step .form-row input[id*="PostalCode"] {
+    flex: 1;
+}
+
+.winback-step .form-row input[id*="HouseNumber"] {
+    flex: 0.8;
+}
+
+.winback-step .form-row input[id*="HouseExt"] {
+    flex: 0.6;
+}
+
+.winback-step .form-row input[id*="Address"] {
+    flex: 2;
+}
+
+.winback-step .form-row input[id*="City"] {
+    flex: 1.5;
+}
+
+/* Checkbox styling in winback-step */
+.winback-step .form-group {
+    margin-bottom: 1rem;
+}
+
+.winback-step .form-group label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.winback-step .form-group input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
+}
+
 /* Mobile responsive for onepager forms */
 @media screen and (max-width: 768px) {
     .onepager-container .form-row {
@@ -1680,6 +1845,17 @@ select option {
     
     .onepager-container .optin-label {
         min-width: auto;
+    }
+    
+    /* Winback step mobile responsive */
+    .winback-step .form-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .winback-step .aanhef-row {
+        flex-wrap: wrap;
+        gap: 1rem;
     }
     
     .onepager-container .form-actions {
