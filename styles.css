@@ -79,64 +79,56 @@ body {
     font-size: 0.9rem;
 }
 
-.agent-name {
-    font-size: 0.9rem;
-    padding-right: 1.5rem;
-    border-right: 1px solid rgba(255, 255, 255, 0.2);
-}
-
 .time {
     font-size: 0.9rem;
     opacity: 0.9;
 }
 
 /* ============================================================================
-   PHASE 1B: AGENT STATUS WIDGET
+   PHASE 1B: AGENT PROFILE WIDGET WITH STATUS
    ============================================================================ */
 
-.agent-status-widget {
+.agent-profile-widget {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    padding-right: 1.5rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.status-indicator {
+.agent-profile-trigger {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: rgba(107, 114, 128, 0.2);
-    border-radius: var(--radius-sm);
-    cursor: default;
-    transition: background 0.2s;
-}
-
-.status-icon {
-    font-size: 1rem;
-}
-
-.status-label {
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.status-dropdown-btn {
+    padding: 0.5rem 0.75rem;
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 0.3rem 0.5rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 0.7rem;
     transition: background 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.status-dropdown-btn:hover {
+.agent-profile-trigger:hover {
     background: rgba(255, 255, 255, 0.2);
 }
 
-.status-menu {
+.agent-status-dot {
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.agent-name-label {
+    font-size: 0.9rem;
+    color: white;
+}
+
+.profile-dropdown-arrow {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    margin-left: 0.25rem;
+}
+
+.agent-profile-menu {
     position: absolute;
     top: 100%;
     right: 0;
@@ -144,9 +136,24 @@ body {
     background: white;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    min-width: 180px;
+    min-width: 220px;
     overflow: hidden;
     z-index: 1000;
+}
+
+.profile-menu-section {
+    padding: 0.5rem 0;
+}
+
+.profile-menu-header {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
 }
 
 .status-menu-item {

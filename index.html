@@ -16,28 +16,30 @@
                 <div class="header-top">
                     <h1>📞 Klantenservice Portal</h1>
                     <div class="header-right">
-                        <!-- Agent Status Widget -->
-                        <div class="agent-status-widget">
-                            <div class="status-indicator" id="agentStatusIndicator">
-                                <span class="status-icon">🟢</span>
-                                <span class="status-label">Beschikbaar</span>
+                        <!-- Agent Profile Widget with Status -->
+                        <div class="agent-profile-widget">
+                            <div class="agent-profile-trigger" onclick="toggleStatusMenu()">
+                                <span class="agent-status-dot" id="agentStatusDot">🟢</span>
+                                <span class="agent-name-label">Agent: <strong id="agentName">Jan Vos</strong></span>
+                                <span class="profile-dropdown-arrow">▼</span>
                             </div>
-                            <button class="status-dropdown-btn" onclick="toggleStatusMenu()">▼</button>
-                            <div class="status-menu" id="agentStatusMenu" style="display: none;">
-                                <div class="status-menu-item" onclick="setAgentStatus('ready')">
-                                    🟢 Beschikbaar
-                                </div>
-                                <div class="status-menu-item" onclick="setAgentStatus('break')">
-                                    🔵 Pauze
-                                </div>
-                                <div class="status-menu-item" onclick="setAgentStatus('offline')">
-                                    ⚫ Offline
+                            <div class="agent-profile-menu" id="agentStatusMenu" style="display: none;">
+                                <div class="profile-menu-section">
+                                    <div class="profile-menu-header">Status</div>
+                                    <div class="status-menu-item" onclick="setAgentStatus('ready')">
+                                        🟢 Beschikbaar
+                                    </div>
+                                    <div class="status-menu-item" onclick="setAgentStatus('break')">
+                                        🔵 Pauze
+                                    </div>
+                                    <div class="status-menu-item" onclick="setAgentStatus('offline')">
+                                        ⚫ Offline
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="user-info">
-                            <span class="agent-name">Agent: <strong id="agentName">Jan Vos</strong></span>
                             <span class="time" id="currentTime"></span>
                         </div>
                     </div>

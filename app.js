@@ -676,12 +676,10 @@ function setAgentStatus(newStatus) {
 // Update Agent Status Display
 function updateAgentStatusDisplay() {
     const statusConfig = agentStatuses[agentStatus.current];
-    const indicator = document.getElementById('agentStatusIndicator');
+    const statusDot = document.getElementById('agentStatusDot');
     
-    if (indicator) {
-        indicator.querySelector('.status-icon').textContent = statusConfig.icon;
-        indicator.querySelector('.status-label').textContent = statusConfig.label;
-        indicator.style.backgroundColor = statusConfig.color + '20'; // 20% opacity
+    if (statusDot) {
+        statusDot.textContent = statusConfig.icon;
     }
 }
 
