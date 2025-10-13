@@ -13,37 +13,39 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <h1>📞 Klantenservice Portal</h1>
-                <div class="header-right">
-                    <!-- Agent Status Widget -->
-                    <div class="agent-status-widget">
-                        <div class="status-indicator" id="agentStatusIndicator">
-                            <span class="status-icon">⚫</span>
-                            <span class="status-label">Offline</span>
+                <div class="header-top">
+                    <h1>📞 Klantenservice Portal</h1>
+                    <div class="header-right">
+                        <!-- Agent Status Widget -->
+                        <div class="agent-status-widget">
+                            <div class="status-indicator" id="agentStatusIndicator">
+                                <span class="status-icon">⚫</span>
+                                <span class="status-label">Offline</span>
+                            </div>
+                            <button class="status-dropdown-btn" onclick="toggleStatusMenu()">▼</button>
+                            <div class="status-menu" id="agentStatusMenu" style="display: none;">
+                                <div class="status-menu-item" onclick="setAgentStatus('ready')">
+                                    🟢 Beschikbaar
+                                </div>
+                                <div class="status-menu-item" onclick="setAgentStatus('break')">
+                                    🔵 Pauze
+                                </div>
+                                <div class="status-menu-item" onclick="setAgentStatus('offline')">
+                                    ⚫ Offline
+                                </div>
+                            </div>
                         </div>
-                        <button class="status-dropdown-btn" onclick="toggleStatusMenu()">▼</button>
-                        <div class="status-menu" id="agentStatusMenu" style="display: none;">
-                            <div class="status-menu-item" onclick="setAgentStatus('ready')">
-                                🟢 Beschikbaar
-                            </div>
-                            <div class="status-menu-item" onclick="setAgentStatus('break')">
-                                🔵 Pauze
-                            </div>
-                            <div class="status-menu-item" onclick="setAgentStatus('offline')">
-                                ⚫ Offline
-                            </div>
+                        
+                        <div class="user-info">
+                            <span class="agent-name">Agent: <strong id="agentName">Jan Vos</strong></span>
+                            <span class="time" id="currentTime"></span>
                         </div>
                     </div>
-                    
-                    <div class="user-info">
-                        <span class="agent-name">Agent: <strong id="agentName">Jan Vos</strong></span>
-                        <span class="time" id="currentTime"></span>
-                        <!-- Legacy Call Status Display (will be deprecated) -->
-                        <span id="callStatus" class="call-status" style="display: none;"></span>
-                    </div>
-                    
-                    <!-- New Session Info Display -->
-                    <div id="sessionInfo" class="session-info" style="display: none;">
+                </div>
+                
+                <!-- Active Call Session Bar -->
+                <div id="sessionInfo" class="session-info" style="display: none;">
+                    <div class="session-info-content">
                         <div class="session-service">
                             <span class="service-icon">📞</span>
                             <span id="sessionServiceNumber" class="service-number">AVROBODE SERVICE</span>
@@ -61,23 +63,32 @@
                             <span class="duration-icon">⏱️</span>
                             <span id="sessionDuration">00:00:00</span>
                         </div>
-                        <button id="endSessionBtn" class="btn-end-session" 
-                                onclick="endCallSession()" 
-                                style="display: none;">
-                            📞 Sessie Afsluiten
-                        </button>
-                        <button id="endAnonymousCallBtn" class="btn-end-anonymous-call" 
-                                onclick="endCallSession()" 
-                                style="display: none;">
-                            📞 Beëindig gesprek
-                        </button>
-                    </div>
-                    
-                    <!-- Recording Indicator -->
-                    <div class="recording-indicator" id="recordingIndicator" style="display: none;">
-                        <span class="rec-icon">🔴</span>
-                        <span class="rec-text">REC</span>
-                        <span class="rec-notice">Dit gesprek wordt opgenomen</span>
+                        
+                        <!-- Recording Indicator -->
+                        <div class="recording-indicator" id="recordingIndicator" style="display: none;">
+                            <span class="rec-icon">🔴</span>
+                            <span class="rec-text">REC</span>
+                        </div>
+                        
+                        <!-- Call Action Buttons -->
+                        <div class="session-actions">
+                            <button id="holdCallBtn" 
+                                    class="btn-hold-call" 
+                                    onclick="toggleCallHold()"
+                                    style="display: none;">
+                                ⏸️ In Wacht
+                            </button>
+                            <button id="endSessionBtn" class="btn-end-session" 
+                                    onclick="endCallSession()" 
+                                    style="display: none;">
+                                📞 Afsluiten
+                            </button>
+                            <button id="endAnonymousCallBtn" class="btn-end-anonymous-call" 
+                                    onclick="endCallSession()" 
+                                    style="display: none;">
+                                📞 Beëindig
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -987,6 +998,79 @@
                         Opslaan
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disposition Modal (Phase 5A) -->
+    <div id="dispositionModal" class="modal">
+        <div class="modal-content disposition-modal">
+            <div class="modal-header">
+                <h2>📋 Gesprek Afronden</h2>
+                <p class="modal-subtitle">Vul de gespreksinformatie in voordat je verder gaat</p>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="dispCategory">Categorie *</label>
+                    <select id="dispCategory" required onchange="updateDispositionOutcomes()">
+                        <option value="">Selecteer categorie...</option>
+                        <option value="subscription">Abonnement</option>
+                        <option value="delivery">Bezorging</option>
+                        <option value="payment">Betaling</option>
+                        <option value="article_sale">Artikel Verkoop</option>
+                        <option value="complaint">Klacht</option>
+                        <option value="general">Algemeen</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dispOutcome">Uitkomst *</label>
+                    <select id="dispOutcome" required disabled>
+                        <option value="">Selecteer eerst een categorie</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dispNotes">Notities</label>
+                    <textarea id="dispNotes" 
+                              rows="4" 
+                              placeholder="Vat het gesprek samen en noteer belangrijke details..."></textarea>
+                    <small class="form-text">Beschrijf kort wat er besproken is en welke acties zijn ondernomen</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="dispFollowUpRequired" onchange="toggleFollowUpSection()">
+                        <span>Follow-up vereist</span>
+                    </label>
+                </div>
+                
+                <div id="followUpSection" class="form-group" style="display: none;">
+                    <label for="dispFollowUpDate">Follow-up datum</label>
+                    <input type="date" id="dispFollowUpDate">
+                    <textarea id="dispFollowUpNotes" 
+                              rows="2" 
+                              placeholder="Wat moet er bij follow-up gebeuren?"></textarea>
+                </div>
+                
+                <div class="disposition-info">
+                    <div class="info-row">
+                        <span>Gespreksduur:</span>
+                        <span id="dispCallDuration">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Klant:</span>
+                        <span id="dispCustomerName">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Service nummer:</span>
+                        <span id="dispServiceNumber">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="cancelDisposition()">Annuleren</button>
+                <button class="btn btn-primary" onclick="saveDisposition()">Opslaan & Afronden</button>
             </div>
         </div>
     </div>

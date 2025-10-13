@@ -15,7 +15,9 @@ let callSession = {
     pendingIdentification: null, // Tijdelijke opslag voor klant die nog niet gekoppeld is
     durationInterval: null,     // Timer interval voor gespreksduur
     recordingActive: false,     // Is recording actief
-    totalHoldTime: 0            // Totale hold tijd
+    totalHoldTime: 0,           // Totale hold tijd
+    holdStartTime: null,        // Wanneer hold startte
+    onHold: false               // Is call momenteel on hold
 };
 
 // Phase 1B: Agent Status State Management
@@ -62,6 +64,74 @@ const serviceNumbers = {
         color: '#9333ea',
         icon: '📞'
     }
+};
+
+// Phase 5A: ACW Configuration
+const ACW_DEFAULT_DURATION = 120; // 120 seconds
+
+// Phase 5A: Disposition Codes Configuration
+const dispositionCategories = {
+    'subscription': {
+        label: 'Abonnement',
+        outcomes: [
+            { code: 'new_subscription', label: 'Nieuw abonnement afgesloten' },
+            { code: 'subscription_changed', label: 'Abonnement gewijzigd' },
+            { code: 'subscription_cancelled', label: 'Abonnement opgezegd' },
+            { code: 'subscription_paused', label: 'Abonnement gepauzeerd' },
+            { code: 'info_provided', label: 'Informatie verstrekt' }
+        ]
+    },
+    'delivery': {
+        label: 'Bezorging',
+        outcomes: [
+            { code: 'delivery_issue_resolved', label: 'Bezorgprobleem opgelost' },
+            { code: 'magazine_resent', label: 'Editie opnieuw verzonden' },
+            { code: 'delivery_prefs_updated', label: 'Bezorgvoorkeuren aangepast' },
+            { code: 'escalated_delivery', label: 'Geëscaleerd naar bezorging' }
+        ]
+    },
+    'payment': {
+        label: 'Betaling',
+        outcomes: [
+            { code: 'payment_resolved', label: 'Betaling afgehandeld' },
+            { code: 'payment_plan_arranged', label: 'Betalingsregeling getroffen' },
+            { code: 'iban_updated', label: 'IBAN gegevens bijgewerkt' },
+            { code: 'escalated_finance', label: 'Geëscaleerd naar financiën' }
+        ]
+    },
+    'article_sale': {
+        label: 'Artikel Verkoop',
+        outcomes: [
+            { code: 'article_sold', label: 'Artikel verkocht' },
+            { code: 'quote_provided', label: 'Offerte verstrekt' },
+            { code: 'no_sale', label: 'Geen verkoop' }
+        ]
+    },
+    'complaint': {
+        label: 'Klacht',
+        outcomes: [
+            { code: 'complaint_resolved', label: 'Klacht opgelost' },
+            { code: 'complaint_escalated', label: 'Klacht geëscaleerd' },
+            { code: 'callback_scheduled', label: 'Terugbelafspraak gemaakt' }
+        ]
+    },
+    'general': {
+        label: 'Algemeen',
+        outcomes: [
+            { code: 'info_provided', label: 'Informatie verstrekt' },
+            { code: 'transferred', label: 'Doorverbonden' },
+            { code: 'customer_hung_up', label: 'Klant opgehangen' },
+            { code: 'wrong_number', label: 'Verkeerd verbonden' },
+            { code: 'no_answer_needed', label: 'Geen actie vereist' }
+        ]
+    }
+};
+
+// Phase 2B: Recording Configuration
+const recordingConfig = {
+    enabled: true,
+    requireConsent: true,
+    autoStart: true
 };
 
 // End Session - Close current customer and return to clean slate
@@ -343,6 +413,23 @@ function startCallSession() {
     // Update agent status naar Busy
     autoSetAgentStatus('call_started');
     
+    // Toon hold button
+    const holdBtn = document.getElementById('holdCallBtn');
+    if (holdBtn) {
+        holdBtn.style.display = 'inline-block';
+        holdBtn.innerHTML = '⏸️ In Wacht Zetten';
+        holdBtn.classList.remove('on-hold');
+    }
+    
+    // Toon recording indicator (Phase 2B)
+    if (recordingConfig.enabled) {
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        if (recordingIndicator) {
+            recordingIndicator.style.display = 'flex';
+            callSession.recordingActive = true;
+        }
+    }
+    
     // Start gespreksduur timer
     updateCallDuration();
     callSession.durationInterval = setInterval(updateCallDuration, 1000);
@@ -392,11 +479,17 @@ function endCallSession(forcedByCustomer = false) {
         pendingIdentification: null,
         durationInterval: null,
         recordingActive: false,
-        totalHoldTime: 0
+        totalHoldTime: 0,
+        holdStartTime: null,
+        onHold: false
     };
     
     // Verberg UI elementen
     document.getElementById('sessionInfo').style.display = 'none';
+    const holdBtn = document.getElementById('holdCallBtn');
+    if (holdBtn) holdBtn.style.display = 'none';
+    const recordingIndicator = document.getElementById('recordingIndicator');
+    if (recordingIndicator) recordingIndicator.style.display = 'none';
     const debugEndBtn = document.getElementById('debugEndCallBtn');
     if (debugEndBtn) {
         debugEndBtn.style.display = 'none';
@@ -456,6 +549,75 @@ function updateIdentifyCallerButtons() {
     const identifyBtn = document.getElementById('identifyCallerBtn');
     if (identifyBtn) {
         identifyBtn.style.display = shouldShow ? 'inline-block' : 'none';
+    }
+}
+
+// ============================================================================
+// PHASE 4B: HOLD/RESUME FUNCTIONALITY
+// ============================================================================
+
+// Toggle Call Hold
+function toggleCallHold() {
+    if (!callSession.active) return;
+    
+    callSession.onHold = !callSession.onHold;
+    
+    const holdBtn = document.getElementById('holdCallBtn');
+    const sessionInfo = document.getElementById('sessionInfo');
+    
+    if (callSession.onHold) {
+        // Put call on hold
+        holdBtn.innerHTML = '▶️ Hervatten';
+        holdBtn.classList.add('on-hold');
+        
+        // Show hold indicator
+        sessionInfo.classList.add('call-on-hold');
+        
+        // Add hold music indicator
+        const holdIndicator = document.createElement('div');
+        holdIndicator.id = 'holdIndicator';
+        holdIndicator.className = 'hold-indicator';
+        holdIndicator.innerHTML = '🎵 Klant in wacht';
+        sessionInfo.appendChild(holdIndicator);
+        
+        // Track hold time
+        callSession.holdStartTime = Date.now();
+        
+        showToast('Gesprek in wacht gezet', 'info');
+        
+        // Log hold
+        if (callSession.customerId) {
+            addContactMoment(
+                callSession.customerId,
+                'call_hold',
+                'Gesprek in wacht gezet'
+            );
+        }
+    } else {
+        // Resume call
+        holdBtn.innerHTML = '⏸️ In Wacht Zetten';
+        holdBtn.classList.remove('on-hold');
+        
+        sessionInfo.classList.remove('call-on-hold');
+        
+        // Remove hold indicator
+        const holdIndicator = document.getElementById('holdIndicator');
+        if (holdIndicator) holdIndicator.remove();
+        
+        // Calculate hold duration
+        const holdDuration = Math.floor((Date.now() - callSession.holdStartTime) / 1000);
+        callSession.totalHoldTime = (callSession.totalHoldTime || 0) + holdDuration;
+        
+        showToast(`Gesprek hervat (wacht: ${formatTime(holdDuration)})`, 'success');
+        
+        // Log resume
+        if (callSession.customerId) {
+            addContactMoment(
+                callSession.customerId,
+                'call_resumed',
+                `Gesprek hervat na ${formatTime(holdDuration)} wachttijd`
+            );
+        }
     }
 }
 
@@ -538,11 +700,198 @@ function autoSetAgentStatus(callState) {
         agentStatus.canReceiveCalls = false;
         updateAgentStatusDisplay();
     } else if (callState === 'call_ended') {
-        // For now, just set to ready. Phase 5 will implement ACW
-        agentStatus.current = 'ready';
-        agentStatus.canReceiveCalls = true;
-        updateAgentStatusDisplay();
+        // Phase 5A: Start ACW after call ends
+        startACW();
     }
+}
+
+// ============================================================================
+// PHASE 5A: AFTER CALL WORK (ACW) & DISPOSITION
+// ============================================================================
+
+// Start ACW (After Call Work)
+function startACW() {
+    agentStatus.current = 'acw';
+    agentStatus.acwStartTime = Date.now();
+    agentStatus.canReceiveCalls = false;
+    
+    // Update UI
+    updateAgentStatusDisplay();
+    
+    // Show disposition modal
+    showDispositionModal();
+    
+    // Start ACW timer
+    startACWTimer();
+}
+
+// Start ACW Timer
+function startACWTimer() {
+    const acwEndTime = agentStatus.acwStartTime + (ACW_DEFAULT_DURATION * 1000);
+    
+    agentStatus.acwInterval = setInterval(() => {
+        const remaining = Math.max(0, Math.floor((acwEndTime - Date.now()) / 1000));
+        
+        // Update timer display in status label
+        const statusLabel = document.querySelector('.status-label');
+        if (statusLabel && agentStatus.current === 'acw') {
+            statusLabel.textContent = `Nabewerkingstijd (${formatTime(remaining)})`;
+        }
+        
+        if (remaining === 0) {
+            endACW();
+        }
+    }, 1000);
+}
+
+// End ACW
+function endACW(manual = false) {
+    if (agentStatus.acwInterval) {
+        clearInterval(agentStatus.acwInterval);
+        agentStatus.acwInterval = null;
+    }
+    
+    // Automatically set to Ready after ACW
+    setAgentStatus('ready');
+    
+    if (manual) {
+        showToast('Klaar voor volgende gesprek', 'success');
+    } else {
+        showToast('ACW tijd verlopen - Status: Beschikbaar', 'info');
+    }
+}
+
+// Show Disposition Modal
+function showDispositionModal() {
+    const modal = document.getElementById('dispositionModal');
+    if (!modal) return;
+    
+    // Pre-fill information
+    const customerNameEl = document.getElementById('dispCustomerName');
+    if (customerNameEl) {
+        customerNameEl.textContent = callSession.customerName || 'Anonieme Beller';
+    }
+    
+    const durationEl = document.getElementById('dispCallDuration');
+    if (durationEl && callSession.startTime) {
+        const duration = Math.floor((Date.now() - callSession.startTime) / 1000);
+        durationEl.textContent = formatTime(duration);
+    }
+    
+    const serviceEl = document.getElementById('dispServiceNumber');
+    if (serviceEl) {
+        serviceEl.textContent = callSession.serviceNumber || '-';
+    }
+    
+    // Reset form
+    document.getElementById('dispCategory').value = '';
+    document.getElementById('dispOutcome').value = '';
+    document.getElementById('dispOutcome').disabled = true;
+    document.getElementById('dispNotes').value = '';
+    document.getElementById('dispFollowUpRequired').checked = false;
+    document.getElementById('followUpSection').style.display = 'none';
+    
+    modal.style.display = 'flex';
+}
+
+// Update Disposition Outcomes based on selected category
+function updateDispositionOutcomes() {
+    const category = document.getElementById('dispCategory').value;
+    const outcomeSelect = document.getElementById('dispOutcome');
+    
+    if (!category) {
+        outcomeSelect.disabled = true;
+        outcomeSelect.innerHTML = '<option value="">Selecteer eerst een categorie</option>';
+        return;
+    }
+    
+    const outcomes = dispositionCategories[category].outcomes;
+    outcomeSelect.disabled = false;
+    outcomeSelect.innerHTML = '<option value="">Selecteer uitkomst...</option>';
+    
+    outcomes.forEach(outcome => {
+        const option = document.createElement('option');
+        option.value = outcome.code;
+        option.textContent = outcome.label;
+        outcomeSelect.appendChild(option);
+    });
+}
+
+// Toggle Follow-up Section
+function toggleFollowUpSection() {
+    const checkbox = document.getElementById('dispFollowUpRequired');
+    const section = document.getElementById('followUpSection');
+    section.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+// Get Outcome Label
+function getOutcomeLabel(category, outcomeCode) {
+    const categoryData = dispositionCategories[category];
+    if (!categoryData) return outcomeCode;
+    
+    const outcome = categoryData.outcomes.find(o => o.code === outcomeCode);
+    return outcome ? outcome.label : outcomeCode;
+}
+
+// Save Disposition
+function saveDisposition() {
+    const category = document.getElementById('dispCategory').value;
+    const outcome = document.getElementById('dispOutcome').value;
+    const notes = document.getElementById('dispNotes').value;
+    const followUpRequired = document.getElementById('dispFollowUpRequired').checked;
+    
+    if (!category || !outcome) {
+        showToast('Selecteer categorie en uitkomst', 'error');
+        return;
+    }
+    
+    const disposition = {
+        category,
+        outcome,
+        notes,
+        followUpRequired,
+        callDuration: callSession.startTime ? Math.floor((Date.now() - callSession.startTime) / 1000) : 0,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Save to customer history if identified
+    if (callSession.customerId) {
+        const outcomeLabel = getOutcomeLabel(category, outcome);
+        addContactMoment(
+            callSession.customerId,
+            'call_disposition',
+            `${dispositionCategories[category].label}: ${outcomeLabel}${notes ? ' - ' + notes : ''}`
+        );
+        
+        // Save follow-up if needed
+        if (followUpRequired) {
+            const followUpDate = document.getElementById('dispFollowUpDate').value;
+            const followUpNotes = document.getElementById('dispFollowUpNotes').value;
+            
+            if (followUpDate) {
+                addContactMoment(
+                    callSession.customerId,
+                    'follow_up_scheduled',
+                    `Follow-up gepland voor ${followUpDate}: ${followUpNotes || 'Geen notities'}`
+                );
+            }
+        }
+    }
+    
+    // Close modal
+    document.getElementById('dispositionModal').style.display = 'none';
+    
+    showToast('Gesprek succesvol afgerond', 'success');
+    
+    // Manual end ACW (since disposition is complete)
+    endACW(true);
+}
+
+// Cancel Disposition
+function cancelDisposition() {
+    // Just close modal, ACW timer continues
+    document.getElementById('dispositionModal').style.display = 'none';
+    showToast('Disposition geannuleerd - ACW loopt door', 'warning');
 }
 
 // Initialize App
@@ -1184,6 +1533,46 @@ function displaySubscriptions() {
     subscriptionsList.innerHTML = html;
 }
 
+// Phase 5B: Extended Contact Types for Better Display
+const contactTypeLabels = {
+    // Call-related
+    'call_started_anonymous': { label: 'Anonieme call gestart', icon: '📞', color: '#fbbf24' },
+    'call_started_identified': { label: 'Call gestart', icon: '📞', color: '#3b82f6' },
+    'call_identified': { label: 'Beller geïdentificeerd', icon: '👤', color: '#10b981' },
+    'call_ended_by_agent': { label: 'Call beëindigd (agent)', icon: '📞', color: '#6b7280' },
+    'call_ended_by_customer': { label: 'Call beëindigd (klant)', icon: '📞', color: '#ef4444' },
+    'call_disposition': { label: 'Gesprek afgerond', icon: '📋', color: '#3b82f6' },
+    'call_hold': { label: 'Gesprek in wacht', icon: '⏸️', color: '#f59e0b' },
+    'call_resumed': { label: 'Gesprek hervat', icon: '▶️', color: '#10b981' },
+    'recording_started': { label: 'Opname gestart', icon: '🔴', color: '#dc2626' },
+    
+    // ACW and follow-up
+    'acw_completed': { label: 'Nabewerking voltooid', icon: '✅', color: '#10b981' },
+    'follow_up_scheduled': { label: 'Follow-up gepland', icon: '📅', color: '#8b5cf6' },
+    
+    // Agent status
+    'agent_status_change': { label: 'Agent status gewijzigd', icon: '🔄', color: '#6b7280' },
+    
+    // Subscription-related
+    'subscription_created': { label: 'Abonnement aangemaakt', icon: '➕', color: '#10b981' },
+    'subscription_changed': { label: 'Abonnement gewijzigd', icon: '✏️', color: '#3b82f6' },
+    'subscription_cancelled': { label: 'Abonnement opgezegd', icon: '❌', color: '#ef4444' },
+    
+    // Article sales
+    'article_sold': { label: 'Artikel verkocht', icon: '🛒', color: '#10b981' },
+    
+    // Delivery
+    'magazine_resent': { label: 'Editie opnieuw verzonden', icon: '📬', color: '#3b82f6' },
+    
+    // Default
+    'default': { label: 'Contact', icon: '📝', color: '#6b7280' }
+};
+
+// Get Contact Type Display Info
+function getContactTypeInfo(type) {
+    return contactTypeLabels[type] || contactTypeLabels['default'];
+}
+
 // Display Contact History
 function displayContactHistory() {
     const historyContainer = document.getElementById('contactHistory');
@@ -1198,11 +1587,15 @@ function displayContactHistory() {
         new Date(b.date) - new Date(a.date)
     );
 
-    historyContainer.innerHTML = sortedHistory.map((item, index) => `
+    historyContainer.innerHTML = sortedHistory.map((item, index) => {
+        const typeInfo = getContactTypeInfo(item.type);
+        return `
         <div class="timeline-item">
-            <div class="timeline-dot"></div>
+            <div class="timeline-dot" style="background-color: ${typeInfo.color}"></div>
             <div class="timeline-header" onclick="toggleTimelineItem(${index})">
-                <span class="timeline-type">${item.type}</span>
+                <span class="timeline-type" style="color: ${typeInfo.color}">
+                    ${typeInfo.icon} ${typeInfo.label}
+                </span>
                 <span class="timeline-expand" id="expand-${index}">▼</span>
                 <span class="timeline-date">${formatDateTime(item.date)}</span>
             </div>
@@ -1210,7 +1603,8 @@ function displayContactHistory() {
                 ${item.description}
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Toggle Timeline Item (Accordion)
