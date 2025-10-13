@@ -93,6 +93,19 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- ACW (After Call Work) Bar -->
+                <div id="acwBar" class="acw-bar" style="display: none;">
+                    <div class="acw-bar-content">
+                        <span class="acw-icon">🟡</span>
+                        <span class="acw-label">Nabewerkingstijd</span>
+                        <span class="acw-timer" id="acwTimer">0:00</span>
+                        <span class="acw-instruction">Vul het nabewerkingsscherm in om klaar te zijn voor het volgende gesprek</span>
+                        <button class="btn-finish-acw" onclick="manualFinishACW()">
+                            ✅ Klaar
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -1009,9 +1022,25 @@
         <div class="modal-content disposition-modal">
             <div class="modal-header">
                 <h2>📋 Gesprek Afronden</h2>
-                <p class="modal-subtitle">Vul de gespreksinformatie in voordat je verder gaat</p>
+                <p class="modal-subtitle">De gegevens hieronder zijn automatisch ingevuld op basis van de acties tijdens het gesprek</p>
             </div>
             <div class="modal-body">
+                <!-- Call Information (Prominent at top) -->
+                <div class="disposition-info">
+                    <div class="info-row">
+                        <span>📞 Service nummer:</span>
+                        <span id="dispServiceNumber">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span>⏱️ Gespreksduur:</span>
+                        <span id="dispCallDuration">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span>👤 Klant:</span>
+                        <span id="dispCustomerName">-</span>
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label for="dispCategory">Categorie *</label>
                     <select id="dispCategory" required onchange="updateDispositionOutcomes()">
@@ -1053,21 +1082,6 @@
                     <textarea id="dispFollowUpNotes" 
                               rows="2" 
                               placeholder="Wat moet er bij follow-up gebeuren?"></textarea>
-                </div>
-                
-                <div class="disposition-info">
-                    <div class="info-row">
-                        <span>Gespreksduur:</span>
-                        <span id="dispCallDuration">-</span>
-                    </div>
-                    <div class="info-row">
-                        <span>Klant:</span>
-                        <span id="dispCustomerName">-</span>
-                    </div>
-                    <div class="info-row">
-                        <span>Service nummer:</span>
-                        <span id="dispServiceNumber">-</span>
-                    </div>
                 </div>
             </div>
             <div class="modal-actions">

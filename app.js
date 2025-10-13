@@ -20,6 +20,9 @@ let callSession = {
     onHold: false               // Is call momenteel on hold
 };
 
+// Last completed call session data (for ACW/disposition)
+let lastCallSession = null;
+
 // Phase 1B: Agent Status State Management
 let agentStatus = {
     current: 'offline',         // offline, ready, busy, acw, break
@@ -467,6 +470,17 @@ function endCallSession(forcedByCustomer = false) {
         clearInterval(callSession.durationInterval);
     }
     
+    // Save call session data for ACW/disposition
+    lastCallSession = {
+        customerId: callSession.customerId,
+        customerName: callSession.customerName,
+        serviceNumber: callSession.serviceNumber,
+        waitTime: callSession.waitTime,
+        startTime: callSession.startTime,
+        callDuration: callDuration,
+        totalHoldTime: callSession.totalHoldTime
+    };
+    
     // Reset session state
     callSession = {
         active: false,
@@ -716,6 +730,12 @@ function startACW() {
     // Update UI
     updateAgentStatusDisplay();
     
+    // Show ACW bar
+    const acwBar = document.getElementById('acwBar');
+    if (acwBar) {
+        acwBar.style.display = 'block';
+    }
+    
     // Show disposition modal
     showDispositionModal();
     
@@ -730,10 +750,10 @@ function startACWTimer() {
     agentStatus.acwInterval = setInterval(() => {
         const remaining = Math.max(0, Math.floor((acwEndTime - Date.now()) / 1000));
         
-        // Update timer display in status label
-        const statusLabel = document.querySelector('.status-label');
-        if (statusLabel && agentStatus.current === 'acw') {
-            statusLabel.textContent = `Nabewerkingstijd (${formatTime(remaining)})`;
+        // Update timer display in ACW bar
+        const acwTimerEl = document.getElementById('acwTimer');
+        if (acwTimerEl && agentStatus.current === 'acw') {
+            acwTimerEl.textContent = formatTime(remaining);
         }
         
         if (remaining === 0) {
@@ -749,6 +769,12 @@ function endACW(manual = false) {
         agentStatus.acwInterval = null;
     }
     
+    // Hide ACW bar
+    const acwBar = document.getElementById('acwBar');
+    if (acwBar) {
+        acwBar.style.display = 'none';
+    }
+    
     // Automatically set to Ready after ACW
     setAgentStatus('ready');
     
@@ -759,37 +785,168 @@ function endACW(manual = false) {
     }
 }
 
+// Manual Finish ACW (triggered by "Klaar" button)
+function manualFinishACW() {
+    // Check if disposition has been filled
+    const dispositionModal = document.getElementById('dispositionModal');
+    const isModalOpen = dispositionModal && dispositionModal.style.display === 'flex';
+    
+    if (isModalOpen) {
+        showToast('Vul eerst het nabewerkingsscherm in voordat je ACW afrondt', 'warning');
+        return;
+    }
+    
+    endACW(true);
+}
+
 // Show Disposition Modal
 function showDispositionModal() {
     const modal = document.getElementById('dispositionModal');
     if (!modal) return;
     
+    // Use lastCallSession data (saved when call ended)
+    const sessionData = lastCallSession || {};
+    
     // Pre-fill information
     const customerNameEl = document.getElementById('dispCustomerName');
     if (customerNameEl) {
-        customerNameEl.textContent = callSession.customerName || 'Anonieme Beller';
+        customerNameEl.textContent = sessionData.customerName || 'Anonieme Beller';
     }
     
     const durationEl = document.getElementById('dispCallDuration');
-    if (durationEl && callSession.startTime) {
-        const duration = Math.floor((Date.now() - callSession.startTime) / 1000);
-        durationEl.textContent = formatTime(duration);
+    if (durationEl && sessionData.callDuration !== undefined) {
+        durationEl.textContent = formatTime(sessionData.callDuration);
     }
     
     const serviceEl = document.getElementById('dispServiceNumber');
     if (serviceEl) {
-        serviceEl.textContent = callSession.serviceNumber || '-';
+        const serviceName = serviceNumbers[sessionData.serviceNumber]?.label || sessionData.serviceNumber || '-';
+        serviceEl.textContent = serviceName;
     }
     
-    // Reset form
-    document.getElementById('dispCategory').value = '';
-    document.getElementById('dispOutcome').value = '';
-    document.getElementById('dispOutcome').disabled = true;
-    document.getElementById('dispNotes').value = '';
+    // Automatically determine category and outcome based on contact history
+    const autoDisposition = determineAutoDisposition();
+    
+    if (autoDisposition.category) {
+        document.getElementById('dispCategory').value = autoDisposition.category;
+        updateDispositionOutcomes();
+        
+        if (autoDisposition.outcome) {
+            document.getElementById('dispOutcome').value = autoDisposition.outcome;
+        }
+        
+        if (autoDisposition.notes) {
+            document.getElementById('dispNotes').value = autoDisposition.notes;
+        }
+    } else {
+        // Reset form if no auto-fill
+        document.getElementById('dispCategory').value = '';
+        document.getElementById('dispOutcome').value = '';
+        document.getElementById('dispOutcome').disabled = true;
+        document.getElementById('dispNotes').value = '';
+    }
+    
     document.getElementById('dispFollowUpRequired').checked = false;
     document.getElementById('followUpSection').style.display = 'none';
     
     modal.style.display = 'flex';
+}
+
+// Determine Auto Disposition based on contact history
+function determineAutoDisposition() {
+    const result = { category: '', outcome: '', notes: '' };
+    
+    // Use lastCallSession data
+    const sessionData = lastCallSession || {};
+    
+    // If no customer identified, return empty
+    if (!sessionData.customerId) {
+        return result;
+    }
+    
+    const customer = customers.find(c => c.id === sessionData.customerId);
+    if (!customer || !customer.contactHistory || customer.contactHistory.length === 0) {
+        return result;
+    }
+    
+    // Get recent contact moments from this call (after call started)
+    const callStartTime = sessionData.startTime;
+    const recentMoments = customer.contactHistory.filter(m => {
+        const momentTime = new Date(m.timestamp).getTime();
+        return momentTime >= callStartTime;
+    });
+    
+    // Analyze actions to determine category and outcome
+    const notesParts = [];
+    
+    // Check for subscription actions
+    const hasNewSubscription = recentMoments.some(m => 
+        m.type === 'subscription_created' || m.description?.includes('Nieuw abonnement'));
+    const hasSubscriptionChange = recentMoments.some(m => 
+        m.type === 'subscription_changed' || m.description?.includes('gewijzigd'));
+    const hasSubscriptionCancelled = recentMoments.some(m => 
+        m.type === 'subscription_cancelled' || m.description?.includes('opgezegd'));
+    
+    // Check for delivery actions
+    const hasMagazineResent = recentMoments.some(m => 
+        m.type === 'magazine_resent' || m.description?.includes('opnieuw verzonden'));
+    const hasDeliveryUpdate = recentMoments.some(m => 
+        m.type === 'delivery_updated' || m.description?.includes('bezorg'));
+    
+    // Check for article sale
+    const hasArticleSale = recentMoments.some(m => 
+        m.type === 'article_sold' || m.description?.includes('Artikel verkocht'));
+    
+    // Check for payment actions
+    const hasPaymentUpdate = recentMoments.some(m => 
+        m.type === 'payment_updated' || m.description?.includes('betaling') || m.description?.includes('IBAN'));
+    
+    // Determine category and outcome
+    if (hasNewSubscription) {
+        result.category = 'subscription';
+        result.outcome = 'new_subscription';
+        notesParts.push('Nieuw abonnement afgesloten');
+    } else if (hasSubscriptionCancelled) {
+        result.category = 'subscription';
+        result.outcome = 'subscription_cancelled';
+        notesParts.push('Abonnement opgezegd');
+    } else if (hasSubscriptionChange) {
+        result.category = 'subscription';
+        result.outcome = 'subscription_changed';
+        notesParts.push('Abonnement gewijzigd');
+    } else if (hasArticleSale) {
+        result.category = 'article_sale';
+        result.outcome = 'article_sold';
+        notesParts.push('Artikel verkocht');
+    } else if (hasMagazineResent) {
+        result.category = 'delivery';
+        result.outcome = 'magazine_resent';
+        notesParts.push('Editie opnieuw verzonden');
+    } else if (hasDeliveryUpdate) {
+        result.category = 'delivery';
+        result.outcome = 'delivery_prefs_updated';
+        notesParts.push('Bezorgvoorkeuren aangepast');
+    } else if (hasPaymentUpdate) {
+        result.category = 'payment';
+        result.outcome = 'iban_updated';
+        notesParts.push('Betalingsgegevens bijgewerkt');
+    } else {
+        // Default to general info provided
+        result.category = 'general';
+        result.outcome = 'info_provided';
+        notesParts.push('Informatie verstrekt');
+    }
+    
+    // Add all relevant action descriptions
+    recentMoments.forEach(m => {
+        if (m.description && !notesParts.includes(m.description)) {
+            notesParts.push(m.description);
+        }
+    });
+    
+    result.notes = notesParts.join('. ');
+    
+    return result;
 }
 
 // Update Disposition Outcomes based on selected category
@@ -843,20 +1000,23 @@ function saveDisposition() {
         return;
     }
     
+    // Use lastCallSession data
+    const sessionData = lastCallSession || {};
+    
     const disposition = {
         category,
         outcome,
         notes,
         followUpRequired,
-        callDuration: callSession.startTime ? Math.floor((Date.now() - callSession.startTime) / 1000) : 0,
+        callDuration: sessionData.callDuration || 0,
         timestamp: new Date().toISOString()
     };
     
     // Save to customer history if identified
-    if (callSession.customerId) {
+    if (sessionData.customerId) {
         const outcomeLabel = getOutcomeLabel(category, outcome);
         addContactMoment(
-            callSession.customerId,
+            sessionData.customerId,
             'call_disposition',
             `${dispositionCategories[category].label}: ${outcomeLabel}${notes ? ' - ' + notes : ''}`
         );
@@ -868,7 +1028,7 @@ function saveDisposition() {
             
             if (followUpDate) {
                 addContactMoment(
-                    callSession.customerId,
+                    sessionData.customerId,
                     'follow_up_scheduled',
                     `Follow-up gepland voor ${followUpDate}: ${followUpNotes || 'Geen notities'}`
                 );

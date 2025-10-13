@@ -351,6 +351,112 @@ body {
     50% { opacity: 0.7; }
 }
 
+/* ============================================================================
+   ACW (AFTER CALL WORK) BAR
+   ============================================================================ */
+
+.acw-bar {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-top: 1px solid rgba(217, 119, 6, 0.3);
+    padding: 0.75rem 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.acw-bar-content {
+    max-width: 1800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.9rem;
+    color: white;
+}
+
+.acw-icon {
+    font-size: 1.3rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.acw-label {
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.acw-timer {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.3rem 0.8rem;
+    border-radius: 6px;
+    letter-spacing: 1px;
+}
+
+.acw-instruction {
+    flex: 1;
+    font-size: 0.85rem;
+    opacity: 0.95;
+}
+
+.btn-finish-acw {
+    padding: 0.5rem 1.5rem;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 700;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.btn-finish-acw:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================================
+   DISPOSITION MODAL ENHANCEMENTS
+   ============================================================================ */
+
+.disposition-info {
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-row span:first-child {
+    font-weight: 600;
+    color: #374151;
+}
+
+.info-row span:last-child {
+    color: #1f2937;
+    font-weight: 500;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
 .hold-indicator {
     display: flex;
     align-items: center;
@@ -2048,18 +2154,19 @@ select option {
 }
 
 .disposition-info {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    padding: 1rem;
-    margin-top: 1rem;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.12) 100%);
+    border: 2px solid rgba(37, 99, 235, 0.25);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-top: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .disposition-info .info-row {
     display: flex;
     justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .disposition-info .info-row:last-child {
@@ -2067,13 +2174,15 @@ select option {
 }
 
 .disposition-info .info-row span:first-child {
-    color: var(--text-secondary);
+    color: #4b5563;
     font-size: 0.9rem;
+    font-weight: 600;
 }
 
 .disposition-info .info-row span:last-child {
-    font-weight: 600;
-    color: var(--text-primary);
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 1rem;
 }
 
 .checkbox-label {
