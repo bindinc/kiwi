@@ -2472,6 +2472,98 @@ function resendMagazine() {
     displayContactHistory();
 }
 
+// Show Editorial Complaint Form
+function showEditorialComplaintForm() {
+    if (!currentCustomer) {
+        showToast('Selecteer eerst een klant', 'error');
+        return;
+    }
+
+    // Populate magazine dropdown with customer's subscriptions
+    const select = document.getElementById('editorialComplaintMagazine');
+    const uniqueMagazines = [...new Set(currentCustomer.subscriptions.map(sub => sub.magazine))];
+    
+    if (uniqueMagazines.length === 0) {
+        select.innerHTML = '<option value="">Geen abonnementen beschikbaar</option>';
+    } else {
+        select.innerHTML = '<option value="">Selecteer magazine...</option>' +
+            uniqueMagazines.map(mag => `<option value="${mag}">${mag}</option>`).join('');
+    }
+
+    // Reset form fields
+    document.getElementById('editorialComplaintType').value = 'klacht';
+    document.getElementById('editorialComplaintCategory').value = 'inhoud';
+    document.getElementById('editorialComplaintDescription').value = '';
+    document.getElementById('editorialComplaintEdition').value = '';
+    document.getElementById('editorialComplaintFollowup').checked = false;
+
+    document.getElementById('editorialComplaintForm').style.display = 'flex';
+}
+
+// Submit Editorial Complaint
+function submitEditorialComplaint() {
+    const magazine = document.getElementById('editorialComplaintMagazine').value;
+    const type = document.getElementById('editorialComplaintType').value;
+    const category = document.getElementById('editorialComplaintCategory').value;
+    const description = document.getElementById('editorialComplaintDescription').value.trim();
+    const edition = document.getElementById('editorialComplaintEdition').value.trim();
+    const followup = document.getElementById('editorialComplaintFollowup').checked;
+
+    // Validation
+    if (!magazine) {
+        showToast('Selecteer een magazine', 'error');
+        return;
+    }
+
+    if (!description) {
+        showToast('Voer een beschrijving in', 'error');
+        return;
+    }
+
+    // Build contact history description
+    const typeLabels = {
+        'klacht': 'Klacht',
+        'opmerking': 'Opmerking',
+        'suggestie': 'Suggestie',
+        'compliment': 'Compliment'
+    };
+
+    const categoryLabels = {
+        'inhoud': 'Inhoud artikel',
+        'foto': 'Foto/afbeelding',
+        'fout': 'Fout in tekst',
+        'programma': 'TV/Radio programma',
+        'puzzel': 'Puzzel',
+        'advertentie': 'Advertentie',
+        'overig': 'Overig'
+    };
+
+    let historyDescription = `${typeLabels[type]} voor redactie ${magazine} - ${categoryLabels[category]}. ${description}`;
+    
+    if (edition) {
+        historyDescription += ` Editie: ${edition}.`;
+    }
+    
+    if (followup) {
+        historyDescription += ' Klant verwacht terugkoppeling.';
+    }
+
+    // Add to contact history
+    currentCustomer.contactHistory.unshift({
+        id: Date.now(),
+        type: `Redactie ${typeLabels[type]}`,
+        date: new Date().toISOString(),
+        description: historyDescription
+    });
+
+    saveCustomers();
+    closeForm('editorialComplaintForm');
+    showToast(`${typeLabels[type]} voor redactie geregistreerd!`, 'success');
+    
+    // Refresh display
+    displayContactHistory();
+}
+
 // Edit Subscription
 // Edit Subscription
 function editSubscription(subId) {
