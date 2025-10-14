@@ -249,8 +249,7 @@ body {
     align-items: center;
 }
 
-.btn-end-session,
-.btn-end-anonymous-call {
+.btn-end-call {
     padding: 0.5rem 1.25rem;
     background: #dc3545;
     color: white;
@@ -263,20 +262,88 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.btn-end-session:hover,
-.btn-end-anonymous-call:hover {
+.btn-end-call:hover {
     background: #c82333;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-.btn-end-anonymous-call {
-    background: #ffc107;
-    color: #000;
+/* ============================================================================
+   PHASE 6: CALL QUEUE INFO BAR
+   ============================================================================ */
+
+.queue-info {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem 2rem;
 }
 
-.btn-end-anonymous-call:hover {
-    background: #e0a800;
+.queue-info-content {
+    max-width: 1800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    font-size: 0.9rem;
+    color: white;
+}
+
+.queue-next-caller,
+.queue-service,
+.queue-wait,
+.queue-length {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.queue-icon,
+.queue-length-icon {
+    font-size: 1.1rem;
+}
+
+.queue-label {
+    opacity: 0.9;
+}
+
+.queue-next-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #fbbf24;
+}
+
+.queue-count {
+    font-weight: 700;
+    font-size: 1.1rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    min-width: 2rem;
+    text-align: center;
+}
+
+.queue-actions {
+    margin-left: auto;
+}
+
+.btn-accept-call {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-accept-call:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* ============================================================================
@@ -2396,6 +2463,88 @@ select option {
     border-color: var(--primary-color);
     transform: translateY(-1px);
     box-shadow: var(--shadow-sm);
+}
+
+/* PHASE 6: Debug Queue Preview Styles */
+.debug-queue-preview {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.debug-queue-preview h4 {
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.debug-queue-list {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.debug-queue-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.debug-queue-item:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.debug-queue-item.current {
+    border: 2px solid var(--primary-color);
+    background: #eff6ff;
+    font-weight: 600;
+}
+
+.debug-queue-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.debug-queue-item-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.debug-queue-item-details {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.debug-queue-item-wait {
+    color: var(--warning-color);
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+.debug-row input[type="number"] {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    background: white;
+}
+
+.debug-row input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .remark-shortcut:active {

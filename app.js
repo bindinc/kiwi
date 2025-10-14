@@ -25,8 +25,8 @@ let lastCallSession = null;
 
 // Phase 1B: Agent Status State Management
 let agentStatus = {
-    current: 'offline',         // offline, ready, busy, acw, break
-    canReceiveCalls: false,
+    current: 'ready',           // offline, ready, busy, acw, break - Agent starts as ready
+    canReceiveCalls: true,      // Can receive calls on page load
     acwStartTime: null,
     breakStartTime: null,
     acwInterval: null
@@ -71,6 +71,15 @@ const serviceNumbers = {
 
 // Phase 5A: ACW Configuration
 const ACW_DEFAULT_DURATION = 120; // 120 seconds
+
+// Phase 6: Call Queue State Management
+let callQueue = {
+    enabled: false,           // Is queue mode geactiveerd
+    queue: [],                // Array van wachtende bellers
+    currentPosition: 0,       // Huidige positie in queue
+    autoAdvance: true,        // Automatisch volgende nemen na gesprek
+    waitTimeInterval: null    // Interval voor real-time wait time updates
+};
 
 // Phase 5A: Disposition Codes Configuration
 const dispositionCategories = {
@@ -154,9 +163,9 @@ function endSession() {
     // Show welcome message
     document.getElementById('welcomeMessage').style.display = 'block';
     
-    // Hide end session buttons
-    document.getElementById('endSessionBtn').style.display = 'none';
-    document.getElementById('endAnonymousCallBtn').style.display = 'none';
+    // Hide end call button
+    const endCallBtn = document.getElementById('endCallBtn');
+    if (endCallBtn) endCallBtn.style.display = 'none';
     
     // Clear search form
     document.getElementById('searchName').value = '';
@@ -405,13 +414,8 @@ function startCallSession() {
     document.getElementById('sessionCallerName').textContent = 
         callSession.customerName || 'Anonieme Beller';
     
-    // Toon/verberg sessie afsluiten knop (identified caller)
-    document.getElementById('endSessionBtn').style.display = 
-        callSession.callerType === 'identified' ? 'block' : 'none';
-    
-    // Toon/verberg beëindig gesprek knop (anonymous caller)
-    document.getElementById('endAnonymousCallBtn').style.display = 
-        callSession.callerType === 'anonymous' ? 'block' : 'none';
+    // Toon gesprek beëindigen knop
+    document.getElementById('endCallBtn').style.display = 'inline-block';
     
     // Update agent status naar Busy
     autoSetAgentStatus('call_started');
@@ -422,6 +426,12 @@ function startCallSession() {
         holdBtn.style.display = 'inline-block';
         holdBtn.innerHTML = '⏸️ In Wacht Zetten';
         holdBtn.classList.remove('on-hold');
+    }
+    
+    // Toon debug end call button
+    const debugEndBtn = document.getElementById('debugEndCallBtn');
+    if (debugEndBtn) {
+        debugEndBtn.style.display = 'block';
     }
     
     // Toon recording indicator (Phase 2B)
@@ -513,8 +523,16 @@ function endCallSession(forcedByCustomer = false) {
     // Update agent status naar ACW (will be implemented in Phase 5)
     autoSetAgentStatus('call_ended');
     
+    // Na gesprek: check of er meer bellers zijn in queue
+    if (callQueue.enabled && callQueue.queue.length > 0 && callQueue.autoAdvance) {
+        // Update queue display zodat volgende beller zichtbaar wordt
+        setTimeout(() => {
+            updateQueueDisplay();
+        }, 1000);
+    }
+    
     if (!forcedByCustomer) {
-        showToast('Call sessie afgesloten', 'success');
+        showToast('Gesprek beëindigd', 'success');
     }
 }
 
@@ -537,8 +555,6 @@ function identifyCallerAsCustomer(customerId) {
     
     // Update UI
     document.getElementById('sessionCallerName').textContent = callSession.customerName;
-    document.getElementById('endSessionBtn').style.display = 'block';
-    document.getElementById('endAnonymousCallBtn').style.display = 'none';
     
     // Verberg alle "Dit is de beller" knoppen
     updateIdentifyCallerButtons();
@@ -674,6 +690,9 @@ function setAgentStatus(newStatus) {
     
     // Update availability
     agentStatus.canReceiveCalls = (newStatus === 'ready');
+    
+    // Update queue display wanneer status wijzigt
+    updateQueueDisplay();
     
     // Log status change
     console.log(`Agent status: ${oldStatus} → ${newStatus}`);
@@ -1052,15 +1071,392 @@ function cancelDisposition() {
     showToast('Disposition geannuleerd - ACW loopt door', 'warning');
 }
 
+// ============================================================================
+// Phase 6: Call Queue Management Functions
+// ============================================================================
+
+/**
+ * Initialize queue from localStorage
+ */
+function initializeQueue() {
+    const savedQueue = localStorage.getItem('callQueue');
+    if (savedQueue) {
+        try {
+            callQueue = JSON.parse(savedQueue);
+            updateQueueDisplay();
+            updateDebugQueuePreview();
+        } catch (e) {
+            console.error('Error loading queue from localStorage:', e);
+            callQueue = {
+                enabled: false,
+                queue: [],
+                currentPosition: 0,
+                autoAdvance: true
+            };
+        }
+    }
+}
+
+/**
+ * Save queue to localStorage
+ */
+function saveQueue() {
+    try {
+        localStorage.setItem('callQueue', JSON.stringify(callQueue));
+    } catch (e) {
+        console.error('Error saving queue to localStorage:', e);
+    }
+}
+
+/**
+ * Generate a single queue entry
+ * @param {number|null} customerId - ID of customer (null for anonymous)
+ * @param {string} callerType - 'known' or 'anonymous'
+ * @returns {object} Queue entry object
+ */
+function generateQueueEntry(customerId = null, callerType = 'anonymous') {
+    const serviceNumbers = ['AVROBODE', 'MIKROGIDS', 'NCRVGIDS', 'ALGEMEEN'];
+    const randomService = serviceNumbers[Math.floor(Math.random() * serviceNumbers.length)];
+    
+    let entry = {
+        id: `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        callerType: callerType,
+        customerId: customerId,
+        customerName: 'Anonieme Beller',
+        serviceNumber: randomService,
+        waitTime: Math.floor(Math.random() * (300 - 30 + 1)) + 30, // 30-300 sec
+        queuedAt: Date.now(),
+        priority: Math.floor(Math.random() * 5) + 1
+    };
+    
+    // Voor bekende klant
+    if (customerId && callerType === 'known') {
+        const customer = customers.find(c => c.id === customerId);
+        if (customer) {
+            entry.customerName = `${customer.firstName || customer.initials || ''} ${customer.middleName ? customer.middleName + ' ' : ''}${customer.lastName}`.trim();
+            if (!entry.customerName) {
+                entry.customerName = 'Klant #' + customerId;
+            }
+        }
+    }
+    
+    return entry;
+}
+
+/**
+ * Generate queue with specified size and mix
+ * Called from debug menu
+ */
+function debugGenerateQueue() {
+    const queueSize = parseInt(document.getElementById('debugQueueSize')?.value) || 5;
+    const queueMix = document.getElementById('debugQueueMix')?.value || 'balanced';
+    
+    // Clear bestaande queue
+    callQueue.queue = [];
+    callQueue.currentPosition = 0;
+    
+    // Bepaal verdeling
+    let knownPercentage = 0.5;
+    switch(queueMix) {
+        case 'mostly_known': knownPercentage = 0.8; break;
+        case 'mostly_anonymous': knownPercentage = 0.2; break;
+        case 'all_known': knownPercentage = 1.0; break;
+        case 'all_anonymous': knownPercentage = 0.0; break;
+    }
+    
+    // Genereer queue entries
+    for (let i = 0; i < queueSize; i++) {
+        const isKnown = Math.random() < knownPercentage && customers.length > 0;
+        
+        if (isKnown) {
+            const randomCustomer = customers[Math.floor(Math.random() * customers.length)];
+            callQueue.queue.push(generateQueueEntry(randomCustomer.id, 'known'));
+        } else {
+            callQueue.queue.push(generateQueueEntry(null, 'anonymous'));
+        }
+    }
+    
+    callQueue.enabled = true;
+    saveQueue();
+    updateQueueDisplay();
+    updateDebugQueuePreview();
+    
+    showToast(`✅ Wachtrij gegenereerd met ${queueSize} bellers`, 'success');
+    
+    // Update debug status
+    const debugStatus = document.getElementById('debugQueueStatus');
+    if (debugStatus) {
+        debugStatus.textContent = `Actief - ${callQueue.queue.length} wachtenden`;
+    }
+}
+
+/**
+ * Update queue display in header
+ * Only shows when:
+ * - Queue is enabled
+ * - There are waiting callers
+ * - No active call
+ */
+function updateQueueDisplay() {
+    const queueInfoBar = document.getElementById('queueInfo');
+    
+    if (!queueInfoBar) {
+        return; // Element not yet in DOM
+    }
+    
+    // Alleen tonen als:
+    // - Queue is enabled
+    // - Er zijn wachtenden
+    // - Geen actief gesprek
+    const shouldShow = callQueue.enabled && 
+                       callQueue.queue.length > 0 && 
+                       !callSession.active;
+    
+    if (!shouldShow) {
+        queueInfoBar.style.display = 'none';
+        stopQueueWaitTimeUpdate();
+        return;
+    }
+    
+    // Toon queue info
+    queueInfoBar.style.display = 'block';
+    
+    // Start wait time update interval als nog niet gestart
+    startQueueWaitTimeUpdate();
+    
+    // Huidige (eerste) entry in queue
+    const nextCaller = callQueue.queue[0];
+    
+    if (nextCaller) {
+        const nextCallerName = document.getElementById('queueNextCallerName');
+        const nextService = document.getElementById('queueNextService');
+        const nextWaitTime = document.getElementById('queueNextWaitTime');
+        const queueLength = document.getElementById('queueLength');
+        
+        if (nextCallerName) nextCallerName.textContent = nextCaller.customerName;
+        if (nextService) {
+            const serviceConfig = serviceNumbers[nextCaller.serviceNumber];
+            nextService.textContent = serviceConfig?.label || nextCaller.serviceNumber;
+        }
+        if (nextWaitTime) nextWaitTime.textContent = formatTime(nextCaller.waitTime);
+        if (queueLength) queueLength.textContent = callQueue.queue.length - 1; // Aantal achter de huidige
+    }
+}
+
+/**
+ * Start real-time wait time update for queue
+ */
+function startQueueWaitTimeUpdate() {
+    // Stop any existing interval
+    if (callQueue.waitTimeInterval) {
+        return; // Already running
+    }
+    
+    // Update wait times every second
+    callQueue.waitTimeInterval = setInterval(() => {
+        if (!callQueue.enabled || callQueue.queue.length === 0 || callSession.active) {
+            stopQueueWaitTimeUpdate();
+            return;
+        }
+        
+        // Increment wait time for all callers in queue
+        callQueue.queue.forEach(entry => {
+            entry.waitTime += 1;
+        });
+        
+        // Update display with new wait time
+        const nextCaller = callQueue.queue[0];
+        if (nextCaller) {
+            const nextWaitTime = document.getElementById('queueNextWaitTime');
+            if (nextWaitTime) {
+                nextWaitTime.textContent = formatTime(nextCaller.waitTime);
+            }
+        }
+        
+        // Update debug preview if visible
+        updateDebugQueuePreview();
+        
+        // Save to localStorage periodically (every 5 seconds to reduce writes)
+        if (nextCaller && nextCaller.waitTime % 5 === 0) {
+            saveQueue();
+        }
+    }, 1000); // Every 1 second
+}
+
+/**
+ * Stop wait time update interval
+ */
+function stopQueueWaitTimeUpdate() {
+    if (callQueue.waitTimeInterval) {
+        clearInterval(callQueue.waitTimeInterval);
+        callQueue.waitTimeInterval = null;
+    }
+}
+
+/**
+ * Clear queue (debug function)
+ */
+function debugClearQueue() {
+    if (confirm('🗑️ Wachtrij volledig wissen?')) {
+        // Stop wait time updates
+        stopQueueWaitTimeUpdate();
+        
+        callQueue = {
+            enabled: false,
+            queue: [],
+            currentPosition: 0,
+            autoAdvance: true,
+            waitTimeInterval: null
+        };
+        
+        saveQueue();
+        updateQueueDisplay();
+        updateDebugQueuePreview();
+        
+        const debugStatus = document.getElementById('debugQueueStatus');
+        if (debugStatus) {
+            debugStatus.textContent = 'Uitgeschakeld';
+        }
+        showToast('✅ Wachtrij gewist', 'info');
+    }
+}
+
+/**
+ * Update debug queue preview
+ */
+function updateDebugQueuePreview() {
+    const previewContainer = document.getElementById('debugQueuePreview');
+    const listContainer = document.getElementById('debugQueueList');
+    
+    if (!previewContainer || !listContainer) {
+        return; // Elements not yet in DOM
+    }
+    
+    if (!callQueue.enabled || callQueue.queue.length === 0) {
+        previewContainer.style.display = 'none';
+        return;
+    }
+    
+    previewContainer.style.display = 'block';
+    listContainer.innerHTML = '';
+    
+    callQueue.queue.forEach((entry, index) => {
+        const item = document.createElement('div');
+        item.className = 'debug-queue-item';
+        if (index === 0) item.classList.add('current');
+        
+        item.innerHTML = `
+            <div class="debug-queue-item-info">
+                <div class="debug-queue-item-name">
+                    ${index + 1}. ${entry.customerName}
+                </div>
+                <div class="debug-queue-item-details">
+                    ${entry.serviceNumber} • 
+                    ${entry.callerType === 'known' ? '👤 Bekend' : '❓ Anoniem'}
+                </div>
+            </div>
+            <div class="debug-queue-item-wait">
+                ⏳ ${formatTime(entry.waitTime)}
+            </div>
+        `;
+        
+        listContainer.appendChild(item);
+    });
+}
+
+/**
+ * Format time in MM:SS format
+ * @param {number} seconds - Time in seconds
+ * @returns {string} Formatted time string
+ */
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Accept next call from queue
+ */
+function acceptNextCall() {
+    if (!callQueue.enabled || callQueue.queue.length === 0) {
+        showToast('⚠️ Geen bellers in wachtrij', 'error');
+        return;
+    }
+    
+    if (callSession.active) {
+        showToast('⚠️ Er is al een actief gesprek', 'error');
+        return;
+    }
+    
+    // Check agent status
+    if (agentStatus.current !== 'ready') {
+        showToast('⚠️ Agent status moet "Beschikbaar" zijn om gesprek te accepteren', 'error');
+        return;
+    }
+    
+    // Haal eerste entry uit queue
+    const nextEntry = callQueue.queue.shift();
+    
+    // Start call session met queue entry data
+    startCallFromQueue(nextEntry);
+    
+    // Update queue display (will stop timer if no more visible callers)
+    saveQueue();
+    updateQueueDisplay();
+    updateDebugQueuePreview();
+}
+
+/**
+ * Start call from queue entry
+ * @param {object} queueEntry - Queue entry object
+ */
+function startCallFromQueue(queueEntry) {
+    // Initialize call session met queue data
+    callSession = {
+        active: true,
+        callerType: queueEntry.callerType,
+        serviceNumber: queueEntry.serviceNumber,
+        waitTime: queueEntry.waitTime,
+        startTime: Date.now(),
+        customerId: queueEntry.customerId,
+        customerName: queueEntry.customerName,
+        pendingIdentification: null,
+        durationInterval: null,
+        recordingActive: false,
+        totalHoldTime: 0,
+        holdStartTime: null,
+        onHold: false
+    };
+    
+    // Als het een bekende klant is, open automatisch het klantrecord
+    if (queueEntry.callerType === 'known' && queueEntry.customerId) {
+        setTimeout(() => {
+            selectCustomer(queueEntry.customerId);
+        }, 500);
+    }
+    
+    // Start normale call session flow
+    startCallSession();
+    
+    showToast(
+        `📞 Gesprek gestart met ${queueEntry.customerName}`,
+        'success'
+    );
+}
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     initializeData();
+    initializeQueue();
     updateTime();
     setInterval(updateTime, 1000);
     updateCustomerActionButtons();
     // Initialize Phase 3 components
     initDeliveryDatePicker();
     initArticleSearch();
+    // Initialize agent status display (agent starts as ready)
+    updateAgentStatusDisplay();
 });
 
 // Initialize Demo Data
@@ -1503,11 +1899,6 @@ function selectCustomer(customerId) {
     
     // Update identify caller button visibility
     updateIdentifyCallerButtons();
-
-    // Show end session button in header only if caller is identified
-    if (callSession.active && callSession.callerType === 'identified') {
-        document.getElementById('endSessionBtn').style.display = 'block';
-    }
 
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3477,9 +3868,6 @@ function debugStartCall() {
     
     // Start UI updates
     startCallSession();
-    
-    // Show debug end call button
-    document.getElementById('debugEndCallBtn').style.display = 'block';
     
     closeDebugModal();
     

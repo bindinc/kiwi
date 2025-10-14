@@ -45,6 +45,47 @@
                     </div>
                 </div>
                 
+                <!-- Call Queue Info Bar -->
+                <div id="queueInfo" class="queue-info" style="display: none;">
+                    <div class="queue-info-content">
+                        <!-- Volgende beller informatie -->
+                        <div class="queue-next-caller">
+                            <span class="queue-icon">👤</span>
+                            <span class="queue-label">Volgende beller:</span>
+                            <span id="queueNextCallerName" class="queue-next-name">Jan Jansen</span>
+                        </div>
+                        
+                        <!-- Service nummer -->
+                        <div class="queue-service">
+                            <span class="service-icon">📞</span>
+                            <span id="queueNextService">AVROBODE SERVICE</span>
+                        </div>
+                        
+                        <!-- Wachttijd -->
+                        <div class="queue-wait">
+                            <span class="wait-icon">⏳</span>
+                            <span>Wacht: </span>
+                            <span id="queueNextWaitTime">2:45</span>
+                        </div>
+                        
+                        <!-- Queue lengte indicator -->
+                        <div class="queue-length">
+                            <span class="queue-length-icon">📋</span>
+                            <span>In wachtrij: </span>
+                            <span id="queueLength" class="queue-count">8</span>
+                        </div>
+                        
+                        <!-- Start gesprek actie -->
+                        <div class="queue-actions">
+                            <button id="acceptCallBtn" 
+                                    class="btn-accept-call" 
+                                    onclick="acceptNextCall()">
+                                📞 Gesprek Starten
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Active Call Session Bar -->
                 <div id="sessionInfo" class="session-info" style="display: none;">
                     <div class="session-info-content">
@@ -80,15 +121,10 @@
                                     style="display: none;">
                                 ⏸️ In Wacht
                             </button>
-                            <button id="endSessionBtn" class="btn-end-session" 
+                            <button id="endCallBtn" class="btn-end-call" 
                                     onclick="endCallSession()" 
                                     style="display: none;">
-                                📞 Afsluiten
-                            </button>
-                            <button id="endAnonymousCallBtn" class="btn-end-anonymous-call" 
-                                    onclick="endCallSession()" 
-                                    style="display: none;">
-                                📞 Beëindig
+                                📞 Beëindig Gesprek
                             </button>
                         </div>
                     </div>
@@ -1150,6 +1186,53 @@
                                 style="display: none;">
                             ❌ Beëindig Telefoongesprek
                         </button>
+                    </div>
+                </div>
+                
+                <!-- PHASE 6: Queue Simulation Section -->
+                <div class="debug-section">
+                    <h3>📋 Wachtrij Simulatie</h3>
+                    
+                    <div class="debug-row">
+                        <label>Queue status:</label>
+                        <span id="debugQueueStatus">Uitgeschakeld</span>
+                    </div>
+                    
+                    <div class="debug-row">
+                        <label>Aantal wachtenden:</label>
+                        <input type="number" id="debugQueueSize" 
+                               value="5" min="1" max="50" />
+                    </div>
+                    
+                    <div class="debug-row">
+                        <label>Mix van bellers:</label>
+                        <select id="debugQueueMix">
+                            <option value="balanced">Gebalanceerd (50/50)</option>
+                            <option value="mostly_known">Vooral bekende klanten (80/20)</option>
+                            <option value="mostly_anonymous">Vooral anoniem (20/80)</option>
+                            <option value="all_known">Alleen bekende klanten</option>
+                            <option value="all_anonymous">Alleen anoniem</option>
+                        </select>
+                    </div>
+                    
+                    <div class="debug-actions">
+                        <button class="btn btn-primary btn-block" 
+                                onclick="debugGenerateQueue()">
+                            🎯 Genereer Wachtrij
+                        </button>
+                        <button class="btn btn-secondary btn-block" 
+                                onclick="debugClearQueue()">
+                            🗑️ Wis Wachtrij
+                        </button>
+                    </div>
+                    
+                    <!-- Queue preview -->
+                    <div id="debugQueuePreview" class="debug-queue-preview" 
+                         style="display: none;">
+                        <h4>Huidige wachtrij:</h4>
+                        <div id="debugQueueList" class="debug-queue-list">
+                            <!-- Dynamisch gevuld met queue items -->
+                        </div>
                     </div>
                 </div>
                 
