@@ -172,10 +172,17 @@
                         </button>
                     </div>
 
-                    <!-- Search Results -->
-                    <div id="searchResults" class="search-results" style="display: none;">
-                        <h3>Resultaten</h3>
-                        <div id="resultsContainer"></div>
+                    <!-- Search Summary (shows after search) -->
+                    <div id="searchSummary" class="search-summary" style="display: none;">
+                        <div class="summary-content">
+                            <div class="summary-badge">
+                                <span class="summary-icon">✓</span>
+                                <span id="resultCount">0</span> klanten gevonden
+                            </div>
+                            <button class="btn btn-link" onclick="scrollToResults()">
+                                Bekijk resultaten →
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -202,6 +209,31 @@
                     </div>
                 </div>
 
+                <!-- Search Results View (shows paginated results) -->
+                <div id="searchResultsView" class="search-results-view" style="display: none;">
+                    <div class="card">
+                        <div class="results-header">
+                            <div class="results-title-section">
+                                <h2 id="resultsTitle">🔍 Zoekresultaten</h2>
+                                <span id="resultsRange" class="results-range">Toont 1-20 van 153</span>
+                            </div>
+                            <div class="results-controls">
+                                <label for="sortBy" class="sort-label">Sorteren:</label>
+                                <select id="sortBy" class="sort-select" onchange="sortResults(this.value)">
+                                    <option value="name">Achternaam</option>
+                                    <option value="postal">Postcode</option>
+                                    <option value="subscriptions">Actieve abonnementen</option>
+                                </select>
+                                <button class="btn btn-small btn-close-results" onclick="clearSearchResults()" title="Sluiten">
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                        <div id="paginatedResults" class="results-table"></div>
+                        <div id="pagination" class="pagination"></div>
+                    </div>
+                </div>
+
                 <!-- Customer Detail View -->
                 <div id="customerDetail" class="customer-detail" style="display: none;">
                     <div class="card">
@@ -224,8 +256,11 @@
                                 </button>
                                 <button class="btn btn-small" onclick="editCustomer()">✏️ Bewerken</button>
                                 <button id="resendMagazineBtn" class="btn btn-small btn-action-inline" onclick="showResendMagazine()">📮 Editie Verzenden</button>
-                                <button id="winbackFlowBtn" class="btn btn-small btn-action-inline" onclick="showWinbackFlow()">🎯 Winback/Opzegging</button>
+                                <!-- <button id="winbackFlowBtn" class="btn btn-small btn-action-inline" onclick="showWinbackFlow()">🎯 Winback/Opzegging</button> -->
                                 <button class="btn btn-small btn-action-inline" onclick="showEditorialComplaintForm()">✍️ Klacht Redactie</button>
+                                <button class="btn btn-small btn-close-customer" onclick="closeCustomerDetail()" title="Sluiten">
+                                    ✕
+                                </button>
                             </div>
                         </div>
 

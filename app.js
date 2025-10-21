@@ -3,6 +3,15 @@ let customers = [];
 let currentCustomer = null;
 let selectedOffer = null;
 
+// Search State Management (for pagination)
+let searchState = {
+    results: [],
+    currentPage: 1,
+    itemsPerPage: 20,
+    sortBy: 'name',
+    sortOrder: 'asc'
+};
+
 // Phase 1A: Call Session State Management
 let callSession = {
     active: false,              // Is er momenteel een actieve call?
@@ -1772,7 +1781,16 @@ function searchCustomer() {
         return matchName && matchPostal && matchHouse;
     });
 
-    displaySearchResults(results);
+    // Update search state
+    searchState.results = results;
+    searchState.currentPage = 1;
+    searchState.sortBy = 'name';
+    
+    // Sort results
+    sortResultsData();
+    
+    // Display results
+    displayPaginatedResults();
 }
 
 // Handle Enter key press in search fields
@@ -1783,80 +1801,332 @@ function handleSearchKeyPress(event) {
     }
 }
 
-// Display Search Results
-function displaySearchResults(results) {
-    const resultsContainer = document.getElementById('resultsContainer');
-    const searchResults = document.getElementById('searchResults');
+// Display Paginated Results
+function displayPaginatedResults() {
+    const { results, currentPage, itemsPerPage } = searchState;
+    
+    // Update summary in left panel
+    const searchSummary = document.getElementById('searchSummary');
+    const resultCount = document.getElementById('resultCount');
+    resultCount.textContent = results.length;
+    searchSummary.style.display = results.length > 0 ? 'block' : 'none';
+    
+    // Show/hide views
+    const searchResultsView = document.getElementById('searchResultsView');
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    const customerDetail = document.getElementById('customerDetail');
     
     if (results.length === 0) {
-        resultsContainer.innerHTML = '<p class="empty-state-small">Geen klanten gevonden</p>';
-        searchResults.style.display = 'block';
-        return;
-    }
-
-    resultsContainer.innerHTML = results.map(customer => {
-        const fullName = customer.middleName 
-            ? `${customer.firstName} ${customer.middleName} ${customer.lastName}`
-            : `${customer.firstName} ${customer.lastName}`;
-        
-        const activeSubscriptions = customer.subscriptions.filter(s => s.status === 'active');
-        const inactiveSubscriptions = customer.subscriptions.filter(s => s.status !== 'active');
-        
-        // Build subscription titles display
-        let subscriptionDetails = '';
-        if (activeSubscriptions.length > 0) {
-            const activeTitles = activeSubscriptions.map(s => s.magazine).join(', ');
-            subscriptionDetails = `<strong>Actief:</strong> ${activeTitles}`;
-        }
-        if (inactiveSubscriptions.length > 0) {
-            // Find the most recent ended subscription based on endDate
-            const mostRecentEnded = inactiveSubscriptions.reduce((latest, current) => {
-                const latestDate = latest.endDate ? new Date(latest.endDate) : new Date(0);
-                const currentDate = current.endDate ? new Date(current.endDate) : new Date(0);
-                return currentDate > latestDate ? current : latest;
-            });
-            
-            const endedCount = inactiveSubscriptions.length;
-            const endedLabel = endedCount > 1 
-                ? `<strong>Beëindigd:</strong> ${mostRecentEnded.magazine} (+${endedCount - 1} meer)`
-                : `<strong>Beëindigd:</strong> ${mostRecentEnded.magazine}`;
-            
-            if (subscriptionDetails) {
-                subscriptionDetails += `<br>${endedLabel}`;
-            } else {
-                subscriptionDetails = endedLabel;
-            }
-        }
-        if (!subscriptionDetails) {
-            subscriptionDetails = 'Geen abonnementen';
-        }
-        
-        // Show identify button only during anonymous call
-        const showIdentifyBtn = callSession.active && callSession.callerType === 'anonymous';
-        
-        return `
-            <div class="result-item">
-                <div class="result-content" onclick="selectCustomer(${customer.id})">
-                    <div class="result-name">${fullName}</div>
-                    <div class="result-details">
-                        ${customer.address}, ${customer.postalCode} ${customer.city}<br>
-                        ${subscriptionDetails}
-                    </div>
-                </div>
-                <div class="result-actions">
-                    <button class="btn btn-small" onclick="selectCustomer(${customer.id})">Bekijken</button>
-                    ${showIdentifyBtn ? `
-                        <button class="btn btn-small btn-primary btn-identify-caller" 
-                                onclick="event.stopPropagation(); identifyCallerAsCustomer(${customer.id})">
-                            👤 Dit is de beller
-                        </button>
-                    ` : ''}
-                </div>
+        // Show empty state in center panel
+        searchResultsView.style.display = 'none';
+        customerDetail.style.display = 'none';
+        welcomeMessage.style.display = 'flex';
+        welcomeMessage.innerHTML = `
+            <div class="empty-state">
+                <span class="empty-icon">🔍</span>
+                <h2>Geen klanten gevonden</h2>
+                <p>Pas je zoekcriteria aan en probeer opnieuw</p>
             </div>
         `;
-    }).join('');
+        return;
+    }
     
-    searchResults.style.display = 'block';
+    // Hide welcome and customer detail, show results view
+    welcomeMessage.style.display = 'none';
+    customerDetail.style.display = 'none';
+    searchResultsView.style.display = 'block';
+    
+    // Calculate pagination
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    const endIdx = startIdx + itemsPerPage;
+    const pageResults = results.slice(startIdx, endIdx);
+    
+    // Update results title and range
+    const searchQuery = document.getElementById('searchName').value || 
+                       document.getElementById('searchPostalCode').value || 
+                       'alle klanten';
+    document.getElementById('resultsTitle').textContent = `🔍 Zoekresultaten: "${searchQuery}"`;
+    document.getElementById('resultsRange').textContent = 
+        `Toont ${startIdx + 1}-${Math.min(endIdx, results.length)} van ${results.length}`;
+    
+    // Render results
+    const container = document.getElementById('paginatedResults');
+    container.innerHTML = pageResults.map(customer => renderCustomerRow(customer)).join('');
+    
+    // Render pagination
+    renderPagination();
+    
+    // Scroll to top of results
+    searchResultsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Render a single customer row
+function renderCustomerRow(customer) {
+    const fullName = customer.middleName 
+        ? `${customer.firstName} ${customer.middleName} <span class="last-name">${customer.lastName}</span>`
+        : `${customer.firstName} <span class="last-name">${customer.lastName}</span>`;
+    
+    const activeSubscriptions = customer.subscriptions.filter(s => s.status === 'active');
+    const inactiveSubscriptions = customer.subscriptions.filter(s => s.status !== 'active');
+    
+    // Build subscription badges
+    let subscriptionBadges = '';
+    if (activeSubscriptions.length > 0) {
+        subscriptionBadges = activeSubscriptions.map(s => 
+            `<span class="subscription-badge active">${s.magazine}</span>`
+        ).join('');
+    }
+    if (inactiveSubscriptions.length > 0 && activeSubscriptions.length === 0) {
+        subscriptionBadges = `<span class="subscription-badge inactive">${inactiveSubscriptions[0].magazine} (beëindigd)</span>`;
+    }
+    if (!subscriptionBadges) {
+        subscriptionBadges = '<span style="color: var(--text-secondary); font-size: 0.875rem;">Geen actief</span>';
+    }
+    
+    // Show identify button only during anonymous call
+    const showIdentifyBtn = callSession.active && callSession.callerType === 'anonymous';
+    
+    return `
+        <div class="result-row" onclick="selectCustomer(${customer.id})">
+            <div class="result-row-name">${fullName}</div>
+            <div class="result-row-address">
+                ${customer.address}<br>
+                ${customer.postalCode} ${customer.city}
+            </div>
+            <div class="result-row-subscriptions">${subscriptionBadges}</div>
+            <div class="result-row-actions">
+                <button class="btn btn-small" onclick="event.stopPropagation(); selectCustomer(${customer.id})">
+                    Bekijken
+                </button>
+                ${showIdentifyBtn ? `
+                    <button class="btn btn-small btn-primary btn-identify-caller" 
+                            onclick="event.stopPropagation(); identifyCallerAsCustomer(${customer.id})">
+                        👤 Identificeer
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+// Render Pagination Controls
+function renderPagination() {
+    const { results, currentPage, itemsPerPage } = searchState;
+    const totalPages = Math.ceil(results.length / itemsPerPage);
+    const pagination = document.getElementById('pagination');
+    
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    
+    // Previous button
+    html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+        ← Vorige
+    </button>`;
+    
+    // Page numbers (with smart ellipsis)
+    const pageNumbers = getPageNumbers(currentPage, totalPages);
+    pageNumbers.forEach(page => {
+        if (page === '...') {
+            html += `<span class="page-ellipsis">...</span>`;
+        } else {
+            const activeClass = page === currentPage ? 'active' : '';
+            html += `<button class="page-btn ${activeClass}" onclick="goToPage(${page})">${page}</button>`;
+        }
+    });
+    
+    // Next button
+    html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+        Volgende →
+    </button>`;
+    
+    pagination.innerHTML = html;
+}
+
+// Get page numbers with smart ellipsis
+function getPageNumbers(currentPage, totalPages) {
+    const pages = [];
+    const maxVisible = 7; // Maximum number of page buttons to show
+    
+    if (totalPages <= maxVisible) {
+        // Show all pages
+        for (let i = 1; i <= totalPages; i++) {
+            pages.push(i);
+        }
+    } else {
+        // Always show first page
+        pages.push(1);
+        
+        // Calculate range around current page
+        let rangeStart = Math.max(2, currentPage - 1);
+        let rangeEnd = Math.min(totalPages - 1, currentPage + 1);
+        
+        // Adjust range if near start or end
+        if (currentPage <= 3) {
+            rangeEnd = Math.min(5, totalPages - 1);
+        }
+        if (currentPage >= totalPages - 2) {
+            rangeStart = Math.max(2, totalPages - 4);
+        }
+        
+        // Add ellipsis before range if needed
+        if (rangeStart > 2) {
+            pages.push('...');
+        }
+        
+        // Add range
+        for (let i = rangeStart; i <= rangeEnd; i++) {
+            pages.push(i);
+        }
+        
+        // Add ellipsis after range if needed
+        if (rangeEnd < totalPages - 1) {
+            pages.push('...');
+        }
+        
+        // Always show last page
+        pages.push(totalPages);
+    }
+    
+    return pages;
+}
+
+// Go to specific page
+function goToPage(page) {
+    const totalPages = Math.ceil(searchState.results.length / searchState.itemsPerPage);
+    
+    if (page < 1 || page > totalPages) return;
+    
+    searchState.currentPage = page;
+    displayPaginatedResults();
+}
+
+// Scroll to results (from left panel button)
+function scrollToResults() {
+    // Hide customer detail and welcome message
+    document.getElementById('customerDetail').style.display = 'none';
+    document.getElementById('welcomeMessage').style.display = 'none';
+    
+    // Show search results view
+    const searchResultsView = document.getElementById('searchResultsView');
+    searchResultsView.style.display = 'block';
+    
+    // Scroll to results
+    searchResultsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Clear search results and return to previous state
+function clearSearchResults() {
+    // Clear search state
+    searchState.results = [];
+    searchState.currentPage = 1;
+    
+    // Hide search results view and summary
+    document.getElementById('searchResultsView').style.display = 'none';
+    document.getElementById('searchSummary').style.display = 'none';
+    
+    // Clear search input fields
+    document.getElementById('searchName').value = '';
+    document.getElementById('searchPostalCode').value = '';
+    document.getElementById('searchHouseNumber').value = '';
+    
+    // Always restore welcome message HTML (in case it was overwritten by empty search)
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    welcomeMessage.innerHTML = `
+        <div class="empty-state">
+            <span class="empty-icon">👤</span>
+            <h2>Welkom bij Klantenservice</h2>
+            <p>Zoek een klant of start een nieuwe actie</p>
+        </div>
+    `;
+    
+    // Check if there was a customer loaded before the search
+    if (currentCustomer) {
+        // Show the previously loaded customer detail
+        document.getElementById('customerDetail').style.display = 'block';
+        welcomeMessage.style.display = 'none';
+    } else {
+        // No customer was loaded, show welcome message
+        document.getElementById('customerDetail').style.display = 'none';
+        welcomeMessage.style.display = 'flex';
+    }
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Close customer detail and return to welcome screen
+function closeCustomerDetail() {
+    // Clear current customer
+    currentCustomer = null;
+    
+    // Hide customer detail
+    document.getElementById('customerDetail').style.display = 'none';
+    
+    // Restore and show welcome message
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    welcomeMessage.innerHTML = `
+        <div class="empty-state">
+            <span class="empty-icon">👤</span>
+            <h2>Welkom bij Klantenservice</h2>
+            <p>Zoek een klant of start een nieuwe actie</p>
+        </div>
+    `;
+    welcomeMessage.style.display = 'flex';
+    
+    // Hide search results if visible
+    document.getElementById('searchResultsView').style.display = 'none';
+    document.getElementById('searchSummary').style.display = 'none';
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Sort results
+function sortResults(sortBy) {
+    searchState.sortBy = sortBy;
+    searchState.currentPage = 1; // Reset to first page when sorting
+    sortResultsData();
+    displayPaginatedResults();
+}
+
+// Sort results data
+function sortResultsData() {
+    const { sortBy } = searchState;
+    
+    searchState.results.sort((a, b) => {
+        switch(sortBy) {
+            case 'name':
+                // Sort by last name, then first name
+                const lastNameCompare = a.lastName.localeCompare(b.lastName);
+                if (lastNameCompare !== 0) return lastNameCompare;
+                return a.firstName.localeCompare(b.firstName);
+            
+            case 'postal':
+                return a.postalCode.localeCompare(b.postalCode);
+            
+            case 'subscriptions':
+                // Sort by number of active subscriptions (descending)
+                const aActive = a.subscriptions.filter(s => s.status === 'active').length;
+                const bActive = b.subscriptions.filter(s => s.status === 'active').length;
+                return bActive - aActive;
+            
+            default:
+                return 0;
+        }
+    });
+}
+
+// Legacy Display Search Results (keep for backward compatibility but not used)
+function displaySearchResults(results) {
+    // This function is now replaced by displayPaginatedResults
+    // Keeping it for backward compatibility
+    searchState.results = results;
+    searchState.currentPage = 1;
+    displayPaginatedResults();
 }
 
 // Select Customer
@@ -1864,8 +2134,9 @@ function selectCustomer(customerId) {
     currentCustomer = customers.find(c => c.id === customerId);
     if (!currentCustomer) return;
 
-    // Hide welcome message
+    // Hide welcome message and search results view
     document.getElementById('welcomeMessage').style.display = 'none';
+    document.getElementById('searchResultsView').style.display = 'none';
     
     // Show customer detail
     const customerDetail = document.getElementById('customerDetail');
