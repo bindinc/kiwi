@@ -1,15 +1,15 @@
 # Feedback
 
 ## Nieuw abonnement 
-- [ ] 1 Eerste invoerveld (bovenaan): Werfsleutel zoek/keuze veld (alleen salescode en omschrijving + prijs per werfsleutel laten zien)
-  - [ ] 1.1 Barcode intypen; systeem valideert (bestaat/actief). voorbeeld barcodes documenteren in de /docs folder.
-  - [ ] 1.2 Kanaal keuze in UI (mag met duidelijke icons ipv tekst, mits bij mouseover de kanaal uitgeschreven zichtbaar wordt in een tooltip): 
+- [x] 1 Eerste invoerveld (bovenaan): Werfsleutel zoek/keuze veld (alleen salescode en omschrijving + prijs per werfsleutel laten zien)
+  - [x] 1.1 Barcode intypen; systeem valideert (bestaat/actief). voorbeeld barcodes documenteren in de /docs folder.
+  - [x] 1.2 Kanaal keuze in UI (mag met duidelijke icons ipv tekst, mits bij mouseover de kanaal uitgeschreven zichtbaar wordt in een tooltip): 
             OL/IS/** = online interne sites. 
             EM/OU/** = e-mail outbound.
             TM/IB/** = telemarketing inbound.
             PR/ET/** = Print eigen titels.
 
-- [ ] 2 Na Enter op werfsleutel (of knop 'bevestigen' rechts naast werfsleutel invoerveld)  dan de read-only overzicht modal en knop eronder om definitief te bevestigen: getoonde titel, looptijd, actie; gebruiker bevestigt.
+- [x] 2 Na Enter op werfsleutel (of knop 'bevestigen' rechts naast werfsleutel invoerveld)  dan de read-only overzicht modal en knop eronder om definitief te bevestigen: getoonde titel, looptijd, actie; gebruiker bevestigt.
 - [ ] 3 Betaalmethode is stap 2 (nog voor naw gegevens invulvelden): keuze Automatische incasso (IBAN) of Factuur (adres).
   - [ ] 3.1 Optionele "tweede betaler" (bijv. bewindvoerder) ná keuze betaalmethode: klantnummer zoeken/aanmaken; niet verplicht. de tweede betaler krijgt ook een apart klantnummer
 - [ ] 4 Marketingconsent: sectie met opt-ins standaard op leeg als geen bestaand profiel is ingeladen.
@@ -17,7 +17,7 @@
 - [ ] 6 Startdatumkalender: alleen toegestane startdata klikbaar (bijv. tweewekelijks; geen te vroege data); duidelijk visueel onderscheid.
 
 ## Bevestiging & proceslogica
-- [ ] 8 Bevestigingspaneel standaard uitgeklapt na "Aanmaken", met duidelijke melding "gelukt".
+- [ ] 8 Bevestigingspanel standaard uitgeklapt na "Aanmaken", met duidelijke melding "gelukt".
 - [ ] 9 Contactgeschiedenis/actieve abonnementen: nieuwe mutatie bovenaan en opvallend gemarkeerd (tijdelijk highlight).
 - [ ] 10 Flow-uitzondering aan de bron: bij aanmaken kun je "proces/confirmatie niet starten" aanvinken (exception).
 - [ ] 11 5-minuten bedenktijd: na bevestigen 5 minuten om zonder database-commit nog te wijzigen/annuleren; daarna definitief (latere wijzigingen via standaard Abel route blijft mogelijk).

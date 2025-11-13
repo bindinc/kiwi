@@ -12,6 +12,15 @@ let searchState = {
     sortOrder: 'asc'
 };
 
+const contactHistoryState = {
+    currentPage: 1,
+    itemsPerPage: 6,
+    highlightId: null,
+    lastEntry: null
+};
+
+let contactHistoryHighlightTimer = null;
+
 // Phase 1A: Call Session State Management
 let callSession = {
     active: false,              // Is er momenteel een actieve call?
@@ -164,7 +173,8 @@ const salesChannelMap = {
 
 const werfsleutelState = {
     selectedKey: null,
-    selectedChannel: null
+    selectedChannel: null,
+    confirmed: false
 };
 
 async function ensureWerfsleutelsLoaded() {
@@ -358,6 +368,9 @@ async function initWerfsleutelPicker() {
 
     const input = document.getElementById('werfsleutelInput');
     const clearButton = document.getElementById('werfsleutelClear');
+    const confirmTrigger = document.getElementById('werfsleutelConfirmTrigger');
+    const confirmModalButton = document.getElementById('werfsleutelConfirmButton');
+    const confirmationFields = ['subMagazine', 'subDuration'];
 
     if (!input) {
         return;
@@ -366,27 +379,43 @@ async function initWerfsleutelPicker() {
     input.addEventListener('input', (event) => handleWerfsleutelQuery(event.target.value));
     input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
+            event.preventDefault();
             const trimmed = input.value.trim();
-            if (!trimmed) {
-                return;
-            }
-            const exactMatch = werfsleutelCatalog.find((item) => item.salesCode.toLowerCase() === trimmed.toLowerCase());
-            if (exactMatch) {
-                selectWerfsleutel(exactMatch.salesCode);
-            } else if (/^\d{6,}$/.test(trimmed)) {
-                validateWerfsleutelBarcode(trimmed);
-            } else {
-                const firstSuggestion = filterWerfsleutelCatalog(trimmed)[0];
-                if (firstSuggestion) {
-                    selectWerfsleutel(firstSuggestion.salesCode);
+            if (trimmed) {
+                const exactMatch = werfsleutelCatalog.find((item) => item.salesCode.toLowerCase() === trimmed.toLowerCase());
+                if (exactMatch) {
+                    selectWerfsleutel(exactMatch.salesCode);
+                } else if (/^\d{6,}$/.test(trimmed)) {
+                    validateWerfsleutelBarcode(trimmed);
+                } else {
+                    const firstSuggestion = filterWerfsleutelCatalog(trimmed)[0];
+                    if (firstSuggestion) {
+                        selectWerfsleutel(firstSuggestion.salesCode);
+                    }
                 }
             }
+            requestWerfsleutelConfirmation();
         }
     });
 
     if (clearButton) {
         clearButton.addEventListener('click', () => resetWerfsleutelPicker());
     }
+
+    if (confirmTrigger) {
+        confirmTrigger.addEventListener('click', requestWerfsleutelConfirmation);
+    }
+
+    if (confirmModalButton) {
+        confirmModalButton.addEventListener('click', confirmWerfsleutelSelection);
+    }
+
+    confirmationFields.forEach((fieldId) => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('change', invalidateWerfsleutelConfirmation);
+        }
+    });
 
     resetWerfsleutelPicker();
 }
@@ -473,6 +502,7 @@ function selectWerfsleutel(salesCode) {
     }
 
     werfsleutelState.selectedKey = match;
+    werfsleutelState.confirmed = false;
     const input = document.getElementById('werfsleutelInput');
 
     if (input) {
@@ -497,12 +527,14 @@ function validateWerfsleutelBarcode(rawValue) {
     const match = werfsleutelCatalog.find((item) => item.barcode === barcode);
     if (!match) {
         werfsleutelState.selectedKey = null;
+        werfsleutelState.confirmed = false;
         updateWerfsleutelSummary();
         return;
     }
 
     if (!match.isActive) {
         werfsleutelState.selectedKey = null;
+        werfsleutelState.confirmed = false;
         updateWerfsleutelSummary();
         return;
     }
@@ -557,6 +589,7 @@ function selectWerfsleutelChannel(channelCode) {
     }
 
     werfsleutelState.selectedChannel = channelCode;
+    werfsleutelState.confirmed = false;
     renderWerfsleutelChannelOptions();
     updateWerfsleutelSummary();
 }
@@ -575,9 +608,21 @@ function updateWerfsleutelSummary() {
     const channelLabel = channelCode ? `${channelCode} · ${werfsleutelChannels[channelCode].label}` : 'Nog geen kanaal gekozen';
     const key = werfsleutelState.selectedKey;
 
+    const confirmationLabel = werfsleutelState.confirmed ? 'Werfsleutel bevestigd' : 'Nog niet bevestigd';
+    const confirmationHint = werfsleutelState.confirmed
+        ? 'Klaar voor vervolgstappen'
+        : 'Bevestig via de knop naast het veld';
+    const confirmationClass = werfsleutelState.confirmed ? 'status-pill--success' : 'status-pill--warning';
+
     summary.innerHTML = `
-        <strong>${key.salesCode}</strong> - ${key.title} (${formatEuro(key.price)})
-        <br> Kanaal: ${channelLabel}
+        <div>
+            <strong>${key.salesCode}</strong> - ${key.title} (${formatEuro(key.price)})
+            <br> Kanaal: ${channelLabel}
+        </div>
+        <div class="werfsleutel-summary-status">
+            <span class="status-pill ${confirmationClass}">${confirmationLabel}</span>
+            <span>${confirmationHint}</span>
+        </div>
     `;
     summary.classList.add('visible');
 }
@@ -585,6 +630,7 @@ function updateWerfsleutelSummary() {
 function resetWerfsleutelPicker() {
     werfsleutelState.selectedKey = null;
     werfsleutelState.selectedChannel = null;
+    werfsleutelState.confirmed = false;
 
     const input = document.getElementById('werfsleutelInput');
     if (input) input.value = '';
@@ -592,6 +638,107 @@ function resetWerfsleutelPicker() {
     renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
     renderWerfsleutelChannelOptions();
     updateWerfsleutelSummary();
+}
+
+function requestWerfsleutelConfirmation() {
+    if (!werfsleutelState.selectedKey) {
+        showToast('Selecteer eerst een actieve werfsleutel.', 'error');
+        return;
+    }
+
+    if (!werfsleutelState.selectedChannel) {
+        showToast('Kies een kanaal voor deze werfsleutel.', 'warning');
+        return;
+    }
+
+    populateWerfsleutelConfirmationModal();
+    const modal = document.getElementById('werfsleutelOverviewModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function populateWerfsleutelConfirmationModal() {
+    const key = werfsleutelState.selectedKey;
+    if (!key) return;
+
+    const magazineSelect = document.getElementById('subMagazine');
+    const durationSelect = document.getElementById('subDuration');
+    const titleLabel = getSelectedOptionLabel(magazineSelect) || key.magazine || 'Nog geen titel gekozen';
+    const durationLabel = describeDurationSelection(durationSelect);
+    const actionLabel = key.title || key.salesCode;
+    const channelCode = werfsleutelState.selectedChannel;
+    const channelMeta = channelCode ? werfsleutelChannels[channelCode] : null;
+    const channelLabel = channelMeta ? `${channelCode} · ${channelMeta.label}` : 'Nog geen kanaal gekozen';
+
+    setElementText('werfsleutelOverviewTitle', titleLabel);
+    setElementText('werfsleutelOverviewDuration', durationLabel);
+    setElementText('werfsleutelOverviewAction', actionLabel);
+    setElementText('werfsleutelOverviewCode', key.salesCode);
+    setElementText('werfsleutelOverviewChannel', channelLabel);
+}
+
+function closeWerfsleutelOverviewModal() {
+    const modal = document.getElementById('werfsleutelOverviewModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function confirmWerfsleutelSelection() {
+    if (!werfsleutelState.selectedKey) {
+        showToast('Selecteer eerst een actieve werfsleutel.', 'error');
+        return;
+    }
+
+    if (!werfsleutelState.selectedChannel) {
+        showToast('Kies een kanaal voor deze werfsleutel.', 'warning');
+        return;
+    }
+
+    werfsleutelState.confirmed = true;
+    updateWerfsleutelSummary();
+    closeWerfsleutelOverviewModal();
+    showToast('Werfsleutel bevestigd.', 'success');
+}
+
+function invalidateWerfsleutelConfirmation() {
+    if (!werfsleutelState.confirmed) {
+        return;
+    }
+    werfsleutelState.confirmed = false;
+    updateWerfsleutelSummary();
+}
+
+function getSelectedOptionLabel(selectEl) {
+    if (!selectEl) return '';
+    const option = selectEl.options[selectEl.selectedIndex];
+    return option ? option.textContent.trim() : '';
+}
+
+function describeDurationSelection(selectEl) {
+    if (!selectEl || !selectEl.value) {
+        return 'Nog geen looptijd gekozen';
+    }
+
+    const pricing = subscriptionPricing[selectEl.value];
+    if (pricing?.description) {
+        return pricing.description;
+    }
+
+    const option = selectEl.options[selectEl.selectedIndex];
+    if (option) {
+        return option.textContent.trim();
+    }
+
+    return selectEl.value;
+}
+
+function setElementText(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = value;
+    }
 }
 
 // Phase 6: Call Queue State Management
@@ -898,24 +1045,87 @@ function formatTime(seconds) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+function generateContactHistoryId() {
+    return `ch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function pushContactHistory(customer, entry, options = {}) {
+    if (!customer) {
+        return null;
+    }
+
+    const {
+        highlight = false,
+        persist = true,
+        refresh = true,
+        moveToFirstPage = false
+    } = options;
+
+    const normalizedEntry = {
+        id: entry.id || generateContactHistoryId(),
+        type: entry.type || 'default',
+        date: entry.date || new Date().toISOString(),
+        description: entry.description || ''
+    };
+
+    if (!Array.isArray(customer.contactHistory)) {
+        customer.contactHistory = [];
+    }
+
+    customer.contactHistory.unshift(normalizedEntry);
+
+    if (persist) {
+        saveCustomers();
+    }
+
+    const isCurrentCustomer = currentCustomer && currentCustomer.id === customer.id;
+
+    if (isCurrentCustomer && (highlight || moveToFirstPage)) {
+        contactHistoryState.currentPage = 1;
+    }
+
+    if (highlight && isCurrentCustomer) {
+        contactHistoryState.highlightId = normalizedEntry.id;
+
+        if (contactHistoryHighlightTimer) {
+            clearTimeout(contactHistoryHighlightTimer);
+        }
+
+        contactHistoryHighlightTimer = setTimeout(() => {
+            contactHistoryState.highlightId = null;
+            if (currentCustomer && currentCustomer.id === customer.id) {
+                displayContactHistory();
+            }
+            contactHistoryHighlightTimer = null;
+        }, 5000);
+    }
+
+    if (refresh && isCurrentCustomer) {
+        displayContactHistory();
+    }
+
+    contactHistoryState.lastEntry = {
+        id: normalizedEntry.id,
+        type: normalizedEntry.type,
+        createdAt: Date.now()
+    };
+
+    return normalizedEntry;
+}
+
 // Helper function to add contact moment to customer history
 function addContactMoment(customerId, type, description) {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return;
-    
-    customer.contactHistory.unshift({
-        id: Date.now(),
-        type: type,
-        date: new Date().toISOString(),
-        description: description
-    });
-    
-    saveCustomers();
-    
-    // Update display if this is the current customer
-    if (currentCustomer && currentCustomer.id === customerId) {
-        displayContactHistory();
-    }
+
+    pushContactHistory(
+        customer,
+        {
+            type: type,
+            description: description
+        },
+        { highlight: true }
+    );
 }
 
 // Start Call Session
@@ -2828,6 +3038,14 @@ function selectCustomer(customerId) {
     currentCustomer = customers.find(c => c.id === customerId);
     if (!currentCustomer) return;
 
+    contactHistoryState.currentPage = 1;
+    contactHistoryState.highlightId = null;
+    contactHistoryState.lastEntry = null;
+    if (contactHistoryHighlightTimer) {
+        clearTimeout(contactHistoryHighlightTimer);
+        contactHistoryHighlightTimer = null;
+    }
+
     // Hide welcome message and search results view
     document.getElementById('welcomeMessage').style.display = 'none';
     document.getElementById('searchResultsView').style.display = 'none';
@@ -3079,6 +3297,10 @@ const contactTypeLabels = {
     'magazine_resent': { label: 'Editie opnieuw verzonden', icon: '📬', color: '#3b82f6' },
     
     // Default
+    'notification_success': { label: 'Melding', icon: '✅', color: '#10b981' },
+    'notification_info': { label: 'Melding', icon: 'ℹ️', color: '#3b82f6' },
+    'notification_warning': { label: 'Melding', icon: '⚠️', color: '#f59e0b' },
+    'notification_error': { label: 'Melding', icon: '❗', color: '#ef4444' },
     'default': { label: 'Contact', icon: '📝', color: '#6b7280' }
 };
 
@@ -3090,44 +3312,109 @@ function getContactTypeInfo(type) {
 // Display Contact History
 function displayContactHistory() {
     const historyContainer = document.getElementById('contactHistory');
-    
-    if (!currentCustomer || currentCustomer.contactHistory.length === 0) {
+
+    if (!historyContainer) {
+        return;
+    }
+
+    if (!currentCustomer || !Array.isArray(currentCustomer.contactHistory) || currentCustomer.contactHistory.length === 0) {
         historyContainer.innerHTML = '<div class="empty-state-small"><p>Geen contactgeschiedenis beschikbaar</p></div>';
         return;
     }
 
-    // Sort by date descending
-    const sortedHistory = [...currentCustomer.contactHistory].sort((a, b) => 
+    const sortedHistory = [...currentCustomer.contactHistory].sort((a, b) =>
         new Date(b.date) - new Date(a.date)
     );
 
-    historyContainer.innerHTML = sortedHistory.map((item, index) => {
+    const totalItems = sortedHistory.length;
+    const itemsPerPage = contactHistoryState.itemsPerPage;
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+
+    if (contactHistoryState.currentPage > totalPages) {
+        contactHistoryState.currentPage = totalPages;
+    }
+
+    if (contactHistoryState.currentPage < 1) {
+        contactHistoryState.currentPage = 1;
+    }
+
+    const startIndex = (contactHistoryState.currentPage - 1) * itemsPerPage;
+    const pageItems = sortedHistory.slice(startIndex, startIndex + itemsPerPage);
+
+    const paginationMarkup = totalPages > 1
+        ? `
+        <div class="timeline-pagination">
+            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage === 1 ? 'disabled' : ''} onclick="changeContactHistoryPage(${contactHistoryState.currentPage - 1})">← Vorige</button>
+            <span class="timeline-page-indicator">Pagina ${contactHistoryState.currentPage} van ${totalPages}</span>
+            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage >= totalPages ? 'disabled' : ''} onclick="changeContactHistoryPage(${contactHistoryState.currentPage + 1})">Volgende →</button>
+        </div>
+        `
+        : '';
+
+    const timelineItems = pageItems.map((item, index) => {
         const typeInfo = getContactTypeInfo(item.type);
+        const rawId = String(item.id ?? `${startIndex + index}`);
+        const sanitizedId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
+        const entryDomId = sanitizedId ? `ch-${sanitizedId}` : `ch-entry-${startIndex + index}`;
+        const isHighlighted = contactHistoryState.highlightId && String(contactHistoryState.highlightId) === String(item.id);
+        const highlightClass = isHighlighted ? ' timeline-item--highlight' : '';
+
+        const descriptionHtml = (item.description || '').replace(/\n/g, '<br>');
+
         return `
-        <div class="timeline-item">
+        <div class="timeline-item${highlightClass}" data-contact-id="${rawId}">
             <div class="timeline-dot" style="background-color: ${typeInfo.color}"></div>
-            <div class="timeline-header" onclick="toggleTimelineItem(${index})">
+            <div class="timeline-header" onclick="toggleTimelineItem('${entryDomId}')">
                 <span class="timeline-type" style="color: ${typeInfo.color}">
                     ${typeInfo.icon} ${typeInfo.label}
                 </span>
-                <span class="timeline-expand" id="expand-${index}">▼</span>
+                <span class="timeline-expand expanded" id="expand-${entryDomId}">▼</span>
                 <span class="timeline-date">${formatDateTime(item.date)}</span>
             </div>
-            <div class="timeline-content" id="content-${index}">
-                ${item.description}
+            <div class="timeline-content expanded" id="content-${entryDomId}">
+                ${descriptionHtml}
             </div>
         </div>
         `;
     }).join('');
+
+    historyContainer.innerHTML = `
+        ${paginationMarkup}
+        <div class="timeline-list">
+            ${timelineItems}
+        </div>
+        ${paginationMarkup}
+    `;
 }
 
 // Toggle Timeline Item (Accordion)
-function toggleTimelineItem(index) {
-    const content = document.getElementById(`content-${index}`);
-    const expand = document.getElementById(`expand-${index}`);
-    
-    content.classList.toggle('expanded');
-    expand.classList.toggle('expanded');
+function toggleTimelineItem(entryDomId) {
+    const content = document.getElementById(`content-${entryDomId}`);
+    const expand = document.getElementById(`expand-${entryDomId}`);
+
+    if (!content || !expand) {
+        return;
+    }
+
+    const isExpanded = content.classList.toggle('expanded');
+    expand.classList.toggle('expanded', isExpanded);
+}
+
+function changeContactHistoryPage(newPage) {
+    if (!currentCustomer) {
+        return;
+    }
+
+    const totalItems = currentCustomer.contactHistory ? currentCustomer.contactHistory.length : 0;
+    const totalPages = Math.max(1, Math.ceil(totalItems / contactHistoryState.itemsPerPage));
+    const targetPage = Math.min(Math.max(newPage, 1), totalPages);
+
+    if (targetPage === contactHistoryState.currentPage) {
+        return;
+    }
+
+    contactHistoryState.currentPage = targetPage;
+    displayContactHistory();
 }
 
 // Format Date
@@ -3206,6 +3493,11 @@ function createSubscription(event) {
         return;
     }
 
+    if (!werfsleutelState.confirmed) {
+        showToast('Bevestig de werfsleutel via het overzicht.', 'warning');
+        return;
+    }
+
     const salutation = document.querySelector('input[name="subSalutation"]:checked').value;
     const initials = document.getElementById('subInitials').value;
     const middleName = document.getElementById('subMiddleName').value;
@@ -3260,13 +3552,15 @@ function createSubscription(event) {
         
         currentCustomer.subscriptions.push(newSubscription);
         
-        currentCustomer.contactHistory.unshift({
-            id: currentCustomer.contactHistory.length + 1,
-            type: 'Extra abonnement',
-            date: new Date().toISOString(),
-            description: `Extra abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) toegevoegd. ${werfsleutelNote}.`
-        });
-        
+        pushContactHistory(
+            currentCustomer,
+            {
+                type: 'Extra abonnement',
+                description: `Extra abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) toegevoegd. ${werfsleutelNote}.`
+            },
+            { highlight: true, persist: false }
+        );
+
         saveCustomers();
         closeForm('newSubscriptionForm');
         showToast('Extra abonnement succesvol toegevoegd!', 'success');
@@ -3391,12 +3685,14 @@ function saveCustomerEdit(event) {
     customer.optinPost = document.querySelector('input[name="editOptinPost"]:checked').value;
 
     // Add to contact history
-    customer.contactHistory.unshift({
-        id: customer.contactHistory.length + 1,
-        type: 'Gegevens gewijzigd',
-        date: new Date().toISOString(),
-        description: 'Klantgegevens bijgewerkt.'
-    });
+    pushContactHistory(
+        customer,
+        {
+            type: 'Gegevens gewijzigd',
+            description: 'Klantgegevens bijgewerkt.'
+        },
+        { highlight: true, persist: false }
+    );
 
     saveCustomers();
     closeForm('editCustomerForm');
@@ -3443,12 +3739,14 @@ function resendMagazine() {
         'other': 'anders'
     }[reason];
 
-    currentCustomer.contactHistory.unshift({
-        id: currentCustomer.contactHistory.length + 1,
-        type: 'Editie verzonden',
-        date: new Date().toISOString(),
-        description: `Laatste editie van ${subscription.magazine} opnieuw verzonden. Reden: ${reasonText}.`
-    });
+    pushContactHistory(
+        currentCustomer,
+        {
+            type: 'Editie verzonden',
+            description: `Laatste editie van ${subscription.magazine} opnieuw verzonden. Reden: ${reasonText}.`
+        },
+        { highlight: true, persist: false }
+    );
 
     saveCustomers();
     closeForm('resendMagazineForm');
@@ -3535,12 +3833,14 @@ function submitEditorialComplaint() {
     }
 
     // Add to contact history
-    currentCustomer.contactHistory.unshift({
-        id: Date.now(),
-        type: `Redactie ${typeLabels[type]}`,
-        date: new Date().toISOString(),
-        description: historyDescription
-    });
+    pushContactHistory(
+        currentCustomer,
+        {
+            type: `Redactie ${typeLabels[type]}`,
+            description: historyDescription
+        },
+        { highlight: true, persist: false }
+    );
 
     saveCustomers();
     closeForm('editorialComplaintForm');
@@ -3617,13 +3917,15 @@ function saveSubscriptionEdit(event) {
     }
     
     // Add to contact history
-    currentCustomer.contactHistory.unshift({
-        id: currentCustomer.contactHistory.length + 1,
-        type: 'Abonnement gewijzigd',
-        date: new Date().toISOString(),
-        description: `Abonnement bewerkt. ${changes.join('. ')}.`
-    });
-    
+    pushContactHistory(
+        currentCustomer,
+        {
+            type: 'Abonnement gewijzigd',
+            description: `Abonnement bewerkt. ${changes.join('. ')}.`
+        },
+        { highlight: true, persist: false }
+    );
+
     saveCustomers();
     closeForm('editSubscriptionForm');
     showToast('Abonnement succesvol bijgewerkt!', 'success');
@@ -4119,13 +4421,15 @@ function completeRestitutionTransfer(event) {
         ? `${transferData.salutation} ${transferData.firstName} ${transferData.middleName} ${transferData.lastName}`
         : `${transferData.salutation} ${transferData.firstName} ${transferData.lastName}`;
     
-    currentCustomer.contactHistory.unshift({
-        id: currentCustomer.contactHistory.length + 1,
-        type: 'Restitutie Ongedaan - Abonnement Overgezet',
-        date: new Date().toISOString(),
-        description: `Restitutie van ${subscription.magazine} ongedaan gemaakt. Abonnement overgezet naar ${newCustomerName} (${transferData.email}) op ${transferData.address}, ${transferData.postalCode} ${transferData.city}.`
-    });
-    
+    pushContactHistory(
+        currentCustomer,
+        {
+            type: 'Restitutie Ongedaan - Abonnement Overgezet',
+            description: `Restitutie van ${subscription.magazine} ongedaan gemaakt. Abonnement overgezet naar ${newCustomerName} (${transferData.email}) op ${transferData.address}, ${transferData.postalCode} ${transferData.city}.`
+        },
+        { highlight: true, persist: false }
+    );
+
     saveCustomers();
     
     // Close form
@@ -4223,13 +4527,15 @@ function completeAllDeceasedActions() {
         }
     }
     
-    currentCustomer.contactHistory.unshift({
-        id: currentCustomer.contactHistory.length + 1,
-        type: 'Overlijden - Meerdere Abonnementen',
-        date: new Date().toISOString(),
-        description: historyDescription
-    });
-    
+    pushContactHistory(
+        currentCustomer,
+        {
+            type: 'Overlijden - Meerdere Abonnementen',
+            description: historyDescription
+        },
+        { highlight: true, persist: false }
+    );
+
     saveCustomers();
     closeForm('winbackFlow');
     
@@ -4333,24 +4639,28 @@ function completeWinback() {
     
     if (result.value === 'accepted') {
         // Customer accepted offer
-        currentCustomer.contactHistory.unshift({
-            id: currentCustomer.contactHistory.length + 1,
-            type: 'Winback succesvol',
-            date: new Date().toISOString(),
-            description: `Klant accepteerde winback aanbod: ${selectedOffer.title}. Abonnement ${subscription.magazine} blijft actief.`
-        });
+        pushContactHistory(
+            currentCustomer,
+            {
+                type: 'Winback succesvol',
+                description: `Klant accepteerde winback aanbod: ${selectedOffer.title}. Abonnement ${subscription.magazine} blijft actief.`
+            },
+            { highlight: true, persist: false }
+        );
         
         showToast('Winback succesvol! Klant blijft abonnee.', 'success');
     } else {
         // Customer declined, cancel subscription
         currentCustomer.subscriptions = currentCustomer.subscriptions.filter(s => s.id !== subId);
         
-        currentCustomer.contactHistory.unshift({
-            id: currentCustomer.contactHistory.length + 1,
-            type: 'Abonnement opgezegd',
-            date: new Date().toISOString(),
-            description: `Klant heeft abonnement ${subscription.magazine} opgezegd na winback poging.`
-        });
+        pushContactHistory(
+            currentCustomer,
+            {
+                type: 'Abonnement opgezegd',
+                description: `Klant heeft abonnement ${subscription.magazine} opgezegd na winback poging.`
+            },
+            { highlight: true, persist: false }
+        );
         
         showToast('Abonnement opgezegd', 'error');
     }
@@ -4626,13 +4936,15 @@ function createArticleSale(event) {
         }
         currentCustomer.articles.push(newOrder);
         
-        currentCustomer.contactHistory.unshift({
-            id: currentCustomer.contactHistory.length + 1,
-            type: 'Artikel bestelling',
-            date: new Date().toISOString(),
-            description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription}${couponNote} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
-        });
-        
+        pushContactHistory(
+            currentCustomer,
+            {
+                type: 'Artikel bestelling',
+                description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription}${couponNote} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
+            },
+            { highlight: true, persist: false }
+        );
+
         saveCustomers();
         
         // Clear order items
@@ -4756,12 +5068,14 @@ function saveDeliveryRemarks() {
         });
         
         // Add to contact history
-        currentCustomer.contactHistory.unshift({
-            id: currentCustomer.contactHistory.length + 1,
-            type: 'Bezorgvoorkeuren gewijzigd',
-            date: new Date().toISOString(),
-            description: `Bezorgvoorkeuren bijgewerkt: "${newRemarks || '(leeg)'}"`
-        });
+        pushContactHistory(
+            currentCustomer,
+            {
+                type: 'Bezorgvoorkeuren gewijzigd',
+                description: `Bezorgvoorkeuren bijgewerkt: "${newRemarks || '(leeg)'}"`
+            },
+            { highlight: true, persist: false }
+        );
     }
     
     // Update current remarks
@@ -4770,9 +5084,6 @@ function saveDeliveryRemarks() {
     
     // Save to storage
     saveCustomers();
-    
-    // Update display
-    displayContactHistory();
     
     // Close modal
     closeEditRemarksModal();
@@ -4794,9 +5105,51 @@ function closeForm(formId) {
     }
 }
 
-// Show Toast Notification
+function mapToastTypeToContactType(toastType) {
+    switch (toastType) {
+        case 'error':
+            return 'notification_error';
+        case 'warning':
+            return 'notification_warning';
+        case 'info':
+            return 'notification_info';
+        default:
+            return 'notification_success';
+    }
+}
+
+// Show Toast Notification (now backed by contact history)
 function showToast(message, type = 'success') {
+    if (currentCustomer) {
+        const recentEntry = contactHistoryState.lastEntry;
+        const now = Date.now();
+        const justLoggedMutation = Boolean(
+            recentEntry &&
+            contactHistoryState.highlightId &&
+            recentEntry.id === contactHistoryState.highlightId &&
+            now - recentEntry.createdAt < 1500
+        );
+
+        if (type === 'success' && justLoggedMutation) {
+            return;
+        }
+
+        pushContactHistory(
+            currentCustomer,
+            {
+                type: mapToastTypeToContactType(type),
+                description: message
+            },
+            { highlight: true, moveToFirstPage: true }
+        );
+        return;
+    }
+
     const toast = document.getElementById('toast');
+    if (!toast) {
+        return;
+    }
+
     toast.textContent = message;
     toast.className = `toast ${type}`;
     toast.classList.add('show');

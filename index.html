@@ -328,6 +328,7 @@
                                 </div>
                                 <div class="werfsleutel-search-row">
                                     <input type="search" class="form-control" id="werfsleutelInput" placeholder="Typ werfsleutel of scan barcode (bijv. AVRV525 of 8712345...)" autocomplete="off">
+                                    <button type="button" class="btn btn-primary" id="werfsleutelConfirmTrigger">Bevestigen</button>
                                     <button type="button" class="btn btn-secondary ghost" id="werfsleutelClear">Wissen</button>
                                 </div>
                                 <div class="werfsleutel-suggestions" id="werfsleutelSuggestions"></div>
@@ -1159,6 +1160,46 @@
 
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
+
+    <!-- Werfsleutel Overview Modal -->
+    <div id="werfsleutelOverviewModal" class="modal">
+        <div class="modal-content werfsleutel-overview-modal">
+            <div class="modal-header werfsleutel-modal-header">
+                <h2>✅ Werfsleutel controleren</h2>
+                <button class="modal-close" onclick="closeWerfsleutelOverviewModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle">Controleer titel, looptijd en actie voordat je doorgaat.</p>
+                <dl class="werfsleutel-overview-list">
+                    <div class="overview-item">
+                        <dt>Titel</dt>
+                        <dd id="werfsleutelOverviewTitle">Nog geen keuze</dd>
+                    </div>
+                    <div class="overview-item">
+                        <dt>Looptijd</dt>
+                        <dd id="werfsleutelOverviewDuration">Nog geen keuze</dd>
+                    </div>
+                    <div class="overview-item">
+                        <dt>Actie</dt>
+                        <dd id="werfsleutelOverviewAction">Nog geen keuze</dd>
+                    </div>
+                    <div class="overview-item subtle">
+                        <dt>Werfsleutel</dt>
+                        <dd id="werfsleutelOverviewCode">-</dd>
+                    </div>
+                    <div class="overview-item subtle">
+                        <dt>Kanaal</dt>
+                        <dd id="werfsleutelOverviewChannel">Nog geen kanaal</dd>
+                    </div>
+                </dl>
+                <p class="helper-text">Gegevens zijn alleen-lezen. Wijzig titel, looptijd of kanaal in het formulier.</p>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeWerfsleutelOverviewModal()">Wijzigen</button>
+                    <button class="btn btn-primary" id="werfsleutelConfirmButton">Definitief bevestigen</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Edit Delivery Remarks Modal -->
     <div id="editDeliveryRemarksModal" class="modal">

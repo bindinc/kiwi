@@ -1776,6 +1776,12 @@ select option {
     display: block;
 }
 
+.timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
 .timeline-expand {
     margin-left: 0.25rem;
     transition: transform 0.2s;
@@ -1783,6 +1789,66 @@ select option {
 
 .timeline-expand.expanded {
     transform: rotate(180deg);
+}
+
+.timeline-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.timeline-pagination:last-child {
+    margin-bottom: 0;
+    margin-top: 0.75rem;
+}
+
+.timeline-page-indicator {
+    flex: 1;
+    text-align: center;
+}
+
+.timeline-nav-btn {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    font-size: 0.85rem;
+}
+
+.timeline-nav-btn:hover:not(:disabled) {
+    background-color: var(--bg-primary);
+    border-color: var(--primary-color);
+}
+
+.timeline-nav-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.timeline-item--highlight .timeline-header,
+.timeline-item--highlight .timeline-content {
+    background-color: rgba(16, 185, 129, 0.12);
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25);
+    animation: timeline-highlight-pulse 0.75s ease-in-out 2;
+}
+
+@keyframes timeline-highlight-pulse {
+    0% {
+        background-color: rgba(16, 185, 129, 0.3);
+    }
+    50% {
+        background-color: rgba(16, 185, 129, 0.12);
+    }
+    100% {
+        background-color: rgba(16, 185, 129, 0.3);
+    }
 }
 
 /* Winback Flow */
@@ -3132,6 +3198,62 @@ select option {
 
 .werfsleutel-summary.visible {
     display: block;
+}
+
+.werfsleutel-summary-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #047857;
+}
+
+.werfsleutel-overview-modal {
+    max-width: 520px;
+}
+
+.werfsleutel-modal-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.werfsleutel-overview-list {
+    list-style: none;
+    margin: 1.25rem 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.overview-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.overview-item:last-child {
+    border-bottom: none;
+}
+
+.overview-item dt {
+    margin: 0;
+    font-weight: 600;
+    color: #374151;
+}
+
+.overview-item dd {
+    margin: 0;
+    font-weight: 600;
+    color: #111827;
+    text-align: right;
+}
+
+.overview-item.subtle dd {
+    font-weight: 500;
+    color: #4b5563;
 }
 
 .status-pill {
