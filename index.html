@@ -153,10 +153,6 @@
                 <section class="card search-card">
                     <h2>🔍 Klant Zoeken</h2>
                     <div class="search-form">
-                        <div class="form-group">
-                            <label for="searchName">Naam</label>
-                            <input type="text" id="searchName" placeholder="Achternaam, Voornaam" onkeypress="handleSearchKeyPress(event)">
-                        </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="searchPostalCode">Postcode</label>
@@ -165,6 +161,31 @@
                             <div class="form-group">
                                 <label for="searchHouseNumber">Huisnr.</label>
                                 <input type="text" id="searchHouseNumber" placeholder="12" onkeypress="handleSearchKeyPress(event)">
+                            </div>
+                        </div>
+                        <div class="additional-filters">
+                            <button 
+                                type="button" 
+                                class="additional-filters-toggle" 
+                                id="additionalFiltersToggle" 
+                                onclick="toggleAdditionalFilters()" 
+                                aria-expanded="false">
+                                Additionele filters
+                                <span class="chevron" id="additionalFiltersChevron">▼</span>
+                            </button>
+                            <div class="additional-filters-panel" id="additionalFiltersPanel">
+                                <div class="form-group">
+                                    <label for="searchName">Naam</label>
+                                    <input type="text" id="searchName" placeholder="Achternaam, Voornaam" onkeypress="handleSearchKeyPress(event)">
+                                </div>
+                                <div class="form-group">
+                                    <label for="searchPhone">Telefoon</label>
+                                    <input type="text" id="searchPhone" placeholder="Bijv. 0612345678" onkeypress="handleSearchKeyPress(event)">
+                                </div>
+                                <div class="form-group">
+                                    <label for="searchEmail">E-mail</label>
+                                    <input type="email" id="searchEmail" placeholder="naam@email.nl" onkeypress="handleSearchKeyPress(event)">
+                                </div>
                             </div>
                         </div>
                         <button class="btn btn-primary" onclick="searchCustomer()">
@@ -228,6 +249,14 @@
                                     ✕
                                 </button>
                             </div>
+                        </div>
+                        <div class="results-table-header">
+                            <span>Achternaam</span>
+                            <span>Initialen</span>
+                            <span>Adres</span>
+                            <span>Abonnementen</span>
+                            <span>Abon.nr</span>
+                            <span>Acties</span>
                         </div>
                         <div id="paginatedResults" class="results-table"></div>
                         <div id="pagination" class="pagination"></div>

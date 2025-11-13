@@ -81,6 +81,44 @@ const serviceNumbers = {
 // Phase 5A: ACW Configuration
 const ACW_DEFAULT_DURATION = 120; // 120 seconds
 
+const MIN_SUB_NUMBER = 8099098;
+const MAX_SUB_NUMBER = 12199098;
+const NAME_INSERTION_PREFIXES = [
+    'van der',
+    'van den',
+    'van de',
+    'von der',
+    'ten',
+    'ter',
+    'op de',
+    'op den',
+    'op',
+    'aan de',
+    'aan den',
+    'aan',
+    'bij',
+    'uit de',
+    'uit den',
+    'uit',
+    'de',
+    'den',
+    'der',
+    'van',
+    'von',
+    'te'
+];
+
+function normalizeNameFragment(value) {
+    return (value || '').replace(/[\s.]/g, '').toLowerCase();
+}
+
+function generateSubscriptionNumber(customerId, subscriptionId) {
+    const range = MAX_SUB_NUMBER - MIN_SUB_NUMBER + 1;
+    const seed = Math.abs((customerId * 73856093) ^ (subscriptionId * 193939));
+    const offset = seed % range;
+    return String(MIN_SUB_NUMBER + offset);
+}
+
 // Phase 6: Call Queue State Management
 let callQueue = {
     enabled: false,           // Is queue mode geactiveerd
@@ -180,6 +218,11 @@ function endSession() {
     document.getElementById('searchName').value = '';
     document.getElementById('searchPostalCode').value = '';
     document.getElementById('searchHouseNumber').value = '';
+    const phoneInput = document.getElementById('searchPhone');
+    if (phoneInput) phoneInput.value = '';
+    const emailInput = document.getElementById('searchEmail');
+    if (emailInput) emailInput.value = '';
+    setAdditionalFiltersOpen(false);
     
     // Hide search results
     const searchResults = document.getElementById('searchResults');
@@ -1466,6 +1509,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initArticleSearch();
     // Initialize agent status display (agent starts as ready)
     updateAgentStatusDisplay();
+
+    const advancedFilterIds = ['searchName', 'searchPhone', 'searchEmail'];
+    const hasAdvancedValues = advancedFilterIds.some(id => {
+        const input = document.getElementById(id);
+        return input && input.value.trim().length > 0;
+    });
+    setAdditionalFiltersOpen(hasAdvancedValues);
 });
 
 // Initialize Demo Data
@@ -1764,21 +1814,105 @@ function updateTime() {
 }
 
 // Search Customer
-function searchCustomer() {
-    const name = document.getElementById('searchName').value.toLowerCase().trim();
+function normalizePhone(value = '') {
+    return value.replace(/\D/g, '');
+}
+
+function getSearchFilters() {
     const postalCode = document.getElementById('searchPostalCode').value.toUpperCase().trim();
     const houseNumber = document.getElementById('searchHouseNumber').value.trim();
+    const nameInput = document.getElementById('searchName');
+    const phoneInput = document.getElementById('searchPhone');
+    const emailInput = document.getElementById('searchEmail');
 
-    let results = customers.filter(customer => {
-        const matchName = !name || 
-            customer.firstName.toLowerCase().includes(name) || 
-            customer.lastName.toLowerCase().includes(name) ||
-            `${customer.firstName} ${customer.lastName}`.toLowerCase().includes(name);
+    const name = nameInput ? nameInput.value.toLowerCase().trim() : '';
+    const phone = normalizePhone(phoneInput ? phoneInput.value : '');
+    const email = emailInput ? emailInput.value.toLowerCase().trim() : '';
+
+    return { postalCode, houseNumber, name, phone, email };
+}
+
+function matchesCustomerName(customer, nameQuery) {
+    if (!nameQuery) return true;
+
+    const nameCandidates = [
+        customer.firstName,
+        customer.lastName,
+        `${customer.firstName} ${customer.lastName}`,
+        customer.middleName ? `${customer.firstName} ${customer.middleName} ${customer.lastName}` : null
+    ]
+        .filter(Boolean)
+        .map(value => value.toLowerCase());
+
+    return nameCandidates.some(value => value.includes(nameQuery));
+}
+
+function matchesCustomerPhone(customer, phoneQuery) {
+    if (!phoneQuery) return true;
+
+    const customerPhone = normalizePhone(customer.phone || '');
+    return customerPhone.includes(phoneQuery);
+}
+
+function matchesCustomerEmail(customer, emailQuery) {
+    if (!emailQuery) return true;
+
+    const customerEmail = (customer.email || '').toLowerCase();
+    return customerEmail.includes(emailQuery);
+}
+
+function buildSearchQueryLabel() {
+    const postalCode = document.getElementById('searchPostalCode').value.trim();
+    const houseNumber = document.getElementById('searchHouseNumber').value.trim();
+    const nameInput = document.getElementById('searchName');
+    const name = nameInput ? nameInput.value.trim() : '';
+
+    const labelParts = [];
+    
+    if (postalCode || houseNumber) {
+        const addressLabel = [postalCode, houseNumber].filter(Boolean).join(' ');
+        labelParts.push(addressLabel);
+    }
+    if (name) labelParts.push(`Naam: ${name}`);
+
+    return labelParts.length ? labelParts.join(' • ') : 'alle klanten';
+}
+
+function setAdditionalFiltersOpen(isOpen) {
+    const panel = document.getElementById('additionalFiltersPanel');
+    const toggle = document.getElementById('additionalFiltersToggle');
+
+    if (!panel || !toggle) return;
+
+    if (isOpen) {
+        panel.classList.add('is-open');
+        panel.style.display = 'grid';
+    } else {
+        panel.classList.remove('is-open');
+        panel.style.display = 'none';
+    }
+    toggle.setAttribute('aria-expanded', String(isOpen));
+}
+
+function toggleAdditionalFilters() {
+    const panel = document.getElementById('additionalFiltersPanel');
+    if (!panel) return;
+
+    const willOpen = !panel.classList.contains('is-open');
+    setAdditionalFiltersOpen(willOpen);
+}
+
+function searchCustomer() {
+    const filters = getSearchFilters();
+
+    const results = customers.filter(customer => {
+        const matchPostal = !filters.postalCode || customer.postalCode === filters.postalCode;
+        const matchHouse = !filters.houseNumber || customer.houseNumber === filters.houseNumber;
+        const matchName = matchesCustomerName(customer, filters.name);
+        const matchPhone = matchesCustomerPhone(customer, filters.phone);
+        const matchEmail = matchesCustomerEmail(customer, filters.email);
         
-        const matchPostal = !postalCode || customer.postalCode === postalCode;
-        const matchHouse = !houseNumber || customer.houseNumber === houseNumber;
-        
-        return matchName && matchPostal && matchHouse;
+        return matchPostal && matchHouse && matchName && matchPhone && matchEmail;
     });
 
     // Update search state
@@ -1842,9 +1976,7 @@ function displayPaginatedResults() {
     const pageResults = results.slice(startIdx, endIdx);
     
     // Update results title and range
-    const searchQuery = document.getElementById('searchName').value || 
-                       document.getElementById('searchPostalCode').value || 
-                       'alle klanten';
+    const searchQuery = buildSearchQueryLabel();
     document.getElementById('resultsTitle').textContent = `🔍 Zoekresultaten: "${searchQuery}"`;
     document.getElementById('resultsRange').textContent = 
         `Toont ${startIdx + 1}-${Math.min(endIdx, results.length)} van ${results.length}`;
@@ -1861,15 +1993,80 @@ function displayPaginatedResults() {
 }
 
 // Render a single customer row
+function getCustomerInitials(customer) {
+    const providedInitials = customer.initials?.trim();
+    if (providedInitials) return providedInitials;
+
+    const firstName = (customer.firstName || '').replace(/\./g, ' ').trim();
+    if (!firstName) return '';
+
+    const initials = firstName
+        .split(/[\s-]+/)
+        .filter(Boolean)
+        .map(part => part[0].toUpperCase())
+        .join('.');
+
+    return initials ? `${initials}.` : '';
+}
+
+function splitLastNameComponents(customer) {
+    let lastName = (customer.lastName || '').trim();
+    let insertion = (customer.middleName || '').trim();
+
+    if (!insertion && lastName.includes(' ')) {
+        const lower = lastName.toLowerCase();
+        const matchedPrefix = NAME_INSERTION_PREFIXES.find(prefix => lower.startsWith(`${prefix} `));
+        if (matchedPrefix) {
+            insertion = lastName.substring(0, matchedPrefix.length);
+            const remainder = lastName.substring(matchedPrefix.length).trim();
+            if (remainder) {
+                lastName = remainder;
+            } else {
+                // If no remainder, fallback to original lastName
+                insertion = (customer.middleName || '').trim();
+            }
+        }
+    }
+
+    return { lastName, insertion };
+}
+
+function buildNameRest(customer) {
+    const restParts = [];
+    if (customer.salutation) restParts.push(customer.salutation.trim());
+    if (customer.firstName) restParts.push(customer.firstName.trim());
+    return restParts.join(' ').trim();
+}
+
+function getInitialsDisplay(customer) {
+    const initials = getCustomerInitials(customer) || '-';
+    const rest = buildNameRest(customer);
+    const showRest = rest && normalizeNameFragment(rest) !== normalizeNameFragment(initials);
+    return {
+        initials,
+        rest: showRest ? rest : ''
+    };
+}
+
+function formatLastNameSection(customer) {
+    const { lastName, insertion } = splitLastNameComponents(customer);
+
+    if (!lastName && !insertion) return '';
+    if (!lastName) return insertion;
+
+    return insertion
+        ? `<span class="last-name">${lastName}</span>, ${insertion}`
+        : `<span class="last-name">${lastName}</span>`;
+}
+
 function renderCustomerRow(customer) {
-    const fullName = customer.middleName 
-        ? `${customer.firstName} ${customer.middleName} <span class="last-name">${customer.lastName}</span>`
-        : `${customer.firstName} <span class="last-name">${customer.lastName}</span>`;
+    const lastNameSection = formatLastNameSection(customer) || '-';
+    const { initials, rest } = getInitialsDisplay(customer);
     
     const activeSubscriptions = customer.subscriptions.filter(s => s.status === 'active');
     const inactiveSubscriptions = customer.subscriptions.filter(s => s.status !== 'active');
     
-    // Build subscription badges
+    // Build subscription badges with subscription numbers
     let subscriptionBadges = '';
     if (activeSubscriptions.length > 0) {
         subscriptionBadges = activeSubscriptions.map(s => 
@@ -1883,17 +2080,32 @@ function renderCustomerRow(customer) {
         subscriptionBadges = '<span style="color: var(--text-secondary); font-size: 0.875rem;">Geen actief</span>';
     }
     
+    // Get primary active subscription number (or first subscription if no active)
+    let subscriberNumber = '-';
+    const primarySubscription = activeSubscriptions.length > 0 
+        ? activeSubscriptions[0] 
+        : customer.subscriptions[0];
+    
+    if (primarySubscription) {
+        subscriberNumber = generateSubscriptionNumber(customer.id, primarySubscription.id);
+    }
+    
     // Show identify button only during anonymous call
     const showIdentifyBtn = callSession.active && callSession.callerType === 'anonymous';
     
     return `
         <div class="result-row" onclick="selectCustomer(${customer.id})">
-            <div class="result-row-name">${fullName}</div>
+            <div class="result-row-lastname">${lastNameSection}</div>
+            <div class="result-row-initials">
+                <span class="initials-value">${initials}</span>
+                ${rest ? `<span class="name-rest">${rest}</span>` : ''}
+            </div>
             <div class="result-row-address">
                 ${customer.address}<br>
                 ${customer.postalCode} ${customer.city}
             </div>
             <div class="result-row-subscriptions">${subscriptionBadges}</div>
+            <div class="result-row-subscriber-number">${subscriberNumber}</div>
             <div class="result-row-actions">
                 <button class="btn btn-small" onclick="event.stopPropagation(); selectCustomer(${customer.id})">
                     Bekijken
@@ -2032,6 +2244,11 @@ function clearSearchResults() {
     document.getElementById('searchName').value = '';
     document.getElementById('searchPostalCode').value = '';
     document.getElementById('searchHouseNumber').value = '';
+    const phoneInput = document.getElementById('searchPhone');
+    if (phoneInput) phoneInput.value = '';
+    const emailInput = document.getElementById('searchEmail');
+    if (emailInput) emailInput.value = '';
+    setAdditionalFiltersOpen(false);
     
     // Always restore welcome message HTML (in case it was overwritten by empty search)
     const welcomeMessage = document.getElementById('welcomeMessage');
