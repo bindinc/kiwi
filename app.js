@@ -78,6 +78,232 @@ const serviceNumbers = {
     }
 };
 
+// Currency formatter reused for werfsleutels and notes
+const euroFormatter = new Intl.NumberFormat('nl-NL', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2
+});
+
+// Werfsleutel fallback catalog (used until markdown geladen is geparsed)
+const fallbackWerfsleutels = [
+    {
+        salesCode: 'AVRV525',
+        title: 'Ja, ik blijf bij Avrobode',
+        price: 49.0,
+        barcode: '8712345000012',
+        magazine: 'Avrobode',
+        isActive: true,
+        allowedChannels: ['OL/IS', 'EM/OU', 'TM/IB', 'PR/ET']
+    },
+    {
+        salesCode: 'AVRV526',
+        title: 'Ja, ik blijf bij Avrobode (maandelijks)',
+        price: 4.08,
+        barcode: '8712345000029',
+        magazine: 'Avrobode',
+        isActive: true,
+        allowedChannels: ['OL/IS', 'EM/OU', 'TM/IB']
+    },
+    {
+        salesCode: 'AVRV519',
+        title: '1 jaar Avrobode voor €52',
+        price: 52.0,
+        barcode: '8712345000036',
+        magazine: 'Avrobode',
+        isActive: true,
+        allowedChannels: ['OL/IS', 'PR/ET']
+    },
+    {
+        salesCode: 'MIKV310',
+        title: 'Mikrogids proef 12 nummers',
+        price: 24.0,
+        barcode: '8712345000043',
+        magazine: 'Mikrogids',
+        isActive: true,
+        allowedChannels: ['EM/OU', 'TM/IB']
+    },
+    {
+        salesCode: 'NCRV410',
+        title: 'NCRV-gids jaarabonnement',
+        price: 54.5,
+        barcode: '8712345000050',
+        magazine: 'Ncrvgids',
+        isActive: true,
+        allowedChannels: ['OL/IS', 'PR/ET']
+    },
+    {
+        salesCode: 'AVRSTOP',
+        title: 'Campagne gestopt - enkel naservice',
+        price: 0,
+        barcode: '8712345000067',
+        magazine: 'Avrobode',
+        isActive: false,
+        allowedChannels: ['TM/IB']
+    }
+];
+
+let werfsleutelCatalog = [...fallbackWerfsleutels];
+let werfsleutelLoadAttempted = false;
+
+// Kanaal definities gekoppeld aan werfsleutels
+const werfsleutelChannels = {
+    'OL/IS': { label: 'Online interne sites', icon: '💻' },
+    'EM/OU': { label: 'E-mail outbound', icon: '✉️' },
+    'TM/IB': { label: 'Telemarketing inbound', icon: '☎️' },
+    'PR/ET': { label: 'Print eigen titels', icon: '📰' }
+};
+
+const salesChannelMap = {
+    'OL|IS': 'OL/IS',
+    'EM|OU': 'EM/OU',
+    'TM|IN': 'TM/IB',
+    'TM|IB': 'TM/IB',
+    'PR|ET': 'PR/ET'
+};
+
+const werfsleutelState = {
+    selectedKey: null,
+    selectedChannel: null
+};
+
+async function ensureWerfsleutelsLoaded() {
+    if (werfsleutelLoadAttempted) {
+        return;
+    }
+
+    werfsleutelLoadAttempted = true;
+
+    try {
+        const response = await fetch('src/stores/onepager_werfsleutels.md', { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`Kan werfsleutels niet laden (${response.status})`);
+        }
+
+        const markdown = await response.text();
+        const parsed = convertMarkdownToWerfsleutels(markdown);
+
+        if (parsed.length > 0) {
+            werfsleutelCatalog = parsed;
+        } else {
+            console.warn('Geen werfsleutels gevonden in markdown, fallback wordt gebruikt.');
+            werfsleutelCatalog = [...fallbackWerfsleutels];
+        }
+    } catch (error) {
+        console.warn('Fout bij laden van werfsleutels, fallback wordt gebruikt.', error);
+        werfsleutelCatalog = [...fallbackWerfsleutels];
+    }
+}
+
+function convertMarkdownToWerfsleutels(markdown) {
+    const lines = markdown.split('\n');
+    const entries = new Map();
+
+    lines.forEach((line) => {
+        if (!line.trim().startsWith('|')) {
+            return;
+        }
+        if (/^\|\s*-+/.test(line)) {
+            return;
+        }
+
+        const cells = line
+            .split('|')
+            .map((cell) => cell.trim())
+            .filter((_, index, array) => !(index === 0 || index === array.length - 1));
+
+        if (cells.length < 8) {
+            return;
+        }
+
+        const [salesCode, offerId, title, offerPrice, offerUrl, channel1, channel2, channel3] = cells;
+        const canonicalChannel = resolveCanonicalChannel(channel1, channel2);
+
+        if (!salesCode || salesCode === 'salesCode') {
+            return;
+        }
+
+        const normalizedCode = salesCode.trim();
+        const price = parseFloat(String(offerPrice).replace(',', '.')) || 0;
+
+        if (!entries.has(normalizedCode)) {
+            entries.set(normalizedCode, {
+                salesCode: normalizedCode,
+                title: title,
+                price: price,
+                offerId,
+                offerUrl,
+                barcode: buildWerfsleutelBarcode(offerId, normalizedCode),
+                magazine: inferMagazineFromTitle(title),
+                isActive: !normalizedCode.toUpperCase().includes('STOP'),
+                allowedChannels: canonicalChannel ? new Set([canonicalChannel]) : new Set()
+            });
+        } else {
+            const existing = entries.get(normalizedCode);
+            if (!existing.title && title) {
+                existing.title = title;
+            }
+            if (!existing.price && price) {
+                existing.price = price;
+            }
+            if (canonicalChannel) {
+                existing.allowedChannels.add(canonicalChannel);
+            }
+        }
+    });
+
+    return Array.from(entries.values()).map((entry) => ({
+        salesCode: entry.salesCode,
+        title: entry.title || 'Onbekende werfsleutel',
+        price: entry.price || 0,
+        barcode: entry.barcode,
+        magazine: entry.magazine,
+        isActive: entry.isActive,
+        allowedChannels:
+            entry.allowedChannels.size > 0 ? Array.from(entry.allowedChannels) : Object.keys(werfsleutelChannels)
+    }));
+}
+
+function inferMagazineFromTitle(title = '') {
+    const normalized = title.toLowerCase();
+    if (normalized.includes('avrobode')) return 'Avrobode';
+    if (normalized.includes('mikrogids')) return 'Mikrogids';
+    if (normalized.includes('ncrv')) return 'Ncrvgids';
+    return 'Onbekend';
+}
+
+function resolveCanonicalChannel(channel1, channel2) {
+    const key = `${channel1 || ''}|${channel2 || ''}`.toUpperCase();
+    return salesChannelMap[key] || null;
+}
+
+function buildWerfsleutelBarcode(offerId, salesCode) {
+    const offerDigits = String(offerId || '')
+        .replace(/[^0-9]/g, '')
+        .slice(-10);
+
+    if (offerDigits.length > 0) {
+        const padded = offerDigits.padStart(10, '0');
+        return `872${padded}`;
+    }
+
+    return generateBarcodeFromSalesCode(salesCode);
+}
+
+function generateBarcodeFromSalesCode(code) {
+    const baseDigits = code.replace(/[^0-9]/g, '');
+    if (baseDigits.length >= 12) {
+        return baseDigits.slice(0, 13).padEnd(13, '0');
+    }
+
+    let hash = 0;
+    for (let i = 0; i < code.length; i++) {
+        hash = (hash * 31 + code.charCodeAt(i)) >>> 0;
+    }
+    const base = (hash % 1_000_000_000).toString().padStart(9, '0');
+    return `87${base}`.padEnd(13, '0');
+}
+
 // Phase 5A: ACW Configuration
 const ACW_DEFAULT_DURATION = 120; // 120 seconds
 
@@ -117,6 +343,255 @@ function generateSubscriptionNumber(customerId, subscriptionId) {
     const seed = Math.abs((customerId * 73856093) ^ (subscriptionId * 193939));
     const offset = seed % range;
     return String(MIN_SUB_NUMBER + offset);
+}
+
+function formatEuro(amount) {
+    if (typeof amount !== 'number') {
+        const numericValue = Number(amount);
+        return euroFormatter.format(Number.isFinite(numericValue) ? numericValue : 0);
+    }
+    return euroFormatter.format(amount);
+}
+
+async function initWerfsleutelPicker() {
+    await ensureWerfsleutelsLoaded();
+
+    const input = document.getElementById('werfsleutelInput');
+    const clearButton = document.getElementById('werfsleutelClear');
+
+    if (!input) {
+        return;
+    }
+
+    input.addEventListener('input', (event) => handleWerfsleutelQuery(event.target.value));
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            const trimmed = input.value.trim();
+            if (!trimmed) {
+                return;
+            }
+            const exactMatch = werfsleutelCatalog.find((item) => item.salesCode.toLowerCase() === trimmed.toLowerCase());
+            if (exactMatch) {
+                selectWerfsleutel(exactMatch.salesCode);
+            } else if (/^\d{6,}$/.test(trimmed)) {
+                validateWerfsleutelBarcode(trimmed);
+            } else {
+                const firstSuggestion = filterWerfsleutelCatalog(trimmed)[0];
+                if (firstSuggestion) {
+                    selectWerfsleutel(firstSuggestion.salesCode);
+                }
+            }
+        }
+    });
+
+    if (clearButton) {
+        clearButton.addEventListener('click', () => resetWerfsleutelPicker());
+    }
+
+    resetWerfsleutelPicker();
+}
+
+function handleWerfsleutelQuery(rawValue) {
+    const query = rawValue.trim();
+
+    if (!query) {
+        renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
+        return;
+    }
+
+    const matches = filterWerfsleutelCatalog(query);
+    renderWerfsleutelSuggestions(matches);
+
+    if (/^\d{6,}$/.test(query)) {
+        validateWerfsleutelBarcode(query);
+        return;
+    }
+}
+
+function filterWerfsleutelCatalog(query) {
+    if (!query) {
+        return werfsleutelCatalog.slice(0, 5);
+    }
+
+    const normalized = query.toLowerCase();
+    return werfsleutelCatalog.filter((item) => {
+        return item.salesCode.toLowerCase().includes(normalized) ||
+            item.title.toLowerCase().includes(normalized) ||
+            String(item.price).includes(normalized);
+    }).slice(0, 5);
+}
+
+function renderWerfsleutelSuggestions(matches, options = {}) {
+    const container = document.getElementById('werfsleutelSuggestions');
+    if (!container) return;
+
+    const { hideWhenEmpty = false } = options;
+
+    if (!matches || matches.length === 0) {
+        if (hideWhenEmpty) {
+            container.innerHTML = '';
+            container.classList.add('hidden');
+        } else {
+            container.innerHTML = '<div class="empty-state-small">Geen werfsleutels gevonden</div>';
+            container.classList.remove('hidden');
+        }
+        return;
+    }
+
+    container.classList.remove('hidden');
+    container.innerHTML = matches.map((item) => `
+        <button type="button" class="werfsleutel-suggestion${item.isActive ? '' : ' inactive'}" data-code="${item.salesCode}">
+            <span class="code">${item.salesCode}</span>
+            <span class="title">${item.title}</span>
+            <span class="price">${formatEuro(item.price)}</span>
+            <span class="status-pill ${item.isActive ? 'status-pill--success' : 'status-pill--warning'}">
+                ${item.isActive ? 'Actief' : 'Inactief'}
+            </span>
+        </button>
+    `).join('');
+
+    container.querySelectorAll('.werfsleutel-suggestion').forEach((button) => {
+        if (button.classList.contains('inactive')) {
+            button.addEventListener('click', () => showToast('Deze werfsleutel is niet meer actief.', 'warning'));
+            return;
+        }
+        button.addEventListener('click', () => selectWerfsleutel(button.dataset.code));
+    });
+}
+
+function selectWerfsleutel(salesCode) {
+    const match = werfsleutelCatalog.find((item) => item.salesCode === salesCode);
+    if (!match) {
+        showToast('Onbekende werfsleutel.', 'error');
+        return;
+    }
+
+    if (!match.isActive) {
+        showToast('Deze werfsleutel is niet meer actief.', 'warning');
+        setBarcodeStatus('Werfsleutel is inactief', 'warning');
+        return;
+    }
+
+    werfsleutelState.selectedKey = match;
+    const input = document.getElementById('werfsleutelInput');
+
+    if (input) {
+        input.value = match.salesCode;
+    }
+
+    if (!match.allowedChannels.includes(werfsleutelState.selectedChannel)) {
+        werfsleutelState.selectedChannel = null;
+    }
+
+    renderWerfsleutelChannelOptions();
+    updateWerfsleutelSummary();
+}
+
+function validateWerfsleutelBarcode(rawValue) {
+    const barcode = rawValue.replace(/[^0-9]/g, '');
+
+    if (!barcode) {
+        return;
+    }
+
+    const match = werfsleutelCatalog.find((item) => item.barcode === barcode);
+    if (!match) {
+        werfsleutelState.selectedKey = null;
+        updateWerfsleutelSummary();
+        return;
+    }
+
+    if (!match.isActive) {
+        werfsleutelState.selectedKey = null;
+        updateWerfsleutelSummary();
+        return;
+    }
+
+    selectWerfsleutel(match.salesCode);
+}
+
+function renderWerfsleutelChannelOptions() {
+    const container = document.getElementById('werfsleutelChannels');
+    if (!container) return;
+
+    const allowed = werfsleutelState.selectedKey?.allowedChannels || Object.keys(werfsleutelChannels);
+
+    container.innerHTML = Object.entries(werfsleutelChannels).map(([code, meta]) => {
+        const isAvailable = allowed.includes(code);
+        const isSelected = werfsleutelState.selectedChannel === code;
+        const disabledAttr = isAvailable ? '' : 'disabled';
+        const unavailableClass = isAvailable ? '' : ' unavailable';
+
+        return `
+            <button type="button"
+                    class="channel-chip${isSelected ? ' selected' : ''}${unavailableClass}"
+                    data-channel="${code}"
+                    title="${meta.label}${isAvailable ? '' : ' (niet beschikbaar)'}"
+                    ${disabledAttr}>
+                <span class="channel-icon">${meta.icon}</span>
+                <span class="channel-code">${code}</span>
+                <span class="channel-label">${meta.label}</span>
+            </button>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.channel-chip').forEach((button) => {
+        if (button.disabled) return;
+
+        button.addEventListener('click', () => {
+            selectWerfsleutelChannel(button.dataset.channel);
+        });
+    });
+}
+
+function selectWerfsleutelChannel(channelCode) {
+    if (!werfsleutelChannels[channelCode]) {
+        showToast('Onbekend kanaal', 'error');
+        return;
+    }
+
+    const allowed = werfsleutelState.selectedKey?.allowedChannels ?? Object.keys(werfsleutelChannels);
+    if (allowed.length > 0 && !allowed.includes(channelCode)) {
+        showToast('Dit kanaal hoort niet bij de gekozen werfsleutel.', 'warning');
+        return;
+    }
+
+    werfsleutelState.selectedChannel = channelCode;
+    renderWerfsleutelChannelOptions();
+    updateWerfsleutelSummary();
+}
+
+function updateWerfsleutelSummary() {
+    const summary = document.getElementById('werfsleutelSummary');
+    if (!summary) return;
+
+    if (!werfsleutelState.selectedKey) {
+        summary.classList.remove('visible');
+        summary.textContent = '';
+        return;
+    }
+
+    const channelCode = werfsleutelState.selectedChannel;
+    const channelLabel = channelCode ? `${channelCode} · ${werfsleutelChannels[channelCode].label}` : 'Nog geen kanaal gekozen';
+    const key = werfsleutelState.selectedKey;
+
+    summary.innerHTML = `
+        <strong>${key.salesCode}</strong> - ${key.title} (${formatEuro(key.price)})
+        <br> Kanaal: ${channelLabel}
+    `;
+    summary.classList.add('visible');
+}
+
+function resetWerfsleutelPicker() {
+    werfsleutelState.selectedKey = null;
+    werfsleutelState.selectedChannel = null;
+
+    const input = document.getElementById('werfsleutelInput');
+    if (input) input.value = '';
+
+    renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
+    renderWerfsleutelChannelOptions();
+    updateWerfsleutelSummary();
 }
 
 // Phase 6: Call Queue State Management
@@ -1507,6 +1982,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Phase 3 components
     initDeliveryDatePicker();
     initArticleSearch();
+    initWerfsleutelPicker().catch((error) => {
+        console.error('Kon werfsleutels niet initialiseren', error);
+    });
     // Initialize agent status display (agent starts as ready)
     updateAgentStatusDisplay();
 
@@ -2679,6 +3157,8 @@ function showNewSubscription() {
     // Set today's date as default start date
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('subStartDate').value = today;
+
+    resetWerfsleutelPicker();
     
     // Prefill customer data if a customer is currently selected
     if (currentCustomer) {
@@ -2716,6 +3196,16 @@ function showNewSubscription() {
 function createSubscription(event) {
     event.preventDefault();
 
+    if (!werfsleutelState.selectedKey) {
+        showToast('Selecteer eerst een actieve werfsleutel.', 'error');
+        return;
+    }
+
+    if (!werfsleutelState.selectedChannel) {
+        showToast('Kies een kanaal voor deze werfsleutel.', 'error');
+        return;
+    }
+
     const salutation = document.querySelector('input[name="subSalutation"]:checked').value;
     const initials = document.getElementById('subInitials').value;
     const middleName = document.getElementById('subMiddleName').value;
@@ -2745,8 +3235,16 @@ function createSubscription(event) {
         iban: document.getElementById('subIBAN')?.value || '',
         optinEmail: document.querySelector('input[name="subOptinEmail"]:checked').value,
         optinPhone: document.querySelector('input[name="subOptinPhone"]:checked').value,
-        optinPost: document.querySelector('input[name="subOptinPost"]:checked').value
+        optinPost: document.querySelector('input[name="subOptinPost"]:checked').value,
+        werfsleutel: werfsleutelState.selectedKey.salesCode,
+        werfsleutelTitle: werfsleutelState.selectedKey.title,
+        werfsleutelPrice: werfsleutelState.selectedKey.price,
+        werfsleutelChannel: werfsleutelState.selectedChannel,
+        werfsleutelChannelLabel: werfsleutelChannels[werfsleutelState.selectedChannel]?.label || ''
     };
+
+    const werfsleutelChannelLabel = formData.werfsleutelChannelLabel || 'Onbekend kanaal';
+    const werfsleutelNote = `Werfsleutel ${formData.werfsleutel} (${formData.werfsleutelTitle}, ${formatEuro(formData.werfsleutelPrice)}) via ${formData.werfsleutelChannel} (${werfsleutelChannelLabel})`;
 
     // Check if this is for an existing customer
     if (currentCustomer) {
@@ -2766,7 +3264,7 @@ function createSubscription(event) {
             id: currentCustomer.contactHistory.length + 1,
             type: 'Extra abonnement',
             date: new Date().toISOString(),
-            description: `Extra abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) toegevoegd.`
+            description: `Extra abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) toegevoegd. ${werfsleutelNote}.`
         });
         
         saveCustomers();
@@ -2802,7 +3300,7 @@ function createSubscription(event) {
                     id: 1,
                     type: 'Nieuw abonnement',
                     date: new Date().toISOString(),
-                    description: `Abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) aangemaakt via telefonische bestelling.`
+                    description: `Abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) aangemaakt via telefonische bestelling. ${werfsleutelNote}.`
                 }
             ]
         };
@@ -2821,6 +3319,7 @@ function createSubscription(event) {
     
     // Reset form
     document.getElementById('subscriptionForm').reset();
+    resetWerfsleutelPicker();
 }
 
 // Edit Customer

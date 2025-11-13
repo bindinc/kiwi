@@ -321,6 +321,25 @@
                             <button class="btn-close" onclick="closeForm('newSubscriptionForm')">✕</button>
                         </div>
                         <form id="subscriptionForm" class="form-section" onsubmit="createSubscription(event)">
+                            <div class="werfsleutel-fieldset">
+                                <div class="fieldset-heading">
+                                    <label for="werfsleutelSearch">Werfsleutel *</label>
+                                    <p class="helper-text">Zoek op salescode of titel en kies het kanaal</p>
+                                </div>
+                                <div class="werfsleutel-search-row">
+                                    <input type="search" class="form-control" id="werfsleutelInput" placeholder="Typ werfsleutel of scan barcode (bijv. AVRV525 of 8712345...)" autocomplete="off">
+                                    <button type="button" class="btn btn-secondary ghost" id="werfsleutelClear">Wissen</button>
+                                </div>
+                                <div class="werfsleutel-suggestions" id="werfsleutelSuggestions"></div>
+                                <div class="werfsleutel-summary" id="werfsleutelSummary"></div>
+                                <div class="channel-picker">
+                                    <div class="fieldset-heading compact">
+                                        <label for="werfsleutelChannels">Kanaal *</label>
+                                        <p class="helper-text">Kanaal bepaalt vervolgcommunicatie</p>
+                                    </div>
+                                    <div class="channel-options" id="werfsleutelChannels"></div>
+                                </div>
+                            </div>
                             <h3 class="form-subtitle">Aanhef *</h3>
                             <div class="aanhef-row">
                                 <label><input type="radio" name="subSalutation" value="Dhr." required checked> Dhr.</label>
