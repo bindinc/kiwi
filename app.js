@@ -2094,19 +2094,18 @@ function renderCustomerRow(customer) {
     const showIdentifyBtn = callSession.active && callSession.callerType === 'anonymous';
     
     return `
-        <div class="result-row" onclick="selectCustomer(${customer.id})">
-            <div class="result-row-lastname">${lastNameSection}</div>
-            <div class="result-row-initials">
+        <tr class="result-row" onclick="selectCustomer(${customer.id})">
+            <td class="result-row-lastname">${lastNameSection}</td>
+            <td class="result-row-initials">
                 <span class="initials-value">${initials}</span>
-                ${rest ? `<span class="name-rest">${rest}</span>` : ''}
-            </div>
-            <div class="result-row-address">
-                ${customer.address}<br>
-                ${customer.postalCode} ${customer.city}
-            </div>
-            <div class="result-row-subscriptions">${subscriptionBadges}</div>
-            <div class="result-row-subscriber-number">${subscriberNumber}</div>
-            <div class="result-row-actions">
+            </td>
+            <td class="result-row-address">
+                <span>${customer.address}</span><br>
+                <span>${customer.postalCode} ${customer.city}</span>
+            </td>
+            <td class="result-row-subscriptions">${subscriptionBadges}</td>
+            <td class="result-row-subscriber-number">${subscriberNumber}</td>
+            <td class="result-row-actions">
                 <button class="btn btn-small" onclick="event.stopPropagation(); selectCustomer(${customer.id})">
                     Bekijken
                 </button>
@@ -2116,8 +2115,8 @@ function renderCustomerRow(customer) {
                         👤 Identificeer
                     </button>
                 ` : ''}
-            </div>
-        </div>
+            </td>
+        </tr>
     `;
 }
 

@@ -250,15 +250,21 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="results-table-header">
-                            <span>Achternaam</span>
-                            <span>Initialen</span>
-                            <span>Adres</span>
-                            <span>Abonnementen</span>
-                            <span>Abon.nr</span>
-                            <span>Acties</span>
+                        <div class="results-table-wrapper">
+                            <table class="results-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Achternaam</th>
+                                        <th scope="col">Initialen</th>
+                                        <th scope="col">Adres</th>
+                                        <th scope="col">Abonnementen</th>
+                                        <th scope="col">Abon.nr</th>
+                                        <th scope="col">Acties</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paginatedResults"></tbody>
+                            </table>
                         </div>
-                        <div id="paginatedResults" class="results-table"></div>
                         <div id="pagination" class="pagination"></div>
                     </div>
                 </div>
