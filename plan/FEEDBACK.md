@@ -18,7 +18,7 @@
 
 ## Bevestiging & proceslogica
 - [ ] 8 Bevestigingspanel standaard uitgeklapt na "Aanmaken", met duidelijke melding "gelukt".
-- [ ] 9 Contactgeschiedenis/actieve abonnementen: nieuwe mutatie bovenaan en opvallend gemarkeerd (tijdelijk highlight).
+- [x] 9 Contactgeschiedenis/actieve abonnementen: nieuwe mutatie bovenaan en opvallend gemarkeerd (tijdelijk highlight).
 - [ ] 10 Flow-uitzondering aan de bron: bij aanmaken kun je "proces/confirmatie niet starten" aanvinken (exception).
 - [ ] 11 5-minuten bedenktijd: na bevestigen 5 minuten om zonder database-commit nog te wijzigen/annuleren; daarna definitief (latere wijzigingen via standaard Abel route blijft mogelijk).
 

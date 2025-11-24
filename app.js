@@ -282,6 +282,60 @@ function inferMagazineFromTitle(title = '') {
     return 'Onbekend';
 }
 
+function deriveMagazineFromKey(key) {
+    if (!key) return 'Onbekend';
+    if (key.magazine && key.magazine !== 'Onbekend') {
+        return key.magazine;
+    }
+    return inferMagazineFromTitle(key.title || '');
+}
+
+function detectDurationKeyFromTitle(title = '') {
+    const normalized = title.toLowerCase();
+    const mentionsMonthly = normalized.includes('maandelijks') || normalized.includes('per maand') || normalized.includes('maand');
+
+    if (normalized.includes('3 jaar') || normalized.includes('36 nummers')) {
+        return mentionsMonthly ? '3-jaar-maandelijks' : '3-jaar';
+    }
+    if (normalized.includes('2 jaar') || normalized.includes('24 nummers')) {
+        return mentionsMonthly ? '2-jaar-maandelijks' : '2-jaar';
+    }
+    if (normalized.includes('1 jaar') || normalized.includes('12 nummers') || normalized.includes('proef 12')) {
+        return mentionsMonthly ? '1-jaar-maandelijks' : '1-jaar';
+    }
+    if (mentionsMonthly) {
+        return '1-jaar-maandelijks';
+    }
+    return null;
+}
+
+function extractDurationLabelFromTitle(title = '') {
+    if (!title) {
+        return 'Looptijd onbekend';
+    }
+    const match = title.match(/(\d+)\s*(jaar|maand|maanden|nummers?)/i);
+    if (match) {
+        const unit = match[2].toLowerCase();
+        const normalizedUnit = unit.startsWith('maand') ? 'maanden' : unit;
+        return `${match[1]} ${normalizedUnit}`;
+    }
+    return 'Looptijd onbekend';
+}
+
+function getWerfsleutelOfferDetails(key) {
+    const magazine = deriveMagazineFromKey(key);
+    const durationKey = detectDurationKeyFromTitle(key?.title);
+    const durationLabel = durationKey
+        ? subscriptionPricing[durationKey]?.description || extractDurationLabelFromTitle(key?.title)
+        : extractDurationLabelFromTitle(key?.title);
+
+    return {
+        magazine,
+        durationKey,
+        durationLabel
+    };
+}
+
 function resolveCanonicalChannel(channel1, channel2) {
     const key = `${channel1 || ''}|${channel2 || ''}`.toUpperCase();
     return salesChannelMap[key] || null;
@@ -370,7 +424,6 @@ async function initWerfsleutelPicker() {
     const clearButton = document.getElementById('werfsleutelClear');
     const confirmTrigger = document.getElementById('werfsleutelConfirmTrigger');
     const confirmModalButton = document.getElementById('werfsleutelConfirmButton');
-    const confirmationFields = ['subMagazine', 'subDuration'];
 
     if (!input) {
         return;
@@ -409,13 +462,6 @@ async function initWerfsleutelPicker() {
     if (confirmModalButton) {
         confirmModalButton.addEventListener('click', confirmWerfsleutelSelection);
     }
-
-    confirmationFields.forEach((fieldId) => {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            field.addEventListener('change', invalidateWerfsleutelConfirmation);
-        }
-    });
 
     resetWerfsleutelPicker();
 }
@@ -662,10 +708,9 @@ function populateWerfsleutelConfirmationModal() {
     const key = werfsleutelState.selectedKey;
     if (!key) return;
 
-    const magazineSelect = document.getElementById('subMagazine');
-    const durationSelect = document.getElementById('subDuration');
-    const titleLabel = getSelectedOptionLabel(magazineSelect) || key.magazine || 'Nog geen titel gekozen';
-    const durationLabel = describeDurationSelection(durationSelect);
+    const offerDetails = getWerfsleutelOfferDetails(key);
+    const titleLabel = offerDetails.magazine || 'Nog geen titel gekozen';
+    const durationLabel = offerDetails.durationLabel || 'Looptijd onbekend';
     const actionLabel = key.title || key.salesCode;
     const channelCode = werfsleutelState.selectedChannel;
     const channelMeta = channelCode ? werfsleutelChannels[channelCode] : null;
@@ -700,38 +745,6 @@ function confirmWerfsleutelSelection() {
     updateWerfsleutelSummary();
     closeWerfsleutelOverviewModal();
     showToast('Werfsleutel bevestigd.', 'success');
-}
-
-function invalidateWerfsleutelConfirmation() {
-    if (!werfsleutelState.confirmed) {
-        return;
-    }
-    werfsleutelState.confirmed = false;
-    updateWerfsleutelSummary();
-}
-
-function getSelectedOptionLabel(selectEl) {
-    if (!selectEl) return '';
-    const option = selectEl.options[selectEl.selectedIndex];
-    return option ? option.textContent.trim() : '';
-}
-
-function describeDurationSelection(selectEl) {
-    if (!selectEl || !selectEl.value) {
-        return 'Nog geen looptijd gekozen';
-    }
-
-    const pricing = subscriptionPricing[selectEl.value];
-    if (pricing?.description) {
-        return pricing.description;
-    }
-
-    const option = selectEl.options[selectEl.selectedIndex];
-    if (option) {
-        return option.textContent.trim();
-    }
-
-    return selectEl.value;
 }
 
 function setElementText(elementId, value) {
@@ -1027,6 +1040,26 @@ function getPricingDisplay(duration) {
     const pricing = subscriptionPricing[duration];
     if (!pricing) return '';
     return `€${pricing.perMonth.toFixed(2)}/maand (${pricing.description})`;
+}
+
+function getSubscriptionDurationDisplay(subscription) {
+    if (!subscription) {
+        return 'Oude prijsstructuur';
+    }
+
+    if (subscription.duration && subscriptionPricing[subscription.duration]) {
+        return getPricingDisplay(subscription.duration);
+    }
+
+    if (subscription.durationLabel) {
+        return subscription.durationLabel;
+    }
+
+    if (subscription.duration) {
+        return subscription.duration;
+    }
+
+    return 'Oude prijsstructuur';
 }
 
 // ============================================================================
@@ -3146,7 +3179,7 @@ function displaySubscriptions() {
     if (activeSubscriptions.length > 0) {
         html += '<div class="subscription-group"><h4 class="subscription-group-title">Actieve Abonnementen</h4>';
         html += activeSubscriptions.map(sub => {
-            const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
+            const pricingInfo = getSubscriptionDurationDisplay(sub);
             
             return `
                 <div class="subscription-item">
@@ -3173,7 +3206,7 @@ function displaySubscriptions() {
     if (endedSubscriptions.length > 0) {
         html += '<div class="subscription-group"><h4 class="subscription-group-title">Beëindigde Abonnementen</h4>';
         html += endedSubscriptions.map(sub => {
-            const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
+            const pricingInfo = getSubscriptionDurationDisplay(sub);
             const statusClass = sub.status === 'cancelled' ? 'status-cancelled' : 'status-ended';
             const statusText = sub.status === 'cancelled' ? 'Opgezegd' : 'Beëindigd';
             
@@ -3204,7 +3237,7 @@ function displaySubscriptions() {
     if (restitutedSubscriptions.length > 0) {
         html += '<div class="subscription-group"><h4 class="subscription-group-title">Gerestitueerde Abonnementen</h4>';
         html += restitutedSubscriptions.map(sub => {
-            const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
+            const pricingInfo = getSubscriptionDurationDisplay(sub);
             const refundInfo = sub.refundInfo ? `<br>Restitutie naar: ${sub.refundInfo.email}` : '';
             
             return `
@@ -3234,7 +3267,7 @@ function displaySubscriptions() {
     if (transferredSubscriptions.length > 0) {
         html += '<div class="subscription-group"><h4 class="subscription-group-title">Overgezette Abonnementen</h4>';
         html += transferredSubscriptions.map(sub => {
-            const pricingInfo = sub.duration ? getPricingDisplay(sub.duration) : 'Oude prijsstructuur';
+            const pricingInfo = getSubscriptionDurationDisplay(sub);
             let transferInfo = '';
             if (sub.transferredTo) {
                 const transferName = sub.transferredTo.middleName 
@@ -3504,6 +3537,7 @@ function createSubscription(event) {
     const lastName = document.getElementById('subLastName').value;
     const houseNumber = document.getElementById('subHouseNumber').value;
     const houseExt = document.getElementById('subHouseExt').value;
+    const offerDetails = getWerfsleutelOfferDetails(werfsleutelState.selectedKey);
     
     // Construct full name
     const firstName = initials;
@@ -3520,8 +3554,9 @@ function createSubscription(event) {
         city: document.getElementById('subCity').value,
         email: document.getElementById('subEmail').value,
         phone: document.getElementById('subPhone').value,
-        magazine: document.getElementById('subMagazine').value,
-        duration: document.getElementById('subDuration').value,
+        magazine: offerDetails.magazine,
+        duration: offerDetails.durationKey || '',
+        durationLabel: offerDetails.durationLabel,
         startDate: document.getElementById('subStartDate').value,
         paymentMethod: document.querySelector('input[name="subPayment"]:checked').value,
         iban: document.getElementById('subIBAN')?.value || '',
@@ -3537,6 +3572,9 @@ function createSubscription(event) {
 
     const werfsleutelChannelLabel = formData.werfsleutelChannelLabel || 'Onbekend kanaal';
     const werfsleutelNote = `Werfsleutel ${formData.werfsleutel} (${formData.werfsleutelTitle}, ${formatEuro(formData.werfsleutelPrice)}) via ${formData.werfsleutelChannel} (${werfsleutelChannelLabel})`;
+    const durationDisplay = formData.duration
+        ? (subscriptionPricing[formData.duration]?.description || formData.durationLabel)
+        : formData.durationLabel;
 
     // Check if this is for an existing customer
     if (currentCustomer) {
@@ -3545,6 +3583,7 @@ function createSubscription(event) {
             id: Date.now(),
             magazine: formData.magazine,
             duration: formData.duration,
+            durationLabel: formData.durationLabel,
             startDate: formData.startDate,
             status: 'active',
             lastEdition: new Date().toISOString().split('T')[0]
@@ -3556,7 +3595,7 @@ function createSubscription(event) {
             currentCustomer,
             {
                 type: 'Extra abonnement',
-                description: `Extra abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) toegevoegd. ${werfsleutelNote}.`
+                description: `Extra abonnement ${formData.magazine} (${durationDisplay}) toegevoegd. ${werfsleutelNote}.`
             },
             { highlight: true, persist: false }
         );
@@ -3584,6 +3623,7 @@ function createSubscription(event) {
                     id: Date.now(),
                     magazine: formData.magazine,
                     duration: formData.duration,
+                    durationLabel: formData.durationLabel,
                     startDate: formData.startDate,
                     status: 'active',
                     lastEdition: new Date().toISOString().split('T')[0]
@@ -3594,7 +3634,7 @@ function createSubscription(event) {
                     id: 1,
                     type: 'Nieuw abonnement',
                     date: new Date().toISOString(),
-                    description: `Abonnement ${formData.magazine} (${subscriptionPricing[formData.duration]?.description || formData.duration}) aangemaakt via telefonische bestelling. ${werfsleutelNote}.`
+                    description: `Abonnement ${formData.magazine} (${durationDisplay}) aangemaakt via telefonische bestelling. ${werfsleutelNote}.`
                 }
             ]
         };

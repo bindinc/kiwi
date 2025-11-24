@@ -195,5 +195,5 @@ Voor vragen of suggesties, neem contact op met het development team.
 
 ---
 
-**Laatst bijgewerkt**: Oktober 2024  
+**Laatst bijgewerkt**: Oktober 2025  
 **Versie**: 1.0.0 (PoC)
