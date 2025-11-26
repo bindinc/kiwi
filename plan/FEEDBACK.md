@@ -13,7 +13,7 @@
 - [ ] 3 Payment method is step 2 (before the personal data fields): choose Direct debit (IBAN) or Invoice (address).
   - [ ] 3.1 Optional "second payer" (e.g. administrator) after choosing payment method: search/create customer number; not required. The second payer also gets a separate customer number
 - [ ] 4 Marketing consent: section with opt-ins empty by default if no existing profile is loaded.
-- [ ] 5 Enrich personal data: include date of birth field on new subscription; phone/email, address and other data can be updated here.
+- [x] 5 Enrich personal data: include date of birth field on new subscription; phone/email, address and other data can be updated here.
 - [ ] 6 Start date calendar: only allowed start dates clickable (e.g. every two weeks; no dates too soon); clear visual distinction.
 
 ## Confirmation & process logic
