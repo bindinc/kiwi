@@ -1,44 +1,44 @@
 # Feedback
 
-## Nieuw abonnement 
-- [x] 1 Eerste invoerveld (bovenaan): Werfsleutel zoek/keuze veld (alleen salescode en omschrijving + prijs per werfsleutel laten zien)
-  - [x] 1.1 Barcode intypen; systeem valideert (bestaat/actief). voorbeeld barcodes documenteren in de /docs folder.
-  - [x] 1.2 Kanaal keuze in UI (mag met duidelijke icons ipv tekst, mits bij mouseover de kanaal uitgeschreven zichtbaar wordt in een tooltip): 
-            OL/IS/** = online interne sites. 
-            EM/OU/** = e-mail outbound.
+## New subscription 
+- [x] 1 First input field (top): Acquisition key search/selection field (only show sales code and description + price per acquisition key)
+  - [x] 1.1 Type barcode; system validates (exists/active). Document sample barcodes in the /docs folder.
+  - [x] 1.2 Channel choice in UI (clear icons are fine instead of text if mouseover shows the channel spelled out in a tooltip): 
+            OL/IS/** = online internal sites. 
+            EM/OU/** = email outbound.
             TM/IB/** = telemarketing inbound.
-            PR/ET/** = Print eigen titels.
+            PR/ET/** = print own titles.
 
-- [x] 2 Na Enter op werfsleutel (of knop 'bevestigen' rechts naast werfsleutel invoerveld)  dan de read-only overzicht modal en knop eronder om definitief te bevestigen: getoonde titel, looptijd, actie; gebruiker bevestigt.
-- [ ] 3 Betaalmethode is stap 2 (nog voor naw gegevens invulvelden): keuze Automatische incasso (IBAN) of Factuur (adres).
-  - [ ] 3.1 Optionele "tweede betaler" (bijv. bewindvoerder) ná keuze betaalmethode: klantnummer zoeken/aanmaken; niet verplicht. de tweede betaler krijgt ook een apart klantnummer
-- [ ] 4 Marketingconsent: sectie met opt-ins standaard op leeg als geen bestaand profiel is ingeladen.
-- [ ] 5 Persoonsgegevens verrijken: geboortedatum veld opnemen bij nieuwe abo; telefoon/e-mail, adres en andere gegevens kunnen hier geactualiseerd worden.
-- [ ] 6 Startdatumkalender: alleen toegestane startdata klikbaar (bijv. tweewekelijks; geen te vroege data); duidelijk visueel onderscheid.
+- [x] 2 After pressing Enter on the acquisition key (or the 'confirm' button to the right of the acquisition key input) show the read-only overview modal and button below to finalize: displayed title, term, offer; user confirms.
+- [ ] 3 Payment method is step 2 (before the personal data fields): choose Direct debit (IBAN) or Invoice (address).
+  - [ ] 3.1 Optional "second payer" (e.g. administrator) after choosing payment method: search/create customer number; not required. The second payer also gets a separate customer number
+- [ ] 4 Marketing consent: section with opt-ins empty by default if no existing profile is loaded.
+- [ ] 5 Enrich personal data: include date of birth field on new subscription; phone/email, address and other data can be updated here.
+- [ ] 6 Start date calendar: only allowed start dates clickable (e.g. every two weeks; no dates too soon); clear visual distinction.
 
-## Bevestiging & proceslogica
-- [ ] 8 Bevestigingspanel standaard uitgeklapt na "Aanmaken", met duidelijke melding "gelukt".
-- [x] 9 Contactgeschiedenis/actieve abonnementen: nieuwe mutatie bovenaan en opvallend gemarkeerd (tijdelijk highlight).
-- [ ] 10 Flow-uitzondering aan de bron: bij aanmaken kun je "proces/confirmatie niet starten" aanvinken (exception).
-- [ ] 11 5-minuten bedenktijd: na bevestigen 5 minuten om zonder database-commit nog te wijzigen/annuleren; daarna definitief (latere wijzigingen via standaard Abel route blijft mogelijk).
+## Confirmation & process logic
+- [ ] 8 Confirmation panel expanded by default after "Create", with a clear "success" message.
+- [x] 9 Contact history/active subscriptions: new change at the top and clearly highlighted (temporary highlight).
+- [ ] 10 Flow exception at the source: during creation you can check "do not start process/confirmation" (exception).
+- [ ] 11 5-minute grace period: after confirming, 5 minutes to change/cancel without database commit; after that final (later changes via standard Abel route remain possible).
 
-## Opzeggen (opzegflow)
-- [ ] 12 Zoek & selecteer: zelfde zoekscherm als bij aanmaken.
-- [ ] 13 Stap 1 - Reden: lijst gesorteerd op populariteit; "Anders" klapt uit voor toelichting. "Overlijden" aanwezig.
-- [ ] 14 Stap 2 - Memo: memo-veld verplicht zichtbaar na reden (voor context zoals overstap),
-  - [ ] 15 Uitzondering: bij Overlijden (en mogelijk Verpleeghuis) geen memo tonen; ook geen winback.
-- [ ] 16 Te tonen abonnementen: alle actieve betaalde lidmaatschappen + gidsabonnementen; kosteloze lidmaatschappen stoppen automatisch.
-- [ ] 17 Overlijden-logica: restitutie automatisch bepaald door systeem op basis van betalingen; géén gebruikerskeuze tonen.
-- [ ] 18 Overzetten op andere persoon (aparte stopreden):
-  - [ ] 18.1 Looptijd blijft doorlopen bij overname,
-  - [ ] 18.2 Geboortedatum van nieuwe ontvanger vastleggen,
-  - [ ] 18.3 Betaalmethode/IBAN kunnen wijzigen (bijv. dochter gaat zelf betalen).
-- [ ] 19 Bevestigingsmail bij restitutie: aparte e-mail voor bevestiging in te voeren (wordt als extra e-mail opgeslagen; bestaande e-mail niet overschrijven).
+## Cancel (cancellation flow)
+- [ ] 12 Search & select: same search screen as during creation.
+- [ ] 13 Step 1 - Reason: list sorted by popularity; "Other" expands for clarification. "Deceased" present.
+- [ ] 14 Step 2 - Memo: memo field required, visible after reason (for context such as switch),
+  - [ ] 15 Exception: for Deceased (and possibly Nursing home) do not show memo; also no winback.
+- [ ] 16 Subscriptions to show: all active paid memberships + guide subscriptions; free memberships stop automatically.
+- [ ] 17 Deceased logic: refund automatically determined by system based on payments; do not show user choice.
+- [ ] 18 Transfer to another person (separate stop reason):
+  - [ ] 18.1 Term continues when transferred,
+  - [ ] 18.2 Record date of birth of new recipient,
+  - [ ] 18.3 Payment method/IBAN can be changed (e.g. daughter will pay herself).
+- [ ] 19 Confirmation email when refunding: enter separate email for confirmation (stored as extra email; do not overwrite existing email).
 
-UI/feedback & volgorde
-- [ ] 20 Nieuwe/gewijzigde items krijgen tijdelijke highlight;
-- [ ] 21 Procesregels zichtbaar; geen overbodige knoppen—simpel basis-ontwerp, later verfijnbaar.
+UI/feedback & order
+- [ ] 20 New/changed items get temporary highlight;
+- [ ] 21 Process rules visible; no unnecessary buttons—simple base design, refinable later.
 
 Scope & planning
-- [ ] 22 Eerste iteratie focust op verwerking van mail en bonnetjes (geen telefonie/winback/klachtroute nu).
-- [ ] 23 Volgende stappen: tweewekelijks afstemmen met leverancier (HUP) en geüpdatete mock-ups laten zien voor visuele check.
+- [ ] 22 First iteration focuses on processing email and receipts (no telephony/winback/complaint route now).
+- [ ] 23 Next steps: align every two weeks with supplier (HUP) and show updated mock-ups for visual check.
