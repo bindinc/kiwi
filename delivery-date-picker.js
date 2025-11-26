@@ -159,6 +159,18 @@ function formatDateShort(date) {
     return dayNames[date.getDay()];
 }
 
+// Format date for hidden input without timezone shifts
+function formatDateInputValue(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+if (typeof module !== 'undefined') {
+    module.exports = { formatDateInputValue };
+}
+
 // Initialize the delivery date picker
 function initDeliveryDatePicker() {
     const container = document.getElementById('deliveryDatePickerContainer');
@@ -315,7 +327,7 @@ function generateCalendar(startDate) {
     
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(startDate.getFullYear(), startDate.getMonth(), day);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatDateInputValue(date);
         const isAvailable = isDeliveryAvailable(date);
         const isPast = date < today;
         const isRecommended = date.getTime() === recommendedDate.getTime();
@@ -384,8 +396,8 @@ function navigateCalendar(direction, event) {
 function selectDeliveryDate(date) {
     const hiddenInput = document.getElementById('articleDesiredDelivery');
     const displayDiv = document.getElementById('deliveryDateDisplay');
-    
-    const dateStr = date.toISOString().split('T')[0];
+
+    const dateStr = formatDateInputValue(date);
     hiddenInput.value = dateStr;
     displayDiv.textContent = formatDeliveryDate(date);
     displayDiv.classList.add('selected');
