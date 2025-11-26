@@ -95,6 +95,11 @@ const nl = {
         refundEmailMissing: 'Voer een e-mailadres in voor de restitutiebevestiging',
         refundEmailInvalid: 'Voer een geldig e-mailadres in voor de restitutie',
         descriptionRequired: 'Voer een beschrijving in',
+        birthdayLabel: 'Geboortedatum*',
+        birthdayDayPlaceholder: 'Dag',
+        birthdayMonthPlaceholder: 'Maand',
+        birthdayYearPlaceholder: 'Jaar',
+        invalidBirthday: 'Voer een geldige geboortedatum in',
         selectMagazine: 'Selecteer een magazine'
     },
     winback: {
