@@ -1,199 +1,199 @@
-# Klantenservice Portal - Magazine Abonnementen
+# Customer Service Portal - Magazine Subscriptions
 
-Een moderne, lichtgewicht webinterface voor klantenservice medewerkers om magazine abonnementen te beheren.
+A modern, lightweight web interface for customer service agents to manage magazine subscriptions.
 
-## 📋 Functionaliteiten
+## Features
 
-### 🔍 Klant Zoeken
-- Zoeken op naam (voor- en achternaam)
-- Zoeken op postcode en huisnummer
-- **Enter toets** voor snelle zoekopdrachten
-- Directe toegang tot klantgegevens
+### Customer Search
+- Search by first and last name
+- Search by postal code and house number
+- **Enter key** for quick search
+- Direct access to customer data
 
-### ➕ Nieuw Abonnement Aanmaken
-- Volledige klantregistratie tijdens telefoongesprek
-- **Automatisch voorinvullen** van klantgegevens bij bestaande klanten
-- Keuze uit magazines: Avrobode, Mikrogids, Ncrvgids
-- **Flexibele abonnementsduur en betaalopties:**
-  - Jaarlijks betalen: 1, 2 (5% korting), of 3 jaar (10% korting)
-  - Maandelijks betalen: 1, 2, of 3 jaar
-  - Transparante prijsweergave
-- Extra abonnementen toevoegen aan bestaande klanten
-- Directe startdatum instelling
+### Create New Subscription
+- Complete customer registration during a call
+- **Automatic prefill** of customer data for existing customers
+- Magazine choices: Avrobode, Mikrogids, Ncrvgids
+- **Flexible subscription duration and payment options:**
+  - Annual payments: 1, 2 (5% discount), or 3 years (10% discount)
+  - Monthly payments: 1, 2, or 3 years
+  - Transparent price display
+- Add extra subscriptions for existing customers
+- Immediate start date configuration
 
-### ✏️ Gegevens Beheren
-- Klantgegevens wijzigen
-- **Volledige abonnementbewerking:**
-  - Magazine type aanpassen
-  - Duur en betaalfrequentie wijzigen
-  - Status beheren (actief/gepauzeerd/opgezegd)
-  - Startdatum aanpassen
-- Adreswijzigingen verwerken
-- Wijzigingen worden automatisch gelogd
+### Manage Data
+- Edit customer details
+- **Full subscription editing:**
+  - Change magazine type
+  - Adjust duration and payment frequency
+  - Manage status (active/paused/cancelled)
+  - Modify start date
+- Process address changes
+- Changes are logged automatically
 
-### 📋 Contact Geschiedenis
-- Verticale tijdlijn met alle contactmomenten
-- Accordion view voor gedetailleerde informatie
-- Automatische registratie van alle acties
+### Contact History
+- Vertical timeline with all contact moments
+- Accordion view for detailed information
+- Automatic logging of all actions
 
-### 📮 Magazine Verzenden
-- Handmatig laatste editie opnieuw verzenden
-- Reden registratie (niet ontvangen, beschadigd, etc.)
-- Automatische logging in contactgeschiedenis
+### Send Magazine
+- Manually resend the latest issue
+- Record the reason (not received, damaged, etc.)
+- Automatic logging in contact history
 
-### 🎯 Winback Flow
-- Gestructureerde opzegflow met scripts
-- Reden analyse voor opzegging
-- Gepersonaliseerde winback aanbiedingen:
-  - Bij prijs: kortingsacties
-  - Bij inhoud: upgrades en extra content
-  - Bij levering: premium service
-  - Algemeen: flexibele voorwaarden
-- Resultaat tracking (geaccepteerd/geweigerd)
+### Winback Flow
+- Structured cancellation flow with scripts
+- Reason analysis for cancellation
+- Personalized winback offers:
+  - Price-related: discount offers
+  - Content-related: upgrades and extra content
+  - Delivery-related: premium service
+  - General: flexible terms
+- Result tracking (accepted/declined)
 
-## 🚀 Installatie & Gebruik
+## Installation & Usage
 
-### Optie 1: Direct openen
-1. Open `index.html` in een moderne browser
-2. De interface werkt direct met demo data
+### Option 1: Open directly
+1. Open `index.html` in a modern browser
+2. The interface works immediately with demo data
 
-### Optie 2: Met Live Server (aanbevolen)
-1. Installeer een lokale webserver:
-   - **VS Code**: Installeer "Live Server" extensie
+### Option 2: With Live Server (recommended)
+1. Install a local web server:
+   - **VS Code**: Install the "Live Server" extension
    - **Python**: `python -m http.server 8000`
    - **Node.js**: `npx serve`
 
-2. Open de applicatie via localhost
+2. Open the application via localhost
 
-## 💾 Data Opslag
+## Data Storage
 
-- **LocalStorage**: Alle data wordt lokaal opgeslagen in de browser
-- **Demo Data**: Bij eerste gebruik wordt automatisch demo data geladen
-- **Persistentie**: Wijzigingen blijven bewaard tussen sessies
+- **LocalStorage**: All data is stored locally in the browser
+- **Demo Data**: Demo data loads automatically on first use
+- **Persistence**: Changes are preserved between sessions
 
-### Demo Klanten
+### Demo Customers
 1. **Jan de Vries** - Amsterdam (1012AB, nr. 42)
-   - Avrobode abonnement
+   - Avrobode subscription
 
 2. **Maria Jansen** - Rotterdam (3011BD, nr. 15)
-   - Mikrogids én Ncrvgids abonnement
+   - Mikrogids and Ncrvgids subscription
 
-3. **Pieter Bakker** - Den Haag (2511VA, nr. 88)
-   - Avrobode abonnement
+3. **Pieter Bakker** - The Hague (2511VA, nr. 88)
+   - Avrobode subscription
 
-## 🎨 Interface Highlights
+## Interface Highlights
 
 ### Modern Design
-- Clean, professioneel uiterlijk
-- Responsief voor verschillende schermformaten
-- Duidelijke visuele hiërarchie
+- Clean, professional appearance
+- Responsive across different screen sizes
+- Clear visual hierarchy
 
-### Drie-koloms Layout
-- **Links**: Zoekfunctie en snelle acties
-- **Midden**: Klantdetails en formulieren
-- **Rechts**: Contact geschiedenis tijdlijn
+### Three-Column Layout
+- **Left**: Search function and quick actions
+- **Middle**: Customer details and forms
+- **Right**: Contact history timeline
 
-### Gebruiksvriendelijk
-- Intuïtieve navigatie
-- Duidelijke call-to-action buttons
-- Toast notificaties voor feedback
+### User Friendly
+- Intuitive navigation
+- Clear call-to-action buttons
+- Toast notifications for feedback
 - Keyboard shortcuts (Esc, Ctrl+K)
 
-## ⌨️ Sneltoetsen
+## Keyboard Shortcuts
 
-- `Esc` - Sluit huidige formulier
-- `Ctrl/Cmd + K` - Focus op zoekveld
+- `Esc` - Close the current form
+- `Ctrl/Cmd + K` - Focus the search field
 
-## 🛠️ Technische Details
+## Technical Details
 
 ### Tech Stack
-- **HTML5**: Semantische structuur
-- **CSS3**: Modern styling met CSS variables
-- **Vanilla JavaScript**: Geen frameworks, pure JS
+- **HTML5**: Semantic structure
+- **CSS3**: Modern styling with CSS variables
+- **Vanilla JavaScript**: No frameworks, pure JS
 
-### Browser Compatibiliteit
-- Chrome/Edge (laatste 2 versies)
-- Firefox (laatste 2 versies)
-- Safari (laatste 2 versies)
+### Browser Compatibility
+- Chrome/Edge (latest 2 versions)
+- Firefox (latest 2 versions)
+- Safari (latest 2 versions)
 
 ### Responsive Breakpoints
-- Desktop: > 1200px (3-koloms)
-- Tablet: 768px - 1200px (aanpassingen)
-- Mobile: < 768px (1-kolom stacked)
+- Desktop: > 1200px (3 columns)
+- Tablet: 768px - 1200px (adjusted layout)
+- Mobile: < 768px (single stacked column)
 
-## 📝 Gebruik Scenario's
+## Usage Scenarios
 
-### Scenario 1: Nieuwe Klant Belt
-1. Klik "Nieuw Abonnement"
-2. Vul klantgegevens in tijdens gesprek
-3. Selecteer gewenst magazine
-4. Stel startdatum in
-5. Bevestig → klant wordt aangemaakt met eerste contact
+### Scenario 1: New Customer Calls
+1. Click "New Subscription"
+2. Fill in customer details during the call
+3. Select the desired magazine
+4. Set the start date
+5. Confirm → customer is created with first contact
 
-### Scenario 2: Magazine Niet Ontvangen
-1. Zoek klant op naam/adres
-2. Selecteer klant uit resultaten
-3. Klik "Editie Verzenden"
-4. Selecteer betreffend abonnement
-5. Kies reden
-6. Bevestig → actie wordt gelogd
+### Scenario 2: Magazine Not Received
+1. Search for the customer by name/address
+2. Select the customer from the results
+3. Click "Send Issue"
+4. Select the relevant subscription
+5. Choose a reason
+6. Confirm → action is logged
 
-### Scenario 3: Klant Wil Opzeggen
-1. Open klantprofiel
-2. Klik 🚫 bij betreffend abonnement
-3. Winback flow start automatisch:
-   - Vraag naar reden
-   - Presenteer passend aanbod
-   - Registreer resultaat
-4. Bij acceptatie: abonnement blijft, aanbod wordt toegepast
-5. Bij weigering: abonnement wordt beëindigd
+### Scenario 3: Customer Wants to Cancel
+1. Open the customer profile
+2. Click the cancel option for the relevant subscription
+3. Winback flow starts automatically:
+   - Ask for the reason
+   - Present a suitable offer
+   - Record the result
+4. If accepted: subscription continues, offer is applied
+5. If declined: subscription is terminated
 
-### Scenario 4: Adreswijziging
-1. Open klantprofiel
-2. Klik "Bewerken"
-3. Pas gegevens aan
-4. Opslaan → wijziging wordt gelogd in historie
+### Scenario 4: Address Change
+1. Open the customer profile
+2. Click "Edit"
+3. Update the details
+4. Save → change is logged in history
 
-## 🎯 Verbeterpunten t.o.v. Huidige Interface
+## Improvements Compared to the Current Interface
 
-### Oude Interface Problemen
-- ❌ Onoverzichtelijke layout
-- ❌ Te veel informatie tegelijk
-- ❌ Onduidelijke navigatie
-- ❌ Verouderd design
-- ❌ Geen duidelijke workflow
+### Problems in the Old Interface
+- Unclear layout
+- Too much information at once
+- Confusing navigation
+- Outdated design
+- No clear workflow
 
-### Nieuwe Interface Verbeteringen
-- ✅ Schone, gerichte interface per taak
-- ✅ Duidelijke informatie hiërarchie
-- ✅ Intuïtieve navigatie en acties
-- ✅ Modern, professioneel design
-- ✅ Gestructureerde workflows met scripts
-- ✅ Visuele feedback op alle acties
-- ✅ Efficiënte three-panel layout
-- ✅ Sneltoetsen voor power users
+### Improvements in the New Interface
+- Clean, task-focused interface
+- Clear information hierarchy
+- Intuitive navigation and actions
+- Modern, professional design
+- Structured workflows with scripts
+- Visual feedback on all actions
+- Efficient three-panel layout
+- Keyboard shortcuts for power users
 
-## 🔮 Toekomstige Uitbreidingen
+## Future Enhancements
 
-- [ ] Backend API integratie
-- [ ] Authenticatie & autorisatie
-- [ ] Betaalstatus en facturatie
-- [ ] E-mail templates
-- [ ] Rapportages en statistieken
-- [ ] Export functionaliteit
-- [ ] Geavanceerde filters
-- [ ] Notificaties systeem
+- [ ] Backend API integration
+- [ ] Authentication and authorization
+- [ ] Payment status and invoicing
+- [ ] Email templates
+- [ ] Reports and statistics
+- [ ] Export functionality
+- [ ] Advanced filters
+- [ ] Notification system
 - [ ] Multi-language support
 
-## 📄 Licentie
+## License
 
-Dit is een Proof of Concept voor intern gebruik.
+This is a Proof of Concept for internal use.
 
-## 👥 Support
+## Support
 
-Voor vragen of suggesties, neem contact op met het development team.
+For questions or suggestions, contact the development team.
 
 ---
 
-**Laatst bijgewerkt**: Oktober 2025  
-**Versie**: 1.0.0 (PoC)
+**Last updated**: October 2025
+**Version**: 1.0.0 (PoC)
