@@ -1,14 +1,39 @@
 // Delivery Date Picker Component
 // Advanced date picker with business logic for magazine delivery
 
+function translateDelivery(key, params, fallback) {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const value = window.i18n.t(key, params);
+        if (value !== undefined && value !== null && value !== key) {
+            return value;
+        }
+    }
+    return fallback !== undefined ? fallback : key;
+}
+
 // Dutch Holidays Configuration
-const dutchHolidays = [
+const fallbackHolidays = [
     { name: 'Nieuwjaarsdag', date: '01-01' },
     { name: 'Koningsdag', date: '04-27' },
     { name: 'Bevrijdingsdag', date: '05-05', everyFiveYears: true },
     { name: 'Eerste Kerstdag', date: '12-25' },
     { name: 'Tweede Kerstdag', date: '12-26' }
 ];
+
+const translatedHolidays = translateDelivery('delivery.holidays');
+const dutchHolidays = Array.isArray(translatedHolidays) ? translatedHolidays : fallbackHolidays;
+
+const fallbackDayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+const translatedDayNames = translateDelivery('delivery.dayNames');
+const dayNames = Array.isArray(translatedDayNames) ? translatedDayNames : fallbackDayNames;
+
+const fallbackMonthNames = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+const translatedMonthNames = translateDelivery('delivery.monthNames');
+const monthNames = Array.isArray(translatedMonthNames) ? translatedMonthNames : fallbackMonthNames;
+
+const fallbackShortDayNames = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
+const translatedShortDays = translateDelivery('delivery.dayNamesShort');
+const dayNamesShort = Array.isArray(translatedShortDays) ? translatedShortDays : fallbackShortDayNames;
 
 // Easter calculation (Computus algorithm)
 function calculateEaster(year) {
@@ -142,10 +167,6 @@ function getRecommendedDate() {
 
 // Format date with Dutch day name
 function formatDeliveryDate(date) {
-    const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
-    const monthNames = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 
-                        'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
-    
     const dayName = dayNames[date.getDay()];
     const day = date.getDate();
     const month = monthNames[date.getMonth()];
@@ -155,8 +176,7 @@ function formatDeliveryDate(date) {
 
 // Format date for display (short version)
 function formatDateShort(date) {
-    const dayNames = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
-    return dayNames[date.getDay()];
+    return dayNamesShort[date.getDay()];
 }
 
 // Format date for hidden input without timezone shifts

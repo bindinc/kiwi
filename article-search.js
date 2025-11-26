@@ -1,6 +1,16 @@
 // Article Search and Selection Component
 // Optimized for 100+ articles with search, filtering, and categorization
 
+function translateArticle(key, params, fallback) {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const value = window.i18n.t(key, params);
+        if (value !== undefined && value !== null && value !== key) {
+            return value;
+        }
+    }
+    return fallback !== undefined ? fallback : key;
+}
+
 // Extended article database (100+ items)
 const articles = [
     // Avrobode - Jaargang bundels
@@ -164,14 +174,17 @@ function renderArticleDropdown(filteredArticles, query) {
     const dropdown = document.getElementById('articleDropdown');
     
     if (filteredArticles.length === 0) {
-        dropdown.innerHTML = '<div class="article-no-results">Geen artikelen gevonden. <button type="button" onclick="showAllArticles()" class="browse-all-link">Blader door alle artikelen →</button></div>';
+        const noResults = translateArticle('articleSearch.noResults', {}, 'Geen artikelen gevonden.');
+        const browseAllCta = translateArticle('articleSearch.browseAllCta', {}, 'Blader door alle artikelen →');
+        dropdown.innerHTML = `<div class="article-no-results">${noResults} <button type="button" onclick="showAllArticles()" class="browse-all-link">${browseAllCta}</button></div>`;
         return;
     }
     
     let html = '';
     
     // Add "browse all" link at top
-    html += '<div class="article-browse-all"><button type="button" onclick="showAllArticles()" class="browse-all-link">📚 Blader door alle artikelen</button></div>';
+    const browseAll = translateArticle('articleSearch.browseAll', {}, '📚 Blader door alle artikelen');
+    html += `<div class="article-browse-all"><button type="button" onclick="showAllArticles()" class="browse-all-link">${browseAll}</button></div>`;
     
     // Group by magazine
     const groupedByMagazine = {};
@@ -257,23 +270,31 @@ function showAllArticles() {
 
 // Create all articles modal
 function createAllArticlesModal() {
+    const modalTitle = translateArticle('articleSearch.modalTitle', {}, '📚 Alle Artikelen');
+    const searchPlaceholder = translateArticle('articleSearch.searchPlaceholder', {}, 'Zoek artikel...');
+    const tabAll = translateArticle('articleSearch.tabAll', {}, 'Alle');
+    const tabPopular = translateArticle('articleSearch.tabPopular', {}, 'Populair');
+    const tabAvrobode = translateArticle('articleSearch.tabAvrobode', {}, 'Avrobode');
+    const tabMikrogids = translateArticle('articleSearch.tabMikrogids', {}, 'Mikrogids');
+    const tabNcrvgids = translateArticle('articleSearch.tabNcrvgids', {}, 'Ncrvgids');
+
     const modalHtml = `
         <div id="allArticlesModal" class="modal" style="display: none;">
             <div class="modal-content modal-large">
                 <div class="modal-header">
-                    <h3>📚 Alle Artikelen</h3>
+                    <h3>${modalTitle}</h3>
                     <button class="btn-close" onclick="closeAllArticlesModal()">✕</button>
                 </div>
                 <div class="modal-body">
                     <div class="article-search-in-modal">
-                        <input type="text" id="modalArticleSearch" placeholder="Zoek artikel..." oninput="filterModalArticles(this.value)">
+                        <input type="text" id="modalArticleSearch" placeholder="${searchPlaceholder}" oninput="filterModalArticles(this.value)">
                     </div>
                     <div class="article-tabs">
-                        <button class="article-tab active" onclick="showArticleTab('all')">Alle</button>
-                        <button class="article-tab" onclick="showArticleTab('popular')">Populair</button>
-                        <button class="article-tab" onclick="showArticleTab('Avrobode')">Avrobode</button>
-                        <button class="article-tab" onclick="showArticleTab('Mikrogids')">Mikrogids</button>
-                        <button class="article-tab" onclick="showArticleTab('Ncrvgids')">Ncrvgids</button>
+                        <button class="article-tab active" onclick="showArticleTab('all')">${tabAll}</button>
+                        <button class="article-tab" onclick="showArticleTab('popular')">${tabPopular}</button>
+                        <button class="article-tab" onclick="showArticleTab('Avrobode')">${tabAvrobode}</button>
+                        <button class="article-tab" onclick="showArticleTab('Mikrogids')">${tabMikrogids}</button>
+                        <button class="article-tab" onclick="showArticleTab('Ncrvgids')">${tabNcrvgids}</button>
                     </div>
                     <div id="articleTabContent" class="article-grid"></div>
                 </div>
@@ -339,7 +360,8 @@ function renderArticleGrid(articles) {
     const grid = document.getElementById('articleTabContent');
     
     if (articles.length === 0) {
-        grid.innerHTML = '<div class="empty-state">Geen artikelen gevonden</div>';
+        const emptyState = translateArticle('articleSearch.emptyState', {}, 'Geen artikelen gevonden');
+        grid.innerHTML = `<div class="empty-state">${emptyState}</div>`;
         return;
     }
     

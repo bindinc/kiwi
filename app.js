@@ -21,6 +21,16 @@ const contactHistoryState = {
 
 let contactHistoryHighlightTimer = null;
 
+const translate = (key, params, fallback) => {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const value = window.i18n.t(key, params);
+        if (value !== undefined && value !== null && value !== key) {
+            return value;
+        }
+    }
+    return fallback !== undefined ? fallback : key;
+};
+
 // Phase 1A: Call Session State Management
 let callSession = {
     active: false,              // Is er momenteel een actieve call?
@@ -52,11 +62,11 @@ let agentStatus = {
 
 // Agent Status Definitions
 const agentStatuses = {
-    'offline': { label: 'Offline', color: '#6b7280', icon: '⚫' },
-    'ready': { label: 'Beschikbaar', color: '#10b981', icon: '🟢' },
-    'busy': { label: 'In Gesprek', color: '#ef4444', icon: '🔴' },
-    'acw': { label: 'Nabewerkingstijd', color: '#f59e0b', icon: '🟡' },
-    'break': { label: 'Pauze', color: '#3b82f6', icon: '🔵' }
+    offline: { label: translate('agentStatus.offline', {}, 'Offline'), color: '#6b7280', icon: '⚫' },
+    ready: { label: translate('agentStatus.ready', {}, 'Beschikbaar'), color: '#10b981', icon: '🟢' },
+    busy: { label: translate('agentStatus.busy', {}, 'In Gesprek'), color: '#ef4444', icon: '🔴' },
+    acw: { label: translate('agentStatus.acw', {}, 'Nabewerkingstijd'), color: '#f59e0b', icon: '🟡' },
+    break: { label: translate('agentStatus.break', {}, 'Pauze'), color: '#3b82f6', icon: '🔵' }
 };
 
 // Phase 1A: Service Number Configuration
@@ -157,10 +167,10 @@ let werfsleutelLoadAttempted = false;
 
 // Kanaal definities gekoppeld aan werfsleutels
 const werfsleutelChannels = {
-    'OL/IS': { label: 'Online interne sites', icon: '💻' },
-    'EM/OU': { label: 'E-mail outbound', icon: '✉️' },
-    'TM/IB': { label: 'Telemarketing inbound', icon: '☎️' },
-    'PR/ET': { label: 'Print eigen titels', icon: '📰' }
+    'OL/IS': { label: translate('werfsleutelChannels.onlineInternal', {}, 'Online interne sites'), icon: '💻' },
+    'EM/OU': { label: translate('werfsleutelChannels.emailOutbound', {}, 'E-mail outbound'), icon: '✉️' },
+    'TM/IB': { label: translate('werfsleutelChannels.telemarketingInbound', {}, 'Telemarketing inbound'), icon: '☎️' },
+    'PR/ET': { label: translate('werfsleutelChannels.printOwnTitles', {}, 'Print eigen titels'), icon: '📰' }
 };
 
 const salesChannelMap = {
@@ -264,7 +274,7 @@ function convertMarkdownToWerfsleutels(markdown) {
 
     return Array.from(entries.values()).map((entry) => ({
         salesCode: entry.salesCode,
-        title: entry.title || 'Onbekende werfsleutel',
+        title: entry.title || translate('werfsleutel.unknownTitle', {}, 'Onbekende werfsleutel'),
         price: entry.price || 0,
         barcode: entry.barcode,
         magazine: entry.magazine,
@@ -279,12 +289,13 @@ function inferMagazineFromTitle(title = '') {
     if (normalized.includes('avrobode')) return 'Avrobode';
     if (normalized.includes('mikrogids')) return 'Mikrogids';
     if (normalized.includes('ncrv')) return 'Ncrvgids';
-    return 'Onbekend';
+    return translate('common.unknown', {}, 'Onbekend');
 }
 
 function deriveMagazineFromKey(key) {
-    if (!key) return 'Onbekend';
-    if (key.magazine && key.magazine !== 'Onbekend') {
+    const unknownMagazine = translate('common.unknown', {}, 'Onbekend');
+    if (!key) return unknownMagazine;
+    if (key.magazine && key.magazine !== unknownMagazine) {
         return key.magazine;
     }
     return inferMagazineFromTitle(key.title || '');
@@ -319,7 +330,7 @@ function extractDurationLabelFromTitle(title = '') {
         const normalizedUnit = unit.startsWith('maand') ? 'maanden' : unit;
         return `${match[1]} ${normalizedUnit}`;
     }
-    return 'Looptijd onbekend';
+    return translate('common.unknownDuration', {}, 'Looptijd onbekend');
 }
 
 function getWerfsleutelOfferDetails(key) {
@@ -527,7 +538,7 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
 
     container.querySelectorAll('.werfsleutel-suggestion').forEach((button) => {
         if (button.classList.contains('inactive')) {
-            button.addEventListener('click', () => showToast('Deze werfsleutel is niet meer actief.', 'warning'));
+            button.addEventListener('click', () => showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning'));
             return;
         }
         button.addEventListener('click', () => selectWerfsleutel(button.dataset.code));
@@ -537,12 +548,12 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
 function selectWerfsleutel(salesCode) {
     const match = werfsleutelCatalog.find((item) => item.salesCode === salesCode);
     if (!match) {
-        showToast('Onbekende werfsleutel.', 'error');
+        showToast(translate('werfsleutel.unknown', {}, 'Onbekende werfsleutel.'), 'error');
         return;
     }
 
     if (!match.isActive) {
-        showToast('Deze werfsleutel is niet meer actief.', 'warning');
+        showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning');
         setBarcodeStatus('Werfsleutel is inactief', 'warning');
         return;
     }
@@ -624,13 +635,13 @@ function renderWerfsleutelChannelOptions() {
 
 function selectWerfsleutelChannel(channelCode) {
     if (!werfsleutelChannels[channelCode]) {
-        showToast('Onbekend kanaal', 'error');
+        showToast(translate('werfsleutel.unknownChannel', {}, 'Onbekend kanaal'), 'error');
         return;
     }
 
     const allowed = werfsleutelState.selectedKey?.allowedChannels ?? Object.keys(werfsleutelChannels);
     if (allowed.length > 0 && !allowed.includes(channelCode)) {
-        showToast('Dit kanaal hoort niet bij de gekozen werfsleutel.', 'warning');
+        showToast(translate('werfsleutel.channelMismatch', {}, 'Dit kanaal hoort niet bij de gekozen werfsleutel.'), 'warning');
         return;
     }
 
@@ -688,12 +699,12 @@ function resetWerfsleutelPicker() {
 
 function requestWerfsleutelConfirmation() {
     if (!werfsleutelState.selectedKey) {
-        showToast('Selecteer eerst een actieve werfsleutel.', 'error');
+        showToast(translate('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
         return;
     }
 
     if (!werfsleutelState.selectedChannel) {
-        showToast('Kies een kanaal voor deze werfsleutel.', 'warning');
+        showToast(translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'warning');
         return;
     }
 
@@ -732,19 +743,19 @@ function closeWerfsleutelOverviewModal() {
 
 function confirmWerfsleutelSelection() {
     if (!werfsleutelState.selectedKey) {
-        showToast('Selecteer eerst een actieve werfsleutel.', 'error');
+        showToast(translate('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
         return;
     }
 
     if (!werfsleutelState.selectedChannel) {
-        showToast('Kies een kanaal voor deze werfsleutel.', 'warning');
+        showToast(translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'warning');
         return;
     }
 
     werfsleutelState.confirmed = true;
     updateWerfsleutelSummary();
     closeWerfsleutelOverviewModal();
-    showToast('Werfsleutel bevestigd.', 'success');
+    showToast(translate('werfsleutel.confirmed', {}, 'Werfsleutel bevestigd.'), 'success');
 }
 
 function setElementText(elementId, value) {
@@ -1302,7 +1313,7 @@ function endCallSession(forcedByCustomer = false) {
     }
     
     if (!forcedByCustomer) {
-        showToast('Gesprek beëindigd', 'success');
+        showToast(translate('calls.ended', {}, 'Gesprek beëindigd'), 'success');
     }
 }
 
@@ -1314,7 +1325,7 @@ function identifyCallerAsCustomer(customerId) {
     
     const customer = customers.find(c => c.id === customerId);
     if (!customer) {
-        showToast('Klant niet gevonden', 'error');
+        showToast(translate('customer.notFound', {}, 'Klant niet gevonden'), 'error');
         return;
     }
     
@@ -1333,7 +1344,7 @@ function identifyCallerAsCustomer(customerId) {
     addContactMoment(customerId, 'call_identified', 
         `Beller geïdentificeerd tijdens ${callSession.serviceNumber} call`);
     
-    showToast(`Beller geïdentificeerd als ${callSession.customerName}`, 'success');
+    showToast(translate('calls.identifiedAs', { name: callSession.customerName }, `Beller geïdentificeerd als ${callSession.customerName}`), 'success');
 }
 
 // Update "Dit is de Beller" Button Visibility
@@ -1383,7 +1394,7 @@ function toggleCallHold() {
         // Track hold time
         callSession.holdStartTime = Date.now();
         
-        showToast('Gesprek in wacht gezet', 'info');
+        showToast(translate('calls.onHold', {}, 'Gesprek in wacht gezet'), 'info');
         
         // Log hold
         if (callSession.customerId) {
@@ -1408,7 +1419,10 @@ function toggleCallHold() {
         const holdDuration = Math.floor((Date.now() - callSession.holdStartTime) / 1000);
         callSession.totalHoldTime = (callSession.totalHoldTime || 0) + holdDuration;
         
-        showToast(`Gesprek hervat (wacht: ${formatTime(holdDuration)})`, 'success');
+        showToast(
+            translate('calls.resumed', { duration: formatTime(holdDuration) }, `Gesprek hervat (wacht: ${formatTime(holdDuration)})`),
+            'success'
+        );
         
         // Log resume
         if (callSession.customerId) {
@@ -1448,7 +1462,7 @@ function showSuccessIdentificationPrompt(customerId, customerName) {
 function setAgentStatus(newStatus) {
     // Validatie
     if (callSession.active && newStatus === 'ready') {
-        showToast('Kan niet naar Beschikbaar tijdens actief gesprek', 'error');
+        showToast(translate('agent.cannotSetReadyDuringCall', {}, 'Kan niet naar Beschikbaar tijdens actief gesprek'), 'error');
         return;
     }
     
@@ -1473,7 +1487,10 @@ function setAgentStatus(newStatus) {
         menu.style.display = 'none';
     }
     
-    showToast(`Status gewijzigd naar: ${agentStatuses[newStatus].label}`, 'success');
+    showToast(
+        translate('agent.statusChanged', { status: agentStatuses[newStatus].label }, `Status gewijzigd naar: ${agentStatuses[newStatus].label}`),
+        'success'
+    );
 }
 
 // Update Agent Status Display
@@ -1568,9 +1585,9 @@ function endACW(manual = false) {
     setAgentStatus('ready');
     
     if (manual) {
-        showToast('Klaar voor volgende gesprek', 'success');
+        showToast(translate('acw.readyForNext', {}, 'Klaar voor volgende gesprek'), 'success');
     } else {
-        showToast('ACW tijd verlopen - Status: Beschikbaar', 'info');
+        showToast(translate('acw.expired', {}, 'ACW tijd verlopen - Status: Beschikbaar'), 'info');
     }
 }
 
@@ -1581,7 +1598,10 @@ function manualFinishACW() {
     const isModalOpen = dispositionModal && dispositionModal.style.display === 'flex';
     
     if (isModalOpen) {
-        showToast('Vul eerst het nabewerkingsscherm in voordat je ACW afrondt', 'warning');
+        showToast(
+            translate('acw.completeForm', {}, 'Vul eerst het nabewerkingsscherm in voordat je ACW afrondt'),
+            'warning'
+        );
         return;
     }
     
@@ -1785,7 +1805,7 @@ function saveDisposition() {
     const followUpRequired = document.getElementById('dispFollowUpRequired').checked;
     
     if (!category || !outcome) {
-        showToast('Selecteer categorie en uitkomst', 'error');
+        showToast(translate('disposition.selectCategory', {}, 'Selecteer categorie en uitkomst'), 'error');
         return;
     }
     
@@ -1828,7 +1848,7 @@ function saveDisposition() {
     // Close modal
     document.getElementById('dispositionModal').style.display = 'none';
     
-    showToast('Gesprek succesvol afgerond', 'success');
+    showToast(translate('calls.completed', {}, 'Gesprek succesvol afgerond'), 'success');
     
     // Manual end ACW (since disposition is complete)
     endACW(true);
@@ -1838,7 +1858,7 @@ function saveDisposition() {
 function cancelDisposition() {
     // Just close modal, ACW timer continues
     document.getElementById('dispositionModal').style.display = 'none';
-    showToast('Disposition geannuleerd - ACW loopt door', 'warning');
+    showToast(translate('disposition.cancelled', {}, 'Disposition geannuleerd - ACW loopt door'), 'warning');
 }
 
 // ============================================================================
@@ -1951,7 +1971,10 @@ function debugGenerateQueue() {
     updateQueueDisplay();
     updateDebugQueuePreview();
     
-    showToast(`✅ Wachtrij gegenereerd met ${queueSize} bellers`, 'success');
+    showToast(
+        translate('queue.generated', { count: queueSize }, `✅ Wachtrij gegenereerd met ${queueSize} bellers`),
+        'success'
+    );
     
     // Update debug status
     const debugStatus = document.getElementById('debugQueueStatus');
@@ -2087,7 +2110,7 @@ function debugClearQueue() {
         if (debugStatus) {
             debugStatus.textContent = 'Uitgeschakeld';
         }
-        showToast('✅ Wachtrij gewist', 'info');
+        showToast(translate('queue.cleared', {}, '✅ Wachtrij gewist'), 'info');
     }
 }
 
@@ -2150,18 +2173,21 @@ function formatTime(seconds) {
  */
 function acceptNextCall() {
     if (!callQueue.enabled || callQueue.queue.length === 0) {
-        showToast('⚠️ Geen bellers in wachtrij', 'error');
+        showToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
         return;
     }
     
     if (callSession.active) {
-        showToast('⚠️ Er is al een actief gesprek', 'error');
+        showToast(translate('queue.activeCallExists', {}, '⚠️ Er is al een actief gesprek'), 'error');
         return;
     }
     
     // Check agent status
     if (agentStatus.current !== 'ready') {
-        showToast('⚠️ Agent status moet "Beschikbaar" zijn om gesprek te accepteren', 'error');
+        showToast(
+            translate('queue.mustBeReady', {}, '⚠️ Agent status moet "Beschikbaar" zijn om gesprek te accepteren'),
+            'error'
+        );
         return;
     }
     
@@ -2210,7 +2236,7 @@ function startCallFromQueue(queueEntry) {
     startCallSession();
     
     showToast(
-        `📞 Gesprek gestart met ${queueEntry.customerName}`,
+        translate('calls.startedFromQueue', { name: queueEntry.customerName }, `📞 Gesprek gestart met ${queueEntry.customerName}`),
         'success'
     );
 }
@@ -3517,17 +3543,17 @@ function createSubscription(event) {
     event.preventDefault();
 
     if (!werfsleutelState.selectedKey) {
-        showToast('Selecteer eerst een actieve werfsleutel.', 'error');
+        showToast(translate('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
         return;
     }
 
     if (!werfsleutelState.selectedChannel) {
-        showToast('Kies een kanaal voor deze werfsleutel.', 'error');
+        showToast(translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'error');
         return;
     }
 
     if (!werfsleutelState.confirmed) {
-        showToast('Bevestig de werfsleutel via het overzicht.', 'warning');
+        showToast(translate('werfsleutel.confirmViaSummary', {}, 'Bevestig de werfsleutel via het overzicht.'), 'warning');
         return;
     }
 
@@ -3570,7 +3596,7 @@ function createSubscription(event) {
         werfsleutelChannelLabel: werfsleutelChannels[werfsleutelState.selectedChannel]?.label || ''
     };
 
-    const werfsleutelChannelLabel = formData.werfsleutelChannelLabel || 'Onbekend kanaal';
+    const werfsleutelChannelLabel = formData.werfsleutelChannelLabel || translate('werfsleutel.unknownChannel', {}, 'Onbekend kanaal');
     const werfsleutelNote = `Werfsleutel ${formData.werfsleutel} (${formData.werfsleutelTitle}, ${formatEuro(formData.werfsleutelPrice)}) via ${formData.werfsleutelChannel} (${werfsleutelChannelLabel})`;
     const durationDisplay = formData.duration
         ? (subscriptionPricing[formData.duration]?.description || formData.durationLabel)
@@ -3602,7 +3628,7 @@ function createSubscription(event) {
 
         saveCustomers();
         closeForm('newSubscriptionForm');
-        showToast('Extra abonnement succesvol toegevoegd!', 'success');
+        showToast(translate('subscription.extraAdded', {}, 'Extra abonnement succesvol toegevoegd!'), 'success');
         
         // Refresh display
         selectCustomer(currentCustomer.id);
@@ -3642,7 +3668,7 @@ function createSubscription(event) {
         customers.push(newCustomer);
         saveCustomers();
         closeForm('newSubscriptionForm');
-        showToast('Nieuw abonnement succesvol aangemaakt!', 'success');
+        showToast(translate('subscription.created', {}, 'Nieuw abonnement succesvol aangemaakt!'), 'success');
         
         // Select the new customer
         selectCustomer(newCustomer.id);
@@ -3736,7 +3762,7 @@ function saveCustomerEdit(event) {
 
     saveCustomers();
     closeForm('editCustomerForm');
-    showToast('Klantgegevens succesvol bijgewerkt!', 'success');
+    showToast(translate('customer.updated', {}, 'Klantgegevens succesvol bijgewerkt!'), 'success');
     
     // Refresh display
     selectCustomer(customerId);
@@ -3745,7 +3771,7 @@ function saveCustomerEdit(event) {
 // Show Resend Magazine Form
 function showResendMagazine() {
     if (!currentCustomer) {
-        showToast('Selecteer eerst een klant', 'error');
+        showToast(translate('customer.selectFirst', {}, 'Selecteer eerst een klant'), 'error');
         return;
     }
 
@@ -3764,7 +3790,7 @@ function resendMagazine() {
     const reason = document.getElementById('resendReason').value;
     
     if (!subId) {
-        showToast('Selecteer een abonnement', 'error');
+        showToast(translate('subscription.selectOne', {}, 'Selecteer een abonnement'), 'error');
         return;
     }
 
@@ -3790,7 +3816,10 @@ function resendMagazine() {
 
     saveCustomers();
     closeForm('resendMagazineForm');
-    showToast(`Editie van ${subscription.magazine} wordt opnieuw verzonden!`, 'success');
+    showToast(
+        translate('resend.editionResent', { magazine: subscription.magazine }, `Editie van ${subscription.magazine} wordt opnieuw verzonden!`),
+        'success'
+    );
     
     // Refresh display
     displayContactHistory();
@@ -3799,7 +3828,7 @@ function resendMagazine() {
 // Show Editorial Complaint Form
 function showEditorialComplaintForm() {
     if (!currentCustomer) {
-        showToast('Selecteer eerst een klant', 'error');
+        showToast(translate('customer.selectFirst', {}, 'Selecteer eerst een klant'), 'error');
         return;
     }
 
@@ -3835,12 +3864,12 @@ function submitEditorialComplaint() {
 
     // Validation
     if (!magazine) {
-        showToast('Selecteer een magazine', 'error');
+        showToast(translate('forms.selectMagazine', {}, 'Selecteer een magazine'), 'error');
         return;
     }
 
     if (!description) {
-        showToast('Voer een beschrijving in', 'error');
+        showToast(translate('forms.descriptionRequired', {}, 'Voer een beschrijving in'), 'error');
         return;
     }
 
@@ -3884,7 +3913,10 @@ function submitEditorialComplaint() {
 
     saveCustomers();
     closeForm('editorialComplaintForm');
-    showToast(`${typeLabels[type]} voor redactie geregistreerd!`, 'success');
+    showToast(
+        translate('editorial.registered', { typeLabel: typeLabels[type] }, `${typeLabels[type]} voor redactie geregistreerd!`),
+        'success'
+    );
     
     // Refresh display
     displayContactHistory();
@@ -3897,7 +3929,7 @@ function editSubscription(subId) {
     
     const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
     if (!subscription) {
-        showToast('Abonnement niet gevonden', 'error');
+        showToast(translate('subscription.notFound', {}, 'Abonnement niet gevonden'), 'error');
         return;
     }
     
@@ -3922,7 +3954,7 @@ function saveSubscriptionEdit(event) {
     const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
     
     if (!subscription) {
-        showToast('Abonnement niet gevonden', 'error');
+        showToast(translate('subscription.notFound', {}, 'Abonnement niet gevonden'), 'error');
         return;
     }
     
@@ -3968,7 +4000,7 @@ function saveSubscriptionEdit(event) {
 
     saveCustomers();
     closeForm('editSubscriptionForm');
-    showToast('Abonnement succesvol bijgewerkt!', 'success');
+    showToast(translate('subscription.updated', {}, 'Abonnement succesvol bijgewerkt!'), 'success');
     
     // Refresh display
     selectCustomer(currentCustomer.id);
@@ -4000,7 +4032,7 @@ function startWinbackForSubscription(subId) {
 // Show Winback Flow
 function showWinbackFlow() {
     if (!currentCustomer) {
-        showToast('Selecteer eerst een klant', 'error');
+        showToast(translate('customer.selectFirst', {}, 'Selecteer eerst een klant'), 'error');
         return;
     }
 
@@ -4030,7 +4062,7 @@ function winbackNextStep(stepNumber) {
     if (stepNumber === 2) {
         const selectedReason = document.querySelector('input[name="cancelReason"]:checked');
         if (!selectedReason) {
-            showToast('Selecteer een reden', 'error');
+            showToast(translate('subscription.selectReason', {}, 'Selecteer een reden'), 'error');
             return;
         }
         
@@ -4046,7 +4078,7 @@ function winbackNextStep(stepNumber) {
     
     if (stepNumber === 3) {
         if (!selectedOffer) {
-            showToast('Selecteer een aanbod', 'error');
+            showToast(translate('subscription.selectOffer', {}, 'Selecteer een aanbod'), 'error');
             return;
         }
         
@@ -4182,7 +4214,7 @@ function winbackHandleDeceased() {
     const activeSubscriptions = currentCustomer.subscriptions.filter(s => s.status === 'active');
     
     if (activeSubscriptions.length === 0) {
-        showToast('Geen actieve abonnementen gevonden', 'error');
+        showToast(translate('subscription.noneActive', {}, 'Geen actieve abonnementen gevonden'), 'error');
         return;
     }
     
@@ -4226,7 +4258,10 @@ function processDeceasedSubscriptions() {
     for (const sub of activeSubscriptions) {
         const selectedAction = document.querySelector(`input[name="action_${sub.id}"]:checked`);
         if (!selectedAction) {
-            showToast(`Selecteer een actie voor ${sub.magazine}`, 'error');
+            showToast(
+                translate('subscription.selectAction', { magazine: sub.magazine }, `Selecteer een actie voor ${sub.magazine}`),
+                'error'
+            );
             return;
         }
         subscriptionActions.push({
@@ -4363,7 +4398,7 @@ function showDeceasedCombinedForm() {
 function revertRestitution(subscriptionId) {
     const subscription = currentCustomer.subscriptions.find(s => s.id === subscriptionId);
     if (!subscription || subscription.status !== 'restituted') {
-        showToast('Abonnement niet gevonden of niet gerestitueerd', 'error');
+        showToast(translate('subscription.notFoundOrRefund', {}, 'Abonnement niet gevonden of niet gerestitueerd'), 'error');
         return;
     }
     
@@ -4417,7 +4452,7 @@ function completeRestitutionTransfer(event) {
     const subscription = currentCustomer.subscriptions.find(s => s.id === subscriptionId);
     
     if (!subscription) {
-        showToast('Abonnement niet gevonden', 'error');
+        showToast(translate('subscription.notFound', {}, 'Abonnement niet gevonden'), 'error');
         return;
     }
     
@@ -4438,13 +4473,13 @@ function completeRestitutionTransfer(event) {
     
     // Validate
     if (!transferData.firstName || !transferData.lastName || !transferData.email || !transferData.phone) {
-        showToast('Vul alle verplichte velden in', 'error');
+        showToast(translate('forms.required', {}, 'Vul alle verplichte velden in'), 'error');
         return;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(transferData.email)) {
-        showToast('Voer een geldig e-mailadres in', 'error');
+        showToast(translate('forms.invalidEmail', {}, 'Voer een geldig e-mailadres in'), 'error');
         return;
     }
     
@@ -4478,7 +4513,10 @@ function completeRestitutionTransfer(event) {
     // Refresh display
     selectCustomer(currentCustomer.id);
     
-    showToast(`${subscription.magazine} overgezet naar ${newCustomerName}`, 'success');
+    showToast(
+        translate('subscription.transferred', { magazine: subscription.magazine, name: newCustomerName }, `${subscription.magazine} overgezet naar ${newCustomerName}`),
+        'success'
+    );
     
     // Clear stored subscription ID
     window.restitutionRevertSubId = null;
@@ -4582,7 +4620,14 @@ function completeAllDeceasedActions() {
     // Refresh display
     selectCustomer(currentCustomer.id);
     
-    showToast(`${processedMagazines.length} abonnement(en) verwerkt. Bevestigingen worden verstuurd.`, 'success');
+    showToast(
+        translate(
+            'subscription.processed',
+            { count: processedMagazines.length },
+            `${processedMagazines.length} abonnement(en) verwerkt. Bevestigingen worden verstuurd.`
+        ),
+        'success'
+    );
     
     // Reset
     window.deceasedSubscriptionActions = null;
@@ -4629,18 +4674,18 @@ function getRefundDataFromForm(formVersion) {
 // Validate Transfer Data
 function validateTransferData(data) {
     if (!data.firstName || !data.lastName || !data.email || !data.phone) {
-        showToast('Vul alle verplichte velden in voor de nieuwe abonnee', 'error');
+        showToast(translate('forms.newSubscriberRequired', {}, 'Vul alle verplichte velden in voor de nieuwe abonnee'), 'error');
         return false;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
-        showToast('Voer een geldig e-mailadres in voor de nieuwe abonnee', 'error');
+        showToast(translate('forms.newSubscriberInvalidEmail', {}, 'Voer een geldig e-mailadres in voor de nieuwe abonnee'), 'error');
         return false;
     }
     
     if (!data.postalCode || !data.houseNumber || !data.address || !data.city) {
-        showToast('Vul alle adresvelden in voor de nieuwe abonnee', 'error');
+        showToast(translate('forms.newSubscriberAddressMissing', {}, 'Vul alle adresvelden in voor de nieuwe abonnee'), 'error');
         return false;
     }
     
@@ -4650,13 +4695,13 @@ function validateTransferData(data) {
 // Validate Refund Data
 function validateRefundData(data) {
     if (!data.email) {
-        showToast('Voer een e-mailadres in voor de restitutiebevestiging', 'error');
+        showToast(translate('forms.refundEmailMissing', {}, 'Voer een e-mailadres in voor de restitutiebevestiging'), 'error');
         return false;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
-        showToast('Voer een geldig e-mailadres in voor de restitutie', 'error');
+        showToast(translate('forms.refundEmailInvalid', {}, 'Voer een geldig e-mailadres in voor de restitutie'), 'error');
         return false;
     }
     
@@ -4670,7 +4715,7 @@ function completeWinback() {
     const result = document.querySelector('input[name="winbackResult"]:checked');
     
     if (!result) {
-        showToast('Selecteer een resultaat', 'error');
+        showToast(translate('winback.selectOutcome', {}, 'Selecteer een resultaat'), 'error');
         return;
     }
 
@@ -4688,7 +4733,7 @@ function completeWinback() {
             { highlight: true, persist: false }
         );
         
-        showToast('Winback succesvol! Klant blijft abonnee.', 'success');
+        showToast(translate('winback.success', {}, 'Winback succesvol! Klant blijft abonnee.'), 'success');
     } else {
         // Customer declined, cancel subscription
         currentCustomer.subscriptions = currentCustomer.subscriptions.filter(s => s.id !== subId);
@@ -4702,7 +4747,7 @@ function completeWinback() {
             { highlight: true, persist: false }
         );
         
-        showToast('Abonnement opgezegd', 'error');
+        showToast(translate('subscription.cancelled', {}, 'Abonnement opgezegd'), 'error');
     }
 
     saveCustomers();
@@ -4891,7 +4936,7 @@ function createArticleSale(event) {
 
     // Check if there are items in the order
     if (!orderItems || orderItems.length === 0) {
-        showToast('Voeg minimaal één artikel toe aan de bestelling', 'error');
+        showToast(translate('articleOrders.addItem', {}, 'Voeg minimaal één artikel toe aan de bestelling'), 'error');
         return;
     }
 
@@ -4992,7 +5037,7 @@ function createArticleSale(event) {
         renderOrderItems();
         
         closeForm('articleSaleForm');
-        showToast('Artikel bestelling succesvol aangemaakt!', 'success');
+        showToast(translate('articleOrders.created', {}, 'Artikel bestelling succesvol aangemaakt!'), 'success');
         
         // Refresh display
         selectCustomer(currentCustomer.id);
@@ -5032,7 +5077,7 @@ function createArticleSale(event) {
         renderOrderItems();
         
         closeForm('articleSaleForm');
-        showToast('Nieuwe klant en artikel bestelling succesvol aangemaakt!', 'success');
+        showToast(translate('articleOrders.createdWithCustomer', {}, 'Nieuwe klant en artikel bestelling succesvol aangemaakt!'), 'success');
         
         // Select the new customer
         selectCustomer(newCustomer.id);
@@ -5128,7 +5173,7 @@ function saveDeliveryRemarks() {
     // Close modal
     closeEditRemarksModal();
     
-    showToast('Bezorgvoorkeuren opgeslagen!', 'success');
+    showToast(translate('delivery.remarksSaved', {}, 'Bezorgvoorkeuren opgeslagen!'), 'success');
 }
 
 // Close Edit Remarks Modal
@@ -5343,7 +5388,11 @@ function debugStartCall() {
     closeDebugModal();
     
     showToast(
-        `Call simulatie gestart: ${serviceNumber} (wachttijd: ${formatTime(waitTime)})`,
+        translate(
+            'calls.simulationStarted',
+            { serviceNumber, wait: formatTime(waitTime) },
+            `Call simulatie gestart: ${serviceNumber} (wachttijd: ${formatTime(waitTime)})`
+        ),
         'success'
     );
 }
@@ -5386,7 +5435,7 @@ function fullReset() {
         localStorage.clear();
         
         // Show toast
-        showToast('Lokale opslag gewist. Pagina wordt herladen...', 'info');
+        showToast(translate('storage.cleared', {}, 'Lokale opslag gewist. Pagina wordt herladen...'), 'info');
         
         // Reload after short delay
         setTimeout(() => {
