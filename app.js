@@ -894,6 +894,163 @@ function endSession() {
 }
 
 // ============================================================================
+// Birthday helpers (shared across NAW forms)
+// ============================================================================
+
+const BIRTHDAY_MONTHS = [
+    { value: '01', label: 'Januari' },
+    { value: '02', label: 'Februari' },
+    { value: '03', label: 'Maart' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'Mei' },
+    { value: '06', label: 'Juni' },
+    { value: '07', label: 'Juli' },
+    { value: '08', label: 'Augustus' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'Oktober' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+];
+
+function getBirthdayDayOptions() {
+    const placeholder = `<option value="">${translate('forms.birthdayDayPlaceholder', {}, 'Dag')}</option>`;
+    const options = Array.from({ length: 31 }, (_, i) => {
+        const day = String(i + 1).padStart(2, '0');
+        return `<option value="${day}">${i + 1}</option>`;
+    }).join('');
+    return `${placeholder}${options}`;
+}
+
+function getBirthdayMonthOptions() {
+    const placeholder = `<option value="">${translate('forms.birthdayMonthPlaceholder', {}, 'Maand')}</option>`;
+    const options = BIRTHDAY_MONTHS.map(month =>
+        `<option value="${month.value}">${month.label}</option>`
+    ).join('');
+    return `${placeholder}${options}`;
+}
+
+function getBirthdayYearOptions() {
+    const placeholder = `<option value="">${translate('forms.birthdayYearPlaceholder', {}, 'Jaar')}</option>`;
+    const currentYear = new Date().getFullYear();
+    const startYear = currentYear - 120;
+    const options = [];
+
+    for (let year = currentYear; year >= startYear; year--) {
+        options.push(`<option value="${year}">${year}</option>`);
+    }
+
+    return `${placeholder}${options.join('')}`;
+}
+
+function getBirthdayFieldsHtml(prefix) {
+    return `
+        <div class="form-group birthday-group">
+            <label>${translate('forms.birthdayLabel', {}, 'Geboortedatum*')}</label>
+            <div class="form-row birthday-row">
+                <select id="${prefix}BirthdayDay" required>
+                    ${getBirthdayDayOptions()}
+                </select>
+                <select id="${prefix}BirthdayMonth" required>
+                    ${getBirthdayMonthOptions()}
+                </select>
+                <select id="${prefix}BirthdayYear" required>
+                    ${getBirthdayYearOptions()}
+                </select>
+            </div>
+        </div>
+    `;
+}
+
+function renderBirthdayFields(containerId, prefix) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = getBirthdayFieldsHtml(prefix);
+    }
+}
+
+function buildBirthdayValue(prefix) {
+    const day = document.getElementById(`${prefix}BirthdayDay`)?.value;
+    const month = document.getElementById(`${prefix}BirthdayMonth`)?.value;
+    const year = document.getElementById(`${prefix}BirthdayYear`)?.value;
+
+    if (!day || !month || !year) {
+        return '';
+    }
+
+    const date = new Date(`${year}-${month}-${day}`);
+    const timestamp = date.getTime();
+    const isValidDate =
+        date instanceof Date &&
+        !Number.isNaN(timestamp) &&
+        date.getFullYear().toString() === year &&
+        String(date.getMonth() + 1).padStart(2, '0') === month &&
+        String(date.getDate()).padStart(2, '0') === day;
+
+    if (!isValidDate) {
+        return null;
+    }
+
+    return `${year}-${month}-${day}`;
+}
+
+function ensureBirthdayValue(prefix, required = false) {
+    const birthday = buildBirthdayValue(prefix);
+
+    if (!birthday && required) {
+        showToast(translate('forms.invalidBirthday', {}, 'Voer een geldige geboortedatum in'), 'error');
+        return null;
+    }
+
+    if (birthday === null) {
+        showToast(translate('forms.invalidBirthday', {}, 'Voer een geldige geboortedatum in'), 'error');
+        return null;
+    }
+
+    return birthday || '';
+}
+
+function setBirthdayFields(prefix, birthday) {
+    if (!birthday) {
+        const fields = ['Day', 'Month', 'Year'];
+        fields.forEach(field => {
+            const element = document.getElementById(`${prefix}Birthday${field}`);
+            if (element) {
+                element.value = '';
+            }
+        });
+        return;
+    }
+
+    const [year, month, day] = birthday.split('-');
+    const date = new Date(`${year}-${month}-${day}`);
+
+    const timestamp = date.getTime();
+    const isValid =
+        date instanceof Date &&
+        !Number.isNaN(timestamp) &&
+        date.getFullYear().toString() === year &&
+        String(date.getMonth() + 1).padStart(2, '0') === month &&
+        String(date.getDate()).padStart(2, '0') === day;
+
+    if (!isValid) {
+        return;
+    }
+
+    const mapping = {
+        Day: day,
+        Month: month,
+        Year: year
+    };
+
+    Object.entries(mapping).forEach(([field, value]) => {
+        const element = document.getElementById(`${prefix}Birthday${field}`);
+        if (element) {
+            element.value = value;
+        }
+    });
+}
+
+// ============================================================================
 // DRY: Reusable Customer Data Form Component
 // ============================================================================
 
@@ -931,7 +1088,9 @@ function renderCustomerForm(containerId, prefix, config = {}) {
             <input type="text" id="${prefix}MiddleName" placeholder="Tussenvoegsel">
             <input type="text" id="${prefix}LastName" placeholder="Achternaam*" required>
         </div>
-        
+
+        ${getBirthdayFieldsHtml(prefix)}
+
         <div class="form-row">
             <input type="text" id="${prefix}PostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
             <input type="text" id="${prefix}HouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required>
@@ -974,6 +1133,7 @@ function getCustomerFormData(prefix) {
         initials: document.getElementById(`${prefix}Initials`)?.value || '',
         middleName: document.getElementById(`${prefix}MiddleName`)?.value || '',
         lastName: document.getElementById(`${prefix}LastName`)?.value || '',
+        birthday: buildBirthdayValue(prefix) || '',
         postalCode: document.getElementById(`${prefix}PostalCode`)?.value || '',
         houseNumber: document.getElementById(`${prefix}HouseNumber`)?.value || '',
         houseExt: document.getElementById(`${prefix}HouseExt`)?.value || '',
@@ -997,6 +1157,7 @@ function setCustomerFormData(prefix, data) {
     if (data.initials) document.getElementById(`${prefix}Initials`).value = data.initials;
     if (data.middleName) document.getElementById(`${prefix}MiddleName`).value = data.middleName;
     if (data.lastName) document.getElementById(`${prefix}LastName`).value = data.lastName;
+    if (data.birthday) setBirthdayFields(prefix, data.birthday);
     if (data.postalCode) document.getElementById(`${prefix}PostalCode`).value = data.postalCode;
     if (data.houseNumber) document.getElementById(`${prefix}HouseNumber`).value = data.houseNumber;
     if (data.houseExt) document.getElementById(`${prefix}HouseExt`).value = data.houseExt;
@@ -2248,6 +2409,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTime();
     setInterval(updateTime, 1000);
     updateCustomerActionButtons();
+    renderBirthdayFields('subBirthdayContainer', 'sub');
+    renderBirthdayFields('articleBirthdayContainer', 'article');
+    renderBirthdayFields('editBirthdayContainer', 'edit');
     // Initialize Phase 3 components
     initDeliveryDatePicker();
     initArticleSearch();
@@ -2278,6 +2442,7 @@ function initializeData() {
                 firstName: 'J.',
                 middleName: 'de',
                 lastName: 'Vries',
+                birthday: '1972-03-14',
                 postalCode: '1012AB',
                 houseNumber: '42',
                 address: 'Damstraat 42',
@@ -2384,6 +2549,7 @@ function initializeData() {
                 firstName: 'M.',
                 middleName: '',
                 lastName: 'Jansen',
+                birthday: '1980-07-22',
                 postalCode: '3011BD',
                 houseNumber: '15',
                 address: 'Wijnhaven 15',
@@ -2442,6 +2608,7 @@ function initializeData() {
             },
             {
                 id: 3,
+                birthday: '1988-11-05',
                 firstName: 'Pieter',
                 lastName: 'Bakker',
                 postalCode: '2511VA',
@@ -2476,6 +2643,7 @@ function initializeData() {
                 firstName: 'H.',
                 middleName: 'van',
                 lastName: 'Dijk',
+                birthday: '1975-02-02',
                 postalCode: '3512JE',
                 houseNumber: '23',
                 address: 'Oudegracht 23',
@@ -3525,14 +3693,16 @@ function showNewSubscription() {
         // Extract street name from address (remove house number)
         const streetName = currentCustomer.address.replace(/\s+\d+.*$/, '');
         if (addressEl) addressEl.value = streetName;
-        
+
         if (cityEl) cityEl.value = currentCustomer.city;
         if (emailEl) emailEl.value = currentCustomer.email;
         if (phoneEl) phoneEl.value = currentCustomer.phone;
+        setBirthdayFields('sub', currentCustomer.birthday);
     } else {
         // Clear form if no customer selected (new customer)
         document.getElementById('subscriptionForm').reset();
         document.getElementById('subStartDate').value = today;
+        setBirthdayFields('sub');
     }
     
     document.getElementById('newSubscriptionForm').style.display = 'flex';
@@ -3563,6 +3733,11 @@ function createSubscription(event) {
     const lastName = document.getElementById('subLastName').value;
     const houseNumber = document.getElementById('subHouseNumber').value;
     const houseExt = document.getElementById('subHouseExt').value;
+    const birthday = ensureBirthdayValue('sub', true);
+
+    if (!birthday) {
+        return;
+    }
     const offerDetails = getWerfsleutelOfferDetails(werfsleutelState.selectedKey);
     
     // Construct full name
@@ -3574,6 +3749,7 @@ function createSubscription(event) {
         firstName: firstName,
         middleName: middleName,
         lastName: fullLastName,
+        birthday: birthday,
         postalCode: document.getElementById('subPostalCode').value.toUpperCase(),
         houseNumber: houseExt ? `${houseNumber}${houseExt}` : houseNumber,
         address: `${document.getElementById('subAddress').value} ${houseNumber}${houseExt}`,
@@ -3614,8 +3790,9 @@ function createSubscription(event) {
             status: 'active',
             lastEdition: new Date().toISOString().split('T')[0]
         };
-        
+
         currentCustomer.subscriptions.push(newSubscription);
+        currentCustomer.birthday = birthday;
         
         pushContactHistory(
             currentCustomer,
@@ -3638,6 +3815,7 @@ function createSubscription(event) {
             id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
             firstName: formData.firstName,
             lastName: formData.lastName,
+            birthday: formData.birthday,
             postalCode: formData.postalCode,
             houseNumber: formData.houseNumber,
             address: formData.address,
@@ -3704,7 +3882,8 @@ function editCustomer() {
     document.getElementById('editHouseExt').value = houseNumberMatch && houseNumberMatch[2] ? houseNumberMatch[2] : '';
     document.getElementById('editAddress').value = currentCustomer.address.replace(/ \d+.*$/, '');
     document.getElementById('editCity').value = currentCustomer.city;
-    
+    setBirthdayFields('edit', currentCustomer.birthday);
+
     // Contact info
     document.getElementById('editEmail').value = currentCustomer.email;
     document.getElementById('editPhone').value = currentCustomer.phone;
@@ -3727,14 +3906,18 @@ function saveCustomerEdit(event) {
 
     const customerId = parseInt(document.getElementById('editCustomerId').value);
     const customer = customers.find(c => c.id === customerId);
-    
+
     if (!customer) return;
+
+    const birthday = ensureBirthdayValue('edit', true);
+    if (!birthday) return;
 
     // Get form values
     customer.salutation = document.querySelector('input[name="editSalutation"]:checked').value;
     customer.firstName = document.getElementById('editInitials').value;
     customer.middleName = document.getElementById('editMiddleName').value;
     customer.lastName = document.getElementById('editLastName').value;
+    customer.birthday = birthday;
     customer.postalCode = document.getElementById('editPostalCode').value.toUpperCase();
     
     const houseNumber = document.getElementById('editHouseNumber').value;
@@ -4544,9 +4727,13 @@ function completeAllDeceasedActions() {
         // Only refund
         refundData = getRefundDataFromForm(1);
     }
-    
+
     // Validate transfer data if needed
     const transferActions = window.deceasedSubscriptionActions.filter(sa => sa.action === 'transfer');
+    if (transferActions.length > 0 && transferData === null) {
+        return;
+    }
+
     if (transferActions.length > 0 && transferData) {
         if (!validateTransferData(transferData)) {
             return; // Validation error already shown
@@ -4637,8 +4824,14 @@ function completeAllDeceasedActions() {
 function getTransferDataFromForm(formVersion) {
     const prefix = formVersion === 2 ? 'transfer2' : 'transfer';
     const data = getCustomerFormData(prefix);
+    const birthday = ensureBirthdayValue(prefix, true);
+
+    if (!birthday) {
+        return null;
+    }
+
     const sameAddress = document.getElementById(`${prefix}SameAddress`)?.checked || false;
-    
+
     // If same address is checked, override with current customer address
     if (sameAddress && currentCustomer) {
         data.postalCode = currentCustomer.postalCode;
@@ -4653,6 +4846,7 @@ function getTransferDataFromForm(formVersion) {
         firstName: data.initials,
         middleName: data.middleName,
         lastName: data.lastName,
+        birthday: birthday,
         email: data.email,
         phone: data.phone,
         postalCode: data.postalCode,
@@ -4673,7 +4867,7 @@ function getRefundDataFromForm(formVersion) {
 
 // Validate Transfer Data
 function validateTransferData(data) {
-    if (!data.firstName || !data.lastName || !data.email || !data.phone) {
+    if (!data.firstName || !data.lastName || !data.email || !data.phone || !data.birthday) {
         showToast(translate('forms.newSubscriberRequired', {}, 'Vul alle verplichte velden in voor de nieuwe abonnee'), 'error');
         return false;
     }
@@ -4883,11 +5077,12 @@ function showArticleSale() {
         // Extract street name from address (remove house number)
         const streetName = currentCustomer.address.replace(/\s+\d+.*$/, '');
         document.getElementById('articleAddress').value = streetName;
-        
+
         document.getElementById('articleCity').value = currentCustomer.city;
         document.getElementById('articleEmail').value = currentCustomer.email;
         document.getElementById('articlePhone').value = currentCustomer.phone;
-        
+        setBirthdayFields('article', currentCustomer.birthday);
+
         // Prefill delivery remarks from customer profile if available
         if (currentCustomer.deliveryRemarks && currentCustomer.deliveryRemarks.default) {
             document.getElementById('articleNotes').value = currentCustomer.deliveryRemarks.default;
@@ -4895,6 +5090,7 @@ function showArticleSale() {
     } else {
         // Clear form if no customer selected
         document.getElementById('articleForm').reset();
+        setBirthdayFields('article');
     }
     
     // Initialize delivery date picker with recommended date
@@ -4946,7 +5142,12 @@ function createArticleSale(event) {
     const lastName = document.getElementById('articleLastName').value;
     const houseNumber = document.getElementById('articleHouseNumber').value;
     const houseExt = document.getElementById('articleHouseExt').value;
-    
+    const birthday = ensureBirthdayValue('article', true);
+
+    if (!birthday) {
+        return;
+    }
+
     // Get order data
     const orderData = getOrderData();
     
@@ -4961,6 +5162,7 @@ function createArticleSale(event) {
         city: document.getElementById('articleCity').value,
         email: document.getElementById('articleEmail').value,
         phone: document.getElementById('articlePhone').value,
+        birthday: birthday,
         desiredDeliveryDate: document.getElementById('articleDesiredDelivery').value,
         paymentMethod: document.querySelector('input[name="articlePayment"]:checked').value,
         notes: document.getElementById('articleNotes').value
@@ -5020,6 +5222,7 @@ function createArticleSale(event) {
             currentCustomer.articles = [];
         }
         currentCustomer.articles.push(newOrder);
+        currentCustomer.birthday = birthday;
         
         pushContactHistory(
             currentCustomer,
@@ -5051,6 +5254,7 @@ function createArticleSale(event) {
             firstName: formData.firstName,
             middleName: formData.middleName,
             lastName: fullLastName,
+            birthday: formData.birthday,
             postalCode: formData.postalCode,
             houseNumber: formData.houseNumber,
             address: formData.address,
