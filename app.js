@@ -912,59 +912,44 @@ const BIRTHDAY_MONTHS = [
     { value: '12', label: 'December' }
 ];
 
-function getBirthdayDayOptions() {
-    const placeholder = `<option value="">${translate('forms.birthdayDayPlaceholder', {}, 'Dag')}</option>`;
-    const options = Array.from({ length: 31 }, (_, i) => {
-        const day = String(i + 1).padStart(2, '0');
-        return `<option value="${day}">${i + 1}</option>`;
-    }).join('');
-    return `${placeholder}${options}`;
-}
+function populateBirthdayFields(prefix) {
+    const daySelect = document.getElementById(`${prefix}BirthdayDay`);
+    const monthSelect = document.getElementById(`${prefix}BirthdayMonth`);
+    const yearSelect = document.getElementById(`${prefix}BirthdayYear`);
 
-function getBirthdayMonthOptions() {
-    const placeholder = `<option value="">${translate('forms.birthdayMonthPlaceholder', {}, 'Maand')}</option>`;
-    const options = BIRTHDAY_MONTHS.map(month =>
-        `<option value="${month.value}">${month.label}</option>`
-    ).join('');
-    return `${placeholder}${options}`;
-}
+    if (!daySelect || !monthSelect || !yearSelect) return;
 
-function getBirthdayYearOptions() {
-    const placeholder = `<option value="">${translate('forms.birthdayYearPlaceholder', {}, 'Jaar')}</option>`;
-    const currentYear = new Date().getFullYear();
-    const startYear = currentYear - 120;
-    const options = [];
-
-    for (let year = currentYear; year >= startYear; year--) {
-        options.push(`<option value="${year}">${year}</option>`);
+    // Populate Days
+    if (daySelect.options.length <= 1) {
+        for (let i = 1; i <= 31; i++) {
+            const day = String(i).padStart(2, '0');
+            const option = document.createElement('option');
+            option.value = day;
+            option.textContent = i;
+            daySelect.appendChild(option);
+        }
     }
 
-    return `${placeholder}${options.join('')}`;
-}
+    // Populate Months
+    if (monthSelect.options.length <= 1) {
+        BIRTHDAY_MONTHS.forEach(month => {
+            const option = document.createElement('option');
+            option.value = month.value;
+            option.textContent = month.label;
+            monthSelect.appendChild(option);
+        });
+    }
 
-function getBirthdayFieldsHtml(prefix) {
-    return `
-        <div class="form-group birthday-group">
-            <label>${translate('forms.birthdayLabel', {}, 'Geboortedatum*')}</label>
-            <div class="form-row birthday-row">
-                <select id="${prefix}BirthdayDay" required>
-                    ${getBirthdayDayOptions()}
-                </select>
-                <select id="${prefix}BirthdayMonth" required>
-                    ${getBirthdayMonthOptions()}
-                </select>
-                <select id="${prefix}BirthdayYear" required>
-                    ${getBirthdayYearOptions()}
-                </select>
-            </div>
-        </div>
-    `;
-}
-
-function renderBirthdayFields(containerId, prefix) {
-    const container = document.getElementById(containerId);
-    if (container) {
-        container.innerHTML = getBirthdayFieldsHtml(prefix);
+    // Populate Years
+    if (yearSelect.options.length <= 1) {
+        const currentYear = new Date().getFullYear();
+        const startYear = currentYear - 120;
+        for (let year = currentYear; year >= startYear; year--) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            yearSelect.appendChild(option);
+        }
     }
 }
 
@@ -973,21 +958,16 @@ function buildBirthdayValue(prefix) {
     const month = document.getElementById(`${prefix}BirthdayMonth`)?.value;
     const year = document.getElementById(`${prefix}BirthdayYear`)?.value;
 
-    if (!day || !month || !year) {
-        return '';
-    }
+    // If all empty, return empty string (valid, but empty)
+    if (!day && !month && !year) return '';
 
+    // If any is missing, return null (invalid)
+    if (!day || !month || !year) return null;
+
+    // Validate date
     const date = new Date(`${year}-${month}-${day}`);
-    const timestamp = date.getTime();
-    const isValidDate =
-        date instanceof Date &&
-        !Number.isNaN(timestamp) &&
-        date.getFullYear().toString() === year &&
-        String(date.getMonth() + 1).padStart(2, '0') === month &&
-        String(date.getDate()).padStart(2, '0') === day;
-
-    if (!isValidDate) {
-        return null;
+    if (isNaN(date.getTime()) || date.getDate() !== parseInt(day) || date.getMonth() + 1 !== parseInt(month)) {
+        return null; // Invalid date (e.g. 31 Feb)
     }
 
     return `${year}-${month}-${day}`;
@@ -996,12 +976,12 @@ function buildBirthdayValue(prefix) {
 function ensureBirthdayValue(prefix, required = false) {
     const birthday = buildBirthdayValue(prefix);
 
-    if (!birthday && required) {
-        showToast(translate('forms.invalidBirthday', {}, 'Voer een geldige geboortedatum in'), 'error');
-        return null;
+    if (birthday === null) {
+         showToast(translate('forms.invalidBirthday', {}, 'Voer een geldige geboortedatum in'), 'error');
+         return null;
     }
 
-    if (birthday === null) {
+    if (!birthday && required) {
         showToast(translate('forms.invalidBirthday', {}, 'Voer een geldige geboortedatum in'), 'error');
         return null;
     }
@@ -1010,44 +990,25 @@ function ensureBirthdayValue(prefix, required = false) {
 }
 
 function setBirthdayFields(prefix, birthday) {
+    const daySelect = document.getElementById(`${prefix}BirthdayDay`);
+    const monthSelect = document.getElementById(`${prefix}BirthdayMonth`);
+    const yearSelect = document.getElementById(`${prefix}BirthdayYear`);
+
+    if (!daySelect || !monthSelect || !yearSelect) return;
+
     if (!birthday) {
-        const fields = ['Day', 'Month', 'Year'];
-        fields.forEach(field => {
-            const element = document.getElementById(`${prefix}Birthday${field}`);
-            if (element) {
-                element.value = '';
-            }
-        });
+        daySelect.value = '';
+        monthSelect.value = '';
+        yearSelect.value = '';
         return;
     }
 
     const [year, month, day] = birthday.split('-');
-    const date = new Date(`${year}-${month}-${day}`);
-
-    const timestamp = date.getTime();
-    const isValid =
-        date instanceof Date &&
-        !Number.isNaN(timestamp) &&
-        date.getFullYear().toString() === year &&
-        String(date.getMonth() + 1).padStart(2, '0') === month &&
-        String(date.getDate()).padStart(2, '0') === day;
-
-    if (!isValid) {
-        return;
+    if (year && month && day) {
+        yearSelect.value = year;
+        monthSelect.value = month;
+        daySelect.value = day;
     }
-
-    const mapping = {
-        Day: day,
-        Month: month,
-        Year: year
-    };
-
-    Object.entries(mapping).forEach(([field, value]) => {
-        const element = document.getElementById(`${prefix}Birthday${field}`);
-        if (element) {
-            element.value = value;
-        }
-    });
 }
 
 // ============================================================================
@@ -1089,7 +1050,20 @@ function renderCustomerForm(containerId, prefix, config = {}) {
             <input type="text" id="${prefix}LastName" placeholder="Achternaam*" required>
         </div>
 
-        ${getBirthdayFieldsHtml(prefix)}
+        <div class="form-group">
+            <label>Geboortedatum</label>
+            <div class="form-row">
+                <select id="${prefix}BirthdayDay">
+                    <option value="">Dag</option>
+                </select>
+                <select id="${prefix}BirthdayMonth">
+                    <option value="">Maand</option>
+                </select>
+                <select id="${prefix}BirthdayYear">
+                    <option value="">Jaar</option>
+                </select>
+            </div>
+        </div>
 
         <div class="form-row">
             <input type="text" id="${prefix}PostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
@@ -1120,6 +1094,7 @@ function renderCustomerForm(containerId, prefix, config = {}) {
     `;
 
     document.getElementById(containerId).innerHTML = html;
+    populateBirthdayFields(prefix);
 }
 
 /**
@@ -2409,9 +2384,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTime();
     setInterval(updateTime, 1000);
     updateCustomerActionButtons();
-    renderBirthdayFields('subBirthdayContainer', 'sub');
-    renderBirthdayFields('articleBirthdayContainer', 'article');
-    renderBirthdayFields('editBirthdayContainer', 'edit');
+    populateBirthdayFields('sub');
+    populateBirthdayFields('article');
+    populateBirthdayFields('edit');
     // Initialize Phase 3 components
     initDeliveryDatePicker();
     initArticleSearch();
@@ -3733,9 +3708,9 @@ function createSubscription(event) {
     const lastName = document.getElementById('subLastName').value;
     const houseNumber = document.getElementById('subHouseNumber').value;
     const houseExt = document.getElementById('subHouseExt').value;
-    const birthday = ensureBirthdayValue('sub', true);
+    const birthday = ensureBirthdayValue('sub', false);
 
-    if (!birthday) {
+    if (birthday === null) {
         return;
     }
     const offerDetails = getWerfsleutelOfferDetails(werfsleutelState.selectedKey);
@@ -3909,8 +3884,8 @@ function saveCustomerEdit(event) {
 
     if (!customer) return;
 
-    const birthday = ensureBirthdayValue('edit', true);
-    if (!birthday) return;
+    const birthday = ensureBirthdayValue('edit', false);
+    if (birthday === null) return;
 
     // Get form values
     customer.salutation = document.querySelector('input[name="editSalutation"]:checked').value;
@@ -4824,9 +4799,9 @@ function completeAllDeceasedActions() {
 function getTransferDataFromForm(formVersion) {
     const prefix = formVersion === 2 ? 'transfer2' : 'transfer';
     const data = getCustomerFormData(prefix);
-    const birthday = ensureBirthdayValue(prefix, true);
+    const birthday = ensureBirthdayValue(prefix, false);
 
-    if (!birthday) {
+    if (birthday === null) {
         return null;
     }
 
@@ -5142,9 +5117,9 @@ function createArticleSale(event) {
     const lastName = document.getElementById('articleLastName').value;
     const houseNumber = document.getElementById('articleHouseNumber').value;
     const houseExt = document.getElementById('articleHouseExt').value;
-    const birthday = ensureBirthdayValue('article', true);
+    const birthday = ensureBirthdayValue('article', false);
 
-    if (!birthday) {
+    if (birthday === null) {
         return;
     }
 

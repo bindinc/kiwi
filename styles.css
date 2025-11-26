@@ -2335,6 +2335,7 @@ select option {
     border-radius: var(--radius-sm);
     box-sizing: border-box;
     font-size: 0.95rem;
+    background-color: var(--bg-secondary);
 }
 
 .onepager-container .form-row input::placeholder {
