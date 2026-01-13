@@ -4,6 +4,10 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Features
 
+## Demo secret panel
+
+- press ']' 4 times when running the demo in the browser to open the secret configuration panel to mimic call queues etc.
+
 ### Customer Search
 - Search by first and last name
 - Search by postal code and house number
