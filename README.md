@@ -4,7 +4,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Features
 
-## Demo secret panel
+### Demo secret panel
 
 - press ']' 4 times when running the demo in the browser to open the secret configuration panel to mimic call queues etc.
 
