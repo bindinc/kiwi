@@ -5424,27 +5424,40 @@ function showToast(message, type = 'success') {
 }
 
 // Debug Mode - Secret Key Sequence
+const isDebugModalEnabled = () => {
+    const flags = window.featureFlags;
+    if (!flags || typeof flags.isEnabled !== 'function') {
+        return true;
+    }
+
+    return flags.isEnabled('debugModal');
+};
+
 let debugKeySequence = [];
 const DEBUG_KEY = ']';
 const DEBUG_KEY_COUNT = 4;
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+    const debugFeatureEnabled = isDebugModalEnabled();
+
     // Debug mode activation - press ']' 4 times
-    if (e.key === DEBUG_KEY) {
-        debugKeySequence.push(Date.now());
-        
-        // Keep only recent keypresses (within 10 seconds)
-        debugKeySequence = debugKeySequence.filter(time => Date.now() - time < 10000);
-        
-        // Check if we have 4 presses
-        if (debugKeySequence.length >= DEBUG_KEY_COUNT) {
-            openDebugModal();
-            debugKeySequence = []; // Reset sequence
+    if (debugFeatureEnabled) {
+        if (e.key === DEBUG_KEY) {
+            debugKeySequence.push(Date.now());
+            
+            // Keep only recent keypresses (within 10 seconds)
+            debugKeySequence = debugKeySequence.filter(time => Date.now() - time < 10000);
+            
+            // Check if we have 4 presses
+            if (debugKeySequence.length >= DEBUG_KEY_COUNT) {
+                openDebugModal();
+                debugKeySequence = []; // Reset sequence
+            }
+        } else {
+            // Reset sequence on any other key
+            debugKeySequence = [];
         }
-    } else {
-        // Reset sequence on any other key
-        debugKeySequence = [];
     }
     
     // Escape to close forms and modals
@@ -5590,7 +5603,15 @@ function debugEndCall() {
 
 // Debug Modal Functions
 function openDebugModal() {
+    if (!isDebugModalEnabled()) {
+        return;
+    }
+
     const modal = document.getElementById('debugModal');
+    if (!modal) {
+        return;
+    }
+
     modal.classList.add('show');
     
     // Update debug end call button visibility

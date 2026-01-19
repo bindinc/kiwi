@@ -125,6 +125,15 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Tablet: 768px - 1200px (adjusted layout)
 - Mobile: < 768px (single stacked column)
 
+## Branching & Collaboration
+
+- Keep `main` green; work in short-lived branches and merge through PRs.
+- One branch per developer/agent, e.g. `dev/bob-orders`, `agent/cloud-auth`.
+- Prefer vertical slices: a small, end-to-end change you can demo in 2-3 steps.
+- Use feature flags to land partial work safely when needed.
+- Optional: use `git worktree` for parallel local checkouts without switching branches.
+- Details and examples live in `docs/BRANCHING.md`.
+
 ## Usage Scenarios
 
 ### Scenario 1: New Customer Calls
@@ -199,5 +208,5 @@ For questions or suggestions, contact the development team.
 
 ---
 
-**Last updated**: October 2025
-**Version**: 1.0.0 (PoC)
+**Last updated**: november 2025
+**Version**: 0.0.0 (PoC)
