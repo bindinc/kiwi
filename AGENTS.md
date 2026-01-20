@@ -34,6 +34,3 @@ if isValid && isAllowed && isSecure {
 - Use self-descriptive values, avoid custom mappings that require memorization.
 - Don't abuse DRY, a little duplication is better than unnecessary dependencies.
 - Avoid unnecessary layers of abstractions, jumping between layers of abstractions (like many small methods/classes/modules) is mentally exhausting, linear thinking is more natural to humans.
-
-## Build, Test, and Development Commands
-This project is front-end only, so a static server is enough for local work. Run `python3 -m http.server 8123` from the repo root to preview the app, or use `npx serve .` if you prefer a Node-based workflow. When adding bundling or transpilation later, expose commands through `package.json` scripts (for example, `npm run dev` or `npm run build`) so other agents inherit the same entry points.

@@ -1,6 +1,6 @@
 ## Voorbeeld Werfsleutels & Barcodes
 
-De UI leest automatisch alle werfsleutels uit `src/stores/onepager_werfsleutels.md`. Iedere rij in de onepager heeft een `offerId`; daar bouwen we een barcode van met het patroon `872` + `offerId` (laatste 10 cijfers, links opgevuld met nullen). Dankzij dit patroon komen barcodes altijd overeen met de brondata en hoeven we geen aparte overrides meer te beheren.
+De UI leest automatisch alle werfsleutels uit `app/static/assets/onepager_werfsleutels.md`. Iedere rij in de onepager heeft een `offerId`; daar bouwen we een barcode van met het patroon `872` + `offerId` (laatste 10 cijfers, links opgevuld met nullen). Dankzij dit patroon komen barcodes altijd overeen met de brondata en hoeven we geen aparte overrides meer te beheren.
 
 | Salescode | OfferId | Barcode        | Omschrijving                         | Beschikbare kanalen        |
 |-----------|---------|----------------|--------------------------------------|---------------------------|
