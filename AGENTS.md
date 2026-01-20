@@ -34,3 +34,55 @@ if isValid && isAllowed && isSecure {
 - Use self-descriptive values, avoid custom mappings that require memorization.
 - Don't abuse DRY, a little duplication is better than unnecessary dependencies.
 - Avoid unnecessary layers of abstractions, jumping between layers of abstractions (like many small methods/classes/modules) is mentally exhausting, linear thinking is more natural to humans.
+
+## Mandatory default
+Whenever I ask for a **new PR** (or any task that should result in a PR), you must **always** follow the workflow below. Deviating from this process is not allowed.
+
+## Step 1 — Initialize PR + worktree (mandatory)
+- Always use the script:
+
+  `scripts/new_pr_worktree.sh`
+
+- Pass the PR title as input to the script.
+- The default base branch is `main`, unless I explicitly specify otherwise.
+- The script will:
+  - generate a `codex/...` kebab-case branch name,
+  - create a **dedicated git worktree** under `../_worktrees/`,
+  - create a **GitHub PR** immediately if possible,
+  - and place you inside the correct worktree.
+
+👉 **Never work in the main checkout.**  
+👉 **Never work without a worktree.**
+
+## Step 2 — Perform the work
+- All code changes, tests, and commits must be done **exclusively** inside the created worktree.
+- Create small, logical commits with clear commit messages.
+- Run the relevant tests and/or linters before reporting completion.
+
+## Step 3 — Push & finalize the PR
+- Ensure the branch is pushed to `origin`.
+- If the PR does not yet exist, create it using `gh pr create`.
+- Update the PR description with:
+  - what was done,
+  - why it was done,
+  - which tests were run and their results.
+
+## Reporting requirements (always include)
+When reporting completion, always explicitly include:
+- Worktree path
+- Branch name
+- Summary of changes (bullet points)
+- Test status
+- PR link
+
+## Parallel work
+- Each new PR must use **its own worktree and branch**.
+- Multiple PRs may run in parallel, but **never** in the same worktree.
+
+## Cleanup
+- Remove worktrees **only** when I explicitly ask you to do so.
+
+---
+
+**Summary for you (Codex):**  
+> New PR = run `new_pr_worktree.sh` first, only then start coding.
