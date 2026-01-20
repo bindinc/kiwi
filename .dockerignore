@@ -1,0 +1,7 @@
+.git
+.github
+docs
+plan
+infra/k8s
+infra/helm
+app/**/*.test.js

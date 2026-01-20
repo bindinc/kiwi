@@ -57,17 +57,25 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Installation & Usage
 
-### Option 1: Open directly
-1. Open `index.html` in a modern browser
-2. The interface works immediately with demo data
+- Render `app/templates/base/index.html` through Flask (Jinja2) so `url_for('static', ...)` resolves.
+- Static assets live under `app/static/assets`.
 
-### Option 2: With Live Server (recommended)
-1. Install a local web server:
-   - **VS Code**: Install the "Live Server" extension
-   - **Python**: `python -m http.server 8000`
-   - **Node.js**: `npx serve`
+## Repository Layout
 
-2. Open the application via localhost
+- `app/` is the Flask app root (blueprints, services, templates, static assets).
+- `infra/k8s/` holds Kustomize base + overlays for local and prod.
+- `infra/helm/` stores Helm values for shared add-ons.
+- `infra/docker/` contains Dockerfiles for the base and app images.
+- `scripts/` provides build and deploy helpers.
+
+## Container & Kubernetes
+
+- Build the base image: `scripts/build-base-image.sh`
+- Build the app image: `scripts/build-image.sh`
+- Deploy the app: `scripts/deploy-app.sh local|prod`
+- Deploy add-ons: `scripts/deploy-addons.sh local|prod`
+- Update `infra/k8s/overlays/*` if your registry or image names differ.
+- Override `BASE_IMAGE`, `IMAGE_NAME`, and `IMAGE_TAG` if you use different tags.
 
 ## Data Storage
 
