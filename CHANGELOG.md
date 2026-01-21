@@ -8,5 +8,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added UV support
 
 ### Changed
+- Update deploy-addons script to install Gateway API, NGINX Gateway Fabric, and cert-manager CRDs
 
 ### Fixed
