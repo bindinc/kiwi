@@ -86,5 +86,9 @@ helm upgrade --install cert-manager jetstack/cert-manager \
   -f "infra/helm/cert-manager/values-${ENVIRONMENT}.yaml" \
   --version "${cert_manager_chart_version}" \
   -n cert-manager --create-namespace \
-  --set installCRDs=true \
+  --wait --timeout 120s \
+  "${HELM_CONTEXT_ARGS[@]}"
+
+helm upgrade --install certmanager-issuer ./infra/helm/cert-manager/issuer-chart \
+  -n cert-manager \
   "${HELM_CONTEXT_ARGS[@]}"
