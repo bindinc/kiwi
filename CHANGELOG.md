@@ -14,5 +14,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Update deploy-addons script to install Gateway API, NGINX Gateway Fabric, and cert-manager CRDs
 - Pin the NGINX Gateway Fabric chart version and require the --confirm-prod flag for production installs
 - Remove ingress-nginx chart artifacts and references in deploy config
+- Configure cert-manager values for CRDs, add Gateway API ACME issuers, and install the issuer chart during addons
 
 ### Fixed
