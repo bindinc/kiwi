@@ -51,8 +51,9 @@ Whenever I ask for a **new PR** (or any task that should result in a PR), you mu
   - create a **GitHub PR** immediately if possible,
   - and place you inside the correct worktree.
 
-👉 **Never work in the main checkout.**  
-👉 **Never work without a worktree.**
+**Always use english for titles and text.**
+**Never work in the main checkout.**  
+**Never work without a worktree.**
 
 ## Step 2 — Perform the work
 - All code changes, tests, and commits must be done **exclusively** inside the created worktree.
