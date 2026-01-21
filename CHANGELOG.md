@@ -9,6 +9,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Update deploy-addons script to install Gateway API, NGINX Gateway Fabric, and cert-manager CRDs
-- Pin the NGINX Gateway Fabric chart version and require prod confirmation in deploy-addons
+- Pin the NGINX Gateway Fabric chart version and require the --confirm-prod flag for production installs
 
 ### Fixed

@@ -1,19 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENVIRONMENT=${1:-local}
+ENVIRONMENT=local
+CONFIRM_PROD=false
 NGINX_GATEWAY_FABRIC_VERSION=${NGINX_GATEWAY_FABRIC_VERSION:-2.3.0}
 
-case "${ENVIRONMENT}" in
-  local|prod) ;;
-  *)
-    echo "Usage: $0 [local|prod]"
-    exit 1
-    ;;
-esac
+usage() {
+  echo "Usage: $0 [local|prod] [--confirm-prod]"
+}
 
-confirm_prod=${CONFIRM_PROD:-}
-if [[ "${ENVIRONMENT}" == "prod" && "${confirm_prod}" != "prod" ]]; then
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    local|prod)
+      ENVIRONMENT="$1"
+      shift
+      ;;
+    --confirm-prod)
+      CONFIRM_PROD=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+is_prod=false
+if [[ "${ENVIRONMENT}" == "prod" ]]; then
+  is_prod=true
+fi
+
+if [[ "${is_prod}" == "true" && "${CONFIRM_PROD}" != "true" ]]; then
   if [[ -t 0 ]]; then
     read -r -p "Type 'prod' to install addons on production: " confirm_input
     if [[ "${confirm_input}" != "prod" ]]; then
@@ -22,7 +44,7 @@ if [[ "${ENVIRONMENT}" == "prod" && "${confirm_prod}" != "prod" ]]; then
     fi
   else
     echo "Refusing to install addons on production without confirmation."
-    echo "Re-run with CONFIRM_PROD=prod to acknowledge."
+    echo "Re-run with --confirm-prod to acknowledge."
     exit 1
   fi
 fi
