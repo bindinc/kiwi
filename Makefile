@@ -24,13 +24,15 @@ IMAGE_TAG ?= $(if $(filter prod,$(ENV)),$(PROD_IMAGE_TAG),$(LOCAL_IMAGE_TAG))
 LOCAL_IMAGE_STRATEGY ?= kind
 KIND_CLUSTER_NAME ?= kind
 KUBE_CONTEXT ?=
+KUBE_CONTEXT_LOCAL ?= kind-kind
+KUBE_CONTEXT_PROD ?= bink8s-prod
 
 LOAD_TARGET :=
 ifneq (,$(filter local,$(ENV)))
   LOAD_TARGET := load-local
 endif
 
-.PHONY: help build build-base build-app load-local deploy addons print-config local prod
+.PHONY: help build build-base build-app load-local deploy addons print-config verify-context local prod
 
 help:
 	@echo "Usage: make build local|prod"
@@ -39,6 +41,7 @@ help:
 	@echo ""
 	@echo "Common vars:"
 	@echo "  KUBE_CONTEXT=<context> LOCAL_IMAGE_STRATEGY=kind|registry KIND_CLUSTER_NAME=kind"
+	@echo "  KUBE_CONTEXT_LOCAL=... KUBE_CONTEXT_PROD=..."
 	@echo "  REGISTRY_HOST=... REGISTRY_NAMESPACE=..."
 
 print-config:
@@ -50,8 +53,31 @@ print-config:
 	@echo "LOCAL_IMAGE_STRATEGY=$(LOCAL_IMAGE_STRATEGY)"
 	@echo "KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME)"
 	@echo "KUBE_CONTEXT=$(KUBE_CONTEXT)"
+	@echo "KUBE_CONTEXT_LOCAL=$(KUBE_CONTEXT_LOCAL)"
+	@echo "KUBE_CONTEXT_PROD=$(KUBE_CONTEXT_PROD)"
 
-build: build-base build-app $(LOAD_TARGET)
+verify-context:
+	@command -v kubectl >/dev/null 2>&1 || { echo "kubectl not found in PATH."; exit 1; }
+	@expected="$(if $(filter prod,$(ENV)),$(KUBE_CONTEXT_PROD),$(KUBE_CONTEXT_LOCAL))"; \
+	effective="$(KUBE_CONTEXT)"; \
+	if [ -z "$$expected" ]; then \
+		echo "Expected context is empty. Set KUBE_CONTEXT_LOCAL or KUBE_CONTEXT_PROD."; \
+		exit 1; \
+	fi; \
+	if [ -z "$$effective" ]; then \
+		effective="$$(kubectl config current-context 2>/dev/null)"; \
+	fi; \
+	if [ -z "$$effective" ]; then \
+		echo "kubectl has no current context. Set KUBE_CONTEXT or switch context."; \
+		exit 1; \
+	fi; \
+	if [ "$$effective" != "$$expected" ]; then \
+		echo "Refusing to proceed: context is '$$effective' but expected '$$expected' for ENV=$(ENV)."; \
+		echo "Set KUBE_CONTEXT_LOCAL/KUBE_CONTEXT_PROD or switch context."; \
+		exit 1; \
+	fi
+
+build: verify-context build-base build-app $(LOAD_TARGET)
 
 build-base:
 	IMAGE_NAME="$(BASE_IMAGE_REPO)" IMAGE_TAG="$(BASE_IMAGE_TAG)" \
@@ -73,10 +99,10 @@ load-local:
 		exit 1; \
 	fi
 
-deploy:
+deploy: verify-context
 	KUBE_CONTEXT="$(KUBE_CONTEXT)" scripts/deploy-app.sh "$(ENV)"
 
-addons:
+addons: verify-context
 	KUBE_CONTEXT="$(KUBE_CONTEXT)" scripts/deploy-addons.sh "$(ENV)"
 
 local prod:
