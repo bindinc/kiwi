@@ -30,14 +30,14 @@ replacements:
     targets:
       - select:
           kind: Deployment
-          name: kiwi-portal
+          name: kiwi
         fieldPaths:
           - metadata.namespace
         options:
           create: true
       - select:
           kind: Service
-          name: kiwi-portal
+          name: kiwi
         fieldPaths:
           - metadata.namespace
         options:
@@ -56,12 +56,12 @@ replacements:
     targets:
       - select:
           kind: Deployment
-          name: kiwi-portal
+          name: kiwi
         fieldPaths:
           - spec.template.spec.containers.0.ports.0.containerPort
       - select:
           kind: Service
-          name: kiwi-portal
+          name: kiwi
         fieldPaths:
           - spec.ports.0.targetPort
   - source:
@@ -71,6 +71,6 @@ replacements:
     targets:
       - select:
           kind: Service
-          name: kiwi-portal
+          name: kiwi
         fieldPaths:
           - spec.ports.0.port

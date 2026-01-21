@@ -22,7 +22,7 @@ endif
 
 APP_IMAGE ?= $(if $(filter prod,$(ENV)),$(APP_IMAGE_PROD),$(APP_IMAGE_LOCAL))
 
-LOCAL_IMAGE_STRATEGY ?= kind
+LOCAL_IMAGE_STRATEGY ?= registry
 KIND_CLUSTER_NAME ?= kind
 KUBE_CONTEXT ?=
 KUBE_CONTEXT_LOCAL ?= docker-desktop

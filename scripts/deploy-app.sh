@@ -30,4 +30,4 @@ if [[ -z "${namespace}" ]]; then
 fi
 
 "${KUBECTL[@]}" apply -k "infra/k8s/overlays/${ENVIRONMENT}"
-"${KUBECTL[@]}" rollout status deployment/kiwi-portal -n "${namespace}" --timeout=5m
+"${KUBECTL[@]}" rollout status deployment/kiwi -n "${namespace}" --timeout=5m
