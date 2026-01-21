@@ -24,6 +24,10 @@ replacements:
           kind: Namespace
         fieldPaths:
           - metadata.name
+  - source:
+      kind: Namespace
+      fieldPath: metadata.name
+    targets:
       - select:
           kind: Deployment
           name: kiwi-portal
