@@ -74,7 +74,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Deploy the app: `make deploy local` or `make deploy prod`
 - Deploy add-ons: `make addons local` or `make addons prod`
 - Shared deploy config lives in `infra/k8s/base/deploy.env` (registry, tags, namespace, ports) and is used by scripts + kustomize.
-- Add-ons pin Helm chart versions from `infra/k8s/base/deploy.env` (`INGRESS_NGINX_CHART_VERSION`, `CERT_MANAGER_CHART_VERSION`).
+- Add-ons pin Helm chart versions from `infra/k8s/base/deploy.env` (`CERT_MANAGER_CHART_VERSION`).
 - Optional: `KUBE_CONTEXT=...` to target a specific cluster; `LOCAL_IMAGE_STRATEGY=kind|registry` for local image loading.
 - Direct scripts remain available: `scripts/build-base-image.sh`, `scripts/build-image.sh`, `scripts/deploy-app.sh`, `scripts/deploy-addons.sh`.
 - Update `infra/k8s/base/deploy.env` if your registry, tags, namespace, or ports differ.
