@@ -70,7 +70,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Container & Kubernetes
 
-- Build images: `make build local` or `make build prod` (checks kubectl context; set `KUBE_CONTEXT_LOCAL`/`KUBE_CONTEXT_PROD`, defaults: `kind-kind` / `bink8s-prod`)
+- Build images: `make build local` or `make build prod` (checks kubectl context; set `KUBE_CONTEXT_LOCAL`/`KUBE_CONTEXT_PROD`, defaults: `docker-desktop` / `bink8s`)
 - Deploy the app: `make deploy local` or `make deploy prod`
 - Deploy add-ons: `make addons local` or `make addons prod`
 - Optional: `KUBE_CONTEXT=...` to target a specific cluster; `LOCAL_IMAGE_STRATEGY=kind|registry` for local image loading.

@@ -24,8 +24,8 @@ IMAGE_TAG ?= $(if $(filter prod,$(ENV)),$(PROD_IMAGE_TAG),$(LOCAL_IMAGE_TAG))
 LOCAL_IMAGE_STRATEGY ?= kind
 KIND_CLUSTER_NAME ?= kind
 KUBE_CONTEXT ?=
-KUBE_CONTEXT_LOCAL ?= kind-kind
-KUBE_CONTEXT_PROD ?= bink8s-prod
+KUBE_CONTEXT_LOCAL ?= docker-desktop
+KUBE_CONTEXT_PROD ?= bink8s
 
 LOAD_TARGET :=
 ifneq (,$(filter local,$(ENV)))
