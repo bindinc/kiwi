@@ -3,10 +3,15 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
 ENV ?= local
-ifneq (,$(filter local,$(MAKECMDGOALS)))
+HAS_LOCAL := $(filter local,$(MAKECMDGOALS))
+HAS_PROD := $(filter prod,$(MAKECMDGOALS))
+ifneq (,$(HAS_LOCAL))
+  ifneq (,$(HAS_PROD))
+    $(error Specify only one environment: local or prod)
+  endif
   ENV := local
 endif
-ifneq (,$(filter prod,$(MAKECMDGOALS)))
+ifneq (,$(HAS_PROD))
   ENV := prod
 endif
 
@@ -22,6 +27,7 @@ KIND_CLUSTER_NAME ?= kind
 KUBE_CONTEXT ?=
 KUBE_CONTEXT_LOCAL ?= docker-desktop
 KUBE_CONTEXT_PROD ?= bink8s
+EXPECTED_CONTEXT_VAR := $(if $(filter prod,$(ENV)),KUBE_CONTEXT_PROD,KUBE_CONTEXT_LOCAL)
 
 LOAD_TARGET :=
 ifneq (,$(filter local,$(ENV)))
@@ -56,13 +62,15 @@ print-config:
 	@echo "KUBE_CONTEXT=$(KUBE_CONTEXT)"
 	@echo "KUBE_CONTEXT_LOCAL=$(KUBE_CONTEXT_LOCAL)"
 	@echo "KUBE_CONTEXT_PROD=$(KUBE_CONTEXT_PROD)"
+	@echo "INGRESS_NGINX_CHART_VERSION=$(INGRESS_NGINX_CHART_VERSION)"
+	@echo "CERT_MANAGER_CHART_VERSION=$(CERT_MANAGER_CHART_VERSION)"
 
 verify-context:
 	@command -v kubectl >/dev/null 2>&1 || { echo "kubectl not found in PATH."; exit 1; }
 	@expected="$(if $(filter prod,$(ENV)),$(KUBE_CONTEXT_PROD),$(KUBE_CONTEXT_LOCAL))"; \
 	effective="$(KUBE_CONTEXT)"; \
 	if [ -z "$$expected" ]; then \
-		echo "Expected context is empty. Set KUBE_CONTEXT_LOCAL or KUBE_CONTEXT_PROD."; \
+		echo "Expected context is empty. Set $(EXPECTED_CONTEXT_VAR) or KUBE_CONTEXT."; \
 		exit 1; \
 	fi; \
 	if [ -z "$$effective" ]; then \
@@ -74,7 +82,7 @@ verify-context:
 	fi; \
 	if [ "$$effective" != "$$expected" ]; then \
 		echo "Refusing to proceed: context is '$$effective' but expected '$$expected' for ENV=$(ENV)."; \
-		echo "Set KUBE_CONTEXT_LOCAL/KUBE_CONTEXT_PROD or switch context."; \
+		echo "Set $(EXPECTED_CONTEXT_VAR) or KUBE_CONTEXT, or switch context."; \
 		exit 1; \
 	fi
 
@@ -86,7 +94,7 @@ build-base:
 	scripts/build-base-image.sh
 
 build-app:
-	APP_IMAGE="$(APP_IMAGE)" \
+	ENVIRONMENT="$(ENV)" \
 	BASE_IMAGE="$(BASE_IMAGE)" \
 	scripts/build-image.sh
 
