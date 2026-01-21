@@ -52,6 +52,7 @@ Whenever I ask for a **new PR** (or any task that should result in a PR), you mu
   - and place you inside the correct worktree.
 
 **Always use english for titles and text.**
+**We require one CHANGELOG.md entry per PR.**
 **Never work in the main checkout.**  
 **Never work without a worktree.**
 
@@ -62,6 +63,7 @@ Whenever I ask for a **new PR** (or any task that should result in a PR), you mu
 
 ## Step 3 — Push & finalize the PR
 - Ensure the branch is pushed to `origin`.
+- Ensure the CHANGELOG.md is up to date with the changes we made under 'unreleased'
 - If the PR does not yet exist, create it using `gh pr create`.
 - Update the PR description with:
   - what was done,
