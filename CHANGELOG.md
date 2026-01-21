@@ -13,5 +13,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - pin add-on Helm chart versions via `infra/k8s/base/deploy.env`
 - Update deploy-addons script to install Gateway API, NGINX Gateway Fabric, and cert-manager CRDs
 - Pin the NGINX Gateway Fabric chart version and require the --confirm-prod flag for production installs
+- Remove ingress-nginx chart artifacts and references in deploy config
 
 ### Fixed
