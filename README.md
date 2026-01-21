@@ -70,12 +70,12 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Container & Kubernetes
 
-- Build the base image: `scripts/build-base-image.sh`
-- Build the app image: `scripts/build-image.sh`
-- Deploy the app: `scripts/deploy-app.sh local|prod`
-- Deploy add-ons: `scripts/deploy-addons.sh local|prod`
+- Build images: `make build local` or `make build prod`
+- Deploy the app: `make deploy local` or `make deploy prod`
+- Deploy add-ons: `make addons local` or `make addons prod`
+- Optional: `KUBE_CONTEXT=...` to target a specific cluster; `LOCAL_IMAGE_STRATEGY=kind|registry` for local image loading.
+- Direct scripts remain available: `scripts/build-base-image.sh`, `scripts/build-image.sh`, `scripts/deploy-app.sh`, `scripts/deploy-addons.sh`.
 - Update `infra/k8s/overlays/*` if your registry or image names differ.
-- Override `BASE_IMAGE`, `IMAGE_NAME`, and `IMAGE_TAG` if you use different tags.
 
 ## Data Storage
 

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ENVIRONMENT=${1:-local}
+KUBE_CONTEXT=${KUBE_CONTEXT:-}
 
 case "${ENVIRONMENT}" in
   local|prod) ;;
@@ -11,5 +12,10 @@ case "${ENVIRONMENT}" in
     ;;
 esac
 
-kubectl apply -k "infra/k8s/overlays/${ENVIRONMENT}"
-kubectl rollout status deployment/kiwi-portal -n kiwi --timeout=5m
+KUBECTL=(kubectl)
+if [[ -n "${KUBE_CONTEXT}" ]]; then
+  KUBECTL+=(--context "${KUBE_CONTEXT}")
+fi
+
+"${KUBECTL[@]}" apply -k "infra/k8s/overlays/${ENVIRONMENT}"
+"${KUBECTL[@]}" rollout status deployment/kiwi-portal -n kiwi --timeout=5m
