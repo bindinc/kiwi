@@ -10,7 +10,7 @@ ifneq (,$(filter prod,$(MAKECMDGOALS)))
   ENV := prod
 endif
 
-ENV_FILE ?= infra/deploy.env
+ENV_FILE ?= infra/k8s/base/deploy.env
 ifneq ("$(wildcard $(ENV_FILE))","")
   include $(ENV_FILE)
 endif
@@ -38,7 +38,7 @@ help:
 	@echo "Common vars:"
 	@echo "  KUBE_CONTEXT=<context> LOCAL_IMAGE_STRATEGY=kind|registry KIND_CLUSTER_NAME=kind"
 	@echo "  KUBE_CONTEXT_LOCAL=... KUBE_CONTEXT_PROD=..."
-	@echo "  ENV_FILE=infra/deploy.env APP_IMAGE=... BASE_IMAGE=..."
+	@echo "  ENV_FILE=infra/k8s/base/deploy.env APP_IMAGE=... BASE_IMAGE=..."
 
 print-config:
 	@echo "ENV=$(ENV)"

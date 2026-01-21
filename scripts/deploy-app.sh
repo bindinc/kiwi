@@ -3,7 +3,7 @@ set -euo pipefail
 
 ENVIRONMENT=${1:-local}
 KUBE_CONTEXT=${KUBE_CONTEXT:-}
-ENV_FILE=${ENV_FILE:-infra/deploy.env}
+ENV_FILE=${ENV_FILE:-infra/k8s/base/deploy.env}
 
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck source=/dev/null
@@ -25,7 +25,7 @@ fi
 
 namespace="${NAMESPACE:-}"
 if [[ -z "${namespace}" ]]; then
-  echo "NAMESPACE is not set. Define NAMESPACE in infra/deploy.env."
+  echo "NAMESPACE is not set. Define NAMESPACE in infra/k8s/base/deploy.env."
   exit 1
 fi
 

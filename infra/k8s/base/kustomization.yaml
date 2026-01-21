@@ -12,7 +12,7 @@ generatorOptions:
 configMapGenerator:
   - name: deploy-config
     envs:
-      - ../../deploy.env
+      - deploy.env
 
 replacements:
   - source:

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENV_FILE=${ENV_FILE:-infra/deploy.env}
+ENV_FILE=${ENV_FILE:-infra/k8s/base/deploy.env}
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck source=/dev/null
   source "${ENV_FILE}"
@@ -28,13 +28,13 @@ else
 fi
 
 if [[ -z "${app_image}" ]]; then
-  echo "App image is not set. Define APP_IMAGE or APP_IMAGE_LOCAL/APP_IMAGE_PROD (infra/deploy.env)."
+  echo "App image is not set. Define APP_IMAGE or APP_IMAGE_LOCAL/APP_IMAGE_PROD (infra/k8s/base/deploy.env)."
   exit 1
 fi
 
 base_image="${BASE_IMAGE:-}"
 if [[ -z "${base_image}" ]]; then
-  echo "BASE_IMAGE is not set. Define BASE_IMAGE in infra/deploy.env."
+  echo "BASE_IMAGE is not set. Define BASE_IMAGE in infra/k8s/base/deploy.env."
   exit 1
 fi
 

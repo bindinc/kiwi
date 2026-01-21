@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENV_FILE=${ENV_FILE:-infra/deploy.env}
+ENV_FILE=${ENV_FILE:-infra/k8s/base/deploy.env}
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck source=/dev/null
   source "${ENV_FILE}"
@@ -23,7 +23,7 @@ elif [[ -n "${BASE_IMAGE:-}" ]]; then
 fi
 
 if [[ -z "${image}" ]]; then
-  echo "Base image is not set. Define BASE_IMAGE or IMAGE/IMAGE_NAME+IMAGE_TAG (infra/deploy.env)."
+  echo "Base image is not set. Define BASE_IMAGE or IMAGE/IMAGE_NAME+IMAGE_TAG (infra/k8s/base/deploy.env)."
   exit 1
 fi
 
@@ -32,7 +32,7 @@ if [[ -z "${alpine_version}" && -n "${image_tag}" ]]; then
   alpine_version="${image_tag}"
 fi
 if [[ -z "${alpine_version}" ]]; then
-  echo "ALPINE_VERSION is not set. Define ALPINE_VERSION in infra/deploy.env."
+  echo "ALPINE_VERSION is not set. Define ALPINE_VERSION in infra/k8s/base/deploy.env."
   exit 1
 fi
 

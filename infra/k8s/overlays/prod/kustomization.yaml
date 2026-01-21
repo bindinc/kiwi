@@ -6,6 +6,9 @@ resources:
 
 patches:
   - path: deployment-prod.yaml
+    target:
+      kind: Deployment
+      name: kiwi-portal
 
 replacements:
   - source:

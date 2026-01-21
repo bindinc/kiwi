@@ -6,6 +6,9 @@ resources:
 
 patches:
   - path: service-nodeport.yaml
+    target:
+      kind: Service
+      name: kiwi-portal
 
 replacements:
   - source:
