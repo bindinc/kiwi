@@ -5,3 +5,68 @@ resources:
   - namespace.yaml
   - deployment.yaml
   - service.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: deploy-config
+    envs:
+      - ../../deploy.env
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: deploy-config
+      fieldPath: data.NAMESPACE
+    targets:
+      - select:
+          kind: Namespace
+        fieldPaths:
+          - metadata.name
+      - select:
+          kind: Deployment
+          name: kiwi-portal
+        fieldPaths:
+          - metadata.namespace
+        options:
+          create: true
+      - select:
+          kind: Service
+          name: kiwi-portal
+        fieldPaths:
+          - metadata.namespace
+        options:
+          create: true
+      - select:
+          kind: ConfigMap
+          name: deploy-config
+        fieldPaths:
+          - metadata.namespace
+        options:
+          create: true
+  - source:
+      kind: ConfigMap
+      name: deploy-config
+      fieldPath: data.APP_PORT
+    targets:
+      - select:
+          kind: Deployment
+          name: kiwi-portal
+        fieldPaths:
+          - spec.template.spec.containers.0.ports.0.containerPort
+      - select:
+          kind: Service
+          name: kiwi-portal
+        fieldPaths:
+          - spec.ports.0.targetPort
+  - source:
+      kind: ConfigMap
+      name: deploy-config
+      fieldPath: data.SERVICE_PORT
+    targets:
+      - select:
+          kind: Service
+          name: kiwi-portal
+        fieldPaths:
+          - spec.ports.0.port
