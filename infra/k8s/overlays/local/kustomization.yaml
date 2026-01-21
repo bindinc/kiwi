@@ -1,15 +1,35 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: kiwi
-
 resources:
   - ../../base
 
-images:
-  - name: kiwi/portal
-    newName: registry.kiwi.svc.cluster.local/kiwi/portal
-    newTag: local
-
 patches:
   - path: service-nodeport.yaml
+    target:
+      kind: Service
+      name: kiwi-portal
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: deploy-config
+      fieldPath: data.APP_IMAGE_LOCAL
+    targets:
+      - select:
+          kind: Deployment
+          name: kiwi-portal
+        fieldPaths:
+          - spec.template.spec.containers.0.image
+  - source:
+      kind: ConfigMap
+      name: deploy-config
+      fieldPath: data.LOCAL_NODEPORT
+    targets:
+      - select:
+          kind: Service
+          name: kiwi-portal
+        fieldPaths:
+          - spec.ports.0.nodePort
+        options:
+          create: true

@@ -4,8 +4,3 @@ metadata:
   name: kiwi-portal
 spec:
   type: NodePort
-  ports:
-    - name: http
-      port: 80
-      targetPort: 8000
-      nodePort: 30080
