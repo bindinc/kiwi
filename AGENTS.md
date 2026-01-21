@@ -41,7 +41,7 @@ Whenever I ask for a **new PR** (or any task that should result in a PR), you mu
 ## Step 1 — Initialize PR + worktree (mandatory)
 - Always use the script:
 
-  `scripts/new_pr_worktree.sh`
+  `~/.codex/skills/pr-worktrees/scripts/new_pr_worktree.sh`
 
 - Pass the PR title as input to the script.
 - The default base branch is `main`, unless I explicitly specify otherwise.
@@ -86,4 +86,4 @@ When reporting completion, always explicitly include:
 ---
 
 **Summary for you (Codex):**  
-> New PR = run `new_pr_worktree.sh` first, only then start coding.
+> New PR = run `~/.codex/skills/pr-worktrees/scripts/new_pr_worktree.sh` first, only then start coding.
