@@ -8,6 +8,7 @@ if [[ -f "${ENV_FILE}" ]]; then
 fi
 
 image=""
+image_tag=""
 if [[ -n "${IMAGE:-}" ]]; then
   image="${IMAGE}"
 elif [[ -n "${IMAGE_NAME:-}" ]]; then
@@ -27,6 +28,9 @@ if [[ -z "${image}" ]]; then
 fi
 
 alpine_version="${ALPINE_VERSION:-}"
+if [[ -z "${alpine_version}" && -n "${image_tag}" ]]; then
+  alpine_version="${image_tag}"
+fi
 if [[ -z "${alpine_version}" ]]; then
   echo "ALPINE_VERSION is not set. Define ALPINE_VERSION in infra/deploy.env."
   exit 1
