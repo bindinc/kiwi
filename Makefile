@@ -10,16 +10,12 @@ ifneq (,$(filter prod,$(MAKECMDGOALS)))
   ENV := prod
 endif
 
-REGISTRY_HOST ?= registry.kiwi.svc.cluster.local
-REGISTRY_NAMESPACE ?= kiwi
-APP_IMAGE_REPO ?= $(REGISTRY_HOST)/$(REGISTRY_NAMESPACE)/portal
-BASE_IMAGE_REPO ?= $(REGISTRY_HOST)/$(REGISTRY_NAMESPACE)/alpine-slim
+ENV_FILE ?= infra/deploy.env
+ifneq ("$(wildcard $(ENV_FILE))","")
+  include $(ENV_FILE)
+endif
 
-BASE_IMAGE_TAG ?= 3.11
-ALPINE_VERSION ?= $(BASE_IMAGE_TAG)
-LOCAL_IMAGE_TAG ?= local
-PROD_IMAGE_TAG ?= prod
-IMAGE_TAG ?= $(if $(filter prod,$(ENV)),$(PROD_IMAGE_TAG),$(LOCAL_IMAGE_TAG))
+APP_IMAGE ?= $(if $(filter prod,$(ENV)),$(APP_IMAGE_PROD),$(APP_IMAGE_LOCAL))
 
 LOCAL_IMAGE_STRATEGY ?= kind
 KIND_CLUSTER_NAME ?= kind
@@ -42,14 +38,19 @@ help:
 	@echo "Common vars:"
 	@echo "  KUBE_CONTEXT=<context> LOCAL_IMAGE_STRATEGY=kind|registry KIND_CLUSTER_NAME=kind"
 	@echo "  KUBE_CONTEXT_LOCAL=... KUBE_CONTEXT_PROD=..."
-	@echo "  REGISTRY_HOST=... REGISTRY_NAMESPACE=..."
+	@echo "  ENV_FILE=infra/deploy.env APP_IMAGE=... BASE_IMAGE=..."
 
 print-config:
 	@echo "ENV=$(ENV)"
-	@echo "APP_IMAGE_REPO=$(APP_IMAGE_REPO)"
-	@echo "BASE_IMAGE_REPO=$(BASE_IMAGE_REPO)"
-	@echo "BASE_IMAGE_TAG=$(BASE_IMAGE_TAG)"
-	@echo "IMAGE_TAG=$(IMAGE_TAG)"
+	@echo "NAMESPACE=$(NAMESPACE)"
+	@echo "APP_IMAGE_LOCAL=$(APP_IMAGE_LOCAL)"
+	@echo "APP_IMAGE_PROD=$(APP_IMAGE_PROD)"
+	@echo "APP_IMAGE=$(APP_IMAGE)"
+	@echo "BASE_IMAGE=$(BASE_IMAGE)"
+	@echo "ALPINE_VERSION=$(ALPINE_VERSION)"
+	@echo "APP_PORT=$(APP_PORT)"
+	@echo "SERVICE_PORT=$(SERVICE_PORT)"
+	@echo "LOCAL_NODEPORT=$(LOCAL_NODEPORT)"
 	@echo "LOCAL_IMAGE_STRATEGY=$(LOCAL_IMAGE_STRATEGY)"
 	@echo "KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME)"
 	@echo "KUBE_CONTEXT=$(KUBE_CONTEXT)"
@@ -80,18 +81,18 @@ verify-context:
 build: verify-context build-base build-app $(LOAD_TARGET)
 
 build-base:
-	IMAGE_NAME="$(BASE_IMAGE_REPO)" IMAGE_TAG="$(BASE_IMAGE_TAG)" \
+	BASE_IMAGE="$(BASE_IMAGE)" \
 	ALPINE_VERSION="$(ALPINE_VERSION)" \
 	scripts/build-base-image.sh
 
 build-app:
-	IMAGE_NAME="$(APP_IMAGE_REPO)" IMAGE_TAG="$(IMAGE_TAG)" \
-	BASE_IMAGE="$(BASE_IMAGE_REPO):$(BASE_IMAGE_TAG)" \
+	APP_IMAGE="$(APP_IMAGE)" \
+	BASE_IMAGE="$(BASE_IMAGE)" \
 	scripts/build-image.sh
 
 load-local:
 	@if [ "$(LOCAL_IMAGE_STRATEGY)" = "kind" ]; then \
-		kind load docker-image "$(APP_IMAGE_REPO):$(IMAGE_TAG)" --name "$(KIND_CLUSTER_NAME)"; \
+		kind load docker-image "$(APP_IMAGE)" --name "$(KIND_CLUSTER_NAME)"; \
 	elif [ "$(LOCAL_IMAGE_STRATEGY)" = "registry" ]; then \
 		echo "LOCAL_IMAGE_STRATEGY=registry; skipping kind load."; \
 	else \

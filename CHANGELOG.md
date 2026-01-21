@@ -8,5 +8,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - added UV support
 
 ### Changed
+- centralized deploy config in `infra/deploy.env` for scripts and kustomize
 
 ### Fixed

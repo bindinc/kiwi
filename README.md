@@ -73,9 +73,10 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Build images: `make build local` or `make build prod` (checks kubectl context; set `KUBE_CONTEXT_LOCAL`/`KUBE_CONTEXT_PROD`, defaults: `docker-desktop` / `bink8s`)
 - Deploy the app: `make deploy local` or `make deploy prod`
 - Deploy add-ons: `make addons local` or `make addons prod`
+- Shared deploy config lives in `infra/deploy.env` (registry, tags, namespace, ports) and is used by scripts + kustomize.
 - Optional: `KUBE_CONTEXT=...` to target a specific cluster; `LOCAL_IMAGE_STRATEGY=kind|registry` for local image loading.
 - Direct scripts remain available: `scripts/build-base-image.sh`, `scripts/build-image.sh`, `scripts/deploy-app.sh`, `scripts/deploy-addons.sh`.
-- Update `infra/k8s/overlays/*` if your registry or image names differ.
+- Update `infra/deploy.env` if your registry, tags, namespace, or ports differ.
 
 ## Data Storage
 
