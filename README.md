@@ -78,7 +78,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Optional: `KUBE_CONTEXT=...` to target a specific cluster; `LOCAL_IMAGE_STRATEGY=kind|registry` for local image loading.
 - Direct scripts remain available: `scripts/build-base-image.sh`, `scripts/build-image.sh`, `scripts/deploy-app.sh`, `scripts/deploy-addons.sh`.
 - Update `infra/k8s/base/deploy.env` if your registry, tags, namespace, or ports differ.
-
+- port forwarding on local: `kubectl port-forward -n kiwi service/kiwi 8080:80`
 ## Data Storage
 
 - **LocalStorage**: All data is stored locally in the browser
