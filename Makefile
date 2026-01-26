@@ -34,12 +34,13 @@ ifneq (,$(filter local,$(ENV)))
   LOAD_TARGET := load-local
 endif
 
-.PHONY: help build build-base build-app load-local deploy addons print-config verify-context local prod
+.PHONY: help build build-base build-app load-local deploy addons preflight print-config verify-context local prod
 
 help:
 	@echo "Usage: make build local|prod"
 	@echo "       make deploy local|prod"
 	@echo "       make addons local|prod"
+	@echo "       make preflight local|prod"
 	@echo ""
 	@echo "Common vars:"
 	@echo "  KUBE_CONTEXT=<context> LOCAL_IMAGE_STRATEGY=kind|registry KIND_CLUSTER_NAME=kind"
@@ -112,6 +113,9 @@ deploy: verify-context
 
 addons: verify-context
 	KUBE_CONTEXT="$(KUBE_CONTEXT)" scripts/deploy-addons.sh "$(ENV)"
+
+preflight: verify-context
+	KUBE_CONTEXT="$(KUBE_CONTEXT)" scripts/deploy-app.sh "$(ENV)" --preflight-only
 
 local prod:
 	@:
