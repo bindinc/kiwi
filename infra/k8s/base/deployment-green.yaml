@@ -1,20 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kiwi
+  name: kiwi-green
   labels:
     app.kubernetes.io/name: kiwi
     app.kubernetes.io/part-of: kiwi
+    track: green
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: kiwi
+      track: green
   template:
     metadata:
       labels:
         app.kubernetes.io/name: kiwi
         app.kubernetes.io/part-of: kiwi
+        track: green
     spec:
       containers:
         - name: portal

@@ -182,4 +182,22 @@ if [[ -z "${namespace}" ]]; then
 fi
 
 "${KUBECTL[@]}" apply -k "infra/k8s/overlays/${ENVIRONMENT}"
-"${KUBECTL[@]}" rollout status deployment/kiwi -n "${namespace}" --timeout=5m
+
+deployments=()
+deployment_names="$("${KUBECTL[@]}" get deployment \
+  -n "${namespace}" \
+  -l "app.kubernetes.io/name=kiwi" \
+  -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)"
+
+if [[ -n "${deployment_names}" ]]; then
+  read -r -a deployments <<< "${deployment_names}"
+fi
+
+if (( ${#deployments[@]} == 0 )); then
+  echo "No kiwi deployments found in namespace '${namespace}'."
+  exit 1
+fi
+
+for deployment in "${deployments[@]}"; do
+  "${KUBECTL[@]}" rollout status "deployment/${deployment}" -n "${namespace}" --timeout=5m
+done

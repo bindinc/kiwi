@@ -9,16 +9,30 @@ patches:
     target:
       kind: Service
       name: kiwi
+  - path: deploy-config.yaml
+    target:
+      kind: ConfigMap
+      name: deploy-config
 
 replacements:
   - source:
       kind: ConfigMap
       name: deploy-config
-      fieldPath: data.APP_IMAGE_LOCAL
+      fieldPath: data.APP_IMAGE_BLUE
     targets:
       - select:
           kind: Deployment
-          name: kiwi
+          name: kiwi-blue
+        fieldPaths:
+          - spec.template.spec.containers.0.image
+  - source:
+      kind: ConfigMap
+      name: deploy-config
+      fieldPath: data.APP_IMAGE_GREEN
+    targets:
+      - select:
+          kind: Deployment
+          name: kiwi-green
         fieldPaths:
           - spec.template.spec.containers.0.image
   - source:
