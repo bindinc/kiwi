@@ -89,3 +89,11 @@ When reporting completion, always explicitly include:
 
 **Summary for you (Codex):**  
 > New PR = run `~/.codex/skills/pr-worktrees/scripts/new_pr_worktree.sh` first, only then start coding.
+
+## Gateway API (nginx gateway fabric)
+
+- The production flask app is HA at url `https://bdc.rtvmedia.org/kiwi` on production
+- The local flask app is available at url `https://bdc.rtvmedia.org.local/kiwi` on local development docker-desktop cluster.
+- A local hosts file is already configured to point 127.0.0.1 to bdc.rtvmedia.org.local
+- certificates on production should be managed by cert-manager issuer-letsencrypt
+- certificates on local development should be managed by cert-manager issuer-staging
