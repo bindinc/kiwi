@@ -17,7 +17,7 @@ Make sure the Flux CLI is installed and your cluster is reachable:
 flux check --pre
 ```
 
-Bootstrap Flux for the cluster you want to manage. For GitHub repos, Flux can create the sync manifests automatically:
+Bootstrap Flux for the cluster you want to manage. For GitHub organization repos, Flux can create the sync manifests automatically:
 
 ```bash
 export GITHUB_TOKEN=<your-token>
@@ -26,7 +26,9 @@ flux bootstrap github \
   --repository=kiwi \
   --branch=main \
   --path=clusters/prod \
-  --personal
+  --token-auth
+
+If you have permissions to create deploy keys for the org repo, you can omit `--token-auth` to use SSH deploy keys instead.
 ```
 
 Use `clusters/local` instead of `clusters/prod` when targeting a local cluster. After bootstrap, verify Flux components:
