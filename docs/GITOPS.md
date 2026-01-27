@@ -131,3 +131,11 @@ kubectl -n kiwi port-forward service/kiwi-preview 8081:80
 Swap `ACTIVE_TRACK` and `PREVIEW_TRACK` back to their previous values and let Flux reconcile.
 
 The `kiwi` Service always points at `ACTIVE_TRACK`, while `kiwi-preview` always points at `PREVIEW_TRACK`.
+
+## Glossary (blue/green)
+
+- **Blue/green**: Run two identical versions (blue + green); switch traffic by flipping a selector.
+- **Active track**: The deployment receiving live traffic via the `kiwi` Service.
+- **Preview track**: The deployment receiving preview traffic via the `kiwi-preview` Service.
+- **Promote**: Swap `ACTIVE_TRACK` and `PREVIEW_TRACK` to move live traffic.
+- **Rollback**: Swap the tracks back to the previous values.
