@@ -82,6 +82,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 ## GitOps (Flux v2)
 
 - Flux v2 sync manifests live under `clusters/` and reconcile the app from `infra/k8s/overlays/<env>`.
+- The repo is organization-owned (bindinc); use `--token-auth` or deploy keys when bootstrapping Flux.
 - Blue/green deployment switches are managed through `infra/k8s/overlays/<env>/deploy-config.yaml`.
 - See `docs/GITOPS.md` for bootstrap and promotion steps.
 
