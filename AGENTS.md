@@ -92,8 +92,10 @@ When reporting completion, always explicitly include:
 
 ## Gateway API (nginx gateway fabric)
 
-- The production flask app is HA at url `https://bdc.rtvmedia.org/kiwi` on production
-- The local flask app is available at url `https://bdc.rtvmedia.org.local/kiwi` on local development docker-desktop cluster.
+- The production active flask app is at url `https://bdc.rtvmedia.org/kiwi` on production
+- The production preview flask app is at url `https://bdc.rtvmedia.org/kiwi-preview` on production
+- The local active flask app is available at url `https://bdc.rtvmedia.org.local/kiwi` on local development docker-desktop cluster.
+- The local preview flask app is available at url `https://bdc.rtvmedia.org.local/kiwi-preview` on local development docker-desktop cluster.
 - A local hosts file is already configured to point 127.0.0.1 to bdc.rtvmedia.org.local
 - certificates on production should be managed by cert-manager issuer-letsencrypt
 - certificates on local development should be managed by cert-manager issuer-staging
