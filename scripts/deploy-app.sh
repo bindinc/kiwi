@@ -152,7 +152,7 @@ preflight_addons() {
   problems=()
 
   check_gateway_api_crds
-  check_deployments_ready "NGINX Gateway Fabric" "nginx-gateway" "app.kubernetes.io/instance=ngf"
+  check_deployments_ready "NGINX Gateway Fabric" "nginx-gateway" "app.kubernetes.io/instance=nginx-gateway-fabric"
   check_deployments_ready "cert-manager" "cert-manager" "app.kubernetes.io/instance=cert-manager"
   check_cluster_issuers
 
