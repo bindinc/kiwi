@@ -89,17 +89,45 @@ make deploy prod
 
 ## Blue/green workflow
 
-The active and preview tracks are defined in `infra/k8s/overlays/<env>/deploy-config.yaml`.
+### Mental model (keep this in your head)
 
-1. Update the preview image (default: green) by setting `APP_IMAGE_GREEN` to the new tag.
-2. Commit and let Flux reconcile the change.
-3. Validate the preview service:
+- There are **two Deployments**: `kiwi-blue` and `kiwi-green`.
+- There are **two Services**:
+  - `kiwi` → **live traffic** (points at `ACTIVE_TRACK`)
+  - `kiwi-preview` → **preview traffic** (points at `PREVIEW_TRACK`)
+- Switching live traffic is just **editing a config file** and letting Flux reconcile.
+
+### Where you change things
+
+Edit `infra/k8s/overlays/<env>/deploy-config.yaml`:
+
+```yaml
+data:
+  APP_IMAGE_BLUE: registry.kiwi.svc.cluster.local/kiwi/portal:1.2.3
+  APP_IMAGE_GREEN: registry.kiwi.svc.cluster.local/kiwi/portal:1.2.4
+  ACTIVE_TRACK: blue
+  PREVIEW_TRACK: green
+```
+
+### Typical rollout (safe + low stress)
+
+1. **Pick the preview track** (usually `green`) and set its image.
+   - Update `APP_IMAGE_GREEN` to the new tag.
+2. **Commit and reconcile** (Flux applies it).
+   - `flux reconcile kustomization kiwi --with-source`
+3. **Verify the preview** service:
 
 ```bash
 kubectl -n kiwi port-forward service/kiwi-preview 8081:80
 ```
 
-4. Promote by swapping `ACTIVE_TRACK` and `PREVIEW_TRACK`.
-5. Optionally set `APP_IMAGE_BLUE` to the new tag once the cutover is complete.
+4. **Promote** by swapping the tracks:
+   - `ACTIVE_TRACK: green`
+   - `PREVIEW_TRACK: blue`
+5. **Optional cleanup**: set the now-preview track image to match live, or keep it ready for the next release.
 
-The `kiwi` Service always points at `ACTIVE_TRACK`, while `kiwi-preview` points at `PREVIEW_TRACK`.
+### Rollback (fast)
+
+Swap `ACTIVE_TRACK` and `PREVIEW_TRACK` back to their previous values and let Flux reconcile.
+
+The `kiwi` Service always points at `ACTIVE_TRACK`, while `kiwi-preview` always points at `PREVIEW_TRACK`.

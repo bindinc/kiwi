@@ -84,6 +84,8 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Flux v2 sync manifests live under `clusters/` and reconcile the app from `infra/k8s/overlays/<env>`.
 - The repo is organization-owned (bindinc); use `--token-auth` or deploy keys when bootstrapping Flux.
 - Blue/green deployment switches are managed through `infra/k8s/overlays/<env>/deploy-config.yaml`.
+- Blue/green basics: `kiwi-blue` and `kiwi-green` run side-by-side; `kiwi` (live) points at `ACTIVE_TRACK` and `kiwi-preview` points at `PREVIEW_TRACK`.
+- Promote by swapping `ACTIVE_TRACK` and `PREVIEW_TRACK` in the deploy config and letting Flux reconcile.
 - See `docs/GITOPS.md` for bootstrap and promotion steps.
 
 ## Data Storage

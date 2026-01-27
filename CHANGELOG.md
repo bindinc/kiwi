@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added blue/green deployment resources with active and preview services
 - Documented local and production deployment steps in the GitOps guide
 - Documented organization-owned repo bootstrap settings for Flux
+- Expanded blue/green deployment explanations in docs and README
 
 ### Changed
 - centralized deploy config in `infra/k8s/base/deploy.env` for scripts and kustomize
