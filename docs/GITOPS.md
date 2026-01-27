@@ -35,6 +35,56 @@ Use `clusters/local` instead of `clusters/prod` when targeting a local cluster. 
 flux check
 ```
 
+## Deploy to local docker-desktop
+
+Make sure Docker Desktop Kubernetes is enabled and your context is set to `docker-desktop` (or export `KUBE_CONTEXT`).
+
+### GitOps (Flux)
+
+1. Commit changes under `infra/k8s/overlays/local/` (for example, update `deploy-config.yaml`).
+2. Let Flux reconcile automatically or run:
+
+```bash
+flux reconcile kustomization kiwi --with-source
+```
+
+### Manual (scripts)
+
+```bash
+make addons local
+make build local
+make deploy local
+```
+
+Access locally:
+
+```bash
+kubectl -n kiwi port-forward service/kiwi 8080:80
+```
+
+## Deploy to production
+
+Ensure your context points at `bink8s` (or export `KUBE_CONTEXT`). Install add-ons once per cluster before deploying.
+
+### GitOps (Flux)
+
+1. Commit changes under `infra/k8s/overlays/prod/` (for example, update `deploy-config.yaml`).
+2. Let Flux reconcile automatically or run:
+
+```bash
+flux reconcile kustomization kiwi --with-source
+```
+
+### Manual (scripts)
+
+```bash
+make addons prod
+make build prod
+make deploy prod
+```
+
+`make addons prod` will prompt for confirmation; for non-interactive runs use `scripts/deploy-addons.sh prod --confirm-prod`.
+
 ## Blue/green workflow
 
 The active and preview tracks are defined in `infra/k8s/overlays/<env>/deploy-config.yaml`.

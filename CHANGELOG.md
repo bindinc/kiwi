@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added UV support
 - Added Flux v2 GitOps cluster definitions under `clusters/`
 - Added blue/green deployment resources with active and preview services
+- Documented local and production deployment steps in the GitOps guide
 
 ### Changed
 - centralized deploy config in `infra/k8s/base/deploy.env` for scripts and kustomize
