@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kiwi
+  name: kiwi-blue
 spec:
   replicas: 2
   template:

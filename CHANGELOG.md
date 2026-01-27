@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 ### Added
 - Added UV support
+- Added Flux v2 GitOps cluster definitions under `clusters/`
+- Added blue/green deployment resources with active and preview services
+- Documented local and production deployment steps in the GitOps guide
+- Documented organization-owned repo bootstrap settings for Flux
+- Expanded blue/green deployment explanations in docs and README
+- Added blue/green glossary to the GitOps guide
+- Moved cluster GitOps configuration to the bink8s-cluster-management repo
 
 ### Changed
 - centralized deploy config in `infra/k8s/base/deploy.env` for scripts and kustomize
@@ -15,5 +22,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Pin the NGINX Gateway Fabric chart version and require the --confirm-prod flag for production installs
 - Remove ingress-nginx chart artifacts and references in deploy config
 - Configure cert-manager values for CRDs, add Gateway API ACME issuers, and install the issuer chart during addons
+- Update deploy-app to wait for all kiwi deployments after applying kustomize overlays
 
 ### Fixed

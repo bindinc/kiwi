@@ -3,8 +3,10 @@ kind: Kustomization
 
 resources:
   - namespace.yaml
-  - deployment.yaml
+  - deployment-blue.yaml
+  - deployment-green.yaml
   - service.yaml
+  - service-preview.yaml
 
 generatorOptions:
   disableNameSuffixHash: true
@@ -30,7 +32,7 @@ replacements:
     targets:
       - select:
           kind: Deployment
-          name: kiwi
+          name: kiwi-blue
         fieldPaths:
           - metadata.namespace
         options:
@@ -38,6 +40,20 @@ replacements:
       - select:
           kind: Service
           name: kiwi
+        fieldPaths:
+          - metadata.namespace
+        options:
+          create: true
+      - select:
+          kind: Deployment
+          name: kiwi-green
+        fieldPaths:
+          - metadata.namespace
+        options:
+          create: true
+      - select:
+          kind: Service
+          name: kiwi-preview
         fieldPaths:
           - metadata.namespace
         options:
@@ -56,12 +72,22 @@ replacements:
     targets:
       - select:
           kind: Deployment
-          name: kiwi
+          name: kiwi-blue
+        fieldPaths:
+          - spec.template.spec.containers.0.ports.0.containerPort
+      - select:
+          kind: Deployment
+          name: kiwi-green
         fieldPaths:
           - spec.template.spec.containers.0.ports.0.containerPort
       - select:
           kind: Service
           name: kiwi
+        fieldPaths:
+          - spec.ports.0.targetPort
+      - select:
+          kind: Service
+          name: kiwi-preview
         fieldPaths:
           - spec.ports.0.targetPort
   - source:
@@ -74,3 +100,32 @@ replacements:
           name: kiwi
         fieldPaths:
           - spec.ports.0.port
+      - select:
+          kind: Service
+          name: kiwi-preview
+        fieldPaths:
+          - spec.ports.0.port
+  - source:
+      kind: ConfigMap
+      name: deploy-config
+      fieldPath: data.ACTIVE_TRACK
+    targets:
+      - select:
+          kind: Service
+          name: kiwi
+        fieldPaths:
+          - spec.selector.track
+        options:
+          create: true
+  - source:
+      kind: ConfigMap
+      name: deploy-config
+      fieldPath: data.PREVIEW_TRACK
+    targets:
+      - select:
+          kind: Service
+          name: kiwi-preview
+        fieldPaths:
+          - spec.selector.track
+        options:
+          create: true
