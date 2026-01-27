@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Documented organization-owned repo bootstrap settings for Flux
 - Expanded blue/green deployment explanations in docs and README
 - Added blue/green glossary to the GitOps guide
+- Moved cluster GitOps configuration to the bink8s-cluster-management repo
 
 ### Changed
 - centralized deploy config in `infra/k8s/base/deploy.env` for scripts and kustomize

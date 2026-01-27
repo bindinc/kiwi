@@ -81,12 +81,12 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - port forwarding on local: `kubectl port-forward -n kiwi service/kiwi 8080:80`
 ## GitOps (Flux v2)
 
-- Flux v2 sync manifests live under `clusters/` and reconcile the app from `infra/k8s/overlays/<env>`.
-- The repo is organization-owned (bindinc); use `--token-auth` or deploy keys when bootstrapping Flux.
+- Cluster GitOps lives in the config repo `bink8s-cluster-management` (GitLab) and points at `infra/k8s/overlays/<env>` in this repo.
+- That config repo is organization-owned (bindinc); use `--token-auth` or deploy keys when bootstrapping Flux.
 - Blue/green deployment switches are managed through `infra/k8s/overlays/<env>/deploy-config.yaml`.
 - Blue/green basics: `kiwi-blue` and `kiwi-green` run side-by-side; `kiwi` (live) points at `ACTIVE_TRACK` and `kiwi-preview` points at `PREVIEW_TRACK`.
 - Promote by swapping `ACTIVE_TRACK` and `PREVIEW_TRACK` in the deploy config and letting Flux reconcile.
-- See `docs/GITOPS.md` for bootstrap and promotion steps.
+- See `docs/GITOPS.md` for blue/green promotion steps.
 
 ## Data Storage
 

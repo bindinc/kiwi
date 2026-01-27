@@ -1,43 +1,16 @@
 # GitOps with Flux v2 and Blue/Green Deployments
 
-This repository is structured for OpenGitOps with Flux v2. Cluster definitions live under `clusters/`, while application manifests stay in `infra/k8s/` and are reconciled by Flux Kustomizations.
+This repository contains the kiwi app manifests. Cluster GitOps (Flux sync, add-ons, and app pointers) lives in the config repo `bink8s-cluster-management` on GitLab.
 
-## Repository layout
+## Repository layout (this repo)
 
-- `clusters/local/` and `clusters/prod/` define Flux sync and app reconciliation per cluster.
 - `infra/k8s/overlays/<env>/` contains the Kustomize overlays Flux applies.
 
-If you are using a fork, update the repository URL in `clusters/<env>/flux-system/gotk-sync.yaml`.
-
-## Bootstrap Flux
-
-Make sure the Flux CLI is installed and your cluster is reachable:
-
-```bash
-flux check --pre
-```
-
-Bootstrap Flux for the cluster you want to manage. For GitHub organization repos, Flux can create the sync manifests automatically:
-
-```bash
-export GITHUB_TOKEN=<your-token>
-flux bootstrap github \
-  --owner=bindinc \
-  --repository=kiwi \
-  --branch=main \
-  --path=clusters/prod \
-  --token-auth
-
-If you have permissions to create deploy keys for the org repo, you can omit `--token-auth` to use SSH deploy keys instead.
-```
-
-Use `clusters/local` instead of `clusters/prod` when targeting a local cluster. After bootstrap, verify Flux components:
-
-```bash
-flux check
-```
+Cluster definitions (Flux sync and add-ons) live in the config repo. The config repo points back to this repo when reconciling the kiwi app.
 
 ## Deploy to local docker-desktop
+
+These steps assume the cluster is already bootstrapped from the config repo and the config repo includes the kiwi app pointer.
 
 Make sure Docker Desktop Kubernetes is enabled and your context is set to `docker-desktop` (or export `KUBE_CONTEXT`).
 
@@ -51,6 +24,8 @@ flux reconcile kustomization kiwi --with-source
 ```
 
 ### Manual (scripts)
+
+Use these only for local experiments; production add-ons should be managed in the config repo.
 
 ```bash
 make addons local
@@ -66,7 +41,7 @@ kubectl -n kiwi port-forward service/kiwi 8080:80
 
 ## Deploy to production
 
-Ensure your context points at `bink8s` (or export `KUBE_CONTEXT`). Install add-ons once per cluster before deploying.
+Ensure your context points at `bink8s` (or export `KUBE_CONTEXT`). Add-ons are managed in the config repo.
 
 ### GitOps (Flux)
 
@@ -78,6 +53,8 @@ flux reconcile kustomization kiwi --with-source
 ```
 
 ### Manual (scripts)
+
+Use these only for emergencies; production add-ons should be managed in the config repo.
 
 ```bash
 make addons prod
@@ -131,11 +108,3 @@ kubectl -n kiwi port-forward service/kiwi-preview 8081:80
 Swap `ACTIVE_TRACK` and `PREVIEW_TRACK` back to their previous values and let Flux reconcile.
 
 The `kiwi` Service always points at `ACTIVE_TRACK`, while `kiwi-preview` always points at `PREVIEW_TRACK`.
-
-## Glossary (blue/green)
-
-- **Blue/green**: Run two identical versions (blue + green); switch traffic by flipping a selector.
-- **Active track**: The deployment receiving live traffic via the `kiwi` Service.
-- **Preview track**: The deployment receiving preview traffic via the `kiwi-preview` Service.
-- **Promote**: Swap `ACTIVE_TRACK` and `PREVIEW_TRACK` to move live traffic.
-- **Rollback**: Swap the tracks back to the previous values.
