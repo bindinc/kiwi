@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+
+## [v1.0.1]
+
+### Changed
+- changed background color
+
+## [v1.0.0]
+
 ### Added
 - Added UV support
 - Added Flux v2 GitOps cluster definitions under `clusters/`
