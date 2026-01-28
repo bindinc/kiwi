@@ -80,14 +80,22 @@ Use this flow when you only have access to this repo and need the HTTPS base URL
    ```
    Add the line `127.0.0.1 bdc.rtvmedia.org.local`, then save with `Ctrl+O`, `Enter`, and exit with `Ctrl+X`.
 
-2. Start the local stack (it will generate local TLS certs on first run):
+2. Create your local OIDC secrets file:
+
+   ```bash
+   cp client_secrets.json.example client_secrets.json
+   ```
+
+   Update `client_secrets.json` with your Azure tenant ID, client ID, and client secret.
+
+3. Start the local stack (it will generate local TLS certs on first run):
 
    ```bash
    make compose-up
    ```
 
-3. Trust the generated cert in your OS/browser (located at `infra/docker/nginx/certs`).
-4. Open:
+4. Trust the generated cert in your OS/browser (located at `infra/docker/nginx/certs`).
+5. Open:
    - https://bdc.rtvmedia.org.local/kiwi
    - https://bdc.rtvmedia.org.local/kiwi-preview
 

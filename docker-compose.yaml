@@ -28,6 +28,11 @@ services:
       dockerfile: infra/docker/app/Dockerfile
     image: kiwi-dev:local
     command: ["gunicorn", "-b", "0.0.0.0:8000", "--reload", "server:app"]
+    environment:
+      OIDC_CLIENT_SECRETS: /app/client_secrets.json
+    secrets:
+      - source: oidc-client-secrets
+        target: /app/client_secrets.json
     volumes:
       - ./app:/app
     expose:
@@ -45,3 +50,7 @@ services:
     volumes:
       - ./infra/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./infra/docker/nginx/certs:/etc/nginx/certs:ro
+
+secrets:
+  oidc-client-secrets:
+    file: ./client_secrets.json
