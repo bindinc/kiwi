@@ -2,3 +2,4 @@
 .github/
 infra/docker/nginx/certs/*.crt
 infra/docker/nginx/certs/*.key
+client_secrets.json
