@@ -60,6 +60,34 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Render `app/templates/base/index.html` through Flask (Jinja2) so `url_for('static', ...)` resolves.
 - Static assets live under `app/static/assets`.
 
+## Local OIDC dev (Docker Compose)
+
+Use this flow when you only have access to this repo and need the HTTPS base URL
+`https://bdc.rtvmedia.org.local/kiwi` for OIDC integration.
+
+1. Ensure your hosts file includes `127.0.0.1 bdc.rtvmedia.org.local`.
+2. Generate local TLS certs and trust the cert in your OS/browser:
+
+   ```bash
+   make dev-certs
+   ```
+
+3. Start the local stack:
+
+   ```bash
+   make compose-up
+   ```
+
+4. Open:
+   - https://bdc.rtvmedia.org.local/kiwi
+   - https://bdc.rtvmedia.org.local/kiwi-preview
+
+Stop the stack with:
+
+```bash
+make compose-down
+```
+
 ## Repository Layout
 
 - `app/` is the Flask app root (blueprints, services, templates, static assets).
