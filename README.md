@@ -66,18 +66,13 @@ Use this flow when you only have access to this repo and need the HTTPS base URL
 `https://bdc.rtvmedia.org.local/kiwi` for OIDC integration.
 
 1. Ensure your hosts file includes `127.0.0.1 bdc.rtvmedia.org.local`.
-2. Generate local TLS certs and trust the cert in your OS/browser:
-
-   ```bash
-   make dev-certs
-   ```
-
-3. Start the local stack:
+2. Start the local stack (it will generate local TLS certs on first run):
 
    ```bash
    make compose-up
    ```
 
+3. Trust the generated cert in your OS/browser (located at `infra/docker/nginx/certs`).
 4. Open:
    - https://bdc.rtvmedia.org.local/kiwi
    - https://bdc.rtvmedia.org.local/kiwi-preview

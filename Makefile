@@ -137,10 +137,10 @@ local prod:
 dev-certs:
 	scripts/dev-certs.sh
 
-compose-build: dev-certs
+compose-build:
 	docker compose build
 
-compose-up: dev-certs
+compose-up:
 	docker compose up --build
 
 compose-down:

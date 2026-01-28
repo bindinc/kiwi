@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add Docker Compose local HTTPS gateway flow for OIDC development.
 ### Changed
 - Document local-only overlay usage and route production deployments to the cluster config repo.
+- Generate local Docker Compose TLS certs automatically via a dedicated service.
 
 ### Removed
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.

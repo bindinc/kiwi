@@ -1,4 +1,27 @@
 services:
+  dev-certs:
+    image: alpine:3.19
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        apk add --no-cache bash openssl >/dev/null &&
+        /usr/local/bin/dev-certs.sh &&
+        tail -f /dev/null
+    environment:
+      DOMAIN: bdc.rtvmedia.org.local
+      CERT_DIR: /certs
+    volumes:
+      - ./infra/docker/nginx/certs:/certs
+      - ./scripts/dev-certs.sh:/usr/local/bin/dev-certs.sh:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - test -f /certs/bdc.rtvmedia.org.local.crt -a -f /certs/bdc.rtvmedia.org.local.key
+      interval: 2s
+      timeout: 1s
+      retries: 10
+
   app:
     build:
       context: .
@@ -13,7 +36,10 @@ services:
   gateway:
     image: nginx:1.25-alpine
     depends_on:
-      - app
+      app:
+        condition: service_started
+      dev-certs:
+        condition: service_healthy
     ports:
       - "443:443"
     volumes:
