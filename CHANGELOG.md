@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Document local-only overlay usage and route production deployments to the cluster config repo.
 - Generate local Docker Compose TLS certs automatically via a dedicated service.
+- Document GHCR image publishing and local `kiwi:dev` builds in the README.
 
 ### Removed
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.
