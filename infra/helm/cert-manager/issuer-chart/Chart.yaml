@@ -1,4 +1,0 @@
-name: cert-manager-issuer
-version: v1.19.2
-description: "Local chart to install cert-manager issuer"
-

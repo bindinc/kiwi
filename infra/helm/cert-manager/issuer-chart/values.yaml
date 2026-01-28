@@ -1,5 +1,0 @@
-letsEncryptClusterIssuer:
-  email: ict.services@bindinc.nl
-  gateway:
-    name: nginx-gateway
-    namespace: nginx-gateway
