@@ -83,6 +83,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 - Cluster GitOps lives in the config repo `bink8s-cluster-management` (GitLab) and points at `infra/k8s/base` in this repo.
 - That config repo is organization-owned (bindinc); use `--token-auth` or deploy keys when bootstrapping Flux.
+- Local HTTPS routes (https://bdc.rtvmedia.org.local/kiwi) are defined in the config repo gateway routes, not in this repo.
 - Blue/green deployment switches are managed through the environment patches in the config repo.
 - Blue/green basics: `kiwi-blue` and `kiwi-green` run side-by-side; `kiwi` (live) points at `ACTIVE_TRACK` and `kiwi-preview` points at `PREVIEW_TRACK`.
 - Promote by swapping `ACTIVE_TRACK` and `PREVIEW_TRACK` in the config repo patch and letting Flux reconcile.
