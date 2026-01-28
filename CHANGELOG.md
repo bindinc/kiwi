@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Add Docker Compose local HTTPS gateway flow for OIDC development.
 ## [v1.0.1]
 
 ### Changed

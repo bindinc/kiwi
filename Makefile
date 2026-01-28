@@ -34,13 +34,15 @@ ifneq (,$(filter local,$(ENV)))
   LOAD_TARGET := load-local
 endif
 
-.PHONY: help build build-base build-app load-local deploy addons preflight print-config verify-context local prod
+.PHONY: help build build-base build-app load-local deploy addons preflight print-config verify-context local prod dev-certs compose-up compose-down compose-logs compose-build
 
 help:
 	@echo "Usage: make build local|prod"
 	@echo "       make deploy local|prod"
 	@echo "       make addons local|prod"
 	@echo "       make preflight local|prod"
+	@echo "       make compose-up"
+	@echo "       make compose-down"
 	@echo ""
 	@echo "Common vars:"
 	@echo "  KUBE_CONTEXT=<context> LOCAL_IMAGE_STRATEGY=kind|registry KIND_CLUSTER_NAME=kind"
@@ -119,3 +121,18 @@ preflight: verify-context
 
 local prod:
 	@:
+
+dev-certs:
+	scripts/dev-certs.sh
+
+compose-build: dev-certs
+	docker compose build
+
+compose-up: dev-certs
+	docker compose up --build
+
+compose-down:
+	docker compose down
+
+compose-logs:
+	docker compose logs -f
