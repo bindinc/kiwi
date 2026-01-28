@@ -1,4 +1,5 @@
 [![Release](https://img.shields.io/github/v/release/bindinc/kiwi?sort=semver)](https://github.com/bindinc/kiwi/releases)
+[![Version](https://img.shields.io/github/v/tag/bindinc/kiwi?sort=semver)](https://github.com/bindinc/kiwi/tags)
 [![Last commit](https://img.shields.io/github/last-commit/bindinc/kiwi?display_timestamp=committer)](https://github.com/bindinc/kiwi/commits)
 [![Release date](https://img.shields.io/github/release-date/bindinc/kiwi?display_date=published_at)](https://github.com/bindinc/kiwi/releases)
 
