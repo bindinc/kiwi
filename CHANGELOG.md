@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.
+- Remove Kubernetes/Helm manifests, scripts, and GitOps docs to focus on Docker Compose.
 
 ## [v1.0.1]
 

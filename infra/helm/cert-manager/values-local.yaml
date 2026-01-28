@@ -1,6 +1,0 @@
-crds:
-  enabled: true
-
-ingressShim:
-  defaultIssuerKind: "ClusterIssuer"
-  defaultIssuerName: "letsencrypt-staging"
