@@ -111,12 +111,24 @@ load-local:
 	fi
 
 deploy: verify-context
+	@if [ "$(ENV)" = "prod" ]; then \
+		echo "Production deploys are managed in bink8s-cluster-management."; \
+		exit 1; \
+	fi
 	KUBE_CONTEXT="$(KUBE_CONTEXT)" scripts/deploy-app.sh "$(ENV)"
 
 addons: verify-context
+	@if [ "$(ENV)" = "prod" ]; then \
+		echo "Production add-ons are managed in bink8s-cluster-management."; \
+		exit 1; \
+	fi
 	KUBE_CONTEXT="$(KUBE_CONTEXT)" scripts/deploy-addons.sh "$(ENV)"
 
 preflight: verify-context
+	@if [ "$(ENV)" = "prod" ]; then \
+		echo "Production preflight is managed in bink8s-cluster-management."; \
+		exit 1; \
+	fi
 	KUBE_CONTEXT="$(KUBE_CONTEXT)" scripts/deploy-app.sh "$(ENV)" --preflight-only
 
 local prod:
