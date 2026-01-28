@@ -57,7 +57,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Installation & Usage
 
-- Render `app/templates/base/index.html` through Flask (Jinja2) so `url_for('static', ...)` resolves.
+- Renders `app/templates/base/index.html` through Flask (Jinja2) so `url_for('static', ...)` resolves.
 - Static assets live under `app/static/assets`.
 
 ## Local OIDC dev (Docker Compose)
@@ -65,7 +65,16 @@ A modern, lightweight web interface for customer service agents to manage magazi
 Use this flow when you only have access to this repo and need the HTTPS base URL
 `https://bdc.rtvmedia.org.local/kiwi` for OIDC integration.
 
-1. Ensure your hosts file includes `127.0.0.1 bdc.rtvmedia.org.local`.
+1. Ensure your hosts file includes `127.0.0.1 bdc.rtvmedia.org.local`. 
+
+   On Windows 11, open Notepad as Administrator (right-click → Run as administrator), then open `C:\Windows\System32\drivers\etc\hosts` and add the line `127.0.0.1 bdc.rtvmedia.org.local`.
+
+   On Linux/macOS, open a terminal and run:
+   ```bash
+   sudo nano /etc/hosts
+   ```
+   Add the line `127.0.0.1 bdc.rtvmedia.org.local`, then save with `Ctrl+O`, `Enter`, and exit with `Ctrl+X`.
+
 2. Start the local stack (it will generate local TLS certs on first run):
 
    ```bash
@@ -134,6 +143,7 @@ make compose-down
 - **HTML5**: Semantic structure
 - **CSS3**: Modern styling with CSS variables
 - **Vanilla JavaScript**: No frameworks, pure JS
+- **Flask**: Flask with OIDC-Flask plug-in enabled
 
 ### Browser Compatibility
 - Chrome/Edge (latest 2 versions)
@@ -228,5 +238,5 @@ For questions or suggestions, contact the development team.
 
 ---
 
-**Last updated**: november 2025
+**Last updated**: januari 2026
 **Version**: 0.0.0 (PoC)
