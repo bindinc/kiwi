@@ -63,7 +63,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 ## Repository Layout
 
 - `app/` is the Flask app root (blueprints, services, templates, static assets).
-- `infra/k8s/` holds Kustomize base + overlays for local and prod.
+- `infra/k8s/` holds the shared Kustomize base plus a dev-only local overlay.
 - `infra/helm/` stores Helm values for shared add-ons.
 - `infra/docker/` contains Dockerfiles for the base and app images.
 - `scripts/` provides build and deploy helpers.
@@ -71,8 +71,8 @@ A modern, lightweight web interface for customer service agents to manage magazi
 ## Container & Kubernetes
 
 - Build images: `make build local` or `make build prod` (verifies kubectl context matches the environment; defaults: `docker-desktop` for local, `bink8s` for prod; override with `KUBE_CONTEXT_LOCAL`/`KUBE_CONTEXT_PROD` or `KUBE_CONTEXT`)
-- Deploy the app: `make deploy local` or `make deploy prod`
-- Deploy add-ons: `make addons local` or `make addons prod`
+- Deploy the app (local dev only): `make deploy local`
+- Deploy add-ons (local dev only): `make addons local`
 - Shared deploy config lives in `infra/k8s/base/deploy.env` (registry, tags, namespace, ports) and is used by scripts + kustomize.
 - Add-ons pin Helm chart versions from `infra/k8s/base/deploy.env` (`CERT_MANAGER_CHART_VERSION`).
 - Optional: `KUBE_CONTEXT=...` to target a specific cluster; `LOCAL_IMAGE_STRATEGY=kind|registry` for local image loading.
@@ -81,11 +81,12 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - port forwarding on local: `kubectl port-forward -n kiwi service/kiwi 8080:80`
 ## GitOps (Flux v2)
 
-- Cluster GitOps lives in the config repo `bink8s-cluster-management` (GitLab) and points at `infra/k8s/overlays/<env>` in this repo.
+- Cluster GitOps lives in the config repo `bink8s-cluster-management` (GitLab) and points at `infra/k8s/base` in this repo.
 - That config repo is organization-owned (bindinc); use `--token-auth` or deploy keys when bootstrapping Flux.
-- Blue/green deployment switches are managed through `infra/k8s/overlays/<env>/deploy-config.yaml`.
+- Local HTTPS routes (https://bdc.rtvmedia.org.local/kiwi) are defined in the config repo gateway routes, not in this repo.
+- Blue/green deployment switches are managed through the environment patches in the config repo.
 - Blue/green basics: `kiwi-blue` and `kiwi-green` run side-by-side; `kiwi` (live) points at `ACTIVE_TRACK` and `kiwi-preview` points at `PREVIEW_TRACK`.
-- Promote by swapping `ACTIVE_TRACK` and `PREVIEW_TRACK` in the deploy config and letting Flux reconcile.
+- Promote by swapping `ACTIVE_TRACK` and `PREVIEW_TRACK` in the config repo patch and letting Flux reconcile.
 - See `docs/GITOPS.md` for blue/green promotion steps.
 
 ## Data Storage

@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: deploy-config
-data:
-  APP_IMAGE_BLUE: registry.kiwi.svc.cluster.local/kiwi/portal:prod
-  APP_IMAGE_GREEN: registry.kiwi.svc.cluster.local/kiwi/portal:prod
-  ACTIVE_TRACK: blue
-  PREVIEW_TRACK: green

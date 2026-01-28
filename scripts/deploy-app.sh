@@ -7,7 +7,7 @@ KUBE_CONTEXT=${KUBE_CONTEXT:-}
 ENV_FILE=${ENV_FILE:-infra/k8s/base/deploy.env}
 
 usage() {
-  echo "Usage: $0 [local|prod] [--preflight-only]"
+  echo "Usage: $0 [local] [--preflight-only]"
 }
 
 if [[ -f "${ENV_FILE}" ]]; then
@@ -44,6 +44,12 @@ done
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "kubectl not found in PATH."
+  exit 1
+fi
+
+if [[ "${ENVIRONMENT}" != "local" ]]; then
+  echo "Production deploys are managed in bink8s-cluster-management."
+  echo "This script supports local-only workflows."
   exit 1
 fi
 

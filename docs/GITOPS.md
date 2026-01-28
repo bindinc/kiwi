@@ -4,7 +4,8 @@ This repository contains the kiwi app manifests. Cluster GitOps (Flux sync, add-
 
 ## Repository layout (this repo)
 
-- `infra/k8s/overlays/<env>/` contains the Kustomize overlays Flux applies.
+- `infra/k8s/base/` contains the shared Kustomize base (used by cluster GitOps).
+- `infra/k8s/overlays/local/` is a dev-only overlay for manual local testing.
 
 Cluster definitions (Flux sync and add-ons) live in the config repo. The config repo points back to this repo when reconciling the kiwi app.
 
@@ -16,8 +17,8 @@ Make sure Docker Desktop Kubernetes is enabled and your context is set to `docke
 
 ### GitOps (Flux)
 
-1. Commit changes under `infra/k8s/overlays/local/` (for example, update `deploy-config.yaml`).
-2. Let Flux reconcile automatically or run:
+Local GitOps is owned by the config repo. Update `bink8s-cluster-management/clusters/local/apps/kiwi/patch-kiwi-local.yaml`, then reconcile.
+The HTTPS routes (`https://bdc.rtvmedia.org.local/kiwi`) are also defined in that config repo.
 
 ```bash
 flux reconcile kustomization kiwi --with-source
@@ -41,28 +42,8 @@ kubectl -n kiwi port-forward service/kiwi 8080:80
 
 ## Deploy to production
 
-Ensure your context points at `bink8s` (or export `KUBE_CONTEXT`). Add-ons are managed in the config repo.
-
-### GitOps (Flux)
-
-1. Commit changes under `infra/k8s/overlays/prod/` (for example, update `deploy-config.yaml`).
-2. Let Flux reconcile automatically or run:
-
-```bash
-flux reconcile kustomization kiwi --with-source
-```
-
-### Manual (scripts)
-
-Use these only for emergencies; production add-ons should be managed in the config repo.
-
-```bash
-make addons prod
-make build prod
-make deploy prod
-```
-
-`make addons prod` will prompt for confirmation; for non-interactive runs use `scripts/deploy-addons.sh prod --confirm-prod`.
+Production deploys are managed in the config repo (`bink8s-cluster-management`).
+Update the prod patch there, then reconcile Flux. Do not deploy to prod from this repo.
 
 ## Blue/green workflow
 
@@ -76,7 +57,12 @@ make deploy prod
 
 ### Where you change things
 
-Edit `infra/k8s/overlays/<env>/deploy-config.yaml`:
+For GitOps, edit the environment patch in the config repo:
+
+- Local: `bink8s-cluster-management/clusters/local/apps/kiwi/patch-kiwi-local.yaml`
+- Prod: `bink8s-cluster-management/clusters/prod/apps/kiwi/patch-kiwi-prod.yaml`
+
+For manual local testing only, edit `infra/k8s/overlays/local/deploy-config.yaml`:
 
 ```yaml
 data:
