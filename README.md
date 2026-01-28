@@ -111,6 +111,25 @@ make compose-down
 - `infra/docker/` contains Dockerfiles for the base and app images.
 - `scripts/` provides local dev helpers.
 
+## Container Images
+
+Versioned images are built by GitHub Actions on tag pushes (`v*`) and published to GHCR as
+`ghcr.io/bindinc/kiwi:<tag>` (see `.github/workflows/build-image.yaml`).
+
+Publish a new image:
+
+```bash
+git tag v1.0.2
+git push origin v1.0.2
+```
+
+For local Kubernetes without a registry, build a local image and use `kiwi:dev` in your
+local overlay in the cluster config repo:
+
+```bash
+make image-build
+```
+
 ## Data Storage
 
 - **LocalStorage**: All data is stored locally in the browser

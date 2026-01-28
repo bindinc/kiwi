@@ -8,9 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Add Docker Compose local HTTPS gateway flow for OIDC development.
 - Add Docker Compose wiring for local OIDC client_secrets.json usage.
+- Add GitHub Actions workflow to build and push GHCR images on version tag pushes.
+- Add Makefile target to build a local `kiwi:dev` image from the app Dockerfile.
 ### Changed
 - Document local-only overlay usage and route production deployments to the cluster config repo.
 - Generate local Docker Compose TLS certs automatically via a dedicated service.
+- Document GHCR image publishing and local `kiwi:dev` builds in the README.
 
 ### Removed
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.
