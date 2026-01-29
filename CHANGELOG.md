@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add Docker Compose wiring for local OIDC client_secrets.json usage.
 - Add GitHub Actions workflow to build and push GHCR images on version tag pushes.
 - Add Makefile target to build a local `kiwi:dev` image from the app Dockerfile.
+
 ### Changed
 - Document local-only overlay usage and route production deployments to the cluster config repo.
 - Generate local Docker Compose TLS certs automatically via a dedicated service.
@@ -18,6 +19,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Removed
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.
 - Remove Kubernetes/Helm manifests, scripts, and GitOps docs to focus on Docker Compose.
+
+## [v1.0.3]
+
+### Changed
+- Changed version number in html for testing auto tagging
+
+## [v1.0.2]
+
+### Added
+- Added version number to html
 
 ## [v1.0.1]
 
