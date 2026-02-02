@@ -23,6 +23,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.
 - Remove Kubernetes/Helm manifests, scripts, and GitOps docs to focus on Docker Compose.
 
+### Fixed
+- Install Alpine build dependencies needed for cryptography/cffi during image builds.
+
 ## [v1.0.3]
 
 ### Changed
