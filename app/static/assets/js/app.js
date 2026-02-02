@@ -31,6 +31,18 @@ const translate = (key, params, fallback) => {
     return fallback !== undefined ? fallback : key;
 };
 
+const agentDisplayName = (() => {
+    if (typeof window !== 'undefined' && window.kiwiAgentName) {
+        return window.kiwiAgentName;
+    }
+    if (typeof document === 'undefined') {
+        return 'Onbekende agent';
+    }
+    const nameElement = document.getElementById('agentName');
+    const fallbackName = nameElement ? nameElement.textContent.trim() : '';
+    return fallbackName || 'Onbekende agent';
+})();
+
 const werfsleutelsUrl = 'static/assets/onepager_werfsleutels.md';
 
 // Phase 1A: Call Session State Management
@@ -2436,7 +2448,7 @@ function initializeData() {
                         {
                             date: '2024-09-10T10:30:00.000Z',
                             remark: 'Bezorgen bij de buren indien niet thuis',
-                            updatedBy: 'Agent Jan Vos'
+                            updatedBy: `Agent ${agentDisplayName}`
                         }
                     ]
                 },

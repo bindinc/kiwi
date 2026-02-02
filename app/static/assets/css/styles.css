@@ -122,6 +122,28 @@ body {
     color: white;
 }
 
+.agent-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+}
+
+.agent-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .profile-dropdown-arrow {
     font-size: 0.7rem;
     opacity: 0.8;
@@ -3342,4 +3364,58 @@ select option {
 
 .channel-chip.selected .channel-label {
     color: #1d4ed8;
+}
+
+/* ============================================================================
+   ACCESS DENIED PAGE
+   ============================================================================ */
+
+.access-denied-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+    color: var(--text-primary);
+}
+
+.access-denied-card {
+    width: min(720px, 100%);
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 2.5rem;
+    text-align: center;
+}
+
+.access-denied-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.access-denied-actions {
+    margin: 1.5rem 0 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.access-denied-roles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    text-align: left;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+}
+
+.access-denied-roles h2 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.access-denied-roles ul {
+    padding-left: 1.2rem;
+    margin: 0;
 }
