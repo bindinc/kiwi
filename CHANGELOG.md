@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Generate local Docker Compose TLS certs automatically via a dedicated service.
 - Document GHCR image publishing and local `kiwi:dev` builds in the README.
 - Move Python dependency definitions to `pyproject.toml` for uv installs.
+- Bump Alpine base images to 3.19 to unlock newer build tooling.
+- Bump the app runtime to Python 3.12.
 
 ### Removed
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.
