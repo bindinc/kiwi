@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add Docker Compose wiring for local OIDC client_secrets.json usage.
 - Add GitHub Actions workflow to build and push GHCR images on version tag pushes.
 - Add Makefile target to build a local `kiwi:dev` image from the app Dockerfile.
+- Add OIDC login flow with role-based access control and a dedicated access denied page.
+- Add unit tests for OIDC auth helpers.
 
 ### Changed
 - Document local-only overlay usage and route production deployments to the cluster config repo.
