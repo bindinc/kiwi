@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.0.5]
+
 ### Added
 - Add Docker Compose local HTTPS gateway flow for OIDC development.
 - Add Docker Compose wiring for local OIDC client_secrets.json usage.
@@ -29,6 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - Install Alpine build dependencies needed for cryptography/cffi during image builds.
 - Mount OIDC client secrets under `/run/secrets` to avoid bind-mount conflicts in Docker Desktop.
+
+## [v1.0.4]
+
+### Changed
+- Changed version number again in html for testing auto tagging
 
 ## [v1.0.3]
 
