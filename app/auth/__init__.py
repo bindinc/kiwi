@@ -51,6 +51,19 @@ def get_callback_route(redirect_uri: Optional[str]) -> Optional[str]:
     return path
 
 
+def build_oidc_redirect_uri(host_url: Optional[str], script_root: Optional[str]) -> Optional[str]:
+    if not host_url:
+        return None
+    base_url = host_url.rstrip("/")
+    if not base_url:
+        return None
+
+    prefix = normalize_base_path(script_root)
+    if prefix:
+        return f"{base_url}{prefix}/auth/callback"
+    return f"{base_url}/auth/callback"
+
+
 def decode_jwt_payload(token: str) -> Optional[dict]:
     try:
         parts = token.split(".")
