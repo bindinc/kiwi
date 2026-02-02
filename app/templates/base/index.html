@@ -20,7 +20,14 @@
                         <div class="agent-profile-widget">
                             <div class="agent-profile-trigger" onclick="toggleStatusMenu()">
                                 <span class="agent-status-dot" id="agentStatusDot">🟢</span>
-                                <span class="agent-name-label">Agent: <strong id="agentName">Jan Vos</strong></span>
+                                <div class="agent-avatar">
+                                    {% if user_profile_image %}
+                                        <img src="{{ user_profile_image }}" alt="{{ user_full_name }}">
+                                    {% else %}
+                                        <span>{{ user_initials }}</span>
+                                    {% endif %}
+                                </div>
+                                <span class="agent-name-label">Agent: <strong id="agentName">{{ user_full_name }}</strong></span>
                                 <span class="profile-dropdown-arrow">▼</span>
                             </div>
                             <div class="agent-profile-menu" id="agentStatusMenu" style="display: none;">
@@ -1473,6 +1480,9 @@
     <script src="{{ url_for('static', filename='assets/js/feature-flags.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/delivery-date-picker.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/article-search.js') }}"></script>
+    <script>
+        window.kiwiAgentName = {{ user_full_name | tojson }};
+    </script>
     <script src="{{ url_for('static', filename='assets/js/app.js') }}"></script>
 </body>
 </html>

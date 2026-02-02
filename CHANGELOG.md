@@ -10,15 +10,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add Docker Compose wiring for local OIDC client_secrets.json usage.
 - Add GitHub Actions workflow to build and push GHCR images on version tag pushes.
 - Add Makefile target to build a local `kiwi:dev` image from the app Dockerfile.
+- Add OIDC login flow with role-based access control and a dedicated access denied page.
+- Add unit tests for OIDC auth helpers.
 
 ### Changed
 - Document local-only overlay usage and route production deployments to the cluster config repo.
 - Generate local Docker Compose TLS certs automatically via a dedicated service.
 - Document GHCR image publishing and local `kiwi:dev` builds in the README.
+- Move Python dependency definitions to `pyproject.toml` for uv installs.
+- Bump Alpine base images to 3.19 to unlock newer build tooling.
+- Bump the app runtime to Python 3.12.
+- Convert auth helpers into a dedicated `app/auth` package.
 
 ### Removed
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.
 - Remove Kubernetes/Helm manifests, scripts, and GitOps docs to focus on Docker Compose.
+
+### Fixed
+- Install Alpine build dependencies needed for cryptography/cffi during image builds.
+- Mount OIDC client secrets under `/run/secrets` to avoid bind-mount conflicts in Docker Desktop.
 
 ## [v1.0.3]
 

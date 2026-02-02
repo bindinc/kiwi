@@ -87,6 +87,8 @@ Use this flow when you only have access to this repo and need the HTTPS base URL
    ```
 
    Update `client_secrets.json` with your Azure tenant ID, client ID, and client secret.
+   Docker Compose mounts this file as a runtime secret at `/run/secrets/oidc-client-secrets`
+   so it is not baked into the image.
 
 3. Start the local stack (it will generate local TLS certs on first run):
 

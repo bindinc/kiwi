@@ -29,10 +29,9 @@ services:
     image: kiwi-dev:local
     command: ["gunicorn", "-b", "0.0.0.0:8000", "--reload", "main:app"]
     environment:
-      OIDC_CLIENT_SECRETS: /app/client_secrets.json
+      OIDC_CLIENT_SECRETS: /run/secrets/oidc-client-secrets
     secrets:
       - source: oidc-client-secrets
-        target: /app/client_secrets.json
     volumes:
       - ./app:/app
     expose:
