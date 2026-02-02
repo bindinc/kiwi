@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Move Python dependency definitions to `pyproject.toml` for uv installs.
 - Bump Alpine base images to 3.19 to unlock newer build tooling.
 - Bump the app runtime to Python 3.12.
+- Convert auth helpers into a dedicated `app/auth` package.
 
 ### Removed
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.
