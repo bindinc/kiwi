@@ -14,4 +14,4 @@ COPY app/ /app
 
 EXPOSE 8000
 USER app
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "server:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:8000", "main:app"]

@@ -27,7 +27,7 @@ services:
       context: .
       dockerfile: infra/docker/app/Dockerfile
     image: kiwi-dev:local
-    command: ["gunicorn", "-b", "0.0.0.0:8000", "--reload", "server:app"]
+    command: ["gunicorn", "-b", "0.0.0.0:8000", "--reload", "main:app"]
     environment:
       OIDC_CLIENT_SECRETS: /app/client_secrets.json
     secrets:
