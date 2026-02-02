@@ -33,10 +33,9 @@ DEFAULT_CLIENT_SECRETS = os.path.join(APP_DIR, "client_secrets.json")
 
 def configure_app(app: Flask) -> None:
     client_secrets_path = os.environ.get("OIDC_CLIENT_SECRETS", DEFAULT_CLIENT_SECRETS)
-    redirect_uri = os.environ.get("OIDC_REDIRECT_URI") or auth.get_redirect_uri_from_secrets(
-        client_secrets_path
-    )
-    callback_route = auth.get_callback_route(redirect_uri)
+    explicit_redirect_uri = os.environ.get("OIDC_REDIRECT_URI")
+    fallback_redirect_uri = auth.get_redirect_uri_from_secrets(client_secrets_path)
+    callback_route = auth.get_callback_route(explicit_redirect_uri or fallback_redirect_uri)
     session_type = os.environ.get("SESSION_TYPE", "filesystem")
     session_dir = os.environ.get("SESSION_FILE_DIR", "/tmp/flask_session")
 
@@ -53,8 +52,8 @@ def configure_app(app: Flask) -> None:
         SESSION_USE_SIGNER=True,
     )
 
-    if redirect_uri:
-        app.config["OIDC_OVERWRITE_REDIRECT_URI"] = redirect_uri
+    if explicit_redirect_uri:
+        app.config["OIDC_OVERWRITE_REDIRECT_URI"] = explicit_redirect_uri
     if callback_route:
         app.config["OIDC_CALLBACK_ROUTE"] = callback_route
 
@@ -73,6 +72,15 @@ def create_app() -> Flask:
 
     oidc_base_path = auth.normalize_base_path(prefix)
     oidc = OpenIDConnect(app, prefix=oidc_base_path or None)
+
+    @app.before_request
+    def update_oidc_redirect_uri() -> None:
+        if os.environ.get("OIDC_REDIRECT_URI"):
+            return
+
+        redirect_uri = auth.build_oidc_redirect_uri(request.host_url, request.script_root)
+        if redirect_uri:
+            app.config["OIDC_OVERWRITE_REDIRECT_URI"] = redirect_uri
 
     @app.route("/")
     def index() -> str:

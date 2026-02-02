@@ -35,6 +35,21 @@ class AuthHelpersTests(unittest.TestCase):
         )
         self.assertIsNone(auth.get_callback_route(None))
 
+    def test_build_oidc_redirect_uri(self):
+        self.assertEqual(
+            auth.build_oidc_redirect_uri("https://example.org/", "/kiwi"),
+            "https://example.org/kiwi/auth/callback",
+        )
+        self.assertEqual(
+            auth.build_oidc_redirect_uri("https://example.org/", "kiwi-preview"),
+            "https://example.org/kiwi-preview/auth/callback",
+        )
+        self.assertEqual(
+            auth.build_oidc_redirect_uri("https://example.org/", ""),
+            "https://example.org/auth/callback",
+        )
+        self.assertIsNone(auth.build_oidc_redirect_uri("", "/kiwi"))
+
     def test_get_user_roles_from_id_token(self):
         token = make_jwt({"roles": ["bink8s.app.kiwi.user"]})
         session_data = {"oidc_auth_token": {"id_token": token}}
