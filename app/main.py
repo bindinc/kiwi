@@ -1,11 +1,12 @@
 import os
 
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, request
 from flask_oidc import OpenIDConnect
 from flask_session import Session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
+from blueprints.registry import register_blueprints
 
 
 class PrefixMiddleware:
@@ -61,15 +62,7 @@ def configure_app(app: Flask) -> None:
         os.makedirs(session_dir, exist_ok=True)
 
 
-def create_app() -> Flask:
-    app = Flask(__name__, template_folder="templates", static_folder="static")
-    configure_app(app)
-    Session(app)
-
-    prefix = os.environ.get("APPLICATION_PREFIX", "")
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
-    app.wsgi_app = PrefixMiddleware(app.wsgi_app, prefix=prefix)
-
+def configure_oidc(app: Flask, prefix: str) -> OpenIDConnect:
     oidc_base_path = auth.normalize_base_path(prefix)
     oidc = OpenIDConnect(app, prefix=oidc_base_path or None)
 
@@ -82,40 +75,20 @@ def create_app() -> Flask:
         if redirect_uri:
             app.config["OIDC_OVERWRITE_REDIRECT_URI"] = redirect_uri
 
-    @app.route("/")
-    def index() -> str:
-        if not oidc.user_loggedin:
-            login_url = url_for("oidc_auth.login", next=request.url)
-            return redirect(login_url)
+    return oidc
 
-        profile = session.get("oidc_auth_profile", {})
-        roles = auth.get_user_roles(session)
-        identity = auth.build_user_identity(profile)
 
-        if not auth.user_has_access(roles):
-            return (
-                render_template(
-                    "base/access_denied.html",
-                    user_full_name=identity["full_name"],
-                    user_email=identity["email"],
-                    user_roles=roles,
-                    allowed_roles=sorted(auth.ALLOWED_ROLES),
-                    logout_url=url_for(
-                        "oidc_auth.logout", next=url_for("index", _external=True)
-                    ),
-                ),
-                403,
-            )
+def create_app() -> Flask:
+    app = Flask(__name__, template_folder="templates", static_folder="static")
+    configure_app(app)
+    Session(app)
 
-        profile_image = auth.get_profile_image(session)
-        return render_template(
-            "base/index.html",
-            user_full_name=identity["full_name"],
-            user_first_name=identity["first_name"],
-            user_last_name=identity["last_name"],
-            user_initials=identity["initials"],
-            user_profile_image=profile_image,
-        )
+    prefix = os.environ.get("APPLICATION_PREFIX", "")
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    app.wsgi_app = PrefixMiddleware(app.wsgi_app, prefix=prefix)
+
+    oidc = configure_oidc(app, prefix)
+    register_blueprints(app, oidc)
 
     return app
 
