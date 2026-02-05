@@ -39,10 +39,6 @@ if isValid && isAllowed && isSecure {
 Whenever I ask for a **new PR** (or any task that should result in a PR), you must **always** follow the workflow below. Deviating from this process is not allowed.
 
 ## Step 1 — Initialize PR + worktree (mandatory)
-- Always use the script:
-
-  `~/.codex/skills/pr-worktrees/scripts/new_pr_worktree.sh`
-
 - Pass the PR title as input to the script.
 - The default base branch is `main`, unless I explicitly specify otherwise.
 - The script will:
@@ -86,9 +82,6 @@ When reporting completion, always explicitly include:
 - Remove worktrees **only** when I explicitly ask you to do so.
 
 ---
-
-**Summary for you (Codex):**  
-> New PR = run `~/.codex/skills/pr-worktrees/scripts/new_pr_worktree.sh` first, only then start coding.
 
 ## Gateway API (nginx gateway fabric)
 
