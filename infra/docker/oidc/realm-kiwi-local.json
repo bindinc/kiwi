@@ -176,6 +176,22 @@
             "realmRoles": [
                 "bink8s.app.kiwi.view"
             ]
+        },
+        {
+            "username": "donny",
+            "enabled": true,
+            "emailVerified": true,
+            "firstName": "Donny",
+            "lastName": "NoAccess",
+            "email": "donny@local.test",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "kiwi-local-dev-password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": []
         }
     ]
 }

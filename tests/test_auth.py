@@ -62,6 +62,7 @@ class AuthHelpersTests(unittest.TestCase):
     def test_user_has_access(self):
         self.assertTrue(auth.user_has_access(["bink8s.app.kiwi.admin"]))
         self.assertFalse(auth.user_has_access(["some.other.role"]))
+        self.assertFalse(auth.user_has_access([]))
 
     def test_build_user_identity(self):
         profile = {"given_name": "Jan", "family_name": "Vos", "email": "jan@example.org"}

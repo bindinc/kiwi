@@ -103,5 +103,6 @@ When reporting completion, always explicitly include:
   - `kiwi-supervisor` -> `bink8s.app.kiwi.supervisor`
   - `kiwi-user` -> `bink8s.app.kiwi.user`
   - `kiwi-view` -> `bink8s.app.kiwi.view`
+  - `donny` -> no Kiwi role (expected access denied)
 - For fallback mode, app scopes must be `openid email profile` (no `User.Read`).
 - To validate fallback end-to-end, run `make compose-smoke-oidc`.
