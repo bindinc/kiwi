@@ -6,15 +6,13 @@ from flask import Flask
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app")))
 
-from blueprints.api import api_v1_bp, register_api_blueprint  # noqa: E402
 from blueprints.api.status import status_bp  # noqa: E402
 
 
 class ApiStatusTests(unittest.TestCase):
     def setUp(self):
         app = Flask(__name__)
-        register_api_blueprint(status_bp)
-        app.register_blueprint(api_v1_bp)
+        app.register_blueprint(status_bp, url_prefix="/api/v1")
         self.client = app.test_client()
 
     def test_status_returns_snapshot(self):

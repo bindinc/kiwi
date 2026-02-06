@@ -224,6 +224,14 @@ body {
     background: #f8fafc;
 }
 
+.profile-menu-user-name {
+    padding: 0.7rem 1rem 0.55rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f172a;
+    border-bottom: 1px solid var(--border-color);
+}
+
 .status-menu-item {
     width: 100%;
     display: flex;
@@ -256,8 +264,20 @@ body {
     background: #10b981;
 }
 
-.status-menu-item[data-status-option="break"]::before {
-    background: #3b82f6;
+.status-menu-item[data-status-option="busy"]::before {
+    background: #ef4444;
+}
+
+.status-menu-item[data-status-option="dnd"]::before {
+    background: #dc2626;
+}
+
+.status-menu-item[data-status-option="brb"]::before {
+    background: #f59e0b;
+}
+
+.status-menu-item[data-status-option="away"]::before {
+    background: #fbbf24;
 }
 
 .status-menu-item[data-status-option="offline"]::before {
@@ -299,6 +319,12 @@ body {
     font-weight: 700;
     color: #0f172a;
     font-family: 'Courier New', monospace;
+}
+
+.agent-work-stat-value--muted {
+    color: #475569;
+    font-family: inherit;
+    font-weight: 600;
 }
 
 @media (max-width: 768px) {

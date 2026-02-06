@@ -135,8 +135,25 @@ To sign in with a fallback user:
 4. On the Keycloak login screen, use one of the usernames above and password `kiwi-local-dev-password`.
 
 Fallback mode requests `openid email profile` scopes by default.
-External mode keeps `openid email profile User.Read` by default.
+External mode keeps `openid email profile User.Read Presence.Read Presence.ReadWrite` by default.
 You can override with `OIDC_SCOPES`, `OIDC_FALLBACK_SCOPES`, or `OIDC_EXTERNAL_SCOPES`.
+
+Teams presence sync is available only for Microsoft Entra sessions with Graph presence scopes.
+Recommended external scopes for sync:
+
+```bash
+OIDC_EXTERNAL_SCOPES="openid email profile User.Read Presence.Read Presence.ReadWrite"
+```
+
+During an active Avaya call, Kiwi publishes Teams call activity (`InACall`) via Graph session presence APIs.
+Outside active calls, Kiwi keeps the user’s external/manual status and does not auto-switch status values.
+
+For local fallback Keycloak (`OIDC_MODE=fallback`), Teams sync is intentionally disabled.
+You can also disable presence sync globally with:
+
+```bash
+TEAMS_PRESENCE_SYNC_ENABLED=false
+```
 
 Run the fallback smoke check:
 

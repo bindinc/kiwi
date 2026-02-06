@@ -6,7 +6,11 @@ const nl = {
     agentStatus: {
         offline: 'Offline',
         ready: 'Beschikbaar',
-        busy: 'In Gesprek',
+        in_call: 'In gesprek',
+        busy: 'Bezet',
+        dnd: 'Niet storen',
+        brb: 'Ben zo terug',
+        away: 'Als afwezig weergeven',
         acw: 'Nabewerkingstijd',
         break: 'Pauze'
     },
@@ -49,11 +53,18 @@ const nl = {
     },
     agent: {
         statusChanged: 'Status gewijzigd naar: {status}',
-        cannotSetReadyDuringCall: 'Kan niet naar Beschikbaar tijdens actief gesprek'
+        cannotSetReadyDuringCall: 'Kan niet naar Beschikbaar tijdens actief gesprek',
+        cannotSetStatusDuringCall: 'Kan status niet wijzigen tijdens actief gesprek',
+        teamsSyncActive: 'Teams sync actief',
+        teamsSyncMissingScope: 'Teams sync vereist Graph scope Presence.ReadWrite. Log opnieuw in na consent.',
+        teamsSyncUnsupportedProvider: 'Teams sync is niet beschikbaar voor deze OIDC provider.',
+        teamsSyncMissingToken: 'Teams sync is niet beschikbaar: ontbrekende toegangstoken.',
+        teamsSyncMissingSession: 'Teams call sync is niet beschikbaar: ontbrekende presence session-id.',
+        teamsSyncTemporarilyUnavailable: 'Teams sync is tijdelijk niet beschikbaar.'
     },
     acw: {
         readyForNext: 'Klaar voor volgende gesprek',
-        expired: 'ACW tijd verlopen - Status: Beschikbaar',
+        expired: 'ACW tijd verlopen',
         completeForm: 'Vul eerst het nabewerkingsscherm in voordat je ACW afrondt'
     },
     disposition: {

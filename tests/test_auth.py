@@ -61,6 +61,32 @@ class AuthHelpersTests(unittest.TestCase):
         session_data = {"oidc_auth_profile": {"roles": ["bink8s.app.kiwi.view"]}}
         self.assertEqual(auth.get_user_roles(session_data), ["bink8s.app.kiwi.view"])
 
+    def test_get_token_scopes_reads_scope_string_and_access_claims(self):
+        access_token = make_jwt({"scp": "Presence.ReadWrite Presence.Read"})
+        session_data = {
+            "oidc_auth_token": {
+                "access_token": access_token,
+                "scope": "openid email profile User.Read",
+            }
+        }
+
+        scopes = auth.get_token_scopes(session_data)
+        self.assertIn("User.Read", scopes)
+        self.assertIn("Presence.Read", scopes)
+        self.assertIn("Presence.ReadWrite", scopes)
+
+    def test_get_oidc_issuer_prefers_id_token_issuer(self):
+        id_token = make_jwt({"iss": "https://login.microsoftonline.com/example/v2.0"})
+        session_data = {"oidc_auth_token": {"id_token": id_token}}
+        self.assertEqual(
+            auth.get_oidc_issuer(session_data),
+            "https://login.microsoftonline.com/example/v2.0",
+        )
+
+    def test_is_microsoft_issuer(self):
+        self.assertTrue(auth.is_microsoft_issuer("https://login.microsoftonline.com/example/v2.0"))
+        self.assertFalse(auth.is_microsoft_issuer("https://bdc.rtvmedia.org.local/kiwi-oidc/realms/kiwi-local"))
+
     def test_user_has_access(self):
         self.assertTrue(auth.user_has_access(["bink8s.app.kiwi.admin"]))
         self.assertFalse(auth.user_has_access(["some.other.role"]))

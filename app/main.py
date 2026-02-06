@@ -30,7 +30,21 @@ class PrefixMiddleware:
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CLIENT_SECRETS = os.path.join(APP_DIR, "client_secrets.json")
-DEFAULT_OIDC_SCOPES = "openid email profile User.Read"
+DEFAULT_OIDC_SCOPES = "openid email profile User.Read Presence.Read Presence.ReadWrite"
+
+
+def parse_bool_env(name: str, default: bool) -> bool:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+
+    normalized = raw_value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+
+    return default
 
 
 def configure_app(app: Flask) -> None:
@@ -54,6 +68,7 @@ def configure_app(app: Flask) -> None:
         SESSION_PERMANENT=False,
         SESSION_USE_SIGNER=True,
         OIDC_POST_LOGOUT_REDIRECT_URI=os.environ.get("OIDC_POST_LOGOUT_REDIRECT_URI"),
+        TEAMS_PRESENCE_SYNC_ENABLED=parse_bool_env("TEAMS_PRESENCE_SYNC_ENABLED", True),
     )
 
     if explicit_redirect_uri:

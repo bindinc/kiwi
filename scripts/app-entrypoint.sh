@@ -10,7 +10,7 @@ if [ -z "${OIDC_SCOPES:-}" ]; then
   if [ "$OIDC_MODE" = "fallback" ]; then
     export OIDC_SCOPES="${OIDC_FALLBACK_SCOPES:-openid email profile}"
   else
-    export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read}"
+    export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read Presence.Read Presence.ReadWrite}"
   fi
 fi
 

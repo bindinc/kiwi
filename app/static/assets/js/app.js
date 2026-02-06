@@ -44,6 +44,7 @@ const agentDisplayName = (() => {
 })();
 
 const werfsleutelsUrl = 'static/assets/onepager_werfsleutels.md';
+const agentStatusApiUrl = 'api/v1/agent-status';
 
 // Phase 1A: Call Session State Management
 let callSession = {
@@ -67,7 +68,9 @@ let lastCallSession = null;
 
 // Phase 1B: Agent Status State Management
 let agentStatus = {
-    current: 'ready',           // offline, ready, busy, acw, break - Agent starts as ready
+    current: 'ready',           // ready, busy, dnd, brb, away, offline, acw
+    preferred: 'ready',         // external/manual status that should survive non-call events
+    statusBeforeCall: null,     // snapshot used to restore status after an active call
     canReceiveCalls: true,      // Can receive calls on page load
     sessionStartTime: Date.now(),
     callsHandled: 0,
@@ -79,12 +82,22 @@ let agentStatus = {
 
 // Agent Status Definitions
 const agentStatuses = {
-    offline: { label: translate('agentStatus.offline', {}, 'Offline'), color: '#9ca3af', badge: '−', textColor: '#111827' },
     ready: { label: translate('agentStatus.ready', {}, 'Beschikbaar'), color: '#4ade80', badge: '✓', textColor: '#052e16' },
-    busy: { label: translate('agentStatus.busy', {}, 'In Gesprek'), color: '#f87171', badge: '●', textColor: '#7f1d1d' },
+    in_call: { label: translate('agentStatus.in_call', {}, 'In gesprek'), color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
+    busy: { label: translate('agentStatus.busy', {}, 'Bezet'), color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
+    dnd: { label: translate('agentStatus.dnd', {}, 'Niet storen'), color: '#dc2626', badge: '⛔', textColor: '#7f1d1d' },
+    brb: { label: translate('agentStatus.brb', {}, 'Ben zo terug'), color: '#f59e0b', badge: '↺', textColor: '#78350f' },
+    away: { label: translate('agentStatus.away', {}, 'Als afwezig weergeven'), color: '#fbbf24', badge: '◔', textColor: '#713f12' },
+    offline: { label: translate('agentStatus.offline', {}, 'Offline'), color: '#9ca3af', badge: '−', textColor: '#111827' },
     acw: { label: translate('agentStatus.acw', {}, 'Nabewerkingstijd'), color: '#facc15', badge: '~', textColor: '#422006' },
-    break: { label: translate('agentStatus.break', {}, 'Pauze'), color: '#60a5fa', badge: 'II', textColor: '#172554' }
 };
+
+const agentStatusAliases = {
+    break: 'away'
+};
+
+let teamsSyncNoticeShown = false;
+const transientAgentStatuses = new Set(['in_call']);
 
 // Phase 1A: Service Number Configuration
 const serviceNumbers = {
@@ -1670,47 +1683,245 @@ function closeStatusMenu() {
     setStatusMenuOpen(false);
 }
 
-// Set Agent Status
-function setAgentStatus(newStatus) {
+function normalizeAgentStatus(status) {
+    if (typeof status !== 'string') {
+        return null;
+    }
+    const normalized = status.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+    const canonical = agentStatusAliases[normalized] || normalized;
+    if (!agentStatuses[canonical]) {
+        return null;
+    }
+    return canonical;
+}
+
+function resolveTeamsSyncLabel(syncResult) {
+    const capability = syncResult && syncResult.capability ? syncResult.capability : null;
+    if (capability && capability.can_write) {
+        return translate('agent.teamsSyncActive', {}, 'Teams sync actief');
+    }
+
+    const reason = (syncResult && syncResult.reason) || (capability && capability.reason) || null;
+    if (reason === 'missing_presence_scope' || reason === 'missing_presence_write_scope' || reason === 'write_scope_unavailable') {
+        return translate(
+            'agent.teamsSyncMissingScope',
+            {},
+            'Teams sync vereist Graph scope Presence.ReadWrite. Log opnieuw in na consent.'
+        );
+    }
+    if (reason === 'unsupported_identity_provider') {
+        return translate(
+            'agent.teamsSyncUnsupportedProvider',
+            {},
+            'Teams sync is niet beschikbaar voor deze OIDC provider.'
+        );
+    }
+    if (reason === 'missing_access_token') {
+        return translate(
+            'agent.teamsSyncMissingToken',
+            {},
+            'Teams sync is niet beschikbaar: ontbrekende toegangstoken.'
+        );
+    }
+    if (reason === 'missing_presence_session_id') {
+        return translate(
+            'agent.teamsSyncMissingSession',
+            {},
+            'Teams call sync is niet beschikbaar: ontbrekende presence session-id.'
+        );
+    }
+
+    return translate('agent.teamsSyncTemporarilyUnavailable', {}, 'Teams sync is tijdelijk niet beschikbaar.');
+}
+
+function updateTeamsSyncState(syncResult) {
+    const syncElement = document.getElementById('agentTeamsSyncState');
+    if (!syncElement) {
+        return;
+    }
+
+    const label = resolveTeamsSyncLabel(syncResult);
+    syncElement.textContent = label;
+}
+
+function maybeNotifyTeamsSyncIssue(syncResult) {
+    if (teamsSyncNoticeShown) {
+        return;
+    }
+
+    const capability = syncResult && syncResult.capability ? syncResult.capability : null;
+    if (capability && capability.can_write) {
+        return;
+    }
+
+    const reason = (syncResult && syncResult.reason) || (capability && capability.reason) || null;
+    if (!reason) {
+        return;
+    }
+
+    const message = resolveTeamsSyncLabel(syncResult);
+    showToast(message, 'warning');
+    teamsSyncNoticeShown = true;
+}
+
+function applyAgentStatusLocally(newStatus, options = {}) {
     const statusConfig = agentStatuses[newStatus];
     if (!statusConfig) {
+        return false;
+    }
+
+    const shouldUpdateQueue = options.updateQueue !== false;
+    const shouldCloseMenu = options.closeMenu === true;
+    const shouldShowToast = options.showToast === true;
+    const shouldLogChange = options.logChange !== false;
+    const shouldPersistPreferred = options.persistPreferred !== false;
+
+    const oldStatus = agentStatus.current;
+    agentStatus.current = newStatus;
+
+    if (shouldPersistPreferred && !transientAgentStatuses.has(newStatus)) {
+        agentStatus.preferred = newStatus;
+    }
+
+    // Update UI
+    updateAgentStatusDisplay();
+
+    // Update availability
+    agentStatus.canReceiveCalls = (newStatus === 'ready');
+
+    if (shouldUpdateQueue) {
+        updateQueueDisplay();
+    }
+
+    // Log status change
+    if (shouldLogChange) {
+        console.log(`Agent status: ${oldStatus} → ${newStatus}`);
+    }
+
+    if (shouldCloseMenu) {
+        closeStatusMenu();
+    }
+
+    if (shouldShowToast) {
+        showToast(
+            translate('agent.statusChanged', { status: statusConfig.label }, `Status gewijzigd naar: ${statusConfig.label}`),
+            'success'
+        );
+    }
+
+    return true;
+}
+
+async function syncAgentStatusWithBackend(newStatus) {
+    try {
+        const response = await fetch(agentStatusApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!response.ok) {
+            console.warn(`Agent status sync failed with HTTP ${response.status}`);
+            return null;
+        }
+
+        const payload = await response.json();
+        const serverStatus = normalizeAgentStatus(payload && payload.status);
+        const teamsSyncResult = payload && payload.teams_sync ? payload.teams_sync : null;
+
+        if (teamsSyncResult) {
+            updateTeamsSyncState(teamsSyncResult);
+        }
+
+        if (serverStatus && serverStatus !== agentStatus.current) {
+            applyAgentStatusLocally(serverStatus, {
+                showToast: false,
+                closeMenu: false
+            });
+        }
+
+        if (teamsSyncResult) {
+            maybeNotifyTeamsSyncIssue(teamsSyncResult);
+        }
+
+        return payload;
+    } catch (error) {
+        console.warn('Agent status sync request failed', error);
+        return null;
+    }
+}
+
+async function initializeAgentStatusFromBackend() {
+    try {
+        const response = await fetch(agentStatusApiUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        const payload = await response.json();
+        const serverStatus = normalizeAgentStatus(payload && payload.status);
+        const teamsSyncResult = payload && payload.teams_sync ? payload.teams_sync : null;
+
+        if (teamsSyncResult) {
+            updateTeamsSyncState(teamsSyncResult);
+        }
+
+        if (serverStatus && serverStatus !== agentStatus.current) {
+            applyAgentStatusLocally(serverStatus, {
+                showToast: false,
+                closeMenu: false
+            });
+        }
+    } catch (error) {
+        console.warn('Agent status initialization from backend failed', error);
+    }
+}
+
+// Set Agent Status
+function setAgentStatus(newStatus) {
+    const normalizedStatus = normalizeAgentStatus(newStatus);
+    if (!normalizedStatus) {
         return;
     }
 
     // Validatie
-    if (callSession.active && newStatus === 'ready') {
-        showToast(translate('agent.cannotSetReadyDuringCall', {}, 'Kan niet naar Beschikbaar tijdens actief gesprek'), 'error');
+    if (callSession.active && normalizedStatus !== 'in_call') {
+        showToast(
+            translate('agent.cannotSetStatusDuringCall', {}, 'Kan status niet wijzigen tijdens actief gesprek'),
+            'error'
+        );
         return;
     }
-    
-    const oldStatus = agentStatus.current;
-    agentStatus.current = newStatus;
-    
-    // Update UI
-    updateAgentStatusDisplay();
-    
-    // Update availability
-    agentStatus.canReceiveCalls = (newStatus === 'ready');
-    
-    // Update queue display wanneer status wijzigt
-    updateQueueDisplay();
-    
-    // Log status change
-    console.log(`Agent status: ${oldStatus} → ${newStatus}`);
-    
-    // Close menu if open
-    closeStatusMenu();
-    
-    showToast(
-        translate('agent.statusChanged', { status: statusConfig.label }, `Status gewijzigd naar: ${statusConfig.label}`),
-        'success'
-    );
+
+    if (normalizedStatus === agentStatus.current) {
+        closeStatusMenu();
+        return;
+    }
+
+    applyAgentStatusLocally(normalizedStatus, {
+        showToast: false,
+        closeMenu: true
+    });
+    syncAgentStatusWithBackend(normalizedStatus);
 }
 
 // Update Agent Status Display
 function updateAgentStatusDisplay() {
     const statusConfig = agentStatuses[agentStatus.current];
     const statusDot = document.getElementById('agentStatusDot');
+    const profileTrigger = document.getElementById('agentProfileTrigger');
     if (!statusConfig || !statusDot) {
         return;
     }
@@ -1718,6 +1929,12 @@ function updateAgentStatusDisplay() {
     statusDot.textContent = statusConfig.badge;
     statusDot.style.backgroundColor = statusConfig.color;
     statusDot.style.color = statusConfig.textColor;
+
+    const statusTooltip = `Status: ${statusConfig.label}`;
+    statusDot.title = statusTooltip;
+    if (profileTrigger) {
+        profileTrigger.title = statusTooltip;
+    }
 
     updateStatusMenuSelection();
     updateAgentWorkSummary();
@@ -1740,12 +1957,32 @@ function toggleStatusMenu(event) {
 // Auto Set Agent Status (during call flow)
 function autoSetAgentStatus(callState) {
     if (callState === 'call_started') {
-        agentStatus.current = 'busy';
-        agentStatus.canReceiveCalls = false;
-        updateAgentStatusDisplay();
-        updateQueueDisplay();
+        const fallbackPreferredStatus = normalizeAgentStatus(agentStatus.preferred) || 'ready';
+        const currentStatus = normalizeAgentStatus(agentStatus.current);
+        const statusToRestore = (currentStatus && !transientAgentStatuses.has(currentStatus))
+            ? currentStatus
+            : fallbackPreferredStatus;
+        agentStatus.statusBeforeCall = statusToRestore;
+
+        applyAgentStatusLocally('in_call', {
+            showToast: false,
+            closeMenu: false,
+            persistPreferred: false
+        });
+        syncAgentStatusWithBackend('in_call');
     } else if (callState === 'call_ended') {
-        // Phase 5A: Start ACW after call ends
+        const statusAfterCall = normalizeAgentStatus(agentStatus.statusBeforeCall)
+            || normalizeAgentStatus(agentStatus.preferred)
+            || 'ready';
+        agentStatus.statusBeforeCall = null;
+
+        applyAgentStatusLocally(statusAfterCall, {
+            showToast: false,
+            closeMenu: false
+        });
+        syncAgentStatusWithBackend(statusAfterCall);
+
+        // Phase 5A: Start ACW after call ends (status remains restored manual/external value)
         startACW();
     }
 }
@@ -1756,12 +1993,7 @@ function autoSetAgentStatus(callState) {
 
 // Start ACW (After Call Work)
 function startACW() {
-    agentStatus.current = 'acw';
     agentStatus.acwStartTime = Date.now();
-    agentStatus.canReceiveCalls = false;
-    
-    // Update UI
-    updateAgentStatusDisplay();
     
     // Show ACW bar
     const acwBar = document.getElementById('acwBar');
@@ -1785,7 +2017,7 @@ function startACWTimer() {
         
         // Update timer display in ACW bar
         const acwTimerEl = document.getElementById('acwTimer');
-        if (acwTimerEl && agentStatus.current === 'acw') {
+        if (acwTimerEl) {
             acwTimerEl.textContent = formatTime(remaining);
         }
         
@@ -1808,13 +2040,10 @@ function endACW(manual = false) {
         acwBar.style.display = 'none';
     }
     
-    // Automatically set to Ready after ACW
-    setAgentStatus('ready');
-    
     if (manual) {
         showToast(translate('acw.readyForNext', {}, 'Klaar voor volgende gesprek'), 'success');
     } else {
-        showToast(translate('acw.expired', {}, 'ACW tijd verlopen - Status: Beschikbaar'), 'info');
+        showToast(translate('acw.expired', {}, 'ACW tijd verlopen'), 'info');
     }
 }
 
@@ -2487,6 +2716,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize agent status display (agent starts as ready)
     startAgentWorkSessionTimer();
     updateAgentStatusDisplay();
+    initializeAgentStatusFromBackend();
 
     const advancedFilterIds = ['searchName', 'searchPhone', 'searchEmail'];
     const hasAdvancedValues = advancedFilterIds.some(id => {

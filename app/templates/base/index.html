@@ -14,7 +14,7 @@
         <header class="header">
             <div class="header-content">
                 <div class="header-top">
-                    <h1>📞 Klantenservice Portal <i>v1.0.5</i></h1>
+                    <h1>KIWI <i>v1.0.6</i></h1>
                     <div class="header-right">
                         <!-- Agent Profile Widget with Status -->
                         <div class="agent-profile-widget">
@@ -25,7 +25,8 @@
                                 onclick="toggleStatusMenu(event)"
                                 aria-expanded="false"
                                 aria-haspopup="true"
-                                aria-controls="agentStatusMenu">
+                                aria-controls="agentStatusMenu"
+                                title="Status: Beschikbaar">
                                 <div class="agent-avatar">
                                     {% if user_profile_image %}
                                         <img src="{{ user_profile_image }}" alt="{{ user_full_name }}">
@@ -38,10 +39,20 @@
                             </button>
                             <div class="agent-profile-menu" id="agentStatusMenu" hidden>
                                 <div class="profile-menu-section">
+                                    <div class="profile-menu-user-name">
+                                        {% if user_first_name or user_last_name %}
+                                            {{ user_first_name }} {{ user_last_name }}
+                                        {% else %}
+                                            {{ user_full_name }}
+                                        {% endif %}
+                                    </div>
                                     <div class="profile-menu-header">Status</div>
                                     <button type="button" class="status-menu-item" data-status-option="ready" onclick="setAgentStatus('ready')">Beschikbaar</button>
-                                    <button type="button" class="status-menu-item" data-status-option="break" onclick="setAgentStatus('break')">Pauze</button>
-                                    <button type="button" class="status-menu-item" data-status-option="offline" onclick="setAgentStatus('offline')">Offline</button>
+                                    <button type="button" class="status-menu-item" data-status-option="busy" onclick="setAgentStatus('busy')">Bezet</button>
+                                    <button type="button" class="status-menu-item" data-status-option="dnd" onclick="setAgentStatus('dnd')">Niet storen</button>
+                                    <button type="button" class="status-menu-item" data-status-option="brb" onclick="setAgentStatus('brb')">Ben zo terug</button>
+                                    <button type="button" class="status-menu-item" data-status-option="away" onclick="setAgentStatus('away')">Als afwezig weergeven</button>
+                                    <button type="button" class="status-menu-item" data-status-option="offline" onclick="setAgentStatus('offline')">Offline weergeven</button>
                                 </div>
                                 <div class="profile-menu-section">
                                     <div class="profile-menu-header">Account</div>
@@ -247,8 +258,8 @@
                 <div id="welcomeMessage" class="welcome-message">
                     <div class="empty-state">
                         <span class="empty-icon">👤</span>
-                        <h2>Welkom bij Klantenservice</h2>
-                        <p>Zoek een klant of start een nieuwe actie</p>
+                        <h2>Welkom bij KIWI!</h2>
+                        <p>Waar klanten zich gehoord voelen.</p>
                     </div>
                 </div>
 
