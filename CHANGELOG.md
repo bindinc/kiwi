@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add fallback OIDC test user `donny` with no Kiwi roles for access-denied testing.
 - Add OIDC runtime mode resolution and container entrypoint scripts for external vs fallback secrets.
 - Add a `make compose-smoke-oidc` smoke test for fallback OIDC token/role validation.
+- Add agent workday stats to the status menu, including active session time and handled call count.
 
 ### Changed
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
@@ -21,9 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Configure fallback Keycloak hostname/backchannel handling so browser redirects stay on the public local URL.
 - Make OIDC scopes mode-aware: fallback defaults to `openid email profile`, external keeps `openid email profile User.Read`.
 - Gate local startup on health checks so `app` waits for fallback OIDC readiness and `gateway` waits for a healthy app.
+- Redesign the header status indicator to an avatar badge style and extend its menu with status selection and logout.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
+- Make menu logout terminate local session and attempt OIDC provider logout before landing on a logged-out page.
 
 ## [v1.0.6]
 

@@ -69,6 +69,9 @@ let lastCallSession = null;
 let agentStatus = {
     current: 'ready',           // offline, ready, busy, acw, break - Agent starts as ready
     canReceiveCalls: true,      // Can receive calls on page load
+    sessionStartTime: Date.now(),
+    callsHandled: 0,
+    sessionTimerInterval: null,
     acwStartTime: null,
     breakStartTime: null,
     acwInterval: null
@@ -76,11 +79,11 @@ let agentStatus = {
 
 // Agent Status Definitions
 const agentStatuses = {
-    offline: { label: translate('agentStatus.offline', {}, 'Offline'), color: '#6b7280', icon: '⚫' },
-    ready: { label: translate('agentStatus.ready', {}, 'Beschikbaar'), color: '#10b981', icon: '🟢' },
-    busy: { label: translate('agentStatus.busy', {}, 'In Gesprek'), color: '#ef4444', icon: '🔴' },
-    acw: { label: translate('agentStatus.acw', {}, 'Nabewerkingstijd'), color: '#f59e0b', icon: '🟡' },
-    break: { label: translate('agentStatus.break', {}, 'Pauze'), color: '#3b82f6', icon: '🔵' }
+    offline: { label: translate('agentStatus.offline', {}, 'Offline'), color: '#9ca3af', badge: '−', textColor: '#111827' },
+    ready: { label: translate('agentStatus.ready', {}, 'Beschikbaar'), color: '#4ade80', badge: '✓', textColor: '#052e16' },
+    busy: { label: translate('agentStatus.busy', {}, 'In Gesprek'), color: '#f87171', badge: '●', textColor: '#7f1d1d' },
+    acw: { label: translate('agentStatus.acw', {}, 'Nabewerkingstijd'), color: '#facc15', badge: '~', textColor: '#422006' },
+    break: { label: translate('agentStatus.break', {}, 'Pauze'), color: '#60a5fa', badge: 'II', textColor: '#172554' }
 };
 
 // Phase 1A: Service Number Configuration
@@ -1395,6 +1398,8 @@ function endCallSession(forcedByCustomer = false) {
     if (!callSession.active) return;
     
     const callDuration = Math.floor((Date.now() - callSession.startTime) / 1000);
+    agentStatus.callsHandled += 1;
+    updateAgentWorkSummary();
     
     // Voeg contact moment toe als beller geïdentificeerd was
     if (callSession.customerId) {
@@ -1608,8 +1613,70 @@ function showSuccessIdentificationPrompt(customerId, customerName) {
 // PHASE 1B: AGENT STATUS MANAGEMENT
 // ============================================================================
 
+function formatElapsedSessionTime(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function updateStatusMenuSelection() {
+    const statusButtons = document.querySelectorAll('[data-status-option]');
+    statusButtons.forEach((button) => {
+        const isCurrentStatus = button.dataset.statusOption === agentStatus.current;
+        button.classList.toggle('is-active', isCurrentStatus);
+    });
+}
+
+function updateAgentWorkSummary() {
+    const activeSessionTimeElement = document.getElementById('agentWorkSessionTime');
+    const callsHandledElement = document.getElementById('agentCallsHandled');
+
+    if (activeSessionTimeElement) {
+        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - agentStatus.sessionStartTime) / 1000));
+        activeSessionTimeElement.textContent = formatElapsedSessionTime(elapsedSeconds);
+    }
+
+    if (callsHandledElement) {
+        callsHandledElement.textContent = String(agentStatus.callsHandled);
+    }
+}
+
+function startAgentWorkSessionTimer() {
+    updateAgentWorkSummary();
+
+    if (agentStatus.sessionTimerInterval) {
+        clearInterval(agentStatus.sessionTimerInterval);
+    }
+
+    agentStatus.sessionTimerInterval = setInterval(() => {
+        updateAgentWorkSummary();
+    }, 1000);
+}
+
+function setStatusMenuOpen(shouldOpen) {
+    const menu = document.getElementById('agentStatusMenu');
+    const trigger = document.getElementById('agentProfileTrigger');
+    if (!menu || !trigger) {
+        return;
+    }
+
+    menu.hidden = !shouldOpen;
+    trigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+}
+
+function closeStatusMenu() {
+    setStatusMenuOpen(false);
+}
+
 // Set Agent Status
 function setAgentStatus(newStatus) {
+    const statusConfig = agentStatuses[newStatus];
+    if (!statusConfig) {
+        return;
+    }
+
     // Validatie
     if (callSession.active && newStatus === 'ready') {
         showToast(translate('agent.cannotSetReadyDuringCall', {}, 'Kan niet naar Beschikbaar tijdens actief gesprek'), 'error');
@@ -1632,13 +1699,10 @@ function setAgentStatus(newStatus) {
     console.log(`Agent status: ${oldStatus} → ${newStatus}`);
     
     // Close menu if open
-    const menu = document.getElementById('agentStatusMenu');
-    if (menu) {
-        menu.style.display = 'none';
-    }
+    closeStatusMenu();
     
     showToast(
-        translate('agent.statusChanged', { status: agentStatuses[newStatus].label }, `Status gewijzigd naar: ${agentStatuses[newStatus].label}`),
+        translate('agent.statusChanged', { status: statusConfig.label }, `Status gewijzigd naar: ${statusConfig.label}`),
         'success'
     );
 }
@@ -1647,18 +1711,30 @@ function setAgentStatus(newStatus) {
 function updateAgentStatusDisplay() {
     const statusConfig = agentStatuses[agentStatus.current];
     const statusDot = document.getElementById('agentStatusDot');
-    
-    if (statusDot) {
-        statusDot.textContent = statusConfig.icon;
+    if (!statusConfig || !statusDot) {
+        return;
     }
+    
+    statusDot.textContent = statusConfig.badge;
+    statusDot.style.backgroundColor = statusConfig.color;
+    statusDot.style.color = statusConfig.textColor;
+
+    updateStatusMenuSelection();
+    updateAgentWorkSummary();
 }
 
 // Toggle Status Menu
-function toggleStatusMenu() {
-    const menu = document.getElementById('agentStatusMenu');
-    if (menu) {
-        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+function toggleStatusMenu(event) {
+    if (event) {
+        event.stopPropagation();
     }
+
+    const menu = document.getElementById('agentStatusMenu');
+    if (!menu) {
+        return;
+    }
+
+    setStatusMenuOpen(menu.hidden);
 }
 
 // Auto Set Agent Status (during call flow)
@@ -1667,6 +1743,7 @@ function autoSetAgentStatus(callState) {
         agentStatus.current = 'busy';
         agentStatus.canReceiveCalls = false;
         updateAgentStatusDisplay();
+        updateQueueDisplay();
     } else if (callState === 'call_ended') {
         // Phase 5A: Start ACW after call ends
         startACW();
@@ -2408,6 +2485,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Kon werfsleutels niet initialiseren', error);
     });
     // Initialize agent status display (agent starts as ready)
+    startAgentWorkSessionTimer();
     updateAgentStatusDisplay();
 
     const advancedFilterIds = ['searchName', 'searchPhone', 'searchEmail'];
@@ -5661,6 +5739,17 @@ function fullReset() {
 // Close modal when clicking outside
 document.addEventListener('click', (e) => {
     const modal = document.getElementById('debugModal');
+    const statusMenu = document.getElementById('agentStatusMenu');
+    const profileTrigger = document.getElementById('agentProfileTrigger');
+
+    const clickInsideStatusMenu = statusMenu && statusMenu.contains(e.target);
+    const clickOnProfileTrigger = profileTrigger && profileTrigger.contains(e.target);
+    const menuIsOpen = statusMenu && !statusMenu.hidden;
+
+    if (menuIsOpen && !clickInsideStatusMenu && !clickOnProfileTrigger) {
+        closeStatusMenu();
+    }
+
     if (e.target === modal) {
         closeDebugModal();
     }

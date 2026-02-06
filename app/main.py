@@ -53,6 +53,7 @@ def configure_app(app: Flask) -> None:
         SESSION_FILE_DIR=session_dir,
         SESSION_PERMANENT=False,
         SESSION_USE_SIGNER=True,
+        OIDC_POST_LOGOUT_REDIRECT_URI=os.environ.get("OIDC_POST_LOGOUT_REDIRECT_URI"),
     )
 
     if explicit_redirect_uri:
