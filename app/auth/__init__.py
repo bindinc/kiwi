@@ -1,6 +1,6 @@
 import base64
 import json
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Set
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import requests
@@ -11,6 +11,12 @@ ALLOWED_ROLES = {
     "bink8s.app.kiwi.dev",
     "bink8s.app.kiwi.admin",
     "bink8s.app.kiwi.view",
+}
+
+MICROSOFT_ISSUER_HOSTS = {
+    "login.microsoftonline.com",
+    "sts.windows.net",
+    "login.windows.net",
 }
 
 
@@ -161,6 +167,84 @@ def get_access_token(session_data: dict) -> Optional[str]:
     if isinstance(token_data, dict):
         return token_data.get("access_token")
     return None
+
+
+def get_id_token(session_data: dict) -> Optional[str]:
+    token_data = session_data.get("oidc_auth_token")
+    if isinstance(token_data, dict):
+        return token_data.get("id_token")
+    return None
+
+
+def get_id_token_claims(session_data: dict) -> Optional[dict]:
+    id_token = get_id_token(session_data)
+    if not id_token:
+        return None
+    return decode_jwt_payload(id_token)
+
+
+def get_access_token_claims(session_data: dict) -> Optional[dict]:
+    access_token = get_access_token(session_data)
+    if not access_token:
+        return None
+    return decode_jwt_payload(access_token)
+
+
+def get_oidc_issuer(session_data: dict) -> Optional[str]:
+    id_token_claims = get_id_token_claims(session_data)
+    if id_token_claims and isinstance(id_token_claims.get("iss"), str):
+        issuer = id_token_claims["iss"].strip()
+        if issuer:
+            return issuer
+
+    access_token_claims = get_access_token_claims(session_data)
+    if access_token_claims and isinstance(access_token_claims.get("iss"), str):
+        issuer = access_token_claims["iss"].strip()
+        if issuer:
+            return issuer
+
+    profile = session_data.get("oidc_auth_profile")
+    if isinstance(profile, dict):
+        issuer = profile.get("iss")
+        if isinstance(issuer, str) and issuer.strip():
+            return issuer.strip()
+
+    return None
+
+
+def is_microsoft_issuer(issuer: Optional[str]) -> bool:
+    if not issuer:
+        return False
+
+    parsed_issuer = urlparse(issuer)
+    issuer_host = (parsed_issuer.hostname or "").lower()
+    if not issuer_host:
+        return False
+
+    if issuer_host in MICROSOFT_ISSUER_HOSTS:
+        return True
+
+    return issuer_host.endswith(".microsoftonline.com")
+
+
+def get_token_scopes(session_data: dict) -> Set[str]:
+    scopes: Set[str] = set()
+
+    token_data = session_data.get("oidc_auth_token")
+    if isinstance(token_data, dict):
+        raw_scope = token_data.get("scope")
+        if isinstance(raw_scope, str):
+            scopes.update(scope for scope in raw_scope.split() if scope)
+        elif isinstance(raw_scope, list):
+            scopes.update(scope for scope in raw_scope if isinstance(scope, str) and scope)
+
+    access_token_claims = get_access_token_claims(session_data)
+    if access_token_claims:
+        access_scope = access_token_claims.get("scp")
+        if isinstance(access_scope, str):
+            scopes.update(scope for scope in access_scope.split() if scope)
+
+    return scopes
 
 
 def fetch_profile_image(access_token: str, http_get=requests.get) -> Optional[str]:
