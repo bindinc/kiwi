@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Persist agent status changes through the backend and sync with Teams only when Graph permissions and Entra issuer checks pass.
 - Expand Kiwi status options to align with Teams presence states (available, busy, do-not-disturb, be-right-back, away, offline).
 - Update default external OIDC scopes to include Graph presence scopes (`Presence.Read`, `Presence.ReadWrite`).
+- Sync Avaya call start to Teams `InACall` activity by using Graph session presence APIs for call-state updates.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.

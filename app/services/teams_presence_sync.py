@@ -19,7 +19,7 @@ WRITE_SCOPES = {
     "Presence.ReadWrite.All",
 }
 
-KIWI_TO_TEAMS_PRESENCE = {
+KIWI_TO_TEAMS_PREFERRED_PRESENCE = {
     "ready": {"availability": "Available", "activity": "Available", "expirationDuration": "PT8H"},
     "break": {"availability": "Away", "activity": "Away", "expirationDuration": "PT4H"},
     "away": {"availability": "Away", "activity": "Away", "expirationDuration": "PT4H"},
@@ -32,6 +32,9 @@ KIWI_TO_TEAMS_PRESENCE = {
     "offline": {"availability": "Offline", "activity": "OffWork", "expirationDuration": "PT8H"},
     "busy": {"availability": "Busy", "activity": "Busy", "expirationDuration": "PT4H"},
     "acw": {"availability": "Busy", "activity": "Busy", "expirationDuration": "PT30M"},
+}
+KIWI_TO_TEAMS_SESSION_PRESENCE = {
+    "in_call": {"availability": "Busy", "activity": "InACall", "expirationDuration": "PT4H"},
 }
 
 logger = logging.getLogger(__name__)
@@ -106,8 +109,40 @@ def get_graph_user_identifier(session_data: dict) -> Optional[str]:
     return None
 
 
-def map_kiwi_status_to_teams_presence(status: str) -> Optional[dict]:
-    mapping = KIWI_TO_TEAMS_PRESENCE.get(status)
+def get_presence_session_id(session_data: dict, app_config: dict) -> Optional[str]:
+    configured_session_id = app_config.get("TEAMS_PRESENCE_SESSION_ID")
+    if isinstance(configured_session_id, str) and configured_session_id.strip():
+        return configured_session_id.strip()
+
+    oidc_client_id = app_config.get("OIDC_CLIENT_ID")
+    if isinstance(oidc_client_id, str) and oidc_client_id.strip():
+        return oidc_client_id.strip()
+
+    access_claims = auth.get_access_token_claims(session_data) or {}
+    id_claims = auth.get_id_token_claims(session_data) or {}
+
+    candidate_values = [
+        access_claims.get("azp"),
+        access_claims.get("appid"),
+        id_claims.get("azp"),
+        id_claims.get("appid"),
+    ]
+    for value in candidate_values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return None
+
+
+def map_kiwi_status_to_teams_preferred_presence(status: str) -> Optional[dict]:
+    mapping = KIWI_TO_TEAMS_PREFERRED_PRESENCE.get(status)
+    if not mapping:
+        return None
+    return dict(mapping)
+
+
+def map_kiwi_status_to_teams_session_presence(status: str) -> Optional[dict]:
+    mapping = KIWI_TO_TEAMS_SESSION_PRESENCE.get(status)
     if not mapping:
         return None
     return dict(mapping)
@@ -135,7 +170,10 @@ def map_teams_presence_to_kiwi_status(availability: Optional[str], activity: Opt
     if normalized_activity in {"outofoffice"}:
         return "away"
 
-    if normalized_activity in {"inacall", "inaconferencecall", "inameeting", "presenting", "urgentinterruptionsonly"}:
+    if normalized_activity in {"inacall", "inaconferencecall"}:
+        return "in_call"
+
+    if normalized_activity in {"inameeting", "presenting", "urgentinterruptionsonly"}:
         return "busy"
 
     availability_mapping = {
@@ -165,15 +203,6 @@ def sync_kiwi_status_to_teams(
             "capability": capability,
         }
 
-    presence_payload = map_kiwi_status_to_teams_presence(kiwi_status)
-    if not presence_payload:
-        return {
-            "attempted": False,
-            "synced": False,
-            "reason": "unsupported_kiwi_status",
-            "capability": capability,
-        }
-
     user_identifier = get_graph_user_identifier(session_data)
     if not user_identifier:
         return {
@@ -185,18 +214,116 @@ def sync_kiwi_status_to_teams(
 
     access_token = auth.get_access_token(session_data)
     encoded_identifier = quote(user_identifier, safe="")
-    endpoint = (
-        f"{GRAPH_API_BASE_URL}/users/"
-        f"{encoded_identifier}/presence/setUserPreferredPresence"
-    )
+    request_headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    if kiwi_status == "in_call":
+        session_presence_payload = map_kiwi_status_to_teams_session_presence(kiwi_status)
+        if not session_presence_payload:
+            return {
+                "attempted": False,
+                "synced": False,
+                "reason": "unsupported_kiwi_status",
+                "capability": capability,
+            }
+
+        session_id = get_presence_session_id(session_data, app_config)
+        if not session_id:
+            return {
+                "attempted": False,
+                "synced": False,
+                "reason": "missing_presence_session_id",
+                "capability": capability,
+            }
+
+        clear_preferred_endpoint = (
+            f"{GRAPH_API_BASE_URL}/users/{encoded_identifier}/presence/clearUserPreferredPresence"
+        )
+        clear_preferred_status = None
+
+        try:
+            clear_preferred_response = http_post(
+                clear_preferred_endpoint,
+                headers=request_headers,
+                json={},
+                timeout=5,
+            )
+            clear_preferred_status = clear_preferred_response.status_code
+        except requests.RequestException as exc:
+            logger.warning("Failed to clear user preferred presence before in-call sync: %s", exc)
+
+        session_endpoint = f"{GRAPH_API_BASE_URL}/users/{encoded_identifier}/presence/setPresence"
+        session_payload = dict(session_presence_payload)
+        session_payload["sessionId"] = session_id
+
+        try:
+            response = http_post(
+                session_endpoint,
+                headers=request_headers,
+                json=session_payload,
+                timeout=5,
+            )
+        except requests.RequestException as exc:
+            logger.warning("Failed to sync in-call Teams presence: %s", exc)
+            return {
+                "attempted": True,
+                "synced": False,
+                "reason": "request_failed",
+                "capability": capability,
+                "mode": "session",
+                "clear_preferred_status": clear_preferred_status,
+            }
+
+        is_success = response.status_code in {200, 204}
+        if not is_success:
+            logger.warning(
+                "Teams in-call presence update failed (status=%s, reason=%s)",
+                response.status_code,
+                response.text[:200],
+            )
+
+        return {
+            "attempted": True,
+            "synced": is_success,
+            "reason": None if is_success else "graph_update_failed",
+            "http_status": response.status_code,
+            "capability": capability,
+            "mode": "session",
+            "clear_preferred_status": clear_preferred_status,
+        }
+
+    presence_payload = map_kiwi_status_to_teams_preferred_presence(kiwi_status)
+    if not presence_payload:
+        return {
+            "attempted": False,
+            "synced": False,
+            "reason": "unsupported_kiwi_status",
+            "capability": capability,
+        }
+
+    clear_presence_status = None
+    session_id = get_presence_session_id(session_data, app_config)
+    if session_id:
+        clear_presence_endpoint = f"{GRAPH_API_BASE_URL}/users/{encoded_identifier}/presence/clearPresence"
+        try:
+            clear_presence_response = http_post(
+                clear_presence_endpoint,
+                headers=request_headers,
+                json={"sessionId": session_id},
+                timeout=5,
+            )
+            clear_presence_status = clear_presence_response.status_code
+        except requests.RequestException as exc:
+            logger.warning("Failed to clear session presence before preferred update: %s", exc)
+
+    endpoint = f"{GRAPH_API_BASE_URL}/users/{encoded_identifier}/presence/setUserPreferredPresence"
 
     try:
         response = http_post(
             endpoint,
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json",
-            },
+            headers=request_headers,
             json=presence_payload,
             timeout=5,
         )
@@ -207,6 +334,8 @@ def sync_kiwi_status_to_teams(
             "synced": False,
             "reason": "request_failed",
             "capability": capability,
+            "mode": "preferred",
+            "clear_presence_status": clear_presence_status,
         }
 
     is_success = response.status_code in {200, 204}
@@ -223,6 +352,8 @@ def sync_kiwi_status_to_teams(
         "reason": None if is_success else "graph_update_failed",
         "http_status": response.status_code,
         "capability": capability,
+        "mode": "preferred",
+        "clear_presence_status": clear_presence_status,
     }
 
 

@@ -6,6 +6,7 @@ const nl = {
     agentStatus: {
         offline: 'Offline',
         ready: 'Beschikbaar',
+        in_call: 'In gesprek',
         busy: 'Bezet',
         dnd: 'Niet storen',
         brb: 'Ben zo terug',
@@ -57,6 +58,7 @@ const nl = {
         teamsSyncMissingScope: 'Teams sync vereist Graph scope Presence.ReadWrite. Log opnieuw in na consent.',
         teamsSyncUnsupportedProvider: 'Teams sync is niet beschikbaar voor deze OIDC provider.',
         teamsSyncMissingToken: 'Teams sync is niet beschikbaar: ontbrekende toegangstoken.',
+        teamsSyncMissingSession: 'Teams call sync is niet beschikbaar: ontbrekende presence session-id.',
         teamsSyncTemporarilyUnavailable: 'Teams sync is tijdelijk niet beschikbaar.'
     },
     acw: {

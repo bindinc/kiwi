@@ -6,7 +6,7 @@ BLUEPRINT_NAME = "agent_status_api"
 URL_PREFIX = "/agent-status"
 SESSION_STATUS_KEY = "kiwi_agent_status"
 DEFAULT_STATUS = "ready"
-SUPPORTED_STATUSES = {"ready", "busy", "dnd", "brb", "away", "offline", "acw"}
+SUPPORTED_STATUSES = {"ready", "busy", "dnd", "brb", "away", "offline", "acw", "in_call"}
 STATUS_ALIASES = {"break": "away"}
 
 

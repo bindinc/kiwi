@@ -145,6 +145,8 @@ Recommended external scopes for sync:
 OIDC_EXTERNAL_SCOPES="openid email profile User.Read Presence.Read Presence.ReadWrite"
 ```
 
+During an active Avaya call, Kiwi publishes Teams call activity (`InACall`) via Graph session presence APIs.
+
 For local fallback Keycloak (`OIDC_MODE=fallback`), Teams sync is intentionally disabled.
 You can also disable presence sync globally with:
 

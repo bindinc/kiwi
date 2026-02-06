@@ -81,6 +81,7 @@ let agentStatus = {
 // Agent Status Definitions
 const agentStatuses = {
     ready: { label: translate('agentStatus.ready', {}, 'Beschikbaar'), color: '#4ade80', badge: '✓', textColor: '#052e16' },
+    in_call: { label: translate('agentStatus.in_call', {}, 'In gesprek'), color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
     busy: { label: translate('agentStatus.busy', {}, 'Bezet'), color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
     dnd: { label: translate('agentStatus.dnd', {}, 'Niet storen'), color: '#dc2626', badge: '⛔', textColor: '#7f1d1d' },
     brb: { label: translate('agentStatus.brb', {}, 'Ben zo terug'), color: '#f59e0b', badge: '↺', textColor: '#78350f' },
@@ -1722,6 +1723,13 @@ function resolveTeamsSyncLabel(syncResult) {
             'Teams sync is niet beschikbaar: ontbrekende toegangstoken.'
         );
     }
+    if (reason === 'missing_presence_session_id') {
+        return translate(
+            'agent.teamsSyncMissingSession',
+            {},
+            'Teams call sync is niet beschikbaar: ontbrekende presence session-id.'
+        );
+    }
 
     return translate('agent.teamsSyncTemporarilyUnavailable', {}, 'Teams sync is tijdelijk niet beschikbaar.');
 }
@@ -1931,11 +1939,11 @@ function toggleStatusMenu(event) {
 // Auto Set Agent Status (during call flow)
 function autoSetAgentStatus(callState) {
     if (callState === 'call_started') {
-        applyAgentStatusLocally('busy', {
+        applyAgentStatusLocally('in_call', {
             showToast: false,
             closeMenu: false
         });
-        syncAgentStatusWithBackend('busy');
+        syncAgentStatusWithBackend('in_call');
     } else if (callState === 'call_ended') {
         // Phase 5A: Start ACW after call ends
         startACW();

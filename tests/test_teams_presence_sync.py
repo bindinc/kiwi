@@ -143,6 +143,41 @@ class TeamsPresenceSyncTests(unittest.TestCase):
         self.assertEqual(calls["json"]["availability"], "Available")
         self.assertEqual(calls["timeout"], 5)
 
+    def test_sync_in_call_uses_session_presence_with_inacall_activity(self):
+        calls = []
+
+        def mock_post(url, headers, json, timeout):
+            calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+            return MockResponse(status_code=200)
+
+        session_data = {
+            "oidc_auth_token": {
+                "id_token": make_jwt(
+                    {
+                        "iss": "https://login.microsoftonline.com/example/v2.0",
+                        "oid": "11111111-1111-1111-1111-111111111111",
+                    }
+                ),
+                "access_token": make_jwt({"scp": "Presence.ReadWrite"}),
+            }
+        }
+
+        result = teams_presence_sync.sync_kiwi_status_to_teams(
+            "in_call",
+            session_data,
+            {"TEAMS_PRESENCE_SYNC_ENABLED": True, "OIDC_CLIENT_ID": "kiwi-client"},
+            http_post=mock_post,
+        )
+
+        self.assertTrue(result["attempted"])
+        self.assertTrue(result["synced"])
+        self.assertEqual(result["mode"], "session")
+        self.assertEqual(len(calls), 2)
+        self.assertIn("/presence/clearUserPreferredPresence", calls[0]["url"])
+        self.assertIn("/presence/setPresence", calls[1]["url"])
+        self.assertEqual(calls[1]["json"]["activity"], "InACall")
+        self.assertEqual(calls[1]["json"]["sessionId"], "kiwi-client")
+
     def test_fetch_presence_maps_to_ready_status(self):
         def mock_get(url, headers, timeout):
             self.assertIn("/me/presence", url)
@@ -191,6 +226,31 @@ class TeamsPresenceSyncTests(unittest.TestCase):
 
         self.assertTrue(result["attempted"])
         self.assertEqual(result["status"], "dnd")
+        self.assertEqual(result["reason"], None)
+
+    def test_fetch_presence_maps_inacall_activity_to_in_call_status(self):
+        def mock_get(url, headers, timeout):
+            self.assertIn("/me/presence", url)
+            return MockResponse(
+                status_code=200,
+                payload={"availability": "Busy", "activity": "InACall"},
+            )
+
+        session_data = {
+            "oidc_auth_token": {
+                "id_token": make_jwt({"iss": "https://login.microsoftonline.com/example/v2.0"}),
+                "access_token": make_jwt({"scp": "Presence.Read"}),
+            }
+        }
+
+        result = teams_presence_sync.fetch_teams_presence_status(
+            session_data,
+            {"TEAMS_PRESENCE_SYNC_ENABLED": True},
+            http_get=mock_get,
+        )
+
+        self.assertTrue(result["attempted"])
+        self.assertEqual(result["status"], "in_call")
         self.assertEqual(result["reason"], None)
 
 

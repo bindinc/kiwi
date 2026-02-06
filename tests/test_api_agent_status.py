@@ -100,6 +100,23 @@ class AgentStatusApiTests(unittest.TestCase):
         self.assertEqual(payload["status"], "away")
         self.assertEqual(payload["previous_status"], "ready")
 
+    def test_post_accepts_in_call_status(self):
+        with mock.patch(
+            "blueprints.api.agent_status.teams_presence_sync.sync_kiwi_status_to_teams",
+            return_value={
+                "attempted": True,
+                "synced": True,
+                "reason": None,
+                "mode": "session",
+                "capability": {},
+            },
+        ):
+            response = self.client.post("/api/v1/agent-status", json={"status": "in_call"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["status"], "in_call")
+
 
 if __name__ == "__main__":
     unittest.main()
