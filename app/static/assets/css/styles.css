@@ -40,7 +40,7 @@ body {
 
 /* Header */
 .header {
-    background: #000 url(/img/Bindinc-Logo-RGB-WIT-2023.svg) center left;
+    background: #000 url(static/assets/img/Bindinc-Logo-RGB-WIT-2023.svg) center left;
     color: white;
     box-shadow: var(--shadow-md);
     position: sticky;
