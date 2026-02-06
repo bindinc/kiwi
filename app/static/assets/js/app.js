@@ -1911,7 +1911,7 @@ function setAgentStatus(newStatus) {
     }
 
     applyAgentStatusLocally(normalizedStatus, {
-        showToast: true,
+        showToast: false,
         closeMenu: true
     });
     syncAgentStatusWithBackend(normalizedStatus);
