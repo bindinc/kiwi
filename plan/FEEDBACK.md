@@ -2,7 +2,9 @@
 
 ## Status indicator
 
-- [ ] change the look of the current status_indicator '/plan/user_status_indicator/status_indicator_commit_bd7b7068592bef5a2e7e18297993770b892a7d17.png' into '/plan/user_status_indicator/desired_status_indicator.png'
+- [ ] Change the look of the current status_indicator '/plan/user_status_indicator/status_indicator_commit_bd7b7068592bef5a2e7e18297993770b892a7d17.png' into '/plan/user_status_indicator/desired_status_indicator.png'
+- [ ] when a user clicks on the use _status indicator  status can be changed and the user can logout. 
+- [ ]  when a user clicks on the use _status indicator it should also show below the status/logout options some relevant callcenter worker info like the actively worked session time and calls handled.
 
 
 ## New subscription 
