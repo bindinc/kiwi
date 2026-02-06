@@ -70,6 +70,11 @@ A modern, lightweight web interface for customer service agents to manage magazi
 Use this flow when you only have access to this repo and need the HTTPS base URL
 `https://bdc.rtvmedia.org.local/kiwi` for OIDC integration.
 
+Docker Compose now supports two local OIDC modes:
+
+- **External mode**: use your own `client_secrets.json` (for example your company OIDC tenant).
+- **Fallback mode**: omit `client_secrets.json` and Compose starts a local Keycloak with seeded Kiwi roles and users.
+
 1. Ensure your hosts file includes `127.0.0.1 bdc.rtvmedia.org.local`. 
 
    On Windows 11, open Notepad as Administrator (right-click → Run as administrator), then open `C:\Windows\System32\drivers\etc\hosts` and add the line `127.0.0.1 bdc.rtvmedia.org.local`.
@@ -80,15 +85,19 @@ Use this flow when you only have access to this repo and need the HTTPS base URL
    ```
    Add the line `127.0.0.1 bdc.rtvmedia.org.local`, then save with `Ctrl+O`, `Enter`, and exit with `Ctrl+X`.
 
-2. Create your local OIDC secrets file:
+2. Pick your local OIDC mode:
 
+   External mode (recommended when you have a real local tenant):
    ```bash
    cp client_secrets.example.json client_secrets.json
    ```
+   Then update `client_secrets.json` with your real OIDC values.
 
-   Update `client_secrets.json` with your Azure tenant ID, client ID, and client secret.
-   Local Docker Compose reads this file from `/workspace/client_secrets.json` inside the container,
-   so it is not baked into the image.
+   Fallback mode (recommended for unit tests/Codex runs):
+   ```bash
+   rm -f client_secrets.json
+   ```
+   Compose will load `infra/docker/oidc/client_secrets.fallback.json` automatically.
 
 3. Start the local stack (it will generate local TLS certs on first run):
 
@@ -96,13 +105,38 @@ Use this flow when you only have access to this repo and need the HTTPS base URL
    make compose-up
    ```
 
-   Startup now runs a preflight check and fails fast with clear instructions when
-   `client_secrets.json` is missing, empty, or accidentally created as a directory.
+   Startup runs a preflight check with this behavior:
+   - missing `client_secrets.json` -> fallback OIDC mode
+   - empty `client_secrets.json` -> fail fast
+   - `client_secrets.json` is a directory -> fail fast
 
 4. Trust the generated cert in your OS/browser (located at `infra/docker/nginx/certs`).
 5. Open:
    - https://bdc.rtvmedia.org.local/kiwi
    - https://bdc.rtvmedia.org.local/kiwi-preview
+   - https://bdc.rtvmedia.org.local/kiwi-oidc/realms/kiwi-local/.well-known/openid-configuration
+
+Fallback mode ships with deterministic test users (all with password `kiwi-local-dev-password`):
+
+| Username | Role |
+| --- | --- |
+| `kiwi-admin` | `bink8s.app.kiwi.admin` |
+| `kiwi-dev` | `bink8s.app.kiwi.dev` |
+| `kiwi-supervisor` | `bink8s.app.kiwi.supervisor` |
+| `kiwi-user` | `bink8s.app.kiwi.user` |
+| `kiwi-view` | `bink8s.app.kiwi.view` |
+
+Run the fallback smoke check:
+
+```bash
+make compose-smoke-oidc
+```
+
+The smoke check runs Gateway on port `8443` by default to avoid collisions with an already running local stack.
+Override with `KIWI_SMOKE_GATEWAY_PORT=<port>` if needed.
+
+> Warning: the fallback Keycloak credentials are intentionally static for local development and tests only.
+> Never use this configuration outside local development.
 
 Stop the stack with:
 
