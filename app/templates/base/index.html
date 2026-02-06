@@ -18,8 +18,14 @@
                     <div class="header-right">
                         <!-- Agent Profile Widget with Status -->
                         <div class="agent-profile-widget">
-                            <div class="agent-profile-trigger" onclick="toggleStatusMenu()">
-                                <span class="agent-status-dot" id="agentStatusDot">🟢</span>
+                            <button
+                                type="button"
+                                id="agentProfileTrigger"
+                                class="agent-profile-trigger"
+                                onclick="toggleStatusMenu(event)"
+                                aria-expanded="false"
+                                aria-haspopup="true"
+                                aria-controls="agentStatusMenu">
                                 <div class="agent-avatar">
                                     {% if user_profile_image %}
                                         <img src="{{ user_profile_image }}" alt="{{ user_full_name }}">
@@ -27,20 +33,29 @@
                                         <span>{{ user_initials }}</span>
                                     {% endif %}
                                 </div>
-                                <span class="agent-name-label">Agent: <strong id="agentName">{{ user_full_name }}</strong></span>
-                                <span class="profile-dropdown-arrow">▼</span>
-                            </div>
-                            <div class="agent-profile-menu" id="agentStatusMenu" style="display: none;">
+                                <span class="agent-status-badge" id="agentStatusDot" aria-hidden="true">✓</span>
+                                <span class="sr-only" id="agentName">{{ user_full_name }}</span>
+                            </button>
+                            <div class="agent-profile-menu" id="agentStatusMenu" hidden>
                                 <div class="profile-menu-section">
                                     <div class="profile-menu-header">Status</div>
-                                    <div class="status-menu-item" onclick="setAgentStatus('ready')">
-                                        🟢 Beschikbaar
+                                    <button type="button" class="status-menu-item" data-status-option="ready" onclick="setAgentStatus('ready')">Beschikbaar</button>
+                                    <button type="button" class="status-menu-item" data-status-option="break" onclick="setAgentStatus('break')">Pauze</button>
+                                    <button type="button" class="status-menu-item" data-status-option="offline" onclick="setAgentStatus('offline')">Offline</button>
+                                </div>
+                                <div class="profile-menu-section">
+                                    <div class="profile-menu-header">Account</div>
+                                    <a class="status-menu-item status-menu-item-danger" href="{{ logout_url }}">Uitloggen</a>
+                                </div>
+                                <div class="profile-menu-section profile-menu-info">
+                                    <div class="profile-menu-header">Werkdag</div>
+                                    <div class="agent-work-stat">
+                                        <span class="agent-work-stat-label">Actieve sessie</span>
+                                        <span class="agent-work-stat-value" id="agentWorkSessionTime">00:00:00</span>
                                     </div>
-                                    <div class="status-menu-item" onclick="setAgentStatus('break')">
-                                        🔵 Pauze
-                                    </div>
-                                    <div class="status-menu-item" onclick="setAgentStatus('offline')">
-                                        ⚫ Offline
+                                    <div class="agent-work-stat">
+                                        <span class="agent-work-stat-label">Gesprekken afgehandeld</span>
+                                        <span class="agent-work-stat-value" id="agentCallsHandled">0</span>
                                     </div>
                                 </div>
                             </div>

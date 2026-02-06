@@ -20,10 +20,10 @@ def create_main_blueprint(oidc: OpenIDConnect) -> Blueprint:
         profile = session.get("oidc_auth_profile", {})
         roles = auth.get_user_roles(session)
         identity = auth.build_user_identity(profile)
+        return_url = url_for(".index", _external=True)
+        logout_url = url_for("oidc_auth.logout", next=return_url)
 
         if not auth.user_has_access(roles):
-            return_url = url_for(".index", _external=True)
-            logout_url = url_for("oidc_auth.logout", next=return_url)
             return (
                 render_template(
                     "base/access_denied.html",
@@ -44,6 +44,7 @@ def create_main_blueprint(oidc: OpenIDConnect) -> Blueprint:
             user_last_name=identity["last_name"],
             user_initials=identity["initials"],
             user_profile_image=profile_image,
+            logout_url=logout_url,
         )
 
     return bp
