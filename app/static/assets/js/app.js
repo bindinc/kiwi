@@ -69,6 +69,8 @@ let lastCallSession = null;
 // Phase 1B: Agent Status State Management
 let agentStatus = {
     current: 'ready',           // ready, busy, dnd, brb, away, offline, acw
+    preferred: 'ready',         // external/manual status that should survive non-call events
+    statusBeforeCall: null,     // snapshot used to restore status after an active call
     canReceiveCalls: true,      // Can receive calls on page load
     sessionStartTime: Date.now(),
     callsHandled: 0,
@@ -95,6 +97,7 @@ const agentStatusAliases = {
 };
 
 let teamsSyncNoticeShown = false;
+const transientAgentStatuses = new Set(['in_call']);
 
 // Phase 1A: Service Number Configuration
 const serviceNumbers = {
@@ -1774,9 +1777,14 @@ function applyAgentStatusLocally(newStatus, options = {}) {
     const shouldCloseMenu = options.closeMenu === true;
     const shouldShowToast = options.showToast === true;
     const shouldLogChange = options.logChange !== false;
+    const shouldPersistPreferred = options.persistPreferred !== false;
 
     const oldStatus = agentStatus.current;
     agentStatus.current = newStatus;
+
+    if (shouldPersistPreferred && !transientAgentStatuses.has(newStatus)) {
+        agentStatus.preferred = newStatus;
+    }
 
     // Update UI
     updateAgentStatusDisplay();
@@ -1889,8 +1897,11 @@ function setAgentStatus(newStatus) {
     }
 
     // Validatie
-    if (callSession.active && normalizedStatus === 'ready') {
-        showToast(translate('agent.cannotSetReadyDuringCall', {}, 'Kan niet naar Beschikbaar tijdens actief gesprek'), 'error');
+    if (callSession.active && normalizedStatus !== 'in_call') {
+        showToast(
+            translate('agent.cannotSetStatusDuringCall', {}, 'Kan status niet wijzigen tijdens actief gesprek'),
+            'error'
+        );
         return;
     }
 
@@ -1939,13 +1950,32 @@ function toggleStatusMenu(event) {
 // Auto Set Agent Status (during call flow)
 function autoSetAgentStatus(callState) {
     if (callState === 'call_started') {
+        const fallbackPreferredStatus = normalizeAgentStatus(agentStatus.preferred) || 'ready';
+        const currentStatus = normalizeAgentStatus(agentStatus.current);
+        const statusToRestore = (currentStatus && !transientAgentStatuses.has(currentStatus))
+            ? currentStatus
+            : fallbackPreferredStatus;
+        agentStatus.statusBeforeCall = statusToRestore;
+
         applyAgentStatusLocally('in_call', {
             showToast: false,
-            closeMenu: false
+            closeMenu: false,
+            persistPreferred: false
         });
         syncAgentStatusWithBackend('in_call');
     } else if (callState === 'call_ended') {
-        // Phase 5A: Start ACW after call ends
+        const statusAfterCall = normalizeAgentStatus(agentStatus.statusBeforeCall)
+            || normalizeAgentStatus(agentStatus.preferred)
+            || 'ready';
+        agentStatus.statusBeforeCall = null;
+
+        applyAgentStatusLocally(statusAfterCall, {
+            showToast: false,
+            closeMenu: false
+        });
+        syncAgentStatusWithBackend(statusAfterCall);
+
+        // Phase 5A: Start ACW after call ends (status remains restored manual/external value)
         startACW();
     }
 }
@@ -1957,11 +1987,6 @@ function autoSetAgentStatus(callState) {
 // Start ACW (After Call Work)
 function startACW() {
     agentStatus.acwStartTime = Date.now();
-    applyAgentStatusLocally('acw', {
-        showToast: false,
-        closeMenu: false
-    });
-    syncAgentStatusWithBackend('acw');
     
     // Show ACW bar
     const acwBar = document.getElementById('acwBar');
@@ -1985,7 +2010,7 @@ function startACWTimer() {
         
         // Update timer display in ACW bar
         const acwTimerEl = document.getElementById('acwTimer');
-        if (acwTimerEl && agentStatus.current === 'acw') {
+        if (acwTimerEl) {
             acwTimerEl.textContent = formatTime(remaining);
         }
         
@@ -2008,13 +2033,10 @@ function endACW(manual = false) {
         acwBar.style.display = 'none';
     }
     
-    // Automatically set to Ready after ACW
-    setAgentStatus('ready');
-    
     if (manual) {
         showToast(translate('acw.readyForNext', {}, 'Klaar voor volgende gesprek'), 'success');
     } else {
-        showToast(translate('acw.expired', {}, 'ACW tijd verlopen - Status: Beschikbaar'), 'info');
+        showToast(translate('acw.expired', {}, 'ACW tijd verlopen'), 'info');
     }
 }
 

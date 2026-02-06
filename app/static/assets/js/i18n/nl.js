@@ -54,6 +54,7 @@ const nl = {
     agent: {
         statusChanged: 'Status gewijzigd naar: {status}',
         cannotSetReadyDuringCall: 'Kan niet naar Beschikbaar tijdens actief gesprek',
+        cannotSetStatusDuringCall: 'Kan status niet wijzigen tijdens actief gesprek',
         teamsSyncActive: 'Teams sync actief',
         teamsSyncMissingScope: 'Teams sync vereist Graph scope Presence.ReadWrite. Log opnieuw in na consent.',
         teamsSyncUnsupportedProvider: 'Teams sync is niet beschikbaar voor deze OIDC provider.',
@@ -63,7 +64,7 @@ const nl = {
     },
     acw: {
         readyForNext: 'Klaar voor volgende gesprek',
-        expired: 'ACW tijd verlopen - Status: Beschikbaar',
+        expired: 'ACW tijd verlopen',
         completeForm: 'Vul eerst het nabewerkingsscherm in voordat je ACW afrondt'
     },
     disposition: {

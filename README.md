@@ -146,6 +146,7 @@ OIDC_EXTERNAL_SCOPES="openid email profile User.Read Presence.Read Presence.Read
 ```
 
 During an active Avaya call, Kiwi publishes Teams call activity (`InACall`) via Graph session presence APIs.
+Outside active calls, Kiwi keeps the user’s external/manual status and does not auto-switch status values.
 
 For local fallback Keycloak (`OIDC_MODE=fallback`), Teams sync is intentionally disabled.
 You can also disable presence sync globally with:
