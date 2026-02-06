@@ -44,6 +44,7 @@ const agentDisplayName = (() => {
 })();
 
 const werfsleutelsUrl = 'static/assets/onepager_werfsleutels.md';
+const agentStatusApiUrl = 'api/v1/agent-status';
 
 // Phase 1A: Call Session State Management
 let callSession = {
@@ -1670,10 +1671,116 @@ function closeStatusMenu() {
     setStatusMenuOpen(false);
 }
 
-// Set Agent Status
-function setAgentStatus(newStatus) {
+function applyAgentStatusLocally(newStatus, options = {}) {
     const statusConfig = agentStatuses[newStatus];
     if (!statusConfig) {
+        return false;
+    }
+
+    const shouldUpdateQueue = options.updateQueue !== false;
+    const shouldCloseMenu = options.closeMenu === true;
+    const shouldShowToast = options.showToast === true;
+    const shouldLogChange = options.logChange !== false;
+
+    const oldStatus = agentStatus.current;
+    agentStatus.current = newStatus;
+
+    // Update UI
+    updateAgentStatusDisplay();
+
+    // Update availability
+    agentStatus.canReceiveCalls = (newStatus === 'ready');
+
+    if (shouldUpdateQueue) {
+        updateQueueDisplay();
+    }
+
+    // Log status change
+    if (shouldLogChange) {
+        console.log(`Agent status: ${oldStatus} → ${newStatus}`);
+    }
+
+    if (shouldCloseMenu) {
+        closeStatusMenu();
+    }
+
+    if (shouldShowToast) {
+        showToast(
+            translate('agent.statusChanged', { status: statusConfig.label }, `Status gewijzigd naar: ${statusConfig.label}`),
+            'success'
+        );
+    }
+
+    return true;
+}
+
+async function syncAgentStatusWithBackend(newStatus) {
+    try {
+        const response = await fetch(agentStatusApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!response.ok) {
+            console.warn(`Agent status sync failed with HTTP ${response.status}`);
+            return null;
+        }
+
+        const payload = await response.json();
+        const serverStatus = payload && payload.status;
+        const serverStatusIsKnown = typeof serverStatus === 'string' && !!agentStatuses[serverStatus];
+
+        if (serverStatusIsKnown && serverStatus !== agentStatus.current) {
+            applyAgentStatusLocally(serverStatus, {
+                showToast: false,
+                closeMenu: false
+            });
+        }
+
+        return payload;
+    } catch (error) {
+        console.warn('Agent status sync request failed', error);
+        return null;
+    }
+}
+
+async function initializeAgentStatusFromBackend() {
+    try {
+        const response = await fetch(agentStatusApiUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        const payload = await response.json();
+        const serverStatus = payload && payload.status;
+        const serverStatusIsKnown = typeof serverStatus === 'string' && !!agentStatuses[serverStatus];
+
+        if (!serverStatusIsKnown || serverStatus === agentStatus.current) {
+            return;
+        }
+
+        applyAgentStatusLocally(serverStatus, {
+            showToast: false,
+            closeMenu: false
+        });
+    } catch (error) {
+        console.warn('Agent status initialization from backend failed', error);
+    }
+}
+
+// Set Agent Status
+function setAgentStatus(newStatus) {
+    if (!agentStatuses[newStatus]) {
         return;
     }
 
@@ -1682,29 +1789,17 @@ function setAgentStatus(newStatus) {
         showToast(translate('agent.cannotSetReadyDuringCall', {}, 'Kan niet naar Beschikbaar tijdens actief gesprek'), 'error');
         return;
     }
-    
-    const oldStatus = agentStatus.current;
-    agentStatus.current = newStatus;
-    
-    // Update UI
-    updateAgentStatusDisplay();
-    
-    // Update availability
-    agentStatus.canReceiveCalls = (newStatus === 'ready');
-    
-    // Update queue display wanneer status wijzigt
-    updateQueueDisplay();
-    
-    // Log status change
-    console.log(`Agent status: ${oldStatus} → ${newStatus}`);
-    
-    // Close menu if open
-    closeStatusMenu();
-    
-    showToast(
-        translate('agent.statusChanged', { status: statusConfig.label }, `Status gewijzigd naar: ${statusConfig.label}`),
-        'success'
-    );
+
+    if (newStatus === agentStatus.current) {
+        closeStatusMenu();
+        return;
+    }
+
+    applyAgentStatusLocally(newStatus, {
+        showToast: true,
+        closeMenu: true
+    });
+    syncAgentStatusWithBackend(newStatus);
 }
 
 // Update Agent Status Display
@@ -1740,10 +1835,11 @@ function toggleStatusMenu(event) {
 // Auto Set Agent Status (during call flow)
 function autoSetAgentStatus(callState) {
     if (callState === 'call_started') {
-        agentStatus.current = 'busy';
-        agentStatus.canReceiveCalls = false;
-        updateAgentStatusDisplay();
-        updateQueueDisplay();
+        applyAgentStatusLocally('busy', {
+            showToast: false,
+            closeMenu: false
+        });
+        syncAgentStatusWithBackend('busy');
     } else if (callState === 'call_ended') {
         // Phase 5A: Start ACW after call ends
         startACW();
@@ -1756,12 +1852,12 @@ function autoSetAgentStatus(callState) {
 
 // Start ACW (After Call Work)
 function startACW() {
-    agentStatus.current = 'acw';
     agentStatus.acwStartTime = Date.now();
-    agentStatus.canReceiveCalls = false;
-    
-    // Update UI
-    updateAgentStatusDisplay();
+    applyAgentStatusLocally('acw', {
+        showToast: false,
+        closeMenu: false
+    });
+    syncAgentStatusWithBackend('acw');
     
     // Show ACW bar
     const acwBar = document.getElementById('acwBar');
@@ -2487,6 +2583,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize agent status display (agent starts as ready)
     startAgentWorkSessionTimer();
     updateAgentStatusDisplay();
+    initializeAgentStatusFromBackend();
 
     const advancedFilterIds = ['searchName', 'searchPhone', 'searchEmail'];
     const hasAdvancedValues = advancedFilterIds.some(id => {
