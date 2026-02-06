@@ -7,6 +7,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
 from blueprints.registry import register_blueprints
+from db.runtime import initialize_database
 
 
 class PrefixMiddleware:
@@ -30,11 +31,14 @@ class PrefixMiddleware:
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CLIENT_SECRETS = os.path.join(APP_DIR, "client_secrets.json")
+FALLBACK_CLIENT_SECRETS = os.path.join(os.path.dirname(APP_DIR), "client_secrets.example.json")
 DEFAULT_OIDC_SCOPES = "openid email profile User.Read"
 
 
 def configure_app(app: Flask) -> None:
     client_secrets_path = os.environ.get("OIDC_CLIENT_SECRETS", DEFAULT_CLIENT_SECRETS)
+    if not os.path.exists(client_secrets_path) and os.path.exists(FALLBACK_CLIENT_SECRETS):
+        client_secrets_path = FALLBACK_CLIENT_SECRETS
     explicit_redirect_uri = os.environ.get("OIDC_REDIRECT_URI")
     fallback_redirect_uri = auth.get_redirect_uri_from_secrets(client_secrets_path)
     callback_route = auth.get_callback_route(explicit_redirect_uri or fallback_redirect_uri)
@@ -84,6 +88,7 @@ def create_app() -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
     configure_app(app)
     Session(app)
+    initialize_database()
 
     prefix = os.environ.get("APPLICATION_PREFIX", "")
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
