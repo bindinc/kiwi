@@ -2,13 +2,14 @@ SHELL := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev-certs compose-preflight compose-up compose-down compose-logs compose-build image-build
+.PHONY: help dev-certs compose-preflight compose-up compose-down compose-logs compose-build compose-smoke-oidc image-build
 
 help:
 	@echo "Usage: make compose-up"
 	@echo "       make compose-down"
 	@echo "       make compose-logs"
 	@echo "       make compose-build"
+	@echo "       make compose-smoke-oidc"
 	@echo "       make image-build"
 	@echo "       make dev-certs"
 
@@ -29,6 +30,9 @@ compose-down:
 
 compose-logs:
 	docker compose logs -f
+
+compose-smoke-oidc:
+	scripts/compose-smoke-oidc.sh
 
 image-build:
 	docker build -t kiwi:dev -f infra/docker/app/Dockerfile .

@@ -8,10 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Add `/api/v1/status` endpoint with API status and rate limit snapshot.
 - Add a local Docker Compose preflight check that validates `client_secrets.json` before the app starts.
+- Add a local fallback Keycloak realm for Docker Compose with seeded Kiwi roles and test users.
+- Add OIDC runtime mode resolution and container entrypoint scripts for external vs fallback secrets.
+- Add a `make compose-smoke-oidc` smoke test for fallback OIDC token/role validation.
 
 ### Changed
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
 - Make `make compose-up` fail fast with actionable guidance when local OIDC prerequisites are not met.
+- Make missing `client_secrets.json` automatically activate local fallback OIDC instead of failing startup.
+- Add local gateway routing for fallback OIDC under `/kiwi-oidc/`.
+- Configure fallback Keycloak hostname/backchannel handling so browser redirects stay on the public local URL.
+- Make OIDC scopes mode-aware: fallback defaults to `openid email profile`, external keeps `openid email profile User.Read`.
+- Gate local startup on health checks so `app` waits for fallback OIDC readiness and `gateway` waits for a healthy app.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.

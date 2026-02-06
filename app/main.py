@@ -30,6 +30,7 @@ class PrefixMiddleware:
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CLIENT_SECRETS = os.path.join(APP_DIR, "client_secrets.json")
+DEFAULT_OIDC_SCOPES = "openid email profile User.Read"
 
 
 def configure_app(app: Flask) -> None:
@@ -39,13 +40,14 @@ def configure_app(app: Flask) -> None:
     callback_route = auth.get_callback_route(explicit_redirect_uri or fallback_redirect_uri)
     session_type = os.environ.get("SESSION_TYPE", "filesystem")
     session_dir = os.environ.get("SESSION_FILE_DIR", "/tmp/flask_session")
+    oidc_scopes = os.environ.get("OIDC_SCOPES", DEFAULT_OIDC_SCOPES)
 
     app.config.update(
         SECRET_KEY=os.environ.get(
             "FLASK_SECRET_KEY", "development-secret-key-change-in-production"
         ),
         OIDC_CLIENT_SECRETS=client_secrets_path,
-        OIDC_SCOPES="openid email profile User.Read",
+        OIDC_SCOPES=oidc_scopes,
         OIDC_USER_INFO_ENABLED=True,
         SESSION_TYPE=session_type,
         SESSION_FILE_DIR=session_dir,

@@ -21,19 +21,26 @@ def run_preflight(project_root: Path) -> subprocess.CompletedProcess:
     )
 
 
+def write_fallback_client_secrets(project_root: Path) -> None:
+    fallback_file = project_root / "infra" / "docker" / "oidc" / "client_secrets.fallback.json"
+    fallback_file.parent.mkdir(parents=True, exist_ok=True)
+    fallback_file.write_text("{}", encoding="utf-8")
+
+
 class ComposePreflightTests(unittest.TestCase):
-    def test_fails_when_client_secrets_file_is_missing(self):
+    def test_uses_fallback_when_client_secrets_file_is_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp)
+            write_fallback_client_secrets(project_root)
             result = run_preflight(project_root)
 
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("Missing required file", result.stderr)
-            self.assertIn("client_secrets.example.json", result.stderr)
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("using fallback OIDC", result.stdout)
 
     def test_fails_when_client_secrets_path_is_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp)
+            write_fallback_client_secrets(project_root)
             (project_root / "client_secrets.json").mkdir()
 
             result = run_preflight(project_root)
@@ -44,6 +51,7 @@ class ComposePreflightTests(unittest.TestCase):
     def test_fails_when_client_secrets_file_is_empty(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp)
+            write_fallback_client_secrets(project_root)
             (project_root / "client_secrets.json").write_text("", encoding="utf-8")
 
             result = run_preflight(project_root)
@@ -54,12 +62,21 @@ class ComposePreflightTests(unittest.TestCase):
     def test_passes_when_client_secrets_file_is_non_empty(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp)
+            write_fallback_client_secrets(project_root)
             (project_root / "client_secrets.json").write_text("{}", encoding="utf-8")
 
             result = run_preflight(project_root)
 
             self.assertEqual(result.returncode, 0)
-            self.assertIn("Compose prerequisites OK", result.stdout)
+            self.assertIn("Using external OIDC secrets", result.stdout)
+
+    def test_fails_when_fallback_client_secrets_file_is_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp)
+            result = run_preflight(project_root)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Fallback OIDC client secrets file is missing", result.stderr)
 
 
 if __name__ == "__main__":

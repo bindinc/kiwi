@@ -6,6 +6,36 @@ services:
     volumes:
       - ./:/workspace:ro
 
+  fallback-oidc:
+    image: quay.io/keycloak/keycloak:26.4.0
+    entrypoint: ["/bin/sh", "/workspace/scripts/fallback-oidc-entrypoint.sh"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: https://bdc.rtvmedia.org.local/kiwi-oidc
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_RELATIVE_PATH: /kiwi-oidc
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+    depends_on:
+      preflight:
+        condition: service_completed_successfully
+    volumes:
+      - ./:/workspace:ro
+      - ./infra/docker/oidc/realm-kiwi-local.json:/opt/keycloak/data/import/realm-kiwi-local.json:ro
+    healthcheck:
+      test:
+        - CMD
+        - /usr/bin/bash
+        - /workspace/scripts/fallback-oidc-healthcheck.sh
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 5s
+    expose:
+      - "8080"
+
   dev-certs:
     image: alpine:3.19
     command:
@@ -34,12 +64,20 @@ services:
       context: .
       dockerfile: infra/docker/app/Dockerfile
     image: kiwi-dev:local
-    command: ["gunicorn", "-b", "0.0.0.0:8000", "--reload", "main:app"]
-    environment:
-      OIDC_CLIENT_SECRETS: /workspace/client_secrets.json
+    command: ["/bin/sh", "/workspace/scripts/app-entrypoint.sh"]
     depends_on:
       preflight:
         condition: service_completed_successfully
+      fallback-oidc:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl --silent --fail --output /dev/null http://127.0.0.1:8000/api/v1/status
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 2s
     volumes:
       - ./app:/app
       - ./:/workspace:ro
@@ -50,11 +88,13 @@ services:
     image: nginx:1.25-alpine
     depends_on:
       app:
-        condition: service_started
+        condition: service_healthy
+      fallback-oidc:
+        condition: service_healthy
       dev-certs:
         condition: service_healthy
     ports:
-      - "443:443"
+      - "${GATEWAY_HTTPS_PORT:-443}:443"
     volumes:
       - ./infra/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./infra/docker/nginx/certs:/etc/nginx/certs:ro
