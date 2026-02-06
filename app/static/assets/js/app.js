@@ -1921,6 +1921,7 @@ function setAgentStatus(newStatus) {
 function updateAgentStatusDisplay() {
     const statusConfig = agentStatuses[agentStatus.current];
     const statusDot = document.getElementById('agentStatusDot');
+    const profileTrigger = document.getElementById('agentProfileTrigger');
     if (!statusConfig || !statusDot) {
         return;
     }
@@ -1928,6 +1929,12 @@ function updateAgentStatusDisplay() {
     statusDot.textContent = statusConfig.badge;
     statusDot.style.backgroundColor = statusConfig.color;
     statusDot.style.color = statusConfig.textColor;
+
+    const statusTooltip = `Status: ${statusConfig.label}`;
+    statusDot.title = statusTooltip;
+    if (profileTrigger) {
+        profileTrigger.title = statusTooltip;
+    }
 
     updateStatusMenuSelection();
     updateAgentWorkSummary();
