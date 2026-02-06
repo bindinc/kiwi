@@ -1,0 +1,181 @@
+{
+    "realm": "kiwi-local",
+    "enabled": true,
+    "displayName": "Kiwi Local",
+    "sslRequired": "none",
+    "registrationAllowed": false,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": false,
+    "rememberMe": false,
+    "roles": {
+        "realm": [
+            {
+                "name": "bink8s.app.kiwi.admin",
+                "description": "KIWI Admin"
+            },
+            {
+                "name": "bink8s.app.kiwi.dev",
+                "description": "KIWI Developer"
+            },
+            {
+                "name": "bink8s.app.kiwi.supervisor",
+                "description": "KIWI Supervisor"
+            },
+            {
+                "name": "bink8s.app.kiwi.user",
+                "description": "KIWI User"
+            },
+            {
+                "name": "bink8s.app.kiwi.view",
+                "description": "KIWI View Only"
+            }
+        ]
+    },
+    "clients": [
+        {
+            "clientId": "kiwi-local-dev",
+            "name": "Kiwi Local Dev",
+            "description": "Fallback OIDC client for local development and tests",
+            "enabled": true,
+            "protocol": "openid-connect",
+            "publicClient": false,
+            "secret": "kiwi-local-dev-secret",
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": true,
+            "serviceAccountsEnabled": false,
+            "implicitFlowEnabled": false,
+            "fullScopeAllowed": true,
+            "redirectUris": [
+                "https://bdc.rtvmedia.org.local/kiwi/auth/callback",
+                "https://bdc.rtvmedia.org/kiwi/auth/callback",
+                "https://bdc.rtvmedia.org.local/kiwi-preview/auth/callback",
+                "https://bdc.rtvmedia.org/kiwi-preview/auth/callback"
+            ],
+            "webOrigins": [
+                "https://bdc.rtvmedia.org.local",
+                "https://bdc.rtvmedia.org"
+            ],
+            "defaultClientScopes": [
+                "profile",
+                "email",
+                "roles",
+                "web-origins"
+            ],
+            "optionalClientScopes": [
+                "address",
+                "phone",
+                "offline_access",
+                "microprofile-jwt"
+            ],
+            "protocolMappers": [
+                {
+                    "name": "kiwi-realm-roles",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-realm-role-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "multivalued": "true",
+                        "userinfo.token.claim": "true",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "roles",
+                        "jsonType.label": "String"
+                    }
+                }
+            ]
+        }
+    ],
+    "users": [
+        {
+            "username": "kiwi-admin",
+            "enabled": true,
+            "emailVerified": true,
+            "firstName": "Kiwi",
+            "lastName": "Admin",
+            "email": "kiwi-admin@local.test",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "kiwi-local-dev-password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "bink8s.app.kiwi.admin"
+            ]
+        },
+        {
+            "username": "kiwi-dev",
+            "enabled": true,
+            "emailVerified": true,
+            "firstName": "Kiwi",
+            "lastName": "Developer",
+            "email": "kiwi-dev@local.test",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "kiwi-local-dev-password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "bink8s.app.kiwi.dev"
+            ]
+        },
+        {
+            "username": "kiwi-supervisor",
+            "enabled": true,
+            "emailVerified": true,
+            "firstName": "Kiwi",
+            "lastName": "Supervisor",
+            "email": "kiwi-supervisor@local.test",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "kiwi-local-dev-password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "bink8s.app.kiwi.supervisor"
+            ]
+        },
+        {
+            "username": "kiwi-user",
+            "enabled": true,
+            "emailVerified": true,
+            "firstName": "Kiwi",
+            "lastName": "User",
+            "email": "kiwi-user@local.test",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "kiwi-local-dev-password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "bink8s.app.kiwi.user"
+            ]
+        },
+        {
+            "username": "kiwi-view",
+            "enabled": true,
+            "emailVerified": true,
+            "firstName": "Kiwi",
+            "lastName": "Viewer",
+            "email": "kiwi-view@local.test",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "kiwi-local-dev-password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "bink8s.app.kiwi.view"
+            ]
+        }
+    ]
+}
