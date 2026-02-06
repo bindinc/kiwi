@@ -2,7 +2,9 @@ import base64
 import json
 import os
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app")))
 
@@ -72,6 +74,64 @@ class AuthHelpersTests(unittest.TestCase):
         self.assertEqual(identity["full_name"], "Jan Vos")
         self.assertEqual(identity["initials"], "JV")
         self.assertEqual(identity["email"], "jan@example.org")
+
+    def test_get_oidc_end_session_endpoint(self):
+        metadata_response = mock.Mock()
+        metadata_response.status_code = 200
+        metadata_response.json.return_value = {
+            "issuer": "https://issuer.example",
+            "end_session_endpoint": "https://issuer.example/logout",
+        }
+
+        endpoint = auth.get_oidc_end_session_endpoint(
+            "https://issuer.example/.well-known/openid-configuration",
+            http_get=mock.Mock(return_value=metadata_response),
+        )
+        self.assertEqual(endpoint, "https://issuer.example/logout")
+
+    def test_get_redirect_uris_from_secrets(self):
+        with tempfile.NamedTemporaryFile("w+", delete=False, encoding="utf-8") as handle:
+            json.dump(
+                {
+                    "web": {
+                        "redirect_uris": [
+                            "https://app.example/auth/callback",
+                            "https://app.example/logged-out",
+                        ]
+                    }
+                },
+                handle,
+            )
+            temp_path = handle.name
+
+        self.assertEqual(
+            auth.get_redirect_uris_from_secrets(temp_path),
+            ["https://app.example/auth/callback", "https://app.example/logged-out"],
+        )
+        os.unlink(temp_path)
+
+    def test_build_end_session_logout_url(self):
+        logout_url = auth.build_end_session_logout_url(
+            end_session_endpoint="https://issuer.example/logout",
+            post_logout_redirect_uri="https://app.example/logged-out",
+            id_token_hint="id-token",
+            client_id="kiwi-client",
+        )
+
+        self.assertIn("post_logout_redirect_uri=https%3A%2F%2Fapp.example%2Flogged-out", logout_url)
+        self.assertIn("id_token_hint=id-token", logout_url)
+        self.assertIn("client_id=kiwi-client", logout_url)
+
+    def test_build_end_session_logout_url_without_post_redirect(self):
+        logout_url = auth.build_end_session_logout_url(
+            end_session_endpoint="https://issuer.example/logout",
+            post_logout_redirect_uri=None,
+            id_token_hint="id-token",
+            client_id="kiwi-client",
+        )
+
+        self.assertNotIn("post_logout_redirect_uri=", logout_url)
+        self.assertIn("id_token_hint=id-token", logout_url)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import base64
 import json
 from typing import Iterable, List, Optional
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import requests
 
@@ -26,16 +26,27 @@ def normalize_base_path(value: Optional[str]) -> str:
 
 
 def get_redirect_uri_from_secrets(path: str) -> Optional[str]:
+    redirect_uris = get_redirect_uris_from_secrets(path)
+    if not redirect_uris:
+        return None
+    return redirect_uris[0]
+
+
+def get_redirect_uris_from_secrets(path: str) -> List[str]:
+    if not path:
+        return []
+
     try:
         with open(path, "r", encoding="utf-8") as handle:
             data = json.load(handle)
     except (OSError, json.JSONDecodeError):
-        return None
+        return []
 
     redirect_uris = data.get("web", {}).get("redirect_uris", [])
-    if not isinstance(redirect_uris, list) or not redirect_uris:
-        return None
-    return redirect_uris[0]
+    if not isinstance(redirect_uris, list):
+        return []
+
+    return [uri for uri in redirect_uris if isinstance(uri, str) and uri.strip()]
 
 
 def get_callback_route(redirect_uri: Optional[str]) -> Optional[str]:
@@ -183,3 +194,54 @@ def get_profile_image(session_data: dict, http_get=requests.get) -> Optional[str
     if data_url:
         session_data["oidc_profile_photo"] = data_url
     return data_url
+
+
+def get_oidc_end_session_endpoint(
+    server_metadata_url: Optional[str], http_get=requests.get
+) -> Optional[str]:
+    if not server_metadata_url:
+        return None
+
+    try:
+        response = http_get(server_metadata_url, timeout=5)
+    except requests.RequestException:
+        return None
+
+    if response.status_code != 200:
+        return None
+
+    try:
+        metadata = response.json()
+    except ValueError:
+        return None
+
+    endpoint = metadata.get("end_session_endpoint")
+    if isinstance(endpoint, str) and endpoint.strip():
+        return endpoint
+
+    return None
+
+
+def build_end_session_logout_url(
+    end_session_endpoint: Optional[str],
+    post_logout_redirect_uri: Optional[str] = None,
+    id_token_hint: Optional[str] = None,
+    client_id: Optional[str] = None,
+) -> Optional[str]:
+    if not end_session_endpoint:
+        return None
+
+    parsed_endpoint = urlparse(end_session_endpoint)
+    if not parsed_endpoint.scheme or not parsed_endpoint.netloc:
+        return None
+
+    query = dict(parse_qsl(parsed_endpoint.query, keep_blank_values=True))
+    if post_logout_redirect_uri:
+        query["post_logout_redirect_uri"] = post_logout_redirect_uri
+
+    if id_token_hint:
+        query["id_token_hint"] = id_token_hint
+    if client_id:
+        query["client_id"] = client_id
+
+    return urlunparse(parsed_endpoint._replace(query=urlencode(query)))

@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
+- Make menu logout terminate local session and attempt OIDC provider logout before landing on a logged-out page.
 
 ## [v1.0.6]
 
