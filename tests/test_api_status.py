@@ -23,6 +23,8 @@ class ApiStatusTests(unittest.TestCase):
 
         payload = response.get_json()
         self.assertEqual(payload["status"], "ok")
+        self.assertIn("db", payload)
+        self.assertIn("queue", payload)
         self.assertIn("rate_limit", payload)
 
 
