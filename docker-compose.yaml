@@ -12,6 +12,8 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: https://bdc.rtvmedia.org.local/kiwi-oidc
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HTTP_RELATIVE_PATH: /kiwi-oidc
       KC_PROXY_HEADERS: xforwarded
       KC_HOSTNAME_STRICT: "false"
