@@ -12,6 +12,7 @@ from .service_factory import (
     extended_data_service,
     address_service,
 )
+from .subscription_gateway import WebAboSubscriptionGateway, RetryableUpstreamError, ValidationUpstreamError
 
 __all__ = [
     'WebAboServiceFactory',
@@ -20,4 +21,7 @@ __all__ = [
     'offer_service',
     'extended_data_service',
     'address_service',
+    'WebAboSubscriptionGateway',
+    'RetryableUpstreamError',
+    'ValidationUpstreamError',
 ]
