@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add fallback OIDC test user `donny` with no Kiwi roles for access-denied testing.
 - Add OIDC runtime mode resolution and container entrypoint scripts for external vs fallback secrets.
 - Add a `make compose-smoke-oidc` smoke test for fallback OIDC token/role validation.
+- Add a PostgreSQL-backed migration runner with checksum validation and migration tracking.
+- Add durable operational tables for idempotent requests, outbound jobs, job attempts, and audit events.
+- Add a dedicated queue worker process skeleton with claim/lease/retry handling and daily retention cleanup.
+- Add local Docker Compose PostgreSQL and worker services for queue processing.
 - Add agent workday stats to the status menu, including active session time and handled call count.
 
 ### Changed
@@ -23,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Make OIDC scopes mode-aware: fallback defaults to `openid email profile`, external keeps `openid email profile User.Read`.
 - Gate local startup on health checks so `app` waits for fallback OIDC readiness and `gateway` waits for a healthy app.
 - Redesign the header status indicator to an avatar badge style and extend its menu with status selection and logout.
+- Extend `/api/v1/status` with database and queue health snapshots.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
