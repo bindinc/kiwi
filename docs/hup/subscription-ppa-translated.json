@@ -1,0 +1,6859 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "servers": [
+    {
+      "url": "http://subscriptionpublic.abelt.paradise.rtvmedia.org/subscription",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/public/persons": {
+      "post": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Create New Person",
+        "description": "Creates a new person based on the provided data.",
+        "operationId": "createPerson",
+        "requestBody": {
+          "description": "Person to be created",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaPerson"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaPerson"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/payments/ibanitems": {
+      "post": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Create New Bank Connection",
+        "description": "Creates a new bank connection",
+        "operationId": "newPaymentsIbanById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaIbanItem"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaIbanItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/contacts/phones": {
+      "post": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Add new phone number",
+        "description": "Creates a new phone number for a person.",
+        "operationId": "createPhoneNumber",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "Person to whom the new phone number should be assigned.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Phone number to be added",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaPhone"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaPhone"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/contacts/mobiles": {
+      "post": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Add new mobile phone number",
+        "description": "Creates a new mobile phone number for a person.",
+        "operationId": "createMobileNumber",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "Person to whom the new mobile phone number should be assigned.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Mobile phone number to be added",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaMobile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaMobile"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/contacts/emails": {
+      "post": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Create email address",
+        "description": "Creates a new email address for a person.",
+        "operationId": "createEmailAddress",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person for whom the email address is to be created",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Email address to be created",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaEmail"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaEmail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/additionaldata/{rid}": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Query additional characteristics of a person",
+        "description": "Returns the additional characteristics of a person matching the specified ID.",
+        "operationId": "getAdditionalDataByPersonIdAndId",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person whose additional characteristics should be returned.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the characteristic.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaAdditionalDataItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Create additional customer characteristics",
+        "description": "Creates additional customer characteristics for a person.",
+        "operationId": "createAdditionalDataItem",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person whose characteristic is to be created",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the characteristic",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Additional characteristic",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaAdditionalDataItem"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaAdditionalDataItem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Returns subscriber orders for various restrictions",
+        "description": "Returns a list of subscriber orders",
+        "operationId": "getOrders",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for a range from the result list",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Page size; determines the number of result entries",
+            "required": false,
+            "schema": {
+              "maximum": 500,
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "customerPersonId",
+            "in": "query",
+            "description": "Customer to filter by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "in": "query",
+            "description": "Product to filter by (multiple)",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "activeAfter",
+            "in": "query",
+            "description": "Format( yyyy-MM-dd ) - Order valid from",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "activeBefore",
+            "in": "query",
+            "description": "Format( yyyy-MM-dd ) - Order valid until",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdersPagedRessource"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Saves a new subscription order",
+        "description": "Order object to be saved",
+        "operationId": "createOrder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaSubscriptionOrder"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaSubscriptionOrder"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{orderid}/termination": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Order Termination",
+        "description": "Returns the possibly existing termination of an order",
+        "operationId": "getOrderTermination",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified ID corresponds to the number",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaSubscriptionTermination"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Subscription Termination",
+        "description": "Creates a termination of a subscription.",
+        "operationId": "createOrderTermination",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the termination should be created",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified ID corresponds to the number",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaSubscriptionTermination"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaSubscriptionTermination"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Delete a termination",
+        "description": "Deletes the existing termination of a subscription",
+        "operationId": "deleteOrderTermination",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the interruption should be deleted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Termination adjustment",
+        "description": "Change an existing subscription termination",
+        "operationId": "changeOrderTermination",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the termination should be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Termination adjustments to be saved",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaSubscriptionTermination"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaSubscriptionTermination"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{orderid}/intermissions": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Returns interruptions for an order",
+        "description": "Returns a list of interruptions",
+        "operationId": "getOrderIntermissions",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for a range from the result list",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Page size; determines the number of result entries",
+            "schema": {
+              "maximum": 1000,
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified ID corresponds to the number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntermissionsPagedRessource"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Saves a new interruption",
+        "description": "Interruption object to be saved",
+        "operationId": "createOrderIntermission",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the interruption should be created",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified ID corresponds to the number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaIntermission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaIntermission"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{orderid}/complaints": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Complaints",
+        "description": "Returns a list of all order complaints",
+        "operationId": "getOrderComplaints",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for a range from the result list",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Page size; determines the number of result entries",
+            "schema": {
+              "maximum": 1000,
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified ID corresponds to the number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaComplaintPagedResource"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Subscription Complaint",
+        "description": "Creates a complaint for a subscription.",
+        "operationId": "createOrderComplaint",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the complaint should be created",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified ID corresponds to the number",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaComplaint"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaComplaint"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{orderid}/adddeliveries": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Returns subsequent deliveries for an order",
+        "description": "Returns a list of subsequent deliveries",
+        "operationId": "getOrderAdddeliveries",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for a range from the result list",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Page size; determines the number of result entries",
+            "schema": {
+              "maximum": 1000,
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified ID corresponds to the number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdddeliveriesPagedRessource"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Saves a new subsequent delivery",
+        "description": "Subsequent delivery object to be saved",
+        "operationId": "createOrderAddDelivery",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the subsequent delivery should be created",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified ID corresponds to the number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaAddDelivery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaIntermission"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Returns the person for an ID",
+        "description": "Returns a single person matching the specified ID or number",
+        "operationId": "getPersonById",
+        "parameters": [
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The ID specified in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "validitydate",
+            "in": "query",
+            "description": "Validity date; returns the status of the person at this time. If empty, the person is loaded with their current data. Format( yyyy-MM-dd )",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person to be returned",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaPerson"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Person Change",
+        "description": "Change an existing person",
+        "operationId": "changePerson",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person to be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The ID specified in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "changestartdate",
+            "in": "query",
+            "description": "The change is valid from this date; if none is specified, the change is valid from the current date. Format( yyyy-MM-dd )",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "changeenddate",
+            "in": "query",
+            "description": "The change is valid up to and including this date; if none is specified, the change is valid forever. Format( yyyy-MM-dd )",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Person resource containing the values to be changed; sub-resources, such as addresses, are adjusted via their endpoints.",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaPerson"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaPerson"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/payments/ibanitems/{rid}": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Returns all bank connections",
+        "description": "Returns all bank connections of a person.",
+        "operationId": "getPaymentsIbanById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the bank connection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaIbanItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Delete a bank connection",
+        "description": "Deletes an existing bank connection.",
+        "operationId": "deletePaymentsIbanById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the bank connection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaIbanItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Change a bank connection",
+        "description": "Loads the bank connection of a person referenced by the resource ID.",
+        "operationId": "patchPaymentsIbanById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the bank connection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaIbanItem"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaIbanItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/contacts/phones/{rid}": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Query phone number of a person",
+        "description": "Returns a phone number of a person matching the specified ID.",
+        "operationId": "getPhoneNumberById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person whose phone number should be returned.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the phone number to be returned.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaPhone"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Delete phone number",
+        "description": "Delete an existing phone number by ID.",
+        "operationId": "deletePhoneNumberById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person whose phone number should be deleted.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the phone number to be deleted.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Change phone number",
+        "description": "Change an existing phone number, matching the ID.",
+        "operationId": "changePhoneNumber",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person whose phone number should be changed.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the phone number to be changed.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "New data of the phone number",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaPhone"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaEmail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/contacts/mobiles/{rid}": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Query mobile phone number of a person",
+        "description": "Returns a mobile phone number of a person matching the specified ID.",
+        "operationId": "getMobileNumberById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person whose mobile phone number should be returned.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the mobile phone number to be returned.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaMobile"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Delete mobile phone number",
+        "description": "Delete an existing mobile phone number by ID.",
+        "operationId": "deleteMobileNumberById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person whose mobile phone number should be deleted.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the mobile phone number to be deleted.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Change mobile phone number",
+        "description": "Change an existing mobile phone number, matching the ID.",
+        "operationId": "changeMobileNumber",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person whose mobile phone number should be changed.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the mobile phone number to be changed.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "New data of the mobile phone number",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaMobile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaMobile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/contacts/emails/{rid}": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Query email address of a person",
+        "description": "Returns an email address of a person matching the specified ID",
+        "operationId": "getEmailAddressById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person whose contact should be returned",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the email address.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personId specified in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaEmail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Delete email address",
+        "description": "Delete an existing email address",
+        "operationId": "deleteEmailAddressById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person whose email address should be deleted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the email address to be deleted.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Change email address",
+        "description": "Change an existing email address",
+        "operationId": "changeEmailAddress",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person whose email address should be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the email address to be changed.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "New data of the email address",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaEmail"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaEmail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/contacts/addresses/{rid}": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Contact address of a person",
+        "description": "Returns a contact address of a person matching the specified ID",
+        "operationId": "getContactAddressById",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person whose contact should be returned",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the contact address. Special case: If \"0\", then the main address is meant.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personId specified in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaContactAddress"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Contact address change",
+        "description": "Change an existing contact address",
+        "operationId": "changeContactAddress",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person whose contact address should be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the contact address to be changed. Special case: If \"0\", then the main address is meant.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "changestartdate",
+            "in": "query",
+            "description": "The change is valid from this date; if none is specified, the change is valid from the current date. Format( yyyy-MM-dd )",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "changeenddate",
+            "in": "query",
+            "description": "The change is valid up to and including this date; if none is specified, the change is valid forever. Format( yyyy-MM-dd )",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Contact address, which contains the values to be changed.",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaContactAddress"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaContactAddress"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/additionaldata/{rid}/{itemno}": {
+      "patch": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Change additional characteristic",
+        "description": "Change an existing additional characteristic",
+        "operationId": "changeAdditionalDataItem",
+        "parameters": [
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID or number of the person whose additional characteristic should be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the additional characteristic to be changed.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemno",
+            "in": "path",
+            "description": "Number of the additional characteristic.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Characteristic to be changed",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaAdditionalDataItem"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaAdditionalDataItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{orderid}": {
+      "patch": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Order adjustment",
+        "description": "Change an existing order",
+        "operationId": "changeOrder",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order to be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "changestartdate",
+            "in": "query",
+            "description": "Start date of the change, Format( yyyy-MM-dd ) (Default: tomorrow)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "changeenddate",
+            "in": "query",
+            "description": "End date of the change, Format( yyyy-MM-dd ) (Default: 2999-01-01)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Order adjustments to be saved",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaSubscriptionOrder"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaSubscriptionOrder"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{orderid}/intermissions/{rid}": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Returns the interruption for an order for an ID",
+        "description": "Returns a single interruption",
+        "operationId": "getIntermissionById",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the interruption to be returned",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaIntermission"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Delete an interruption",
+        "description": "Delete an existing interruption",
+        "operationId": "deleteIntermission",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the interruption should be deleted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the interruption to be deleted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Saves a new interruption change",
+        "description": "Change an existing interruption",
+        "operationId": "changeIntermission",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the interruption should be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the interruption to be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Interruption object to be saved",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaIntermission"
+              },
+              "example": {
+                "startDate": "2021-06-01",
+                "memo": null
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaIntermission"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{orderid}/complaints/{rid}": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Complaint",
+        "description": "Returns an order complaint",
+        "operationId": "getOrderComplaintById",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "Complaint to be loaded",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaComplaint"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Delete a complaint",
+        "description": "Delete an existing complaint",
+        "operationId": "deleteOrderComplaint",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the complaint should be deleted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the complaint to be deleted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Saves a complaint change",
+        "description": "Change an existing complaint",
+        "operationId": "changeOrderComplaint",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the complaint should be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the complaint to be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Patch data for a complaint to be saved",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaComplaint"
+              },
+              "example": {
+                "complaintType": {
+                  "rId": "AUSGABE"
+                },
+                "reason": {
+                  "rId": "DRUCKEREI"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaComplaint"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{orderid}/adddeliveries/{rid}": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Returns the subsequent delivery for an order for an ID",
+        "description": "Returns a single subsequent delivery",
+        "operationId": "getAddDeliveryById",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the subsequent delivery to be returned",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaAddDelivery"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Delete a subsequent delivery",
+        "description": "Delete an existing subsequent delivery",
+        "operationId": "deleteOrderAddDelivery",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the subsequent delivery should be deleted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the subsequent delivery to be deleted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Saves a subsequent delivery change",
+        "description": "Change an existing subsequent delivery",
+        "operationId": "changeOrderAddDelivery",
+        "parameters": [
+          {
+            "name": "orderid",
+            "in": "path",
+            "description": "Order for which the subsequent delivery should be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the subsequent delivery to be changed",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The specified IDs correspond to the numbers",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Patch data for a subsequent delivery to be saved",
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PpaAddDelivery"
+              },
+              "example": {
+                "startDate": "2030-06-01",
+                "memo": null
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaAddDelivery"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/personsearch": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Endpoint for searching for persons",
+        "description": "Returns a list of persons matching the input parameters",
+        "operationId": "searchPersons",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for a range from the result list",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Page size; determines the number of result entries",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "personid",
+            "in": "query",
+            "description": "If set, the text entered is searched in the customer number field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "divisionid",
+            "in": "query",
+            "description": "If set, the result is filtered for this accounting client.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "If set, the text entered is searched in the name field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "firstname",
+            "in": "query",
+            "description": "If set, the text entered is searched in the first name field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "street",
+            "in": "query",
+            "description": "If set, the text entered is searched in the street field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "houseno",
+            "in": "query",
+            "description": "If set, the text entered is searched in the house number field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "description": "If set, the text entered is searched in the city field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "postcode",
+            "in": "query",
+            "description": "If set, the text entered is searched in the postal code field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "description": "If set, the text entered is searched in the district field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "countrycode",
+            "in": "query",
+            "description": "If set, the text entered is searched in the country code field. (according to ISO 3166 ALPHA-2)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "addressextension",
+            "in": "query",
+            "description": "If set, the text entered is searched in the address extension field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "description": "If set, the text entered is searched in the title field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phone",
+            "in": "query",
+            "description": "If set, the text entered is searched in the phone number field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "description": "If set, the text entered is searched in the email field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "matchcode",
+            "in": "query",
+            "description": "If set, the text entered is searched in the customer abbreviation field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "salutation",
+            "in": "query",
+            "description": "If set, the text entered is searched in the salutation field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "initials",
+            "in": "query",
+            "description": "If set, the text entered is searched in the initials field",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceOrigin",
+            "in": "query",
+            "description": "If set, only results with this origin are searched",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceIdentifier",
+            "in": "query",
+            "description": "If set, only results with this reference are searched. Note: The referenceOrigin parameter must also be specified.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exactmatch",
+            "in": "query",
+            "description": "If set and no full-text search is performed, then the individual fields must exactly match the values entered",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonSearchPagedRessource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/persons/{personid}/additionaldata": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "Query additional characteristics of a person",
+        "description": "Returns the additional characteristics of a person matching the specified ID.",
+        "operationId": "getAdditionalDataByPersonId",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for a range from the result list",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Page size; determines the number of result entries",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "personid",
+            "in": "path",
+            "description": "ID of the person whose additional characteristics should be returned.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The personid provided in the path corresponds to the person number.",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaAdditionalDataPagedRessource"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{rid}": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Returns the subscriber order for an ID",
+        "description": "Returns a single subscriber order",
+        "operationId": "getOrderById",
+        "parameters": [
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the subscriber order to be returned",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The ID specified in the path corresponds to the order number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PpaSubscriptionOrder"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/orders/{rid}/revisions": {
+      "get": {
+        "tags": [
+          "subscription-controller"
+        ],
+        "summary": "Returns revisions of subscriber orders",
+        "description": "Returns a list of revisions of subscriber orders",
+        "operationId": "getOrderRevisions",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for a range from the result list",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "pagesize",
+            "in": "query",
+            "description": "Page size; determines the number of result entries",
+            "schema": {
+              "maximum": 500,
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "description": "ID of the subscriber order to be returned",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usenumberasid",
+            "in": "query",
+            "description": "The ID specified in the path corresponds to the order number",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "activeFrom",
+            "in": "query",
+            "description": "Format( yyyy-MM-dd ) - Order valid from",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "activeTo",
+            "in": "query",
+            "description": "Format( yyyy-MM-dd ) - Order valid until",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdersPagedRessource"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EmailType": {
+        "type": "string",
+        "description": "Email type: \n* `STANDARD` - Standard email address\n* `EXPORT` - Email address for exports\n* `INVOICE` - Invoice email address\n* `DUNNING` - Dunning email address",
+        "enum": [
+          "STANDARD",
+          "EXPORT",
+          "INVOICE",
+          "DUNNING"
+        ]
+      },
+      "PpaAddress": {
+        "type": "object",
+        "properties": {
+          "street": {
+            "type": "string",
+            "description": "Street"
+          },
+          "postBox": {
+            "type": "boolean",
+            "description": "PO box yes/no"
+          },
+          "postCode": {
+            "type": "string",
+            "description": "Postal code"
+          },
+          "city": {
+            "type": "string",
+            "description": "City"
+          },
+          "district": {
+            "type": "string",
+            "description": "District"
+          },
+          "isoCountryCode": {
+            "type": "string",
+            "description": "Country code according to ISO 3166"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Longitude",
+            "format": "float"
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Latitude",
+            "format": "float"
+          },
+          "housenumber": {
+            "$ref": "#/components/schemas/PpaHouseNumber"
+          }
+        },
+        "description": "Address"
+      },
+      "PpaAdressType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Salutation key"
+      },
+      "PpaContactAddress": {
+        "type": "object",
+        "properties": {
+          "extension": {
+            "type": "string",
+            "description": "Address supplement"
+          },
+          "additionalExtension": {
+            "type": "string",
+            "description": "Address supplement 2"
+          },
+          "address": {
+            "$ref": "#/components/schemas/PpaAddress"
+          }
+        },
+        "description": "Contact address"
+      },
+      "PpaContacts": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaEmail"
+            }
+          },
+          "phones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaPhone"
+            }
+          },
+          "mobiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaMobile"
+            }
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaContactAddress"
+            }
+          }
+        },
+        "description": "Contact details"
+      },
+      "PpaCreditCardItem": {
+        "type": "object",
+        "properties": {
+          "vendor": {
+            "type": "string",
+            "description": "Institute"
+          },
+          "number": {
+            "type": "string",
+            "description": "Card number"
+          },
+          "validMonth": {
+            "type": "integer",
+            "description": "Validity month",
+            "format": "int32"
+          },
+          "validYear": {
+            "type": "integer",
+            "description": "Validity year",
+            "format": "int32"
+          }
+        },
+        "description": "Credit card"
+      },
+      "PpaDivision": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Accounting client"
+      },
+      "PpaEmail": {
+        "type": "object",
+        "properties": {
+          "getrId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "emailAddress": {
+            "type": "string",
+            "description": "Email address"
+          },
+          "type": {
+            "$ref": "#/components/schemas/EmailType"
+          }
+        },
+        "description": "Email address"
+      },
+      "PpaHouseNumber": {
+        "type": "object",
+        "properties": {
+          "housenumber": {
+            "type": "string",
+            "description": "House number incl. additions"
+          }
+        },
+        "description": "House number"
+      },
+      "PpaIbanItem": {
+        "type": "object",
+        "properties": {
+          "iban": {
+            "type": "string",
+            "description": "IBAN"
+          },
+          "bic": {
+            "type": "string",
+            "description": "BIC"
+          }
+        },
+        "description": "IBAN bank connection"
+      },
+      "PpaMobile": {
+        "type": "object",
+        "properties": {
+          "getrId": {
+            "type": "string",
+            "description": "ID"
+          },
+          "intAreaCode": {
+            "type": "string",
+            "description": "Int. area code (not yet supported)"
+          },
+          "areaCode": {
+            "type": "string",
+            "description": "Area code"
+          },
+          "number": {
+            "type": "string",
+            "description": "Number"
+          }
+        },
+        "description": "Mobile phone number"
+      },
+      "PpaPayments": {
+        "type": "object",
+        "properties": {
+          "ibanItems": {
+            "type": "array",
+            "description": "List of international bank connections",
+            "items": {
+              "$ref": "#/components/schemas/PpaIbanItem"
+            }
+          },
+          "creditCardItems": {
+            "type": "array",
+            "description": "List of credit cards",
+            "items": {
+              "$ref": "#/components/schemas/PpaCreditCardItem"
+            }
+          }
+        },
+        "description": "Payment data"
+      },
+      "PpaPerson": {
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "addressType": {
+            "$ref": "#/components/schemas/PpaAdressType"
+          },
+          "personNumber": {
+            "type": "string",
+            "description": "Customer number"
+          },
+          "division": {
+            "$ref": "#/components/schemas/PpaDivision"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name"
+          },
+          "surName": {
+            "type": "string",
+            "description": "Middle name"
+          },
+          "birthDay": {
+            "type": "string",
+            "description": "Birthday",
+            "format": "date"
+          },
+          "matchCode": {
+            "type": "string",
+            "description": "Short name"
+          },
+          "initials": {
+            "type": "string",
+            "description": "Initials"
+          },
+          "salutation": {
+            "type": "string",
+            "description": "Salutation"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title"
+          },
+          "contacts": {
+            "$ref": "#/components/schemas/PpaContacts"
+          },
+          "payments": {
+            "$ref": "#/components/schemas/PpaPayments"
+          },
+          "references": {
+            "type": "array",
+            "description": "List of external references",
+            "items": {
+              "$ref": "#/components/schemas/PpaPersonReference"
+            }
+          }
+        },
+        "description": "Person"
+      },
+      "PpaPersonReference": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string",
+            "description": "Origin"
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Identifier"
+          }
+        },
+        "description": "Reference"
+      },
+      "PpaPhone": {
+        "type": "object",
+        "properties": {
+          "getrId": {
+            "type": "string",
+            "description": "ID"
+          },
+          "intAreaCode": {
+            "type": "string",
+            "description": "Int. area code (not yet supported)"
+          },
+          "areaCode": {
+            "type": "string",
+            "description": "Area code"
+          },
+          "number": {
+            "type": "string",
+            "description": "Number"
+          }
+        },
+        "description": "Phone number"
+      },
+      "PublicErrorResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Time of the error",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "HTTP status code"
+          },
+          "error": {
+            "type": "string",
+            "description": "HTTP error"
+          },
+          "path": {
+            "type": "string",
+            "description": "URL of the endpoint where the error occurred."
+          },
+          "method": {
+            "type": "string",
+            "description": "Access method to endpoint"
+          },
+          "systemId": {
+            "type": "string",
+            "description": "Context in which the server is running"
+          },
+          "server": {
+            "type": "string",
+            "description": "Service incl. version"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "type": {
+            "type": "string",
+            "description": "URL to error description"
+          },
+          "title": {
+            "type": "string",
+            "description": "Short description of error"
+          },
+          "validationErrors": {
+            "type": "object",
+            "properties": {
+              "empty": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": {
+              "type": "string",
+              "description": "List of validation errors"
+            },
+            "description": "List of validation errors"
+          }
+        }
+      },
+      "PpaAdditionalDataItem": {
+        "required": [
+          "values"
+        ],
+        "type": "object",
+        "properties": {
+          "itemNo": {
+            "type": "integer",
+            "description": "Item number (only needs to be filled for PATCH)",
+            "format": "int32"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date of any period",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date of any period",
+            "format": "date"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "description": "Values"
+            },
+            "description": "Values"
+          }
+        }
+      },
+      "PpaBankDataReference": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Type"
+          }
+        },
+        "description": "Base class for bank connections",
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "iban": "#/components/schemas/PpaIbanAccount"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PpaIbanAccount"
+          }
+        ]
+      },
+      "PpaCombinationType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Type of combination"
+      },
+      "PpaCommitmentType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Commitment type"
+      },
+      "PpaConversionType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Conversion type"
+      },
+      "PpaDaysOfWeek": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          },
+          "monValid": {
+            "type": "boolean",
+            "description": "Publication days on Monday"
+          },
+          "tueValid": {
+            "type": "boolean",
+            "description": "Publication days on Tuesday"
+          },
+          "wedValid": {
+            "type": "boolean",
+            "description": "Publication days on Wednesday"
+          },
+          "thuValid": {
+            "type": "boolean",
+            "description": "Publication days on Thursday"
+          },
+          "friValid": {
+            "type": "boolean",
+            "description": "Publication days on Friday"
+          },
+          "satValid": {
+            "type": "boolean",
+            "description": "Publication days on Saturday"
+          },
+          "sunValid": {
+            "type": "boolean",
+            "description": "Publication days on Sunday"
+          }
+        },
+        "description": "Weekday validity"
+      },
+      "PpaDeliveryMethod": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Delivery method"
+      },
+      "PpaDiscount": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          },
+          "discountPercent": {
+            "type": "number",
+            "description": "Discount percentage",
+            "format": "double"
+          }
+        },
+        "description": "Discount group"
+      },
+      "PpaEdition": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Edition"
+      },
+      "PpaForwardingCharge": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Delivery charges"
+      },
+      "PpaFrequency": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Publication/Order frequency"
+      },
+      "PpaIbanAccount": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "description": "Information about the IBAN",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaBankDataReference"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "iban": {
+                "type": "string"
+              },
+              "bic": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "PpaInvoiceMethod": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Invoice type/rhythm"
+      },
+      "PpaIsoCurrency": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Currency"
+      },
+      "PpaOrderCommitment": {
+        "type": "object",
+        "properties": {
+          "endDate": {
+            "type": "string",
+            "description": "End date",
+            "format": "date"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PpaCommitmentType"
+          }
+        },
+        "description": "Commitment data of the order"
+      },
+      "PpaOrderConversion": {
+        "type": "object",
+        "properties": {
+          "conversionType": {
+            "$ref": "#/components/schemas/PpaConversionType"
+          },
+          "conversionDate": {
+            "type": "string",
+            "description": "Conversion date ",
+            "format": "date"
+          }
+        },
+        "description": "Conversion data of the order"
+      },
+      "PpaOrderReference": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string",
+            "description": "Origin"
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Identifier"
+          }
+        },
+        "description": "Order reference"
+      },
+      "PpaPaymentCondition": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Payment condition"
+      },
+      "PpaPaymentMethod": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          },
+          "invoiceDeliveryType": {
+            "type": "string",
+            "description": "Invoice delivery type",
+            "readOnly": true,
+            "enum": [
+              "NONDELIVERY,POSTALDELIVERY,EMAILDELIVERY"
+            ]
+          },
+          "paymentType": {
+            "type": "string",
+            "description": "Payment type",
+            "readOnly": true,
+            "enum": [
+              "UNKNOWN,NOPAYMENT,BANKTRANSFER,DIRECTDEBITIBAN"
+            ]
+          }
+        },
+        "description": " Payment method"
+      },
+      "PpaPostalAddress": {
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "postalAddressNumber": {
+            "type": "string",
+            "description": "Address number"
+          },
+          "division": {
+            "$ref": "#/components/schemas/PpaDivision"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name"
+          },
+          "surName": {
+            "type": "string",
+            "description": "Middle name"
+          },
+          "matchCode": {
+            "type": "string",
+            "description": "Short name"
+          },
+          "initials": {
+            "type": "string",
+            "description": "Initials"
+          },
+          "salutation": {
+            "type": "string",
+            "description": "Salutation"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title"
+          },
+          "extension": {
+            "type": "string",
+            "description": "Address supplement"
+          },
+          "additionalExtension": {
+            "type": "string",
+            "description": "Address supplement 2"
+          },
+          "address": {
+            "$ref": "#/components/schemas/PpaAddress"
+          }
+        },
+        "description": "Address or similar"
+      },
+      "PpaProduct": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Product"
+      },
+      "PpaSalesCampaign": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Advertising campaign"
+      },
+      "PpaSalesChannel": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Sales channel"
+      },
+      "PpaSequelType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Follow-up subscription type"
+      },
+      "PpaSubscriptionOrder": {
+        "required": [
+          "orderEndDate",
+          "orderItem",
+          "orderStartDate"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "ID"
+          },
+          "orderNumber": {
+            "type": "string",
+            "description": "Order number"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/PpaPerson"
+          },
+          "references": {
+            "type": "array",
+            "description": "List of external references",
+            "items": {
+              "$ref": "#/components/schemas/PpaOrderReference"
+            }
+          },
+          "orderStartDate": {
+            "type": "string",
+            "description": "Order start date",
+            "format": "date"
+          },
+          "orderEndDate": {
+            "type": "string",
+            "description": "Order end date",
+            "format": "date"
+          },
+          "division": {
+            "$ref": "#/components/schemas/PpaDivision"
+          },
+          "orderItem": {
+            "$ref": "#/components/schemas/PpaSubscriptionOrderItem"
+          },
+          "billing": {
+            "$ref": "#/components/schemas/PpaSubscriptionOrderBilling"
+          },
+          "shipping": {
+            "$ref": "#/components/schemas/PpaSubscriptionOrderShipping"
+          },
+          "sales": {
+            "$ref": "#/components/schemas/PpaSubscriptionOrderSales"
+          },
+          "termination": {
+            "$ref": "#/components/schemas/PpaSubscriptionTermination"
+          },
+          "linkedOrders": {
+            "$ref": "#/components/schemas/PpaSubscriptionOrderLinkedOrders"
+          },
+          "activeFrom": {
+            "type": "string",
+            "description": "Active from",
+            "format": "date",
+            "readOnly": true
+          },
+          "activeTo": {
+            "type": "string",
+            "description": "Active to",
+            "format": "date",
+            "readOnly": true
+          }
+        },
+        "description": "Subscriber order"
+      },
+      "PpaSubscriptionOrderBankReference": {
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/PpaBankDataReference"
+          }
+        },
+        "description": "Data of the bank connection"
+      },
+      "PpaSubscriptionOrderBilling": {
+        "type": "object",
+        "properties": {
+          "payer": {
+            "$ref": "#/components/schemas/PpaPerson"
+          },
+          "isoCurrency": {
+            "$ref": "#/components/schemas/PpaIsoCurrency"
+          },
+          "invoiceMethod": {
+            "$ref": "#/components/schemas/PpaInvoiceMethod"
+          },
+          "paymentMethod": {
+            "$ref": "#/components/schemas/PpaPaymentMethod"
+          },
+          "bankReference": {
+            "$ref": "#/components/schemas/PpaSubscriptionOrderBankReference"
+          },
+          "paymentCondition": {
+            "$ref": "#/components/schemas/PpaPaymentCondition"
+          },
+          "subscriptionTax": {
+            "$ref": "#/components/schemas/PpaSubscriptionTax"
+          },
+          "price": {
+            "$ref": "#/components/schemas/PpaSubscriptionPrice"
+          },
+          "specialPriceAmount": {
+            "type": "number",
+            "description": "Special price for this order",
+            "format": "double"
+          },
+          "discount": {
+            "$ref": "#/components/schemas/PpaDiscount"
+          },
+          "forwardingCharge": {
+            "$ref": "#/components/schemas/PpaForwardingCharge"
+          },
+          "invoiceCopyQuantity": {
+            "type": "integer",
+            "description": "Number of invoices",
+            "format": "int32"
+          }
+        },
+        "description": "Billing data for a subscription order"
+      },
+      "PpaSubscriptionOrderItem": {
+        "type": "object",
+        "properties": {
+          "orderType": {
+            "type": "string",
+            "description": "Order type",
+            "readOnly": true,
+            "enum": [
+              "UNKNOWN,SUBSCRIPTION,ADDELIVERY,DONATION"
+            ]
+          },
+          "subscriptionType": {
+            "$ref": "#/components/schemas/PpaSubscriptionType"
+          },
+          "product": {
+            "$ref": "#/components/schemas/PpaProduct"
+          },
+          "edition": {
+            "$ref": "#/components/schemas/PpaEdition"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/PpaFrequency"
+          },
+          "conversion": {
+            "$ref": "#/components/schemas/PpaOrderConversion"
+          },
+          "sequelType": {
+            "$ref": "#/components/schemas/PpaSequelType"
+          },
+          "commitment": {
+            "$ref": "#/components/schemas/PpaOrderCommitment"
+          },
+          "chargeStartDate": {
+            "type": "string",
+            "description": "Charge start date",
+            "format": "date"
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "Quantity",
+            "format": "int32"
+          }
+        },
+        "description": "Information about the order scope/content"
+      },
+      "PpaSubscriptionOrderLinkedCombination": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "OrderId of the combined order"
+          },
+          "combination": {
+            "$ref": "#/components/schemas/PpaCombinationType"
+          },
+          "name": {
+            "type": "string",
+            "description": "Product of the combined order"
+          }
+        },
+        "description": "Combination orders"
+      },
+      "PpaSubscriptionOrderLinkedOrders": {
+        "type": "object",
+        "properties": {
+          "combinations": {
+            "type": "array",
+            "description": "Combination orders",
+            "items": {
+              "$ref": "#/components/schemas/PpaSubscriptionOrderLinkedCombination"
+            }
+          },
+          "sequel": {
+            "$ref": "#/components/schemas/PpaSubscriptionOrderLinkedSequel"
+          }
+        },
+        "description": "Linked orders (readonly)",
+        "readOnly": true
+      },
+      "PpaSubscriptionOrderLinkedSequel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "OrderId of the follow-up order"
+          },
+          "name": {
+            "type": "string",
+            "description": "Product of the follow-up order"
+          }
+        },
+        "description": "Follow-up order"
+      },
+      "PpaSubscriptionOrderSales": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/PpaPerson"
+          },
+          "salesChannel1": {
+            "$ref": "#/components/schemas/PpaSalesChannel"
+          },
+          "salesChannel2": {
+            "$ref": "#/components/schemas/PpaSalesChannel"
+          },
+          "salesChannel3": {
+            "$ref": "#/components/schemas/PpaSalesChannel"
+          },
+          "campaign": {
+            "$ref": "#/components/schemas/PpaSalesCampaign"
+          }
+        },
+        "description": "Sales marketing information for a subscriber order"
+      },
+      "PpaSubscriptionOrderShipping": {
+        "type": "object",
+        "properties": {
+          "deliveryMethod": {
+            "$ref": "#/components/schemas/PpaDeliveryMethod"
+          },
+          "shippingDetails": {
+            "type": "array",
+            "description": "Detailed delivery information",
+            "items": {
+              "$ref": "#/components/schemas/PpaSubscriptionOrderShippingDetail"
+            }
+          }
+        },
+        "description": "Delivery information for a subscriber order"
+      },
+      "PpaSubscriptionOrderShippingDetail": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "$ref": "#/components/schemas/PpaPostalAddress"
+          },
+          "daysOfWeek": {
+            "$ref": "#/components/schemas/PpaDaysOfWeek"
+          },
+          "deliveryEdition": {
+            "$ref": "#/components/schemas/PpaEdition"
+          },
+          "deliveryMethod": {
+            "$ref": "#/components/schemas/PpaDeliveryMethod"
+          },
+          "deliveryHint": {
+            "type": "string",
+            "description": "Delivery hint"
+          }
+        },
+        "description": "Detailed delivery information"
+      },
+      "PpaSubscriptionPrice": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Price group"
+      },
+      "PpaSubscriptionTax": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Tax key"
+      },
+      "PpaSubscriptionTermination": {
+        "type": "object",
+        "properties": {
+          "terminationDate": {
+            "type": "string",
+            "description": "Termination date",
+            "format": "date"
+          },
+          "entryDateTime": {
+            "type": "string",
+            "description": "Entry date time",
+            "format": "date-time"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PpaTerminationType"
+          },
+          "calculationType": {
+            "$ref": "#/components/schemas/PpaTerminationCalculationType"
+          },
+          "surCharge": {
+            "$ref": "#/components/schemas/PpaSurCharge"
+          }
+        },
+        "description": "Unsubscription"
+      },
+      "PpaSubscriptionType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          },
+          "epaper": {
+            "type": "boolean",
+            "description": "Is an epaper order"
+          },
+          "paidContent": {
+            "type": "boolean",
+            "description": "Is paid content"
+          },
+          "timeControlled": {
+            "type": "boolean",
+            "description": "Time-dependent service period"
+          },
+          "trialSubscription": {
+            "type": "boolean",
+            "description": "Is a trial subscription"
+          }
+        },
+        "description": "Subscription type"
+      },
+      "PpaSurCharge": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Surcharges"
+      },
+      "PpaTerminationCalculationType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Calculation rule"
+      },
+      "PpaTerminationType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Reason for leaving"
+      },
+      "PpaDonationPool": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Donation pool"
+      },
+      "PpaIntermission": {
+        "required": [
+          "endDate",
+          "intermissionType",
+          "startDate"
+        ],
+        "type": "object",
+        "properties": {
+          "getrId": {
+            "type": "string",
+            "description": "Interruption number"
+          },
+          "orderId": {
+            "type": "string",
+            "description": "Order number"
+          },
+          "receptionTime": {
+            "type": "string",
+            "description": "Reception time",
+            "format": "date-time"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date of the interruption period",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date of the interruption period",
+            "format": "date"
+          },
+          "intermissionType": {
+            "$ref": "#/components/schemas/PpaIntermissionType"
+          },
+          "memo": {
+            "type": "string",
+            "description": "Note"
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "Quantity",
+            "format": "int32"
+          },
+          "surCharge": {
+            "$ref": "#/components/schemas/PpaSurCharge"
+          },
+          "compensations": {
+            "type": "array",
+            "description": "Compensations",
+            "items": {
+              "$ref": "#/components/schemas/PpaIntermissionCompensation"
+            }
+          },
+          "intermissionNumber": {
+            "type": "string",
+            "description": "Interruption number"
+          }
+        },
+        "description": "Interruption"
+      },
+      "PpaIntermissionArticle": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Voucher, coupon, tangible asset"
+      },
+      "PpaIntermissionCompensation": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Type of compensation (credit,coupon,suspendcalculation,orderextension,donationaccount,donationpool)"
+          }
+        },
+        "description": "Base class for compensations",
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "credit": "#/components/schemas/PpaIntermissionCompensationCredit",
+            "coupon": "#/components/schemas/PpaIntermissionCompensationCoupon",
+            "orderextension": "#/components/schemas/PpaIntermissionCompensationOrderExtension",
+            "suspendcalculation": "#/components/schemas/PpaIntermissionCompensationSuspendCalculation",
+            "donationaccount": "#/components/schemas/PpaIntermissionCompensationDonationAccount",
+            "donationpool": "#/components/schemas/PpaIntermissionCompensationDonationPool"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensationCredit"
+          },
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensationCoupon"
+          },
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensationOrderExtension"
+          },
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensationSuspendCalculation"
+          },
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensationDonationPool"
+          },
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensationDonationAccount"
+          }
+        ]
+      },
+      "PpaIntermissionCompensationCoupon": {
+        "required": [
+          "article",
+          "type"
+        ],
+        "type": "object",
+        "description": "Voucher, coupon, tangible asset (type 'coupon')",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensation"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "article": {
+                "$ref": "#/components/schemas/PpaIntermissionArticle"
+              },
+              "couponAmount": {
+                "type": "number",
+                "description": "Coupon amount (readonly)",
+                "format": "double"
+              }
+            }
+          }
+        ]
+      },
+      "PpaIntermissionCompensationCredit": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "description": "Credit (type 'credit')",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensation"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "startDate": {
+                "type": "string",
+                "description": "Start calculation period - if specified then the EndDate must also be provided!",
+                "format": "date"
+              },
+              "endDate": {
+                "type": "string",
+                "description": "End calculation period- if specified then the StartDate must also be provided!",
+                "format": "date"
+              },
+              "priceAmount": {
+                "type": "number",
+                "description": "Credit amount - readonly",
+                "format": "double"
+              },
+              "portoAmount": {
+                "type": "number",
+                "description": "Porto amount- readonly",
+                "format": "double"
+              }
+            }
+          }
+        ]
+      },
+      "PpaIntermissionCompensationDonationAccount": {
+        "required": [
+          "donationAccount",
+          "type"
+        ],
+        "type": "object",
+        "description": "Donation account (type 'donationaccount')",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensation"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "donationAccount": {
+                "$ref": "#/components/schemas/PpaIntermissionDonationAccount"
+              }
+            }
+          }
+        ]
+      },
+      "PpaIntermissionCompensationDonationPool": {
+        "required": [
+          "ppaDonationPool",
+          "type"
+        ],
+        "type": "object",
+        "description": "Donation pool (type 'donationpool')",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensation"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ppaDonationPool": {
+                "$ref": "#/components/schemas/PpaDonationPool"
+              }
+            }
+          }
+        ]
+      },
+      "PpaIntermissionCompensationOrderExtension": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "description": "Order extension (type 'orderextension')",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensation"
+          }
+        ]
+      },
+      "PpaIntermissionCompensationSuspendCalculation": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "description": "Order extension (type 'suspendcalculation')",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaIntermissionCompensation"
+          }
+        ]
+      },
+      "PpaIntermissionDonationAccount": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Donation account"
+      },
+      "PpaIntermissionType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Interruption type"
+      },
+      "Memo": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text"
+          },
+          "memoType": {
+            "$ref": "#/components/schemas/PpaComplaintMemoType"
+          }
+        },
+        "description": "Last memo"
+      },
+      "PpaComplainCompensationRedeliver": {
+        "type": "object",
+        "description": "Subsequent delivery",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensation"
+          }
+        ]
+      },
+      "PpaComplaint": {
+        "type": "object",
+        "properties": {
+          "getrId": {
+            "type": "string",
+            "description": "Complaint ID"
+          },
+          "complaintNumber": {
+            "type": "string",
+            "description": "Complaint number"
+          },
+          "orderId": {
+            "type": "string",
+            "description": "Order number"
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "Number of complained items",
+            "format": "int32"
+          },
+          "complaintTypeGroup": {
+            "$ref": "#/components/schemas/PpaComplaintTypeGroup"
+          },
+          "complaintType": {
+            "$ref": "#/components/schemas/PpaComplaintType"
+          },
+          "receptionTime": {
+            "type": "string",
+            "description": "Reception time",
+            "format": "date-time"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date of the complaint period",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date of the complaint period",
+            "format": "date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PpaComplaintStatus"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/PpaComplaintReason"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/PpaComplaintSeverity"
+          },
+          "memo": {
+            "$ref": "#/components/schemas/Memo"
+          },
+          "compensations": {
+            "type": "array",
+            "description": "Compensations",
+            "items": {
+              "$ref": "#/components/schemas/PpaComplaintCompensation"
+            }
+          },
+          "responseRequested": {
+            "type": "boolean",
+            "description": "Response requested"
+          },
+          "printOnList": {
+            "type": "boolean",
+            "description": "Print on list"
+          },
+          "addDelivery": {
+            "$ref": "#/components/schemas/PpaComplaintAddDelivery"
+          },
+          "cancelled": {
+            "type": "boolean"
+          }
+        },
+        "description": "Complaint"
+      },
+      "PpaComplaintAddDelivery": {
+        "type": "object",
+        "properties": {
+          "getrId": {
+            "type": "string",
+            "description": "Id of the subsequent delivery"
+          },
+          "addDeliveryNumber": {
+            "type": "string",
+            "description": "Subsequent delivery number"
+          }
+        },
+        "description": "Complaint for subsequent delivery"
+      },
+      "PpaComplaintCompensation": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Type of compensation",
+            "enum": [
+              "redeliver",
+              "credit",
+              "manualcredit",
+              "orderextension",
+              "suspendcalculation",
+              "digitalreplacement"
+            ]
+          }
+        },
+        "description": "Compensation for complaint",
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PpaComplainCompensationRedeliver"
+          },
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensationCredit"
+          },
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensationManualCredit"
+          },
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensationOrderExtension"
+          },
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensationSuspendCalculation"
+          },
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensationDigitalReplacement"
+          }
+        ]
+      },
+      "PpaComplaintCompensationCredit": {
+        "type": "object",
+        "description": "Credit",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensation"
+          }
+        ]
+      },
+      "PpaComplaintCompensationDigitalReplacement": {
+        "type": "object",
+        "description": "Digital replacement delivery",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensation"
+          }
+        ]
+      },
+      "PpaComplaintCompensationManualCredit": {
+        "type": "object",
+        "description": "Manual credit",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensation"
+          }
+        ]
+      },
+      "PpaComplaintCompensationOrderExtension": {
+        "type": "object",
+        "description": "Extend subscription",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensation"
+          }
+        ]
+      },
+      "PpaComplaintCompensationSuspendCalculation": {
+        "type": "object",
+        "description": "Suspend calculation",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PpaComplaintCompensation"
+          }
+        ]
+      },
+      "PpaComplaintMemoType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Memo type"
+      },
+      "PpaComplaintReason": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Reason for complaint"
+      },
+      "PpaComplaintSeverity": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Severity"
+      },
+      "PpaComplaintStatus": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Complaint status"
+      },
+      "PpaComplaintType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Reason for complaint"
+      },
+      "PpaComplaintTypeGroup": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Complaint group"
+      },
+      "PpaAddDelivery": {
+        "required": [
+          "endDate",
+          "postalAddress",
+          "quantity",
+          "receptionTime",
+          "startDate"
+        ],
+        "type": "object",
+        "properties": {
+          "getrId": {
+            "type": "string",
+            "description": "Id of the subsequent delivery"
+          },
+          "addDeliveryNumber": {
+            "type": "string",
+            "description": "Subsequent delivery number"
+          },
+          "orderId": {
+            "type": "string",
+            "description": "Order number"
+          },
+          "addDeliveryType": {
+            "$ref": "#/components/schemas/PpaAddDeliveryType"
+          },
+          "receptionTime": {
+            "type": "string",
+            "description": "Reception time",
+            "format": "date-time"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date of the subsequent delivery period",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date of the subsequent delivery period",
+            "format": "date"
+          },
+          "memo": {
+            "type": "string",
+            "description": "Note"
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "Quantity",
+            "format": "int32"
+          },
+          "postalAddress": {
+            "$ref": "#/components/schemas/PpaPostalAddress"
+          },
+          "product": {
+            "$ref": "#/components/schemas/PpaProduct"
+          },
+          "edition": {
+            "$ref": "#/components/schemas/PpaEdition"
+          },
+          "deliveryMethod": {
+            "$ref": "#/components/schemas/PpaDeliveryMethod"
+          },
+          "price": {
+            "$ref": "#/components/schemas/PpaSubscriptionPrice"
+          },
+          "forwardingCharge": {
+            "$ref": "#/components/schemas/PpaForwardingCharge"
+          },
+          "subscriptionTax": {
+            "$ref": "#/components/schemas/PpaSubscriptionTax"
+          },
+          "paymentMethod": {
+            "$ref": "#/components/schemas/PpaPaymentMethod"
+          },
+          "bankReference": {
+            "$ref": "#/components/schemas/PpaSubscriptionOrderBankReference"
+          },
+          "surCharge": {
+            "$ref": "#/components/schemas/PpaSurCharge"
+          },
+          "additional": {
+            "type": "boolean"
+          }
+        },
+        "description": "Subsequent delivery"
+      },
+      "PpaAddDeliveryType": {
+        "required": [
+          "rId"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description"
+          }
+        },
+        "description": "Reason for subsequent delivery"
+      },
+      "PersonSearchPagedRessource": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaSearchPerson"
+            }
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PpaSearchPerson": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "Id of the person"
+          },
+          "divisionId": {
+            "type": "string",
+            "description": "Id of the accounting client"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name"
+          },
+          "street": {
+            "type": "string",
+            "description": "Street"
+          },
+          "houseNo": {
+            "type": "string",
+            "description": "House number incl. additions"
+          },
+          "city": {
+            "type": "string",
+            "description": "City"
+          },
+          "postCode": {
+            "type": "string",
+            "description": "Postal code"
+          },
+          "district": {
+            "type": "string",
+            "description": "District"
+          },
+          "isoCountryCode": {
+            "type": "string",
+            "description": "Country code according to ISO 3166"
+          },
+          "addressExtension": {
+            "type": "string",
+            "description": "Address supplement"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title"
+          },
+          "phone": {
+            "type": "array",
+            "description": "Phone numbers",
+            "items": {
+              "type": "string",
+              "description": "Phone numbers"
+            }
+          },
+          "geteMail": {
+            "type": "array",
+            "description": "Email addresses",
+            "items": {
+              "type": "string",
+              "description": "Email addresses"
+            }
+          },
+          "matchCode": {
+            "type": "string",
+            "description": "Short name"
+          },
+          "salutation": {
+            "type": "string",
+            "description": "Salutation"
+          },
+          "initials": {
+            "type": "string",
+            "description": "Initials"
+          },
+          "references": {
+            "type": "array",
+            "description": "References",
+            "items": {
+              "$ref": "#/components/schemas/PpaPersonReference"
+            }
+          }
+        },
+        "description": "Person search result"
+      },
+      "PpaAdditionalData": {
+        "required": [
+          "additionalItems"
+        ],
+        "type": "object",
+        "properties": {
+          "rId": {
+            "type": "string",
+            "description": "ID of the data"
+          },
+          "description": {
+            "maxLength": 30,
+            "minLength": 0,
+            "type": "string",
+            "description": "Description",
+            "readOnly": true
+          },
+          "additionalItems": {
+            "type": "array",
+            "description": "List of additional data",
+            "items": {
+              "$ref": "#/components/schemas/PpaAdditionalDataItem"
+            }
+          }
+        },
+        "description": "Additional, customer-specific data for subscription orders"
+      },
+      "PpaAdditionalDataPagedRessource": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaAdditionalData"
+            }
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "OrdersPagedRessource": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaSubscriptionOrder"
+            }
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "IntermissionsPagedRessource": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaIntermission"
+            }
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PpaComplaintPagedResource": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaComplaint"
+            }
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AdddeliveriesPagedRessource": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PpaAddDelivery"
+            }
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      }
+    }
+  }
+}
