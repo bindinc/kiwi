@@ -7,9 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Add `/api/v1/status` endpoint with API status and rate limit snapshot.
+- Add a local Docker Compose preflight check that validates `client_secrets.json` before the app starts.
 
 ### Changed
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
+- Make `make compose-up` fail fast with actionable guidance when local OIDC prerequisites are not met.
+
+### Fixed
+- Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
 
 ## [v1.0.6]
 

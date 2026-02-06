@@ -2,7 +2,7 @@ SHELL := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev-certs compose-up compose-down compose-logs compose-build image-build
+.PHONY: help dev-certs compose-preflight compose-up compose-down compose-logs compose-build image-build
 
 help:
 	@echo "Usage: make compose-up"
@@ -18,7 +18,10 @@ dev-certs:
 compose-build:
 	docker compose build
 
-compose-up:
+compose-preflight:
+	scripts/compose-prereqs.sh
+
+compose-up: compose-preflight
 	docker compose up --build
 
 compose-down:

@@ -83,11 +83,11 @@ Use this flow when you only have access to this repo and need the HTTPS base URL
 2. Create your local OIDC secrets file:
 
    ```bash
-   cp client_secrets.json.example client_secrets.json
+   cp client_secrets.example.json client_secrets.json
    ```
 
    Update `client_secrets.json` with your Azure tenant ID, client ID, and client secret.
-   Docker Compose mounts this file as a runtime secret at `/run/secrets/oidc-client-secrets`
+   Local Docker Compose reads this file from `/workspace/client_secrets.json` inside the container,
    so it is not baked into the image.
 
 3. Start the local stack (it will generate local TLS certs on first run):
@@ -95,6 +95,9 @@ Use this flow when you only have access to this repo and need the HTTPS base URL
    ```bash
    make compose-up
    ```
+
+   Startup now runs a preflight check and fails fast with clear instructions when
+   `client_secrets.json` is missing, empty, or accidentally created as a directory.
 
 4. Trust the generated cert in your OS/browser (located at `infra/docker/nginx/certs`).
 5. Open:
