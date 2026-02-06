@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add local gateway routing for fallback OIDC under `/kiwi-oidc/`.
 - Configure fallback Keycloak hostname/backchannel handling so browser redirects stay on the public local URL.
 - Make OIDC scopes mode-aware: fallback defaults to `openid email profile`, external keeps `openid email profile User.Read`.
+- Gate local startup on health checks so `app` waits for fallback OIDC readiness and `gateway` waits for a healthy app.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
