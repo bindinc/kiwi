@@ -126,6 +126,17 @@ Fallback mode ships with deterministic test users (all with password `kiwi-local
 | `kiwi-user` | `bink8s.app.kiwi.user` |
 | `kiwi-view` | `bink8s.app.kiwi.view` |
 
+To sign in with a fallback user:
+
+1. Ensure `client_secrets.json` is absent (`rm -f client_secrets.json`).
+2. Run `make compose-up`.
+3. Open `https://bdc.rtvmedia.org.local/kiwi`.
+4. On the Keycloak login screen, use one of the usernames above and password `kiwi-local-dev-password`.
+
+Fallback mode requests `openid email profile` scopes by default.
+External mode keeps `openid email profile User.Read` by default.
+You can override with `OIDC_SCOPES`, `OIDC_FALLBACK_SCOPES`, or `OIDC_EXTERNAL_SCOPES`.
+
 Run the fallback smoke check:
 
 ```bash

@@ -61,6 +61,34 @@ for attempt in $(seq 1 60); do
   sleep 1
 done
 
+login_redirect_ready=0
+for attempt in $(seq 1 60); do
+  login_redirect="$(curl -kis "${gateway_base_url}/kiwi/login" | awk 'BEGIN{IGNORECASE=1} /^location:/{print $2; exit}' | tr -d '\r')"
+  if [[ -z "${login_redirect}" ]]; then
+    sleep 1
+    continue
+  fi
+
+  if [[ "${login_redirect}" != https://bdc.rtvmedia.org.local/kiwi-oidc/* ]]; then
+    echo "[compose-smoke-oidc] Unexpected fallback login redirect target: ${login_redirect}"
+    exit 1
+  fi
+
+  if [[ "${login_redirect}" == *"User.Read"* ]]; then
+    echo "[compose-smoke-oidc] Fallback login redirect includes unsupported scope User.Read."
+    exit 1
+  fi
+
+  echo "[compose-smoke-oidc] Login redirect targets public fallback OIDC URL with fallback scopes."
+  login_redirect_ready=1
+  break
+done
+
+if [[ "${login_redirect_ready}" != "1" ]]; then
+  echo "[compose-smoke-oidc] Fallback login redirect did not become available."
+  exit 1
+fi
+
 assert_role() {
   local username="$1"
   local expected_role="$2"

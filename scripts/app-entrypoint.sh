@@ -6,6 +6,14 @@ eval "$resolved"
 
 export OIDC_CLIENT_SECRETS="$OIDC_CLIENT_SECRETS_PATH"
 
+if [ -z "${OIDC_SCOPES:-}" ]; then
+  if [ "$OIDC_MODE" = "fallback" ]; then
+    export OIDC_SCOPES="${OIDC_FALLBACK_SCOPES:-openid email profile}"
+  else
+    export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read}"
+  fi
+fi
+
 if [ "$OIDC_MODE" = "fallback" ]; then
   discovery_url="${OIDC_FALLBACK_DISCOVERY_URL:-http://fallback-oidc:8080/kiwi-oidc/realms/kiwi-local/.well-known/openid-configuration}"
   max_attempts="${OIDC_FALLBACK_WAIT_ATTEMPTS:-60}"

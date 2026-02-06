@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Make `make compose-up` fail fast with actionable guidance when local OIDC prerequisites are not met.
 - Make missing `client_secrets.json` automatically activate local fallback OIDC instead of failing startup.
 - Add local gateway routing for fallback OIDC under `/kiwi-oidc/`.
+- Configure fallback Keycloak hostname/backchannel handling so browser redirects stay on the public local URL.
+- Make OIDC scopes mode-aware: fallback defaults to `openid email profile`, external keeps `openid email profile User.Read`.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.

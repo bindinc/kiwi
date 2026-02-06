@@ -92,3 +92,16 @@ When reporting completion, always explicitly include:
 - A local hosts file is already configured to point 127.0.0.1 to bdc.rtvmedia.org.local
 - certificates on production should be managed by cert-manager issuer-letsencrypt
 - certificates on local development should be managed by cert-manager issuer-staging
+
+## Local fallback OIDC quick validation
+
+- If `client_secrets.json` is missing in the workspace root, Docker Compose automatically uses fallback Keycloak.
+- Fallback OIDC login URL is served through `https://bdc.rtvmedia.org.local/kiwi-oidc`.
+- Fallback test users (password for all: `kiwi-local-dev-password`):
+  - `kiwi-admin` -> `bink8s.app.kiwi.admin`
+  - `kiwi-dev` -> `bink8s.app.kiwi.dev`
+  - `kiwi-supervisor` -> `bink8s.app.kiwi.supervisor`
+  - `kiwi-user` -> `bink8s.app.kiwi.user`
+  - `kiwi-view` -> `bink8s.app.kiwi.view`
+- For fallback mode, app scopes must be `openid email profile` (no `User.Read`).
+- To validate fallback end-to-end, run `make compose-smoke-oidc`.
