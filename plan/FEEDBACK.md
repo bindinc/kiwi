@@ -1,5 +1,10 @@
 # Feedback
 
+## Status indicator
+
+- [ ] change the look of the current status_indicator '/plan/user_status_indicator/status_indicator_commit_bd7b7068592bef5a2e7e18297993770b892a7d17.png' into '/plan/user_status_indicator/desired_status_indicator.png'
+
+
 ## New subscription 
 - [x] 1 First input field (top): Acquisition key search/selection field (only show sales code and description + price per acquisition key)
   - [x] 1.1 Type barcode; system validates (exists/active). Document sample barcodes in the /docs folder.
