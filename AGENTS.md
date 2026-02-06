@@ -39,13 +39,26 @@ if isValid && isAllowed && isSecure {
 Whenever I ask for a **new PR** (or any task that should result in a PR), you must **always** follow the workflow below. Deviating from this process is not allowed.
 
 ## Step 1 — Initialize PR + worktree (mandatory)
-- Pass the PR title as input to the script.
+- There is no bootstrap script anymore. Do this manually.
+- Always start from an English PR title.
 - The default base branch is `main`, unless I explicitly specify otherwise.
-- The script will:
-  - generate a `codex/...` kebab-case branch name,
-  - create a **dedicated git worktree** under `../_worktrees/`,
-  - create a **GitHub PR** immediately if possible,
-  - and place you inside the correct worktree.
+- Derive a branch name in the format `codex/<kebab-case-title>`.
+- Create a **dedicated git worktree** under `../_worktrees/` and switch into it before making changes.
+- Create the GitHub PR immediately if possible.
+- Reference command sequence:
+  ```bash
+  PR_TITLE="Your English PR title"
+  BASE_BRANCH="main" # change only when explicitly requested
+  BRANCH_NAME="codex/<kebab-case-title>"
+  WORKTREE_PATH="../_worktrees/<kebab-case-title>"
+
+  git fetch origin
+  git switch "$BASE_BRANCH"
+  git pull --ff-only origin "$BASE_BRANCH"
+  git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" "$BASE_BRANCH"
+  cd "$WORKTREE_PATH"
+  gh pr create --base "$BASE_BRANCH" --head "$BRANCH_NAME" --title "$PR_TITLE" || true
+  ```
 
 **Always use english for titles and text.**
 **We require one CHANGELOG.md entry per PR.**
