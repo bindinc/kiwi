@@ -21,7 +21,7 @@ from services.queue.retry_policy import RetryPolicy
 
 
 LOGGER = logging.getLogger(__name__)
-JobHandler = Callable[[dict[str, Any]], None]
+JobHandler = Callable[[dict[str, Any]], dict[str, Any] | None]
 
 
 @dataclass(frozen=True)
@@ -149,7 +149,7 @@ class OutboundJobWorker:
             return
 
         try:
-            handler(job)
+            handler_result = handler(job)
         except RetryableJobError as exc:
             self._retry_or_dead_letter(job, now_utc, attempt_id, request_id, str(exc))
             return
@@ -171,16 +171,22 @@ class OutboundJobWorker:
         self.operation_requests_repo.update_status(
             request_id=request_id,
             status="succeeded",
-            result_json={"jobId": job_id},
+            result_json={
+                "jobId": job_id,
+                "upstream": handler_result or {},
+                "subscriptionId": (handler_result or {}).get("subscriptionId")
+                or (handler_result or {}).get("id"),
+            },
             completed=True,
         )
+        payload_json = job.get("payload_json") or {}
         self.audit_events_repo.append_event(
             event_type="outbound_job.succeeded",
             actor_id=self.settings.worker_id,
             entity_type="job",
             entity_id=str(job_id),
             request_id=request_id,
-            correlation_id=job.get("correlation_id"),
+            correlation_id=payload_json.get("correlationId"),
             before_redacted=None,
             after_redacted={"status": "succeeded"},
             metadata_json={"attemptNo": attempt_no},
@@ -196,6 +202,16 @@ class OutboundJobWorker:
     ) -> None:
         job_id = int(job["job_id"])
         attempt_no = int(job["attempt_count"]) + 1
+        max_attempts = int(job.get("max_attempts") or 0)
+        if max_attempts and attempt_no >= max_attempts:
+            self._mark_job_dead_letter(
+                job_id=job_id,
+                request_id=request_id,
+                attempt_id=attempt_id,
+                error_code="retry_exhausted",
+                error_message=message,
+            )
+            return
 
         next_delay = self.retry_policy.next_delay_seconds(attempt_no)
         if next_delay is None:

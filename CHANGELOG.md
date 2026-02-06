@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add a dedicated queue worker process skeleton with claim/lease/retry handling and daily retention cleanup.
 - Add local Docker Compose PostgreSQL and worker services for queue processing.
 - Add agent workday stats to the status menu, including active session time and handled call count.
+- Add direct PPA-backed customer API endpoints for search, detail fetch, and patch update.
+- Add idempotent subscription orchestration endpoint with sync-first execution and queued fallback.
+- Add subscription request polling endpoint and centralized audit timeline endpoint.
+- Add queue worker subscription job handler with retry-aware upstream error mapping.
 
 ### Changed
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
@@ -28,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Gate local startup on health checks so `app` waits for fallback OIDC readiness and `gateway` waits for a healthy app.
 - Redesign the header status indicator to an avatar badge style and extend its menu with status selection and logout.
 - Extend `/api/v1/status` with database and queue health snapshots.
+- Add correlation id assignment on each request and response header propagation (`X-Correlation-Id`).
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
