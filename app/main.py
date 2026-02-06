@@ -30,7 +30,7 @@ class PrefixMiddleware:
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CLIENT_SECRETS = os.path.join(APP_DIR, "client_secrets.json")
-DEFAULT_OIDC_SCOPES = "openid email profile User.Read"
+DEFAULT_OIDC_SCOPES = "openid email profile User.Read Presence.Read Presence.ReadWrite"
 
 
 def parse_bool_env(name: str, default: bool) -> bool:

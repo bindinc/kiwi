@@ -68,7 +68,7 @@ let lastCallSession = null;
 
 // Phase 1B: Agent Status State Management
 let agentStatus = {
-    current: 'ready',           // offline, ready, busy, acw, break - Agent starts as ready
+    current: 'ready',           // ready, busy, dnd, brb, away, offline, acw
     canReceiveCalls: true,      // Can receive calls on page load
     sessionStartTime: Date.now(),
     callsHandled: 0,
@@ -80,12 +80,20 @@ let agentStatus = {
 
 // Agent Status Definitions
 const agentStatuses = {
-    offline: { label: translate('agentStatus.offline', {}, 'Offline'), color: '#9ca3af', badge: '−', textColor: '#111827' },
     ready: { label: translate('agentStatus.ready', {}, 'Beschikbaar'), color: '#4ade80', badge: '✓', textColor: '#052e16' },
-    busy: { label: translate('agentStatus.busy', {}, 'In Gesprek'), color: '#f87171', badge: '●', textColor: '#7f1d1d' },
+    busy: { label: translate('agentStatus.busy', {}, 'Bezet'), color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
+    dnd: { label: translate('agentStatus.dnd', {}, 'Niet storen'), color: '#dc2626', badge: '⛔', textColor: '#7f1d1d' },
+    brb: { label: translate('agentStatus.brb', {}, 'Ben zo terug'), color: '#f59e0b', badge: '↺', textColor: '#78350f' },
+    away: { label: translate('agentStatus.away', {}, 'Als afwezig weergeven'), color: '#fbbf24', badge: '◔', textColor: '#713f12' },
+    offline: { label: translate('agentStatus.offline', {}, 'Offline'), color: '#9ca3af', badge: '−', textColor: '#111827' },
     acw: { label: translate('agentStatus.acw', {}, 'Nabewerkingstijd'), color: '#facc15', badge: '~', textColor: '#422006' },
-    break: { label: translate('agentStatus.break', {}, 'Pauze'), color: '#60a5fa', badge: 'II', textColor: '#172554' }
 };
+
+const agentStatusAliases = {
+    break: 'away'
+};
+
+let teamsSyncNoticeShown = false;
 
 // Phase 1A: Service Number Configuration
 const serviceNumbers = {
@@ -1671,6 +1679,83 @@ function closeStatusMenu() {
     setStatusMenuOpen(false);
 }
 
+function normalizeAgentStatus(status) {
+    if (typeof status !== 'string') {
+        return null;
+    }
+    const normalized = status.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+    const canonical = agentStatusAliases[normalized] || normalized;
+    if (!agentStatuses[canonical]) {
+        return null;
+    }
+    return canonical;
+}
+
+function resolveTeamsSyncLabel(syncResult) {
+    const capability = syncResult && syncResult.capability ? syncResult.capability : null;
+    if (capability && capability.can_write) {
+        return translate('agent.teamsSyncActive', {}, 'Teams sync actief');
+    }
+
+    const reason = (syncResult && syncResult.reason) || (capability && capability.reason) || null;
+    if (reason === 'missing_presence_scope' || reason === 'missing_presence_write_scope' || reason === 'write_scope_unavailable') {
+        return translate(
+            'agent.teamsSyncMissingScope',
+            {},
+            'Teams sync vereist Graph scope Presence.ReadWrite. Log opnieuw in na consent.'
+        );
+    }
+    if (reason === 'unsupported_identity_provider') {
+        return translate(
+            'agent.teamsSyncUnsupportedProvider',
+            {},
+            'Teams sync is niet beschikbaar voor deze OIDC provider.'
+        );
+    }
+    if (reason === 'missing_access_token') {
+        return translate(
+            'agent.teamsSyncMissingToken',
+            {},
+            'Teams sync is niet beschikbaar: ontbrekende toegangstoken.'
+        );
+    }
+
+    return translate('agent.teamsSyncTemporarilyUnavailable', {}, 'Teams sync is tijdelijk niet beschikbaar.');
+}
+
+function updateTeamsSyncState(syncResult) {
+    const syncElement = document.getElementById('agentTeamsSyncState');
+    if (!syncElement) {
+        return;
+    }
+
+    const label = resolveTeamsSyncLabel(syncResult);
+    syncElement.textContent = label;
+}
+
+function maybeNotifyTeamsSyncIssue(syncResult) {
+    if (teamsSyncNoticeShown) {
+        return;
+    }
+
+    const capability = syncResult && syncResult.capability ? syncResult.capability : null;
+    if (capability && capability.can_write) {
+        return;
+    }
+
+    const reason = (syncResult && syncResult.reason) || (capability && capability.reason) || null;
+    if (!reason) {
+        return;
+    }
+
+    const message = resolveTeamsSyncLabel(syncResult);
+    showToast(message, 'warning');
+    teamsSyncNoticeShown = true;
+}
+
 function applyAgentStatusLocally(newStatus, options = {}) {
     const statusConfig = agentStatuses[newStatus];
     if (!statusConfig) {
@@ -1731,14 +1816,22 @@ async function syncAgentStatusWithBackend(newStatus) {
         }
 
         const payload = await response.json();
-        const serverStatus = payload && payload.status;
-        const serverStatusIsKnown = typeof serverStatus === 'string' && !!agentStatuses[serverStatus];
+        const serverStatus = normalizeAgentStatus(payload && payload.status);
+        const teamsSyncResult = payload && payload.teams_sync ? payload.teams_sync : null;
 
-        if (serverStatusIsKnown && serverStatus !== agentStatus.current) {
+        if (teamsSyncResult) {
+            updateTeamsSyncState(teamsSyncResult);
+        }
+
+        if (serverStatus && serverStatus !== agentStatus.current) {
             applyAgentStatusLocally(serverStatus, {
                 showToast: false,
                 closeMenu: false
             });
+        }
+
+        if (teamsSyncResult) {
+            maybeNotifyTeamsSyncIssue(teamsSyncResult);
         }
 
         return payload;
@@ -1762,17 +1855,19 @@ async function initializeAgentStatusFromBackend() {
         }
 
         const payload = await response.json();
-        const serverStatus = payload && payload.status;
-        const serverStatusIsKnown = typeof serverStatus === 'string' && !!agentStatuses[serverStatus];
+        const serverStatus = normalizeAgentStatus(payload && payload.status);
+        const teamsSyncResult = payload && payload.teams_sync ? payload.teams_sync : null;
 
-        if (!serverStatusIsKnown || serverStatus === agentStatus.current) {
-            return;
+        if (teamsSyncResult) {
+            updateTeamsSyncState(teamsSyncResult);
         }
 
-        applyAgentStatusLocally(serverStatus, {
-            showToast: false,
-            closeMenu: false
-        });
+        if (serverStatus && serverStatus !== agentStatus.current) {
+            applyAgentStatusLocally(serverStatus, {
+                showToast: false,
+                closeMenu: false
+            });
+        }
     } catch (error) {
         console.warn('Agent status initialization from backend failed', error);
     }
@@ -1780,26 +1875,27 @@ async function initializeAgentStatusFromBackend() {
 
 // Set Agent Status
 function setAgentStatus(newStatus) {
-    if (!agentStatuses[newStatus]) {
+    const normalizedStatus = normalizeAgentStatus(newStatus);
+    if (!normalizedStatus) {
         return;
     }
 
     // Validatie
-    if (callSession.active && newStatus === 'ready') {
+    if (callSession.active && normalizedStatus === 'ready') {
         showToast(translate('agent.cannotSetReadyDuringCall', {}, 'Kan niet naar Beschikbaar tijdens actief gesprek'), 'error');
         return;
     }
 
-    if (newStatus === agentStatus.current) {
+    if (normalizedStatus === agentStatus.current) {
         closeStatusMenu();
         return;
     }
 
-    applyAgentStatusLocally(newStatus, {
+    applyAgentStatusLocally(normalizedStatus, {
         showToast: true,
         closeMenu: true
     });
-    syncAgentStatusWithBackend(newStatus);
+    syncAgentStatusWithBackend(normalizedStatus);
 }
 
 // Update Agent Status Display

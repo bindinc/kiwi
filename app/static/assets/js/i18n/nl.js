@@ -6,7 +6,10 @@ const nl = {
     agentStatus: {
         offline: 'Offline',
         ready: 'Beschikbaar',
-        busy: 'In Gesprek',
+        busy: 'Bezet',
+        dnd: 'Niet storen',
+        brb: 'Ben zo terug',
+        away: 'Als afwezig weergeven',
         acw: 'Nabewerkingstijd',
         break: 'Pauze'
     },
@@ -49,7 +52,12 @@ const nl = {
     },
     agent: {
         statusChanged: 'Status gewijzigd naar: {status}',
-        cannotSetReadyDuringCall: 'Kan niet naar Beschikbaar tijdens actief gesprek'
+        cannotSetReadyDuringCall: 'Kan niet naar Beschikbaar tijdens actief gesprek',
+        teamsSyncActive: 'Teams sync actief',
+        teamsSyncMissingScope: 'Teams sync vereist Graph scope Presence.ReadWrite. Log opnieuw in na consent.',
+        teamsSyncUnsupportedProvider: 'Teams sync is niet beschikbaar voor deze OIDC provider.',
+        teamsSyncMissingToken: 'Teams sync is niet beschikbaar: ontbrekende toegangstoken.',
+        teamsSyncTemporarilyUnavailable: 'Teams sync is tijdelijk niet beschikbaar.'
     },
     acw: {
         readyForNext: 'Klaar voor volgende gesprek',

@@ -22,6 +22,13 @@ WRITE_SCOPES = {
 KIWI_TO_TEAMS_PRESENCE = {
     "ready": {"availability": "Available", "activity": "Available", "expirationDuration": "PT8H"},
     "break": {"availability": "Away", "activity": "Away", "expirationDuration": "PT4H"},
+    "away": {"availability": "Away", "activity": "Away", "expirationDuration": "PT4H"},
+    "brb": {"availability": "BeRightBack", "activity": "BeRightBack", "expirationDuration": "PT2H"},
+    "dnd": {
+        "availability": "DoNotDisturb",
+        "activity": "DoNotDisturb",
+        "expirationDuration": "PT4H",
+    },
     "offline": {"availability": "Offline", "activity": "OffWork", "expirationDuration": "PT8H"},
     "busy": {"availability": "Busy", "activity": "Busy", "expirationDuration": "PT4H"},
     "acw": {"availability": "Busy", "activity": "Busy", "expirationDuration": "PT30M"},
@@ -61,6 +68,10 @@ def get_sync_capability(session_data: dict, app_config: dict) -> dict:
         reason = "missing_access_token"
     elif not has_read_scope and not has_write_scope:
         reason = "missing_presence_scope"
+    elif not has_read_scope:
+        reason = "missing_presence_read_scope"
+    elif not has_write_scope:
+        reason = "missing_presence_write_scope"
 
     return {
         "enabled": feature_enabled,
@@ -106,19 +117,30 @@ def map_teams_presence_to_kiwi_status(availability: Optional[str], activity: Opt
     normalized_availability = (availability or "").strip().lower()
     normalized_activity = (activity or "").strip().lower()
 
-    if normalized_availability == "offline" or normalized_activity in {"offwork", "outofoffice"}:
+    if normalized_availability == "donotdisturb":
+        return "dnd"
+
+    if normalized_availability == "berightback":
+        return "brb"
+
+    if normalized_availability in {"away", "outofoffice"}:
+        return "away"
+
+    if normalized_availability == "offline":
         return "offline"
 
-    if normalized_activity in {"inacall", "inaconferencecall", "inameeting", "presenting"}:
+    if normalized_activity in {"offwork"}:
+        return "offline"
+
+    if normalized_activity in {"outofoffice"}:
+        return "away"
+
+    if normalized_activity in {"inacall", "inaconferencecall", "inameeting", "presenting", "urgentinterruptionsonly"}:
         return "busy"
 
     availability_mapping = {
         "available": "ready",
-        "away": "break",
-        "berightback": "break",
         "busy": "busy",
-        "donotdisturb": "busy",
-        "offline": "offline",
     }
 
     mapped_status = availability_mapping.get(normalized_availability)

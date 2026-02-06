@@ -40,24 +40,28 @@ body {
 
 /* Header */
 .header {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: #000 url(../img/Bindinc-Logo-RGB-WIT-2023.svg) no-repeat center left;
     color: white;
     box-shadow: var(--shadow-md);
     position: sticky;
     top: 0;
     z-index: 100;
+    height: 75px;
+    padding-left:200px;
 }
 
 .header-content {
     max-width: 1800px;
     margin: 0 auto;
+    height: 100%;
 }
 
 .header-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2rem;
+    padding: 0 2rem;
+    height: 100%;
 }
 
 .header h1 {
@@ -66,10 +70,20 @@ body {
     margin: 0;
 }
 
+.header-logo {
+    height: 75px;
+    width: auto;
+    flex-shrink: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
 .header-right {
     display: flex;
     gap: 2rem;
     align-items: center;
+    margin-left: auto;
 }
 
 .user-info {
@@ -242,8 +256,20 @@ body {
     background: #10b981;
 }
 
-.status-menu-item[data-status-option="break"]::before {
-    background: #3b82f6;
+.status-menu-item[data-status-option="busy"]::before {
+    background: #ef4444;
+}
+
+.status-menu-item[data-status-option="dnd"]::before {
+    background: #dc2626;
+}
+
+.status-menu-item[data-status-option="brb"]::before {
+    background: #f59e0b;
+}
+
+.status-menu-item[data-status-option="away"]::before {
+    background: #fbbf24;
 }
 
 .status-menu-item[data-status-option="offline"]::before {
@@ -285,6 +311,12 @@ body {
     font-weight: 700;
     color: #0f172a;
     font-family: 'Courier New', monospace;
+}
+
+.agent-work-stat-value--muted {
+    color: #475569;
+    font-family: inherit;
+    font-weight: 600;
 }
 
 @media (max-width: 768px) {

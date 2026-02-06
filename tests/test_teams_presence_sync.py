@@ -60,6 +60,21 @@ class TeamsPresenceSyncTests(unittest.TestCase):
         self.assertFalse(capability["can_write"])
         self.assertEqual(capability["reason"], "missing_presence_scope")
 
+    def test_capability_reports_missing_write_scope(self):
+        session_data = {
+            "oidc_auth_token": {
+                "id_token": make_jwt({"iss": "https://login.microsoftonline.com/example/v2.0"}),
+                "access_token": make_jwt({"scp": "Presence.Read"}),
+            }
+        }
+        capability = teams_presence_sync.get_sync_capability(
+            session_data, {"TEAMS_PRESENCE_SYNC_ENABLED": True}
+        )
+
+        self.assertTrue(capability["can_read"])
+        self.assertFalse(capability["can_write"])
+        self.assertEqual(capability["reason"], "missing_presence_write_scope")
+
     def test_capability_allows_read_and_write_with_scope(self):
         session_data = {
             "oidc_auth_token": {
@@ -79,7 +94,7 @@ class TeamsPresenceSyncTests(unittest.TestCase):
         session_data = {
             "oidc_auth_token": {
                 "id_token": make_jwt({"iss": "https://login.microsoftonline.com/example/v2.0"}),
-                "access_token": make_jwt({"scp": "User.Read"}),
+                "access_token": make_jwt({"scp": "Presence.Read"}),
             }
         }
 
@@ -91,7 +106,7 @@ class TeamsPresenceSyncTests(unittest.TestCase):
 
         self.assertFalse(result["attempted"])
         self.assertFalse(result["synced"])
-        self.assertEqual(result["reason"], "missing_presence_scope")
+        self.assertEqual(result["reason"], "missing_presence_write_scope")
 
     def test_sync_updates_graph_when_session_can_write(self):
         calls = {}
@@ -151,6 +166,31 @@ class TeamsPresenceSyncTests(unittest.TestCase):
 
         self.assertTrue(result["attempted"])
         self.assertEqual(result["status"], "ready")
+        self.assertEqual(result["reason"], None)
+
+    def test_fetch_presence_maps_to_dnd_status(self):
+        def mock_get(url, headers, timeout):
+            self.assertIn("/me/presence", url)
+            return MockResponse(
+                status_code=200,
+                payload={"availability": "DoNotDisturb", "activity": "DoNotDisturb"},
+            )
+
+        session_data = {
+            "oidc_auth_token": {
+                "id_token": make_jwt({"iss": "https://login.microsoftonline.com/example/v2.0"}),
+                "access_token": make_jwt({"scp": "Presence.Read"}),
+            }
+        }
+
+        result = teams_presence_sync.fetch_teams_presence_status(
+            session_data,
+            {"TEAMS_PRESENCE_SYNC_ENABLED": True},
+            http_get=mock_get,
+        )
+
+        self.assertTrue(result["attempted"])
+        self.assertEqual(result["status"], "dnd")
         self.assertEqual(result["reason"], None)
 
 

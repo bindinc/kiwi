@@ -40,7 +40,7 @@ class AgentStatusApiTests(unittest.TestCase):
             "blueprints.api.agent_status.teams_presence_sync.fetch_teams_presence_status",
             return_value={
                 "attempted": True,
-                "status": "break",
+                "status": "away",
                 "reason": None,
                 "capability": {},
             },
@@ -49,11 +49,11 @@ class AgentStatusApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
-        self.assertEqual(payload["status"], "break")
+        self.assertEqual(payload["status"], "away")
         self.assertEqual(payload["source"], "teams")
 
         with self.client.session_transaction() as session_data:
-            self.assertEqual(session_data.get("kiwi_agent_status"), "break")
+            self.assertEqual(session_data.get("kiwi_agent_status"), "away")
 
     def test_post_rejects_unknown_status(self):
         response = self.client.post("/api/v1/agent-status", json={"status": "unknown"})
@@ -82,6 +82,23 @@ class AgentStatusApiTests(unittest.TestCase):
 
         with self.client.session_transaction() as session_data:
             self.assertEqual(session_data.get("kiwi_agent_status"), "offline")
+
+    def test_post_accepts_break_alias_and_normalizes_to_away(self):
+        with mock.patch(
+            "blueprints.api.agent_status.teams_presence_sync.sync_kiwi_status_to_teams",
+            return_value={
+                "attempted": False,
+                "synced": False,
+                "reason": "missing_presence_write_scope",
+                "capability": {},
+            },
+        ):
+            response = self.client.post("/api/v1/agent-status", json={"status": "break"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["status"], "away")
+        self.assertEqual(payload["previous_status"], "ready")
 
 
 if __name__ == "__main__":
