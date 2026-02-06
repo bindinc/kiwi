@@ -40,24 +40,27 @@ body {
 
 /* Header */
 .header {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: #000 url(/img/Bindinc-Logo-RGB-WIT-2023.svg) center left;
     color: white;
     box-shadow: var(--shadow-md);
     position: sticky;
     top: 0;
     z-index: 100;
+    height: 75px;
 }
 
 .header-content {
     max-width: 1800px;
     margin: 0 auto;
+    height: 100%;
 }
 
 .header-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2rem;
+    padding: 0 2rem;
+    height: 100%;
 }
 
 .header h1 {
@@ -66,10 +69,20 @@ body {
     margin: 0;
 }
 
+.header-logo {
+    height: 75px;
+    width: auto;
+    flex-shrink: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
 .header-right {
     display: flex;
     gap: 2rem;
     align-items: center;
+    margin-left: auto;
 }
 
 .user-info {
