@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add `/api/v1/status` endpoint with API status and rate limit snapshot.
 - Add a local Docker Compose preflight check that validates `client_secrets.json` before the app starts.
 - Add a local fallback Keycloak realm for Docker Compose with seeded Kiwi roles and test users.
+- Add fallback OIDC test user `donny` with no Kiwi roles for access-denied testing.
 - Add OIDC runtime mode resolution and container entrypoint scripts for external vs fallback secrets.
 - Add a `make compose-smoke-oidc` smoke test for fallback OIDC token/role validation.
 

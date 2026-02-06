@@ -125,6 +125,7 @@ Fallback mode ships with deterministic test users (all with password `kiwi-local
 | `kiwi-supervisor` | `bink8s.app.kiwi.supervisor` |
 | `kiwi-user` | `bink8s.app.kiwi.user` |
 | `kiwi-view` | `bink8s.app.kiwi.view` |
+| `donny` | none (expected access denied) |
 
 To sign in with a fallback user:
 
