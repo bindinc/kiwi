@@ -1,4 +1,13 @@
+ARG NODE_IMAGE=node:22-alpine
 ARG BASE_IMAGE=python:3.12-alpine
+FROM ${NODE_IMAGE} AS frontend-builder
+
+WORKDIR /workspace/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM ${BASE_IMAGE}
 
 USER root
@@ -18,6 +27,7 @@ RUN apk add --no-cache --virtual .build-deps \
     && uv pip install --system -r pyproject.toml \
     && apk del .build-deps
 COPY app/ /app
+COPY --from=frontend-builder /workspace/frontend/dist/ /app/static/assets/vue/
 
 EXPOSE 8000
 USER app

@@ -40,6 +40,10 @@ env/
 # VS Code
 .vscode/
 
+# Frontend workspace
+frontend/node_modules/
+frontend/dist/
+
 # pytest
 .pytest_cache/
 .coverage

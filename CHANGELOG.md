@@ -21,6 +21,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add idempotent subscription orchestration endpoint with sync-first execution and queued fallback.
 - Add subscription request polling endpoint and centralized audit timeline endpoint.
 - Add queue worker subscription job handler with retry-aware upstream error mapping.
+- Add a new `frontend/` Vue 3 + Pinia workspace with modular stores for customer search/detail, subscription, operation status, and audit timeline.
+- Add frontend Vitest suites, including a smoke path that validates search -> edit -> subscription -> poll -> audit timeline flow.
 
 ### Changed
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
@@ -33,6 +35,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Redesign the header status indicator to an avatar badge style and extend its menu with status selection and logout.
 - Extend `/api/v1/status` with database and queue health snapshots.
 - Add correlation id assignment on each request and response header propagation (`X-Correlation-Id`).
+- Add Vite manifest-based static asset loading for a Flask-rendered Vue island mount in `base/index.html`.
+- Add multi-stage Docker image build that compiles frontend assets and packages them into Flask static files.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.

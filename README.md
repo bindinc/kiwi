@@ -159,8 +159,24 @@ make compose-down
 ## Repository Layout
 
 - `app/` is the Flask app root (blueprints, services, templates, static assets).
+- `frontend/` contains the Vue 3 + Pinia workspace for the incremental customer/subscription UI island.
 - `infra/docker/` contains Dockerfiles for the base and app images.
 - `scripts/` provides local dev helpers.
+
+## Frontend Workspace (Vue + Pinia)
+
+The incremental Vue workspace ships as a build artifact that is mounted into the
+existing Flask template shell.
+
+```bash
+cd frontend
+npm install
+npm run test
+npm run build
+```
+
+The production image build now compiles `frontend/` in a Node stage and copies
+the generated assets into `app/static/assets/vue/`.
 
 ## Container Images
 

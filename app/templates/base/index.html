@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/delivery-date-picker.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/article-search.css') }}">
+    {% if workspace_assets %}
+        {% for css_file in workspace_assets.css %}
+            <link rel="stylesheet" href="{{ url_for('static', filename='assets/vue/' ~ css_file) }}">
+        {% endfor %}
+    {% endif %}
 </head>
 <body>
     <div class="container">
@@ -243,6 +248,18 @@
 
             <!-- Center Panel: Customer Details & Forms -->
             <main class="center-panel">
+                {% if workspace_assets %}
+                    <section class="card">
+                        <div class="form-header">
+                            <h2>Structured Workspace (Vue)</h2>
+                        </div>
+                        <div
+                            id="kiwiWorkspaceRoot"
+                            data-api-base-url="{{ workspace_api_base_url }}"
+                            data-agent-name="{{ user_full_name }}"></div>
+                    </section>
+                {% endif %}
+
                 <!-- Welcome Message -->
                 <div id="welcomeMessage" class="welcome-message">
                     <div class="empty-state">
@@ -1498,6 +1515,17 @@
     <script>
         window.kiwiAgentName = {{ user_full_name | tojson }};
     </script>
+    {% if workspace_assets %}
+        <script>
+            window.kiwiWorkspaceConfig = {
+                apiBaseUrl: {{ workspace_api_base_url | tojson }},
+                agentName: {{ user_full_name | tojson }}
+            };
+        </script>
+        {% for js_file in workspace_assets.js %}
+            <script type="module" src="{{ url_for('static', filename='assets/vue/' ~ js_file) }}"></script>
+        {% endfor %}
+    {% endif %}
     <script src="{{ url_for('static', filename='assets/js/app.js') }}"></script>
 </body>
 </html>

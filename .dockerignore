@@ -5,3 +5,4 @@ plan
 infra/k8s
 infra/helm
 app/**/*.test.js
+frontend/node_modules

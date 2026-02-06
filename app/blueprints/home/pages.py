@@ -1,7 +1,9 @@
 from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
 from flask_oidc import OpenIDConnect
+from werkzeug.routing import BuildError
 
 import auth
+from utils.frontend_assets import load_workspace_assets
 
 
 BLUEPRINT_NAME = "main"
@@ -36,6 +38,12 @@ def create_main_blueprint(oidc: OpenIDConnect) -> Blueprint:
             )
 
         profile_image = auth.get_profile_image(session)
+        workspace_assets = load_workspace_assets(current_app.static_folder)
+        try:
+            status_url = url_for("api_v1.api_status.status")
+            workspace_api_base_url = status_url.rsplit("/", 1)[0]
+        except BuildError:
+            workspace_api_base_url = "/api/v1"
         return render_template(
             "base/index.html",
             user_full_name=identity["full_name"],
@@ -44,6 +52,8 @@ def create_main_blueprint(oidc: OpenIDConnect) -> Blueprint:
             user_initials=identity["initials"],
             user_profile_image=profile_image,
             logout_url=logout_url,
+            workspace_assets=workspace_assets,
+            workspace_api_base_url=workspace_api_base_url,
         )
 
     @bp.route("/app-logout")
