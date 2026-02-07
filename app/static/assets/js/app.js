@@ -140,6 +140,20 @@ const werfsleutelState = {
     confirmed: false
 };
 
+const subscriptionRoleState = {
+    recipient: {
+        mode: 'existing',
+        selectedPerson: null,
+        searchResults: []
+    },
+    requester: {
+        mode: 'existing',
+        selectedPerson: null,
+        searchResults: []
+    },
+    requesterSameAsRecipient: true
+};
+
 async function ensureWerfsleutelsLoaded() {
     if (werfsleutelLoadAttempted) {
         return;
@@ -1131,6 +1145,413 @@ function toggleCustomerFormAddress(prefix) {
             }
         }
     });
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getSubscriptionRoleConfig(role) {
+    if (role === 'recipient') {
+        return {
+            roleLabel: 'ontvanger',
+            prefix: 'subRecipient',
+            modeName: 'recipientMode',
+            existingSectionId: 'recipientExistingSection',
+            createSectionId: 'recipientCreateSection',
+            createFormContainerId: 'recipientCreateForm',
+            searchQueryId: 'recipientSearchQuery',
+            searchResultsId: 'recipientSearchResults',
+            selectedPersonId: 'recipientSelectedPerson'
+        };
+    }
+
+    if (role === 'requester') {
+        return {
+            roleLabel: 'aanvrager/betaler',
+            prefix: 'subRequester',
+            modeName: 'requesterMode',
+            existingSectionId: 'requesterExistingSection',
+            createSectionId: 'requesterCreateSection',
+            createFormContainerId: 'requesterCreateForm',
+            searchQueryId: 'requesterSearchQuery',
+            searchResultsId: 'requesterSearchResults',
+            selectedPersonId: 'requesterSelectedPerson'
+        };
+    }
+
+    return null;
+}
+
+function buildPersonDisplayName(person) {
+    if (!person) {
+        return '';
+    }
+    const middleName = person.middleName ? `${person.middleName} ` : '';
+    return `${person.firstName || ''} ${middleName}${person.lastName || ''}`.trim();
+}
+
+function buildPersonDisplayAddress(person) {
+    if (!person) {
+        return '';
+    }
+    const postalCode = (person.postalCode || '').trim();
+    const city = (person.city || '').trim();
+    if (!postalCode && !city) {
+        return '';
+    }
+    return `${postalCode} ${city}`.trim();
+}
+
+function renderSubscriptionRoleSelectedPerson(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) return;
+
+    const selectedNode = document.getElementById(cfg.selectedPersonId);
+    if (!selectedNode) return;
+
+    const selectedPerson = subscriptionRoleState[role].selectedPerson;
+    if (!selectedPerson || selectedPerson.id === undefined || selectedPerson.id === null) {
+        selectedNode.classList.add('empty');
+        selectedNode.textContent = role === 'recipient'
+            ? 'Geen ontvanger geselecteerd'
+            : 'Geen aanvrager/betaler geselecteerd';
+        return;
+    }
+
+    const name = escapeHtml(buildPersonDisplayName(selectedPerson) || `Persoon #${selectedPerson.id}`);
+    const address = escapeHtml(buildPersonDisplayAddress(selectedPerson));
+    const personId = escapeHtml(selectedPerson.id);
+    const addressLine = address ? ` · ${address}` : '';
+    selectedNode.classList.remove('empty');
+    selectedNode.innerHTML = `<strong>${name}</strong> · persoon #${personId}${addressLine}`;
+}
+
+function renderRequesterSameSummary() {
+    const summaryNode = document.getElementById('requesterSameSummary');
+    if (!summaryNode) return;
+
+    if (!subscriptionRoleState.requesterSameAsRecipient) {
+        summaryNode.textContent = '';
+        return;
+    }
+
+    const recipient = subscriptionRoleState.recipient.selectedPerson;
+    if (recipient && recipient.id !== undefined && recipient.id !== null) {
+        const name = escapeHtml(buildPersonDisplayName(recipient) || `Persoon #${recipient.id}`);
+        summaryNode.innerHTML = `Aanvrager/betaler volgt de ontvanger: <strong>${name}</strong> · persoon #${escapeHtml(recipient.id)}.`;
+        return;
+    }
+
+    if (subscriptionRoleState.recipient.mode === 'create') {
+        const initials = document.getElementById('subRecipientInitials')?.value?.trim() || '';
+        const middleName = document.getElementById('subRecipientMiddleName')?.value?.trim() || '';
+        const lastName = document.getElementById('subRecipientLastName')?.value?.trim() || '';
+        const composedName = [initials, middleName, lastName].filter(Boolean).join(' ');
+        if (composedName) {
+            summaryNode.innerHTML = `Aanvrager/betaler volgt de nieuwe ontvanger: <strong>${escapeHtml(composedName)}</strong>.`;
+            return;
+        }
+    }
+
+    summaryNode.textContent = 'Aanvrager/betaler volgt de geselecteerde ontvanger.';
+}
+
+function setSubscriptionRoleMode(role, mode) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) return;
+
+    subscriptionRoleState[role].mode = mode === 'create' ? 'create' : 'existing';
+
+    const modeRadio = document.querySelector(`input[name="${cfg.modeName}"][value="${subscriptionRoleState[role].mode}"]`);
+    if (modeRadio) {
+        modeRadio.checked = true;
+    }
+
+    const existingSection = document.getElementById(cfg.existingSectionId);
+    const createSection = document.getElementById(cfg.createSectionId);
+    if (existingSection) existingSection.style.display = subscriptionRoleState[role].mode === 'existing' ? 'block' : 'none';
+    if (createSection) createSection.style.display = subscriptionRoleState[role].mode === 'create' ? 'block' : 'none';
+
+    const formContainer = document.getElementById(cfg.createFormContainerId);
+    if (subscriptionRoleState[role].mode === 'create') {
+        if (formContainer) {
+            renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
+                includePhone: true,
+                includeEmail: true,
+                phoneRequired: false,
+                emailRequired: true
+            });
+        }
+        subscriptionRoleState[role].selectedPerson = null;
+        renderSubscriptionRoleSelectedPerson(role);
+    } else if (formContainer) {
+        // Remove create-form required fields from DOM to avoid hidden-field validation blocking submit.
+        formContainer.innerHTML = '';
+    }
+
+    if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
+        renderRequesterSameSummary();
+    }
+}
+
+function toggleRequesterSameAsRecipient() {
+    const sameCheckbox = document.getElementById('requesterSameAsRecipient');
+    const requesterDetails = document.getElementById('requesterRoleDetails');
+    const sameSummary = document.getElementById('requesterSameSummary');
+    if (!sameCheckbox) {
+        return;
+    }
+
+    subscriptionRoleState.requesterSameAsRecipient = sameCheckbox.checked;
+    if (requesterDetails) {
+        requesterDetails.style.display = sameCheckbox.checked ? 'none' : 'block';
+    }
+    if (sameSummary) {
+        sameSummary.style.display = sameCheckbox.checked ? 'block' : 'none';
+    }
+
+    if (sameCheckbox.checked) {
+        renderRequesterSameSummary();
+    }
+}
+
+function normalizeRoleSearchQuery(value) {
+    return String(value || '').trim();
+}
+
+function searchPersonsLocallyForRole(query) {
+    const normalizedQuery = normalizeRoleSearchQuery(query).toLowerCase();
+    if (!normalizedQuery) {
+        return [];
+    }
+
+    return customers.filter((person) => {
+        const name = buildPersonDisplayName(person).toLowerCase();
+        const email = (person.email || '').toLowerCase();
+        const phone = normalizePhone(person.phone || '');
+        const postalCode = (person.postalCode || '').toLowerCase();
+        const queryPhone = normalizePhone(normalizedQuery);
+        return name.includes(normalizedQuery)
+            || email.includes(normalizedQuery)
+            || postalCode.includes(normalizedQuery)
+            || (queryPhone && phone.includes(queryPhone));
+    }).slice(0, 10);
+}
+
+function renderSubscriptionRoleSearchResults(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) return;
+
+    const resultsNode = document.getElementById(cfg.searchResultsId);
+    if (!resultsNode) return;
+
+    const results = subscriptionRoleState[role].searchResults || [];
+    if (results.length === 0) {
+        resultsNode.innerHTML = '';
+        return;
+    }
+
+    resultsNode.innerHTML = results.map((person) => {
+        const safeName = escapeHtml(buildPersonDisplayName(person) || `Persoon #${person.id}`);
+        const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
+        const safeId = escapeHtml(person.id);
+        const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
+        return `
+            <div class="party-search-result">
+                <div>
+                    <strong>${safeName}</strong>
+                    <div class="party-search-result-meta">persoon #${safeId}${safeAddressLine}</div>
+                </div>
+                <button type="button" class="btn btn-small" onclick="selectSubscriptionRolePerson('${role}', ${Number(person.id)})">Selecteer</button>
+            </div>
+        `;
+    }).join('');
+}
+
+async function searchSubscriptionRolePerson(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) return;
+
+    const query = normalizeRoleSearchQuery(document.getElementById(cfg.searchQueryId)?.value);
+    if (!query) {
+        showToast('Voer eerst een zoekterm in', 'warning');
+        return;
+    }
+
+    let results = [];
+    if (window.kiwiApi) {
+        const params = new URLSearchParams({
+            page: '1',
+            pageSize: '10',
+            sortBy: 'name'
+        });
+
+        if (query.includes('@')) {
+            params.set('email', query.toLowerCase());
+        } else {
+            const numericPhone = normalizePhone(query);
+            if (numericPhone.length >= 6) {
+                params.set('phone', numericPhone);
+            } else {
+                params.set('name', query.toLowerCase());
+            }
+        }
+
+        try {
+            const payload = await window.kiwiApi.get(`${personsApiUrl}?${params.toString()}`);
+            results = Array.isArray(payload && payload.items) ? payload.items : [];
+        } catch (error) {
+            showToast(error.message || 'Zoeken van personen mislukt', 'error');
+            return;
+        }
+    } else {
+        results = searchPersonsLocallyForRole(query);
+    }
+
+    subscriptionRoleState[role].searchResults = results;
+    renderSubscriptionRoleSearchResults(role);
+}
+
+function selectSubscriptionRolePerson(role, personId) {
+    const selected = (subscriptionRoleState[role].searchResults || [])
+        .find((entry) => Number(entry.id) === Number(personId));
+    if (!selected) {
+        showToast('Geselecteerde persoon niet gevonden in zoekresultaat', 'error');
+        return;
+    }
+
+    subscriptionRoleState[role].selectedPerson = selected;
+    renderSubscriptionRoleSelectedPerson(role);
+
+    const cfg = getSubscriptionRoleConfig(role);
+    const resultsNode = document.getElementById(cfg.searchResultsId);
+    if (resultsNode) {
+        resultsNode.innerHTML = '';
+    }
+
+    if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
+        renderRequesterSameSummary();
+    }
+}
+
+function resetSubscriptionRoleState() {
+    subscriptionRoleState.recipient.mode = 'existing';
+    subscriptionRoleState.recipient.selectedPerson = null;
+    subscriptionRoleState.recipient.searchResults = [];
+    subscriptionRoleState.requester.mode = 'existing';
+    subscriptionRoleState.requester.selectedPerson = null;
+    subscriptionRoleState.requester.searchResults = [];
+    subscriptionRoleState.requesterSameAsRecipient = true;
+}
+
+function createPersonPayloadFromForm(prefix, optinData = null) {
+    const data = getCustomerFormData(prefix);
+    const birthday = ensureBirthdayValue(prefix, false);
+    if (birthday === null) {
+        return null;
+    }
+
+    const initials = data.initials.trim();
+    const middleName = data.middleName.trim();
+    const lastName = data.lastName.trim();
+    const street = data.address.trim();
+    const houseNumber = data.houseNumber.trim();
+    const houseExt = data.houseExt.trim();
+    const combinedHouseNumber = `${houseNumber}${houseExt}`.trim();
+
+    if (!initials || !lastName || !street || !houseNumber || !data.postalCode.trim() || !data.city.trim() || !data.email.trim()) {
+        showToast(translate('forms.required', {}, 'Vul alle verplichte velden in'), 'error');
+        return null;
+    }
+
+    const fullLastName = middleName ? `${middleName} ${lastName}` : lastName;
+    const personPayload = {
+        salutation: data.salutation,
+        firstName: initials,
+        middleName: middleName,
+        lastName: fullLastName,
+        birthday: birthday,
+        postalCode: data.postalCode.trim().toUpperCase(),
+        houseNumber: combinedHouseNumber,
+        address: `${street} ${combinedHouseNumber}`.trim(),
+        city: data.city.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim()
+    };
+
+    if (optinData) {
+        personPayload.optinEmail = optinData.optinEmail;
+        personPayload.optinPhone = optinData.optinPhone;
+        personPayload.optinPost = optinData.optinPost;
+    }
+
+    return personPayload;
+}
+
+function buildSubscriptionRolePayload(role, options = {}) {
+    if (role === 'requester' && subscriptionRoleState.requesterSameAsRecipient) {
+        return { sameAsRecipient: true };
+    }
+
+    const roleState = subscriptionRoleState[role];
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!roleState || !cfg) {
+        showToast('Onbekende persoonsrol in abonnement flow', 'error');
+        return null;
+    }
+
+    if (roleState.mode === 'existing') {
+        if (!roleState.selectedPerson || roleState.selectedPerson.id === undefined || roleState.selectedPerson.id === null) {
+            const message = role === 'recipient'
+                ? 'Selecteer een ontvanger of kies "Nieuwe persoon".'
+                : 'Selecteer een aanvrager/betaler of kies "Nieuwe persoon".';
+            showToast(message, 'error');
+            return null;
+        }
+        return { personId: Number(roleState.selectedPerson.id) };
+    }
+
+    if (roleState.mode === 'create') {
+        const personPayload = createPersonPayloadFromForm(cfg.prefix, options.optinData || null);
+        if (!personPayload) {
+            return null;
+        }
+        return { person: personPayload };
+    }
+
+    showToast('Persoonsrol onjuist ingesteld', 'error');
+    return null;
+}
+
+function initializeSubscriptionRolesForForm() {
+    resetSubscriptionRoleState();
+
+    const recipientSearchQuery = document.getElementById('recipientSearchQuery');
+    if (recipientSearchQuery) recipientSearchQuery.value = '';
+    const requesterSearchQuery = document.getElementById('requesterSearchQuery');
+    if (requesterSearchQuery) requesterSearchQuery.value = '';
+
+    setSubscriptionRoleMode('recipient', 'existing');
+    setSubscriptionRoleMode('requester', 'existing');
+
+    if (currentCustomer) {
+        subscriptionRoleState.recipient.selectedPerson = currentCustomer;
+        renderSubscriptionRoleSelectedPerson('recipient');
+    } else {
+        setSubscriptionRoleMode('recipient', 'create');
+    }
+
+    const sameCheckbox = document.getElementById('requesterSameAsRecipient');
+    if (sameCheckbox) {
+        sameCheckbox.checked = true;
+    }
+    toggleRequesterSameAsRecipient();
 }
 
 // ============================================================================
@@ -2722,7 +3143,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateTime();
     setInterval(updateTime, 1000);
     updateCustomerActionButtons();
-    populateBirthdayFields('sub');
     populateBirthdayFields('article');
     populateBirthdayFields('edit');
     // Initialize Phase 3 components
@@ -3528,6 +3948,7 @@ function displaySubscriptions() {
         html += '<div class="subscription-group"><h4 class="subscription-group-title">Actieve Abonnementen</h4>';
         html += activeSubscriptions.map(sub => {
             const pricingInfo = getSubscriptionDurationDisplay(sub);
+            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
             
             return `
                 <div class="subscription-item">
@@ -3536,7 +3957,7 @@ function displaySubscriptions() {
                         <div class="subscription-details">
                             Start: ${formatDate(sub.startDate)} • 
                             Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}
+                            ${pricingInfo}${requesterMeta}
                         </div>
                     </div>
                     <div class="subscription-actions">
@@ -3555,6 +3976,7 @@ function displaySubscriptions() {
         html += '<div class="subscription-group"><h4 class="subscription-group-title">Beëindigde Abonnementen</h4>';
         html += endedSubscriptions.map(sub => {
             const pricingInfo = getSubscriptionDurationDisplay(sub);
+            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
             const statusClass = sub.status === 'cancelled' ? 'status-cancelled' : 'status-ended';
             const statusText = sub.status === 'cancelled' ? 'Opgezegd' : 'Beëindigd';
             
@@ -3566,7 +3988,7 @@ function displaySubscriptions() {
                             Start: ${formatDate(sub.startDate)} • 
                             ${sub.endDate ? `Einde: ${formatDate(sub.endDate)} • ` : ''}
                             Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}
+                            ${pricingInfo}${requesterMeta}
                         </div>
                     </div>
                     <div class="subscription-actions">
@@ -3586,6 +4008,7 @@ function displaySubscriptions() {
         html += '<div class="subscription-group"><h4 class="subscription-group-title">Gerestitueerde Abonnementen</h4>';
         html += restitutedSubscriptions.map(sub => {
             const pricingInfo = getSubscriptionDurationDisplay(sub);
+            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
             const refundInfo = sub.refundInfo ? `<br>Restitutie naar: ${sub.refundInfo.email}` : '';
             
             return `
@@ -3596,7 +4019,7 @@ function displaySubscriptions() {
                             Start: ${formatDate(sub.startDate)} • 
                             ${sub.endDate ? `Einde: ${formatDate(sub.endDate)} • ` : ''}
                             Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${refundInfo}
+                            ${pricingInfo}${requesterMeta}${refundInfo}
                         </div>
                     </div>
                     <div class="subscription-actions">
@@ -3616,6 +4039,7 @@ function displaySubscriptions() {
         html += '<div class="subscription-group"><h4 class="subscription-group-title">Overgezette Abonnementen</h4>';
         html += transferredSubscriptions.map(sub => {
             const pricingInfo = getSubscriptionDurationDisplay(sub);
+            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
             let transferInfo = '';
             if (sub.transferredTo) {
                 const transferName = sub.transferredTo.middleName 
@@ -3631,7 +4055,7 @@ function displaySubscriptions() {
                         <div class="subscription-details">
                             Start: ${formatDate(sub.startDate)} • 
                             Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${transferInfo}
+                            ${pricingInfo}${requesterMeta}${transferInfo}
                         </div>
                     </div>
                     <div class="subscription-actions">
@@ -3824,41 +4248,15 @@ function formatDateTime(dateString) {
 function showNewSubscription() {
     // Set today's date as default start date
     const today = new Date().toISOString().split('T')[0];
+    const form = document.getElementById('subscriptionForm');
+    if (form) {
+        form.reset();
+    }
     document.getElementById('subStartDate').value = today;
 
     resetWerfsleutelPicker();
-    
-    // Prefill customer data if a customer is currently selected
-    if (currentCustomer) {
-        const initialsEl = document.getElementById('subInitials');
-        const lastNameEl = document.getElementById('subLastName');
-        const postalCodeEl = document.getElementById('subPostalCode');
-        const houseNumberEl = document.getElementById('subHouseNumber');
-        const addressEl = document.getElementById('subAddress');
-        const cityEl = document.getElementById('subCity');
-        const emailEl = document.getElementById('subEmail');
-        const phoneEl = document.getElementById('subPhone');
-        
-        if (initialsEl) initialsEl.value = currentCustomer.firstName;
-        if (lastNameEl) lastNameEl.value = currentCustomer.lastName;
-        if (postalCodeEl) postalCodeEl.value = currentCustomer.postalCode;
-        if (houseNumberEl) houseNumberEl.value = currentCustomer.houseNumber;
-        
-        // Extract street name from address (remove house number)
-        const streetName = currentCustomer.address.replace(/\s+\d+.*$/, '');
-        if (addressEl) addressEl.value = streetName;
-
-        if (cityEl) cityEl.value = currentCustomer.city;
-        if (emailEl) emailEl.value = currentCustomer.email;
-        if (phoneEl) phoneEl.value = currentCustomer.phone;
-        setBirthdayFields('sub', currentCustomer.birthday);
-    } else {
-        // Clear form if no customer selected (new customer)
-        document.getElementById('subscriptionForm').reset();
-        document.getElementById('subStartDate').value = today;
-        setBirthdayFields('sub');
-    }
-    
+    initializeSubscriptionRolesForForm();
+    renderRequesterSameSummary();
     document.getElementById('newSubscriptionForm').style.display = 'flex';
 }
 
@@ -3881,35 +4279,8 @@ async function createSubscription(event) {
         return;
     }
 
-    const salutation = document.querySelector('input[name="subSalutation"]:checked').value;
-    const initials = document.getElementById('subInitials').value;
-    const middleName = document.getElementById('subMiddleName').value;
-    const lastName = document.getElementById('subLastName').value;
-    const houseNumber = document.getElementById('subHouseNumber').value;
-    const houseExt = document.getElementById('subHouseExt').value;
-    const birthday = ensureBirthdayValue('sub', false);
-
-    if (birthday === null) {
-        return;
-    }
     const offerDetails = getWerfsleutelOfferDetails(werfsleutelState.selectedKey);
-    
-    // Construct full name
-    const firstName = initials;
-    const fullLastName = middleName ? `${middleName} ${lastName}` : lastName;
-    
     const formData = {
-        salutation: salutation,
-        firstName: firstName,
-        middleName: middleName,
-        lastName: fullLastName,
-        birthday: birthday,
-        postalCode: document.getElementById('subPostalCode').value.toUpperCase(),
-        houseNumber: houseExt ? `${houseNumber}${houseExt}` : houseNumber,
-        address: `${document.getElementById('subAddress').value} ${houseNumber}${houseExt}`,
-        city: document.getElementById('subCity').value,
-        email: document.getElementById('subEmail').value,
-        phone: document.getElementById('subPhone').value,
         magazine: offerDetails.magazine,
         duration: offerDetails.durationKey || '',
         durationLabel: offerDetails.durationLabel,
@@ -3926,169 +4297,105 @@ async function createSubscription(event) {
         werfsleutelChannelLabel: werfsleutelChannels[werfsleutelState.selectedChannel]?.label || ''
     };
 
+    const optinData = {
+        optinEmail: document.querySelector('input[name="subOptinEmail"]:checked').value,
+        optinPhone: document.querySelector('input[name="subOptinPhone"]:checked').value,
+        optinPost: document.querySelector('input[name="subOptinPost"]:checked').value
+    };
+
+    const recipientPayload = buildSubscriptionRolePayload('recipient', { optinData });
+    if (!recipientPayload) {
+        return;
+    }
+
+    const requesterPayload = buildSubscriptionRolePayload('requester');
+    if (!requesterPayload) {
+        return;
+    }
+
     const werfsleutelChannelLabel = formData.werfsleutelChannelLabel || translate('werfsleutel.unknownChannel', {}, 'Onbekend kanaal');
     const werfsleutelNote = `Werfsleutel ${formData.werfsleutel} (${formData.werfsleutelTitle}, ${formatEuro(formData.werfsleutelPrice)}) via ${formData.werfsleutelChannel} (${werfsleutelChannelLabel})`;
     const durationDisplay = formData.duration
         ? (subscriptionPricing[formData.duration]?.description || formData.durationLabel)
         : formData.durationLabel;
 
-    if (window.kiwiApi) {
-        const hadCurrentCustomer = Boolean(currentCustomer);
-        const subscriptionPayload = {
-            magazine: formData.magazine,
-            duration: formData.duration,
-            durationLabel: formData.durationLabel,
-            startDate: formData.startDate,
-            status: 'active',
-            lastEdition: new Date().toISOString().split('T')[0]
-        };
-        const contactEntry = {
-            type: hadCurrentCustomer ? 'Extra abonnement' : 'Nieuw abonnement',
-            description: hadCurrentCustomer
-                ? `Extra abonnement ${formData.magazine} (${durationDisplay}) toegevoegd. ${werfsleutelNote}.`
-                : `Abonnement ${formData.magazine} (${durationDisplay}) aangemaakt via telefonische bestelling. ${werfsleutelNote}.`
-        };
-        const payload = {
-            subscription: subscriptionPayload,
-            contactEntry
-        };
-
-        if (hadCurrentCustomer) {
-            payload.customerId = currentCustomer.id;
-        } else {
-            payload.customer = {
-                salutation: formData.salutation,
-                firstName: formData.firstName,
-                middleName: formData.middleName,
-                lastName: formData.lastName,
-                birthday: formData.birthday,
-                postalCode: formData.postalCode,
-                houseNumber: formData.houseNumber,
-                address: formData.address,
-                city: formData.city,
-                email: formData.email,
-                phone: formData.phone,
-                optinEmail: formData.optinEmail,
-                optinPhone: formData.optinPhone,
-                optinPost: formData.optinPost,
-                subscriptions: [],
-                articles: [],
-                contactHistory: []
-            };
-        }
-
-        try {
-            const response = await window.kiwiApi.post(`${workflowsApiUrl}/subscription-signup`, payload);
-            const savedCustomer = response && response.customer ? response.customer : null;
-
-            if (savedCustomer) {
-                upsertCustomerInCache(savedCustomer);
-            }
-
-            closeForm('newSubscriptionForm');
-            showToast(
-                hadCurrentCustomer
-                    ? translate('subscription.extraAdded', {}, 'Extra abonnement succesvol toegevoegd!')
-                    : translate('subscription.created', {}, 'Nieuw abonnement succesvol aangemaakt!'),
-                'success'
-            );
-
-            if (savedCustomer && savedCustomer.id) {
-                await selectCustomer(savedCustomer.id);
-                if (!hadCurrentCustomer) {
-                    showSuccessIdentificationPrompt(savedCustomer.id, `${savedCustomer.firstName} ${savedCustomer.lastName}`);
-                }
-            }
-        } catch (error) {
-            showToast(error.message || 'Abonnement aanmaken via backend mislukt', 'error');
-            return;
-        }
-
-        document.getElementById('subscriptionForm').reset();
-        resetWerfsleutelPicker();
+    if (!window.kiwiApi) {
+        showToast('Abonnement aanmaken vereist backend API', 'error');
         return;
     }
 
-    // Check if this is for an existing customer
-    if (currentCustomer) {
-        // Add subscription to existing customer
-        const newSubscription = {
-            id: Date.now(),
-            magazine: formData.magazine,
-            duration: formData.duration,
-            durationLabel: formData.durationLabel,
-            startDate: formData.startDate,
-            status: 'active',
-            lastEdition: new Date().toISOString().split('T')[0]
-        };
+    const hadCurrentCustomer = Boolean(currentCustomer);
+    const subscriptionPayload = {
+        magazine: formData.magazine,
+        duration: formData.duration,
+        durationLabel: formData.durationLabel,
+        startDate: formData.startDate,
+        status: 'active',
+        lastEdition: new Date().toISOString().split('T')[0]
+    };
 
-        currentCustomer.subscriptions.push(newSubscription);
-        currentCustomer.birthday = birthday;
-        
-        pushContactHistory(
-            currentCustomer,
-            {
-                type: 'Extra abonnement',
-                description: `Extra abonnement ${formData.magazine} (${durationDisplay}) toegevoegd. ${werfsleutelNote}.`
-            },
-            { highlight: true, persist: false }
+    const contactEntry = {
+        type: subscriptionRoleState.recipient.mode === 'existing' ? 'Extra abonnement' : 'Nieuw abonnement',
+        description: subscriptionRoleState.recipient.mode === 'existing'
+            ? `Extra abonnement ${formData.magazine} (${durationDisplay}) toegevoegd. ${werfsleutelNote}.`
+            : `Abonnement ${formData.magazine} (${durationDisplay}) aangemaakt via telefonische bestelling. ${werfsleutelNote}.`
+    };
+
+    const payload = {
+        recipient: recipientPayload,
+        requester: requesterPayload,
+        subscription: subscriptionPayload,
+        contactEntry
+    };
+
+    try {
+        const response = await window.kiwiApi.post(`${workflowsApiUrl}/subscription-signup`, payload);
+        const savedRecipient = response && response.recipient ? response.recipient : null;
+        const savedRequester = response && response.requester ? response.requester : null;
+        const createdRecipient = Boolean(response && response.createdRecipient);
+
+        if (savedRecipient) {
+            upsertCustomerInCache(savedRecipient);
+        }
+        if (savedRequester) {
+            upsertCustomerInCache(savedRequester);
+        }
+
+        closeForm('newSubscriptionForm');
+        showToast(
+            createdRecipient
+                ? translate('subscription.created', {}, 'Nieuw abonnement succesvol aangemaakt!')
+                : translate('subscription.extraAdded', {}, 'Extra abonnement succesvol toegevoegd!'),
+            'success'
         );
 
-        saveCustomers();
-        closeForm('newSubscriptionForm');
-        showToast(translate('subscription.extraAdded', {}, 'Extra abonnement succesvol toegevoegd!'), 'success');
-        
-        // Refresh display
-        selectCustomer(currentCustomer.id);
-    } else {
-        // Create new customer with subscription
-        const newCustomer = {
-            id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            birthday: formData.birthday,
-            postalCode: formData.postalCode,
-            houseNumber: formData.houseNumber,
-            address: formData.address,
-            city: formData.city,
-            email: formData.email,
-            phone: formData.phone,
-            subscriptions: [
-                {
-                    id: Date.now(),
-                    magazine: formData.magazine,
-                    duration: formData.duration,
-                    durationLabel: formData.durationLabel,
-                    startDate: formData.startDate,
-                    status: 'active',
-                    lastEdition: new Date().toISOString().split('T')[0]
-                }
-            ],
-            contactHistory: [
-                {
-                    id: 1,
-                    type: 'Nieuw abonnement',
-                    date: new Date().toISOString(),
-                    description: `Abonnement ${formData.magazine} (${durationDisplay}) aangemaakt via telefonische bestelling. ${werfsleutelNote}.`
-                }
-            ]
-        };
-
-        customers.push(newCustomer);
-        saveCustomers();
-        closeForm('newSubscriptionForm');
-        showToast(translate('subscription.created', {}, 'Nieuw abonnement succesvol aangemaakt!'), 'success');
-        
-        // Select the new customer
-        selectCustomer(newCustomer.id);
-        
-        // PHASE 4: Show identification prompt if anonymous call active
-        showSuccessIdentificationPrompt(newCustomer.id, `${formData.firstName} ${formData.lastName}`);
+        if (savedRecipient && savedRecipient.id) {
+            await selectCustomer(savedRecipient.id);
+            if (createdRecipient && !hadCurrentCustomer) {
+                showSuccessIdentificationPrompt(savedRecipient.id, `${savedRecipient.firstName} ${savedRecipient.lastName}`);
+            }
+        }
+    } catch (error) {
+        showToast(error.message || 'Abonnement aanmaken via backend mislukt', 'error');
+        return;
     }
-    
-    // Reset form
-    document.getElementById('subscriptionForm').reset();
+
+    const form = document.getElementById('subscriptionForm');
+    if (form) {
+        form.reset();
+    }
     resetWerfsleutelPicker();
+    initializeSubscriptionRolesForForm();
+}
+
+function getSubscriptionRequesterMetaLine(subscription) {
+    if (!subscription || subscription.requesterPersonId === undefined || subscription.requesterPersonId === null) {
+        return '';
+    }
+    if (currentCustomer && Number(subscription.requesterPersonId) === Number(currentCustomer.id)) {
+        return '';
+    }
+    return `<br>Aangevraagd/betaald door persoon #${subscription.requesterPersonId}`;
 }
 
 // Edit Customer
