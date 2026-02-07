@@ -49,3 +49,8 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# uv
+.uv/
+uv.lock
+
