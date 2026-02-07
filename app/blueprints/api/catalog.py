@@ -13,6 +13,32 @@ URL_PREFIX = "/catalog"
 catalog_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=URL_PREFIX)
 
 
+@catalog_bp.get("/offers")
+def read_offers() -> tuple[dict, int]:
+    offer_type = str(request.args.get("type", "werfsleutels")).strip().lower()
+
+    if offer_type == "werfsleutels":
+        query = request.args.get("query", "")
+        barcode = request.args.get("barcode", "")
+        limit, error = parse_query_int("limit", default=20, minimum=1, maximum=250)
+        if error:
+            return error
+
+        items = poc_catalog.search_werfsleutels(query=query, barcode=barcode, limit=limit)
+        return {"type": offer_type, "items": items, "total": len(items)}, 200
+
+    if offer_type == "winback":
+        reason = request.args.get("reason")
+        items = poc_catalog.get_winback_offers(reason)
+        return {"type": offer_type, "reason": reason or "other", "items": items, "total": len(items)}, 200
+
+    return api_error(
+        400,
+        "invalid_query_parameter",
+        "type must be one of: werfsleutels, winback",
+    )
+
+
 @catalog_bp.get("/articles")
 def read_articles() -> tuple[dict, int]:
     query = request.args.get("query", "")

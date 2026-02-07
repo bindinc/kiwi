@@ -32,8 +32,7 @@ const translate = (key, params, fallback) => {
 };
 
 const bootstrapApiUrl = '/api/v1/bootstrap';
-const werfsleutelsApiUrl = '/api/v1/offers/werfsleutels';
-const winbackOffersApiUrl = '/api/v1/offers/winback';
+const offersApiUrl = '/api/v1/catalog/offers';
 const customersStateApiUrl = '/api/v1/customers/state';
 const customersApiUrl = '/api/v1/customers';
 const workflowsApiUrl = '/api/v1/workflows';
@@ -149,7 +148,8 @@ async function ensureWerfsleutelsLoaded() {
     }
 
     try {
-        const payload = await window.kiwiApi.get(`${werfsleutelsApiUrl}?limit=250`);
+        const query = new URLSearchParams({ type: 'werfsleutels', limit: '250' }).toString();
+        const payload = await window.kiwiApi.get(`${offersApiUrl}?${query}`);
         const items = Array.isArray(payload && payload.items) ? payload.items : [];
         werfsleutelCatalog = items;
     } catch (error) {
@@ -4521,8 +4521,8 @@ async function generateWinbackOffers(reason) {
 
     let relevantOffers = [];
     try {
-        const query = new URLSearchParams({ reason: reason || 'other' }).toString();
-        const payload = await window.kiwiApi.get(`${winbackOffersApiUrl}?${query}`);
+        const query = new URLSearchParams({ type: 'winback', reason: reason || 'other' }).toString();
+        const payload = await window.kiwiApi.get(`${offersApiUrl}?${query}`);
         relevantOffers = payload && Array.isArray(payload.items) ? payload.items : [];
     } catch (error) {
         console.warn('Winback-aanbiedingen laden via backend mislukt.', error);
