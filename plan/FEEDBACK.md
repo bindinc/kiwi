@@ -16,7 +16,7 @@
             TM/IB/** = telemarketing inbound.
             PR/ET/** = print own titles.
 
-- [x] 2 After pressing Enter on the acquisition key (or the 'confirm' button to the right of the acquisition key input) show the read-only overview modal and button below to finalize: displayed title, term, offer; user confirms.
+- [x] 2 After selecting an acquisition key (Enter/mouse), show inline read-only summary status (title/term/offer/channel) without a blocking modal; user can continue directly.
 - [ ] 3 Payment method is step 2 (before the personal data fields): choose Direct debit (IBAN) or Invoice (address).
   - [ ] 3.1 Optional "second payer" (e.g. administrator) after choosing payment method: search/create customer number; not required. The second payer also gets a separate customer number
 - [ ] 4 Marketing consent: section with opt-ins empty by default if no existing profile is loaded.
