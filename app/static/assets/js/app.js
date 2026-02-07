@@ -31,18 +31,6 @@ const translate = (key, params, fallback) => {
     return fallback !== undefined ? fallback : key;
 };
 
-const agentDisplayName = (() => {
-    if (typeof window !== 'undefined' && window.kiwiAgentName) {
-        return window.kiwiAgentName;
-    }
-    if (typeof document === 'undefined') {
-        return 'Onbekende agent';
-    }
-    const nameElement = document.getElementById('agentName');
-    const fallbackName = nameElement ? nameElement.textContent.trim() : '';
-    return fallbackName || 'Onbekende agent';
-})();
-
 const bootstrapApiUrl = '/api/v1/bootstrap';
 const werfsleutelsApiUrl = '/api/v1/catalog/werfsleutels';
 const winbackOffersApiUrl = '/api/v1/catalog/winback-offers';
@@ -128,32 +116,7 @@ let teamsSyncNoticeShown = false;
 const transientAgentStatuses = new Set(['in_call']);
 
 // Phase 1A: Service Number Configuration
-const serviceNumbers = {
-    'AVROBODE': {
-        label: 'AVROBODE SERVICE',
-        phone: '088-0123456',
-        color: '#2563eb',
-        icon: '📘'
-    },
-    'MIKROGIDS': {
-        label: 'MIKROGIDS SERVICE',
-        phone: '088-0123457',
-        color: '#dc2626',
-        icon: '📕'
-    },
-    'NCRVGIDS': {
-        label: 'NCRVGIDS SERVICE',
-        phone: '088-0123458',
-        color: '#16a34a',
-        icon: '📗'
-    },
-    'ALGEMEEN': {
-        label: 'ALGEMEEN SERVICE',
-        phone: '088-0123459',
-        color: '#9333ea',
-        icon: '📞'
-    }
-};
+let serviceNumbers = {};
 
 // Currency formatter reused for werfsleutels and notes
 const euroFormatter = new Intl.NumberFormat('nl-NL', {
@@ -162,82 +125,10 @@ const euroFormatter = new Intl.NumberFormat('nl-NL', {
     minimumFractionDigits: 2
 });
 
-// Werfsleutel fallback catalog (used until markdown geladen is geparsed)
-const fallbackWerfsleutels = [
-    {
-        salesCode: 'AVRV525',
-        title: 'Ja, ik blijf bij Avrobode',
-        price: 49.0,
-        barcode: '8712345000012',
-        magazine: 'Avrobode',
-        isActive: true,
-        allowedChannels: ['OL/IS', 'EM/OU', 'TM/IB', 'PR/ET']
-    },
-    {
-        salesCode: 'AVRV526',
-        title: 'Ja, ik blijf bij Avrobode (maandelijks)',
-        price: 4.08,
-        barcode: '8712345000029',
-        magazine: 'Avrobode',
-        isActive: true,
-        allowedChannels: ['OL/IS', 'EM/OU', 'TM/IB']
-    },
-    {
-        salesCode: 'AVRV519',
-        title: '1 jaar Avrobode voor €52',
-        price: 52.0,
-        barcode: '8712345000036',
-        magazine: 'Avrobode',
-        isActive: true,
-        allowedChannels: ['OL/IS', 'PR/ET']
-    },
-    {
-        salesCode: 'MIKV310',
-        title: 'Mikrogids proef 12 nummers',
-        price: 24.0,
-        barcode: '8712345000043',
-        magazine: 'Mikrogids',
-        isActive: true,
-        allowedChannels: ['EM/OU', 'TM/IB']
-    },
-    {
-        salesCode: 'NCRV410',
-        title: 'NCRV-gids jaarabonnement',
-        price: 54.5,
-        barcode: '8712345000050',
-        magazine: 'Ncrvgids',
-        isActive: true,
-        allowedChannels: ['OL/IS', 'PR/ET']
-    },
-    {
-        salesCode: 'AVRSTOP',
-        title: 'Campagne gestopt - enkel naservice',
-        price: 0,
-        barcode: '8712345000067',
-        magazine: 'Avrobode',
-        isActive: false,
-        allowedChannels: ['TM/IB']
-    }
-];
-
-let werfsleutelCatalog = [...fallbackWerfsleutels];
+let werfsleutelCatalog = [];
 let werfsleutelLoadAttempted = false;
 
-// Kanaal definities gekoppeld aan werfsleutels
-const werfsleutelChannels = {
-    'OL/IS': { label: translate('werfsleutelChannels.onlineInternal', {}, 'Online interne sites'), icon: '💻' },
-    'EM/OU': { label: translate('werfsleutelChannels.emailOutbound', {}, 'E-mail outbound'), icon: '✉️' },
-    'TM/IB': { label: translate('werfsleutelChannels.telemarketingInbound', {}, 'Telemarketing inbound'), icon: '☎️' },
-    'PR/ET': { label: translate('werfsleutelChannels.printOwnTitles', {}, 'Print eigen titels'), icon: '📰' }
-};
-
-const salesChannelMap = {
-    'OL|IS': 'OL/IS',
-    'EM|OU': 'EM/OU',
-    'TM|IN': 'TM/IB',
-    'TM|IB': 'TM/IB',
-    'PR|ET': 'PR/ET'
-};
+let werfsleutelChannels = {};
 
 const werfsleutelState = {
     selectedKey: null,
@@ -251,93 +142,20 @@ async function ensureWerfsleutelsLoaded() {
     }
 
     werfsleutelLoadAttempted = true;
+    if (!window.kiwiApi) {
+        console.warn('kiwiApi niet beschikbaar; werfsleutels konden niet geladen worden.');
+        werfsleutelCatalog = [];
+        return;
+    }
 
     try {
-        if (window.kiwiApi) {
-            const payload = await window.kiwiApi.get(`${werfsleutelsApiUrl}?limit=250`);
-            const items = Array.isArray(payload && payload.items) ? payload.items : [];
-            if (items.length > 0) {
-                werfsleutelCatalog = items;
-            } else {
-                console.warn('Geen werfsleutels gevonden via API, fallback wordt gebruikt.');
-                werfsleutelCatalog = [...fallbackWerfsleutels];
-            }
-        } else {
-            werfsleutelCatalog = [...fallbackWerfsleutels];
-        }
+        const payload = await window.kiwiApi.get(`${werfsleutelsApiUrl}?limit=250`);
+        const items = Array.isArray(payload && payload.items) ? payload.items : [];
+        werfsleutelCatalog = items;
     } catch (error) {
-        console.warn('Fout bij laden van werfsleutels via API, fallback wordt gebruikt.', error);
-        werfsleutelCatalog = [...fallbackWerfsleutels];
+        console.warn('Fout bij laden van werfsleutels via API.', error);
+        werfsleutelCatalog = [];
     }
-}
-
-function convertMarkdownToWerfsleutels(markdown) {
-    const lines = markdown.split('\n');
-    const entries = new Map();
-
-    lines.forEach((line) => {
-        if (!line.trim().startsWith('|')) {
-            return;
-        }
-        if (/^\|\s*-+/.test(line)) {
-            return;
-        }
-
-        const cells = line
-            .split('|')
-            .map((cell) => cell.trim())
-            .filter((_, index, array) => !(index === 0 || index === array.length - 1));
-
-        if (cells.length < 8) {
-            return;
-        }
-
-        const [salesCode, offerId, title, offerPrice, offerUrl, channel1, channel2, channel3] = cells;
-        const canonicalChannel = resolveCanonicalChannel(channel1, channel2);
-
-        if (!salesCode || salesCode === 'salesCode') {
-            return;
-        }
-
-        const normalizedCode = salesCode.trim();
-        const price = parseFloat(String(offerPrice).replace(',', '.')) || 0;
-
-        if (!entries.has(normalizedCode)) {
-            entries.set(normalizedCode, {
-                salesCode: normalizedCode,
-                title: title,
-                price: price,
-                offerId,
-                offerUrl,
-                barcode: buildWerfsleutelBarcode(offerId, normalizedCode),
-                magazine: inferMagazineFromTitle(title),
-                isActive: !normalizedCode.toUpperCase().includes('STOP'),
-                allowedChannels: canonicalChannel ? new Set([canonicalChannel]) : new Set()
-            });
-        } else {
-            const existing = entries.get(normalizedCode);
-            if (!existing.title && title) {
-                existing.title = title;
-            }
-            if (!existing.price && price) {
-                existing.price = price;
-            }
-            if (canonicalChannel) {
-                existing.allowedChannels.add(canonicalChannel);
-            }
-        }
-    });
-
-    return Array.from(entries.values()).map((entry) => ({
-        salesCode: entry.salesCode,
-        title: entry.title || translate('werfsleutel.unknownTitle', {}, 'Onbekende werfsleutel'),
-        price: entry.price || 0,
-        barcode: entry.barcode,
-        magazine: entry.magazine,
-        isActive: entry.isActive,
-        allowedChannels:
-            entry.allowedChannels.size > 0 ? Array.from(entry.allowedChannels) : Object.keys(werfsleutelChannels)
-    }));
 }
 
 function inferMagazineFromTitle(title = '') {
@@ -401,38 +219,6 @@ function getWerfsleutelOfferDetails(key) {
         durationKey,
         durationLabel
     };
-}
-
-function resolveCanonicalChannel(channel1, channel2) {
-    const key = `${channel1 || ''}|${channel2 || ''}`.toUpperCase();
-    return salesChannelMap[key] || null;
-}
-
-function buildWerfsleutelBarcode(offerId, salesCode) {
-    const offerDigits = String(offerId || '')
-        .replace(/[^0-9]/g, '')
-        .slice(-10);
-
-    if (offerDigits.length > 0) {
-        const padded = offerDigits.padStart(10, '0');
-        return `872${padded}`;
-    }
-
-    return generateBarcodeFromSalesCode(salesCode);
-}
-
-function generateBarcodeFromSalesCode(code) {
-    const baseDigits = code.replace(/[^0-9]/g, '');
-    if (baseDigits.length >= 12) {
-        return baseDigits.slice(0, 13).padEnd(13, '0');
-    }
-
-    let hash = 0;
-    for (let i = 0; i < code.length; i++) {
-        hash = (hash * 31 + code.charCodeAt(i)) >>> 0;
-    }
-    const base = (hash % 1_000_000_000).toString().padStart(9, '0');
-    return `87${base}`.padEnd(13, '0');
 }
 
 // Phase 5A: ACW Configuration
@@ -2470,41 +2256,6 @@ function saveCallSession() {
 }
 
 /**
- * Generate a single queue entry
- * @param {number|null} customerId - ID of customer (null for anonymous)
- * @param {string} callerType - 'known' or 'anonymous'
- * @returns {object} Queue entry object
- */
-function generateQueueEntry(customerId = null, callerType = 'anonymous') {
-    const serviceNumbers = ['AVROBODE', 'MIKROGIDS', 'NCRVGIDS', 'ALGEMEEN'];
-    const randomService = serviceNumbers[Math.floor(Math.random() * serviceNumbers.length)];
-    
-    let entry = {
-        id: `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        callerType: callerType,
-        customerId: customerId,
-        customerName: 'Anonieme Beller',
-        serviceNumber: randomService,
-        waitTime: Math.floor(Math.random() * (300 - 30 + 1)) + 30, // 30-300 sec
-        queuedAt: Date.now(),
-        priority: Math.floor(Math.random() * 5) + 1
-    };
-    
-    // Voor bekende klant
-    if (customerId && callerType === 'known') {
-        const customer = customers.find(c => c.id === customerId);
-        if (customer) {
-            entry.customerName = `${customer.firstName || customer.initials || ''} ${customer.middleName ? customer.middleName + ' ' : ''}${customer.lastName}`.trim();
-            if (!entry.customerName) {
-                entry.customerName = 'Klant #' + customerId;
-            }
-        }
-    }
-    
-    return entry;
-}
-
-/**
  * Generate queue with specified size and mix
  * Called from debug menu
  */
@@ -2512,33 +2263,23 @@ async function debugGenerateQueue() {
     const queueSize = parseInt(document.getElementById('debugQueueSize')?.value) || 5;
     const queueMix = document.getElementById('debugQueueMix')?.value || 'balanced';
 
-    if (window.kiwiApi) {
-        try {
-            const payload = await window.kiwiApi.post('/api/v1/call-queue/debug-generate', {
-                queueSize,
-                queueMix
-            });
-            callQueue = {
-                ...callQueue,
-                ...(payload || {})
-            };
-        } catch (error) {
-            showToast(error.message || 'Queue genereren via backend mislukt', 'error');
-            return;
-        }
-    } else {
-        // Clear bestaande queue
-        callQueue.queue = [];
-        callQueue.currentPosition = 0;
-        for (let i = 0; i < queueSize; i++) {
-            const randomCustomer = customers[i % Math.max(customers.length, 1)];
-            if (randomCustomer) {
-                callQueue.queue.push(generateQueueEntry(randomCustomer.id, 'known'));
-            } else {
-                callQueue.queue.push(generateQueueEntry(null, 'anonymous'));
-            }
-        }
-        callQueue.enabled = true;
+    if (!window.kiwiApi) {
+        showToast('Queue genereren via backend is niet beschikbaar', 'error');
+        return;
+    }
+
+    try {
+        const payload = await window.kiwiApi.post('/api/v1/call-queue/debug-generate', {
+            queueSize,
+            queueMix
+        });
+        callQueue = {
+            ...callQueue,
+            ...(payload || {})
+        };
+    } catch (error) {
+        showToast(error.message || 'Queue genereren via backend mislukt', 'error');
+        return;
     }
 
     saveQueue();
@@ -2779,24 +2520,24 @@ async function acceptNextCall() {
         return;
     }
     
+    if (!window.kiwiApi) {
+        showToast('Volgende call ophalen via backend is niet beschikbaar', 'error');
+        return;
+    }
+
     let nextEntry = null;
-    if (window.kiwiApi) {
-        try {
-            const payload = await window.kiwiApi.post('/api/v1/call-queue/accept-next', {});
-            nextEntry = payload && payload.accepted ? payload.accepted : null;
-            if (payload && payload.call_queue) {
-                callQueue = {
-                    ...callQueue,
-                    ...payload.call_queue
-                };
-            }
-        } catch (error) {
-            showToast(error.message || 'Volgende call ophalen via backend mislukt', 'error');
-            return;
+    try {
+        const payload = await window.kiwiApi.post('/api/v1/call-queue/accept-next', {});
+        nextEntry = payload && payload.accepted ? payload.accepted : null;
+        if (payload && payload.call_queue) {
+            callQueue = {
+                ...callQueue,
+                ...payload.call_queue
+            };
         }
-    } else {
-        // Haal eerste entry uit queue
-        nextEntry = callQueue.queue.shift();
+    } catch (error) {
+        showToast(error.message || 'Volgende call ophalen via backend mislukt', 'error');
+        return;
     }
     if (!nextEntry) {
         showToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
@@ -2889,298 +2630,51 @@ async function loadBootstrapState() {
     try {
         bootstrapState = await window.kiwiApi.get(bootstrapApiUrl);
     } catch (error) {
-        console.warn('Kon bootstrap state niet laden, fallback wordt gebruikt.', error);
+        console.warn('Kon bootstrap state niet laden.', error);
         bootstrapState = null;
     }
 }
 
-// Initialize Demo Data
+// Initialize API-backed state
 function initializeData() {
-    if (bootstrapState && Array.isArray(bootstrapState.customers)) {
-        customers = bootstrapState.customers;
-
-        if (bootstrapState.call_queue && typeof bootstrapState.call_queue === 'object') {
-            callQueue = {
-                ...callQueue,
-                ...bootstrapState.call_queue
-            };
-        }
-
-        if (bootstrapState.call_session && typeof bootstrapState.call_session === 'object') {
-            callSession = {
-                ...callSession,
-                ...bootstrapState.call_session
-            };
-        }
-
-        lastCallSession = bootstrapState.last_call_session || null;
-
-        const servicePayload = bootstrapState.catalog && bootstrapState.catalog.serviceNumbers;
-        if (servicePayload && typeof servicePayload === 'object') {
-            Object.keys(serviceNumbers).forEach((key) => {
-                if (servicePayload[key]) {
-                    serviceNumbers[key] = {
-                        ...serviceNumbers[key],
-                        ...servicePayload[key]
-                    };
-                }
-            });
-        }
-    } else {
-        customers = [
-            {
-                id: 1,
-                salutation: 'Dhr.',
-                firstName: 'J.',
-                middleName: 'de',
-                lastName: 'Vries',
-                birthday: '1972-03-14',
-                postalCode: '1012AB',
-                houseNumber: '42',
-                address: 'Damstraat 42',
-                city: 'Amsterdam',
-                email: 'jan.devries@email.nl',
-                phone: '06-12345678',
-                optinEmail: 'yes',
-                optinPhone: 'yes',
-                optinPost: 'no',
-                deliveryRemarks: {
-                    default: 'Bezorgen bij de buren indien niet thuis',
-                    lastUpdated: '2024-09-10T10:30:00.000Z',
-                    history: [
-                        {
-                            date: '2024-09-10T10:30:00.000Z',
-                            remark: 'Bezorgen bij de buren indien niet thuis',
-                            updatedBy: `Agent ${agentDisplayName}`
-                        }
-                    ]
-                },
-                subscriptions: [
-                    {
-                        id: 1,
-                        magazine: 'Avrobode',
-                        duration: '1-jaar',
-                        startDate: '2023-01-15',
-                        endDate: '2024-01-15',
-                        status: 'ended',
-                        lastEdition: '2024-01-01'
-                    },
-                    {
-                        id: 5,
-                        magazine: 'Mikrogids',
-                        duration: '2-jaar',
-                        startDate: '2024-03-01',
-                        status: 'active',
-                        lastEdition: '2024-10-01'
-                    }
-                ],
-                articles: [
-                    {
-                        id: 1,
-                        articleName: 'Jaargang bundel 2023',
-                        quantity: 1,
-                        price: 29.95,
-                        orderDate: '2024-09-15',
-                        desiredDeliveryDate: '2024-09-25',
-                        deliveryStatus: 'delivered',
-                        trackingNumber: '3SABCD1234567890NL',
-                        paymentStatus: 'paid',
-                        paymentMethod: 'iDEAL',
-                        paymentDate: '2024-09-15',
-                        actualDeliveryDate: '2024-09-24',
-                        returnDeadline: '2024-10-08',
-                        notes: ''
-                    },
-                    {
-                        id: 2,
-                        articleName: 'Extra TV gids week editie',
-                        quantity: 2,
-                        price: 7.90,
-                        orderDate: '2024-10-01',
-                        desiredDeliveryDate: '2024-10-12',
-                        deliveryStatus: 'in_transit',
-                        trackingNumber: '3SABCD9876543210NL',
-                        paymentStatus: 'paid',
-                        paymentMethod: 'iDEAL',
-                        paymentDate: '2024-10-01',
-                        actualDeliveryDate: null,
-                        returnDeadline: null,
-                        notes: 'Bezorgen bij buren indien niet thuis'
-                    }
-                ],
-                contactHistory: [
-                    {
-                        id: 1,
-                        type: 'Nieuw abonnement',
-                        date: '2024-03-01 10:30',
-                        description: 'Abonnement Mikrogids aangemaakt. Start per direct.'
-                    },
-                    {
-                        id: 2,
-                        type: 'Abonnement beëindigd',
-                        date: '2024-01-15 14:20',
-                        description: 'Abonnement Avrobode beëindigd na reguliere looptijd van 1 jaar.'
-                    },
-                    {
-                        id: 3,
-                        type: 'Adreswijziging',
-                        date: '2023-09-12 10:15',
-                        description: 'Adres gewijzigd van Kerkstraat 10 naar Damstraat 42.'
-                    },
-                    {
-                        id: 4,
-                        type: 'Nieuw abonnement',
-                        date: '2023-01-15 09:45',
-                        description: 'Abonnement Avrobode aangemaakt. Start per direct.'
-                    }
-                ]
-            },
-            {
-                id: 2,
-                salutation: 'Mevr.',
-                firstName: 'M.',
-                middleName: '',
-                lastName: 'Jansen',
-                birthday: '1980-07-22',
-                postalCode: '3011BD',
-                houseNumber: '15',
-                address: 'Wijnhaven 15',
-                city: 'Rotterdam',
-                email: 'maria.jansen@email.nl',
-                phone: '06-87654321',
-                optinEmail: 'yes',
-                optinPhone: 'no',
-                optinPost: 'yes',
-                subscriptions: [
-                    {
-                        id: 2,
-                        magazine: 'Mikrogids',
-                        duration: '2-jaar',
-                        startDate: '2022-06-01',
-                        endDate: '2024-06-01',
-                        status: 'ended',
-                        lastEdition: '2024-05-28'
-                    },
-                    {
-                        id: 3,
-                        magazine: 'Ncrvgids',
-                        duration: '1-jaar-maandelijks',
-                        startDate: '2023-03-10',
-                        status: 'active',
-                        lastEdition: '2024-09-28'
-                    }
-                ],
-                articles: [],
-                contactHistory: [
-                    {
-                        id: 1,
-                        type: 'Telefoongesprek',
-                        date: '2024-09-20 11:20',
-                        description: 'Vraag over facturatie. Uitleg gegeven over automatische incasso.'
-                    },
-                    {
-                        id: 2,
-                        type: 'Abonnement beëindigd',
-                        date: '2024-06-01 09:15',
-                        description: 'Abonnement Mikrogids beëindigd na reguliere looptijd van 2 jaar.'
-                    },
-                    {
-                        id: 3,
-                        type: 'Extra abonnement',
-                        date: '2023-03-10 15:30',
-                        description: 'Tweede abonnement (Ncrvgids) toegevoegd.'
-                    },
-                    {
-                        id: 4,
-                        type: 'Nieuw abonnement',
-                        date: '2022-06-01 14:45',
-                        description: 'Abonnement Mikrogids aangemaakt voor 2 jaar.'
-                    }
-                ]
-            },
-            {
-                id: 3,
-                birthday: '1988-11-05',
-                firstName: 'Pieter',
-                lastName: 'Bakker',
-                postalCode: '2511VA',
-                houseNumber: '88',
-                address: 'Lange Voorhout 88',
-                city: 'Den Haag',
-                email: 'p.bakker@email.nl',
-                phone: '06-11223344',
-                subscriptions: [
-                    {
-                        id: 4,
-                        magazine: 'Avrobode',
-                        duration: '3-jaar',
-                        startDate: '2024-02-01',
-                        status: 'active',
-                        lastEdition: '2024-10-01'
-                    }
-                ],
-                articles: [],
-                contactHistory: [
-                    {
-                        id: 1,
-                        type: 'Nieuw abonnement',
-                        date: '2024-02-01 13:15',
-                        description: 'Abonnement Avrobode aangemaakt via telefonische bestelling.'
-                    }
-                ]
-            },
-            {
-                id: 4,
-                salutation: 'Dhr.',
-                firstName: 'H.',
-                middleName: 'van',
-                lastName: 'Dijk',
-                birthday: '1975-02-02',
-                postalCode: '3512JE',
-                houseNumber: '23',
-                address: 'Oudegracht 23',
-                city: 'Utrecht',
-                email: 'h.vandijk@email.nl',
-                phone: '06-98765432',
-                optinEmail: 'yes',
-                optinPhone: 'yes',
-                optinPost: 'yes',
-                subscriptions: [
-                    {
-                        id: 6,
-                        magazine: 'Avrobode',
-                        duration: '1-jaar-maandelijks',
-                        startDate: '2023-11-01',
-                        status: 'active',
-                        lastEdition: '2024-10-01'
-                    },
-                    {
-                        id: 7,
-                        magazine: 'Mikrogids',
-                        duration: '2-jaar',
-                        startDate: '2023-05-15',
-                        status: 'active',
-                        lastEdition: '2024-10-01'
-                    }
-                ],
-                articles: [],
-                contactHistory: [
-                    {
-                        id: 1,
-                        type: 'Extra abonnement',
-                        date: '2023-11-01 14:45',
-                        description: 'Tweede abonnement (Avrobode) toegevoegd.'
-                    },
-                    {
-                        id: 2,
-                        type: 'Nieuw abonnement',
-                        date: '2023-05-15 16:20',
-                        description: 'Abonnement Mikrogids aangemaakt voor 2 jaar.'
-                    }
-                ]
-            }
-        ];
+    const hasBootstrapCustomers = bootstrapState && Array.isArray(bootstrapState.customers);
+    if (!hasBootstrapCustomers) {
+        console.warn('Bootstrap state ontbreekt; frontend start met lege API-afhankelijke dataset.');
+        customers = [];
+        lastCallSession = null;
+        serviceNumbers = {};
+        werfsleutelChannels = {};
+        werfsleutelCatalog = [];
+        return;
     }
+
+    customers = bootstrapState.customers;
+
+    if (bootstrapState.call_queue && typeof bootstrapState.call_queue === 'object') {
+        callQueue = {
+            ...callQueue,
+            ...bootstrapState.call_queue
+        };
+    }
+
+    if (bootstrapState.call_session && typeof bootstrapState.call_session === 'object') {
+        callSession = {
+            ...callSession,
+            ...bootstrapState.call_session
+        };
+    }
+
+    lastCallSession = bootstrapState.last_call_session || null;
+
+    const catalogPayload = bootstrapState.catalog && typeof bootstrapState.catalog === 'object'
+        ? bootstrapState.catalog
+        : {};
+    serviceNumbers = catalogPayload.serviceNumbers && typeof catalogPayload.serviceNumbers === 'object'
+        ? catalogPayload.serviceNumbers
+        : {};
+    werfsleutelChannels = catalogPayload.werfsleutelChannels && typeof catalogPayload.werfsleutelChannels === 'object'
+        ? catalogPayload.werfsleutelChannels
+        : {};
 }
 
 // Persist Customers to authenticated API state

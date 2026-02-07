@@ -5,7 +5,7 @@ import time
 
 from flask import Blueprint, request, session
 
-from blueprints.api.common import api_error
+from blueprints.api.common import api_error, parse_int_value
 from services import poc_state
 
 BLUEPRINT_NAME = "call_queue_api"
@@ -44,7 +44,19 @@ def clear_call_queue() -> tuple[dict, int]:
 @call_queue_bp.post("/debug-generate")
 def debug_generate_queue() -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
-    queue_size = int(payload.get("queueSize", 5))
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+
+    queue_size, queue_size_error = parse_int_value(
+        payload.get("queueSize"),
+        field_name="queueSize",
+        default=5,
+        minimum=0,
+        maximum=100,
+    )
+    if queue_size_error:
+        return queue_size_error
+
     queue_mix = str(payload.get("queueMix", "balanced"))
 
     state = poc_state.get_state(session)

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
-
 from flask import Blueprint, request, session
 
-from blueprints.api.common import api_error
+from blueprints.api.common import api_error, parse_int_value
 from services import poc_state
 
 BLUEPRINT_NAME = "subscriptions_api"
@@ -23,6 +21,8 @@ def _find_subscription(customer: dict, subscription_id: int) -> dict | None:
 @subscriptions_bp.patch("/<int:customer_id>/subscriptions/<int:subscription_id>")
 def update_subscription(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
 
     state = poc_state.get_state(session)
     customer = poc_state.find_customer(state, customer_id)
@@ -43,6 +43,9 @@ def update_subscription(customer_id: int, subscription_id: int) -> tuple[dict, i
 @subscriptions_bp.post("/<int:customer_id>/subscriptions/<int:subscription_id>/resend")
 def resend_subscription(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+
     reason = payload.get("reason", "other")
 
     state = poc_state.get_state(session)
@@ -77,6 +80,9 @@ def resend_subscription(customer_id: int, subscription_id: int) -> tuple[dict, i
 @subscriptions_bp.post("/<int:customer_id>/subscriptions/<int:subscription_id>/winback")
 def complete_winback(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+
     result = payload.get("result")
     offer = payload.get("offer") if isinstance(payload.get("offer"), dict) else {}
 
@@ -120,6 +126,9 @@ def complete_winback(customer_id: int, subscription_id: int) -> tuple[dict, int]
 @subscriptions_bp.post("/<int:customer_id>/subscriptions/deceased-actions")
 def process_deceased_actions(customer_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+
     actions = payload.get("actions") if isinstance(payload.get("actions"), list) else []
 
     state = poc_state.get_state(session)
@@ -132,12 +141,18 @@ def process_deceased_actions(customer_id: int) -> tuple[dict, int]:
         if not isinstance(action, dict):
             continue
 
-        subscription_id = action.get("subscriptionId")
+        subscription_id_raw = action.get("subscriptionId")
         operation = action.get("action")
-        if subscription_id is None:
+        subscription_id, subscription_id_error = parse_int_value(
+            subscription_id_raw,
+            field_name="subscriptionId",
+            default=None,
+            minimum=1,
+        )
+        if subscription_id_error:
             continue
 
-        subscription = _find_subscription(customer, int(subscription_id))
+        subscription = _find_subscription(customer, subscription_id)
         if subscription is None:
             continue
 
@@ -146,18 +161,18 @@ def process_deceased_actions(customer_id: int) -> tuple[dict, int]:
             subscription["status"] = "transferred"
             subscription["transferredTo"] = {
                 **transfer_data,
-                "transferDate": datetime.utcnow().isoformat(),
+                "transferDate": poc_state.utc_now_iso(),
             }
             subscription.pop("refundInfo", None)
             processed.append({"subscriptionId": subscription_id, "status": "transferred"})
         else:
             refund_data = action.get("refundData") if isinstance(action.get("refundData"), dict) else {}
             subscription["status"] = "restituted"
-            subscription["endDate"] = datetime.utcnow().isoformat()
+            subscription["endDate"] = poc_state.utc_now_iso()
             subscription["refundInfo"] = {
                 "email": refund_data.get("email"),
                 "notes": refund_data.get("notes", ""),
-                "refundDate": datetime.utcnow().isoformat(),
+                "refundDate": poc_state.utc_now_iso(),
             }
             processed.append({"subscriptionId": subscription_id, "status": "restituted"})
 
@@ -177,6 +192,8 @@ def process_deceased_actions(customer_id: int) -> tuple[dict, int]:
 @subscriptions_bp.post("/<int:customer_id>/subscriptions/<int:subscription_id>/restitution-transfer")
 def complete_restitution_transfer(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
 
     state = poc_state.get_state(session)
     customer = poc_state.find_customer(state, customer_id)
@@ -192,7 +209,7 @@ def complete_restitution_transfer(customer_id: int, subscription_id: int) -> tup
     subscription["status"] = "transferred"
     subscription["transferredTo"] = {
         **transfer_data,
-        "transferDate": datetime.utcnow().isoformat(),
+        "transferDate": poc_state.utc_now_iso(),
     }
     subscription.pop("refundInfo", None)
 

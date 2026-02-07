@@ -648,6 +648,96 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertFalse(reset_payload["call_queue"]["enabled"])
         self.assertFalse(reset_payload["call_session"]["active"])
 
+    def test_invalid_numeric_and_payload_inputs_return_400(self):
+        self._authenticate()
+
+        invalid_page_response = self.client.get("/api/v1/customers?page=abc")
+        self.assertEqual(invalid_page_response.status_code, 400)
+        self.assertEqual(invalid_page_response.get_json()["error"]["code"], "invalid_query_parameter")
+
+        invalid_month_response = self.client.get("/api/v1/catalog/delivery-calendar?year=2026&month=abc")
+        self.assertEqual(invalid_month_response.status_code, 400)
+        self.assertEqual(invalid_month_response.get_json()["error"]["code"], "invalid_query_parameter")
+
+        invalid_wait_time_response = self.client.post(
+            "/api/v1/call-session/start-debug",
+            json={"waitTime": "abc"},
+        )
+        self.assertEqual(invalid_wait_time_response.status_code, 400)
+        self.assertEqual(invalid_wait_time_response.get_json()["error"]["code"], "invalid_payload")
+
+        invalid_customer_id_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={"customerId": "abc", "subscription": {"magazine": "Avrobode"}},
+        )
+        self.assertEqual(invalid_customer_id_response.status_code, 400)
+        self.assertEqual(invalid_customer_id_response.get_json()["error"]["code"], "invalid_payload")
+
+        invalid_queue_size_response = self.client.post(
+            "/api/v1/call-queue/debug-generate",
+            json={"queueSize": "abc"},
+        )
+        self.assertEqual(invalid_queue_size_response.status_code, 400)
+        self.assertEqual(invalid_queue_size_response.get_json()["error"]["code"], "invalid_payload")
+
+        invalid_quote_payload_response = self.client.post(
+            "/api/v1/catalog/article-order-quote",
+            json=["invalid"],
+        )
+        self.assertEqual(invalid_quote_payload_response.status_code, 400)
+        self.assertEqual(invalid_quote_payload_response.get_json()["error"]["code"], "invalid_payload")
+
+    def test_generated_workflow_ids_are_counter_based(self):
+        self._authenticate()
+
+        first_signup_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "customerId": 1,
+                "subscription": {"magazine": "Avrobode", "duration": "1-jaar"},
+            },
+        )
+        second_signup_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "customerId": 1,
+                "subscription": {"magazine": "Mikrogids", "duration": "1-jaar"},
+            },
+        )
+        self.assertEqual(first_signup_response.status_code, 201)
+        self.assertEqual(second_signup_response.status_code, 201)
+
+        first_subscription_id = int(first_signup_response.get_json()["subscription"]["id"])
+        second_subscription_id = int(second_signup_response.get_json()["subscription"]["id"])
+        self.assertEqual(second_subscription_id, first_subscription_id + 1)
+
+        first_order_response = self.client.post(
+            "/api/v1/workflows/article-order",
+            json={
+                "customerId": 1,
+                "order": {
+                    "desiredDeliveryDate": "2026-03-15",
+                    "items": [{"articleId": 1, "quantity": 1}],
+                },
+            },
+        )
+        second_order_response = self.client.post(
+            "/api/v1/workflows/article-order",
+            json={
+                "customerId": 1,
+                "order": {
+                    "desiredDeliveryDate": "2026-03-20",
+                    "items": [{"articleId": 2, "quantity": 1}],
+                },
+            },
+        )
+        self.assertEqual(first_order_response.status_code, 201)
+        self.assertEqual(second_order_response.status_code, 201)
+
+        first_order_id = int(first_order_response.get_json()["order"]["id"])
+        second_order_id = int(second_order_response.get_json()["order"]["id"])
+        self.assertEqual(second_order_id, first_order_id + 1)
+
     def test_swagger_endpoints(self):
         self._authenticate()
 

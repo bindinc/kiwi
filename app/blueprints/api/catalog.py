@@ -4,7 +4,7 @@ from datetime import date
 
 from flask import Blueprint, request
 
-from blueprints.api.common import api_error
+from blueprints.api.common import api_error, parse_query_int
 from services import poc_catalog
 
 BLUEPRINT_NAME = "catalog_api"
@@ -17,7 +17,9 @@ catalog_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=URL_PREFIX)
 def read_werfsleutels() -> tuple[dict, int]:
     query = request.args.get("query", "")
     barcode = request.args.get("barcode", "")
-    limit = int(request.args.get("limit", 20))
+    limit, error = parse_query_int("limit", default=20, minimum=1, maximum=250)
+    if error:
+        return error
 
     items = poc_catalog.search_werfsleutels(query=query, barcode=barcode, limit=limit)
     return {"items": items, "total": len(items)}, 200
@@ -28,7 +30,9 @@ def read_articles() -> tuple[dict, int]:
     query = request.args.get("query", "")
     magazine = request.args.get("magazine")
     tab = request.args.get("tab")
-    limit = int(request.args.get("limit", 20))
+    limit, error = parse_query_int("limit", default=20, minimum=1, maximum=250)
+    if error:
+        return error
 
     popular_arg = (request.args.get("popular") or "").strip().lower()
     popular = popular_arg in {"1", "true", "yes", "on"}
@@ -55,6 +59,9 @@ def read_article(article_id: int) -> tuple[dict, int]:
 @catalog_bp.post("/article-order-quote")
 def quote_article_order() -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+
     items = payload.get("items") if isinstance(payload.get("items"), list) else []
     coupon_code = payload.get("couponCode")
 
@@ -72,8 +79,13 @@ def read_winback_offers() -> tuple[dict, int]:
 @catalog_bp.get("/delivery-calendar")
 def read_delivery_calendar() -> tuple[dict, int]:
     today = date.today()
-    year = int(request.args.get("year", today.year))
-    month = int(request.args.get("month", today.month))
+    year, year_error = parse_query_int("year", default=today.year, minimum=1900, maximum=2200)
+    if year_error:
+        return year_error
+
+    month, month_error = parse_query_int("month", default=today.month, minimum=1, maximum=12)
+    if month_error:
+        return month_error
 
     if month < 1 or month > 12:
         return api_error(400, "invalid_month", "Month must be between 1 and 12")

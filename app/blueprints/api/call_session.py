@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import copy
 import time
-from datetime import datetime
 
 from flask import Blueprint, request, session
 
-from blueprints.api.common import api_error
+from blueprints.api.common import api_error, parse_int_value
 from services import poc_state
 
 BLUEPRINT_NAME = "call_session_api"
@@ -39,10 +38,30 @@ def write_call_session() -> tuple[dict, int]:
 @call_session_bp.post("/start-debug")
 def start_debug_call() -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
 
     state = poc_state.get_state(session)
     call_session = poc_state.get_call_session(state)
-    customer_id = payload.get("customerId")
+
+    wait_time, wait_time_error = parse_int_value(
+        payload.get("waitTime"),
+        field_name="waitTime",
+        default=0,
+        minimum=0,
+    )
+    if wait_time_error:
+        return wait_time_error
+
+    customer_id, customer_id_error = parse_int_value(
+        payload.get("customerId"),
+        field_name="customerId",
+        required=False,
+        minimum=1,
+    )
+    if customer_id_error:
+        return customer_id_error
+
     caller_type = payload.get("callerType", "anonymous")
     if customer_id and caller_type in {"known", "identified"}:
         caller_type = "identified"
@@ -54,7 +73,7 @@ def start_debug_call() -> tuple[dict, int]:
             "customerId": customer_id,
             "customerName": payload.get("customerName"),
             "serviceNumber": payload.get("serviceNumber"),
-            "waitTime": int(payload.get("waitTime") or 0),
+            "waitTime": wait_time,
             "startTime": int(time.time() * 1000),
             "pendingIdentification": None,
             "recordingActive": False,
@@ -71,13 +90,19 @@ def start_debug_call() -> tuple[dict, int]:
 @call_session_bp.post("/identify-caller")
 def identify_caller() -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
-    customer_id = payload.get("customerId")
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+    customer_id, customer_id_error = parse_int_value(
+        payload.get("customerId"),
+        field_name="customerId",
+        minimum=1,
+    )
 
-    if customer_id is None:
-        return api_error(400, "invalid_payload", "customerId is required")
+    if customer_id_error:
+        return customer_id_error
 
     state = poc_state.get_state(session)
-    customer = poc_state.find_customer(state, int(customer_id))
+    customer = poc_state.find_customer(state, customer_id)
     if customer is None:
         return api_error(404, "customer_not_found", "Customer not found")
 
@@ -87,12 +112,12 @@ def identify_caller() -> tuple[dict, int]:
 
     full_name = f"{customer.get('firstName', '')} {customer.get('middleName', '')} {customer.get('lastName', '')}".strip()
     call_session["callerType"] = "identified"
-    call_session["customerId"] = int(customer_id)
+    call_session["customerId"] = customer_id
     call_session["customerName"] = full_name
 
     poc_state.append_contact_history(
         state,
-        int(customer_id),
+        customer_id,
         {
             "type": "call_identified",
             "description": f"Beller geïdentificeerd tijdens {call_session.get('serviceNumber') or 'service'} call",
@@ -137,6 +162,8 @@ def resume_call() -> tuple[dict, int]:
 @call_session_bp.post("/end")
 def end_call() -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
     forced_by_customer = bool(payload.get("forcedByCustomer", False))
 
     state = poc_state.get_state(session)
@@ -176,6 +203,8 @@ def end_call() -> tuple[dict, int]:
 @call_session_bp.post("/disposition")
 def save_disposition() -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
     category = payload.get("category")
     outcome = payload.get("outcome")
     notes = payload.get("notes", "")
@@ -199,7 +228,7 @@ def save_disposition() -> tuple[dict, int]:
             int(customer_id),
             {
                 "type": "call_disposition",
-                "date": datetime.utcnow().isoformat(),
+                "date": poc_state.utc_now_iso(),
                 "description": description,
             },
         )
@@ -210,7 +239,7 @@ def save_disposition() -> tuple[dict, int]:
                 int(customer_id),
                 {
                     "type": "follow_up_scheduled",
-                    "date": datetime.utcnow().isoformat(),
+                    "date": poc_state.utc_now_iso(),
                     "description": f"Follow-up gepland voor {follow_up_date}: {follow_up_notes or 'Geen notities'}",
                 },
             )

@@ -1,6 +1,6 @@
 from flask import Blueprint, current_app, request, session
 
-from blueprints.api.common import require_api_access
+from blueprints.api.common import api_error, require_api_access
 from services import teams_presence_sync
 
 BLUEPRINT_NAME = "agent_status_api"
@@ -64,15 +64,17 @@ def read_agent_status() -> tuple[dict, int]:
 @agent_status_bp.post("")
 def update_agent_status() -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+
     requested_status = normalize_status(payload.get("status"))
 
     if not requested_status:
-        return (
-            {
-                "error": "Invalid agent status",
-                "allowed_statuses": sorted(SUPPORTED_STATUSES | set(STATUS_ALIASES)),
-            },
+        return api_error(
             400,
+            "invalid_payload",
+            "status must be one of the supported agent statuses",
+            details={"allowed_statuses": sorted(SUPPORTED_STATUSES | set(STATUS_ALIASES))},
         )
 
     previous_status = get_current_status()

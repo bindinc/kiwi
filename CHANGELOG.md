@@ -34,6 +34,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Restrict automatic status changes to call transitions only: enter call -> `in_call`, leave call -> restore prior external/manual status.
 - Refactor `app.js`, `article-search.js`, and `delivery-date-picker.js` to remove mock/localStorage backend behavior and use authenticated `/api/v1` endpoints with a shared frontend API client.
 - Expand API unit tests to cover all migrated `/api/v1` POC endpoints, including catalog, customer, subscription, workflow, queue/session, debug-reset, and agent-status auth guards.
+- Validate numeric query/body inputs across `/api/v1` endpoints and return structured `400` API errors instead of `500` for malformed values.
+- Generate workflow subscription/article-order IDs from server-side counters and use timezone-aware UTC timestamps.
+- Remove remaining frontend mock domain duplication for service numbers, werfsleutel channels/catalog fallbacks, and queue generation fallback so bootstrap/API remains the source of truth.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.

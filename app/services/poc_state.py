@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, MutableMapping
 
 from services import poc_catalog
@@ -340,6 +340,22 @@ def _next_counter(state: dict[str, Any], key: str) -> int:
     return current
 
 
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def utc_today_iso() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def next_subscription_id(state: dict[str, Any]) -> int:
+    return _next_counter(state, "subscription_id")
+
+
+def next_article_order_id(state: dict[str, Any]) -> int:
+    return _next_counter(state, "article_order_id")
+
+
 def get_customers(session_data: MutableMapping[str, Any]) -> list[dict[str, Any]]:
     return get_state(session_data).setdefault("customers", [])
 
@@ -382,7 +398,7 @@ def append_contact_history(state: dict[str, Any], customer_id: int, entry: dict[
     normalized = {
         "id": entry.get("id") or _next_counter(state, "contact_history_id"),
         "type": entry.get("type", "default"),
-        "date": entry.get("date") or datetime.utcnow().isoformat(),
+        "date": entry.get("date") or utc_now_iso(),
         "description": entry.get("description", ""),
     }
 

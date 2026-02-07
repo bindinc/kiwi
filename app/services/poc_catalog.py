@@ -604,6 +604,20 @@ def get_delivery_calendar(year: int, month: int) -> dict[str, Any]:
     }
 
 
+def _safe_int(raw_value: Any, default: int) -> int:
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_float(raw_value: Any, default: float) -> float:
+    try:
+        return float(raw_value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _normalize_order_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
 
@@ -611,10 +625,12 @@ def _normalize_order_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not isinstance(raw_item, dict):
             continue
 
-        article_id = raw_item.get("articleId")
-        catalog_article = find_article(int(article_id)) if article_id is not None else None
+        article_id_raw = raw_item.get("articleId")
+        article_id = _safe_int(article_id_raw, default=-1)
+        has_article_id = article_id != -1
+        catalog_article = find_article(article_id) if has_article_id else None
 
-        quantity = int(raw_item.get("quantity") or 1)
+        quantity = _safe_int(raw_item.get("quantity"), default=1)
         quantity = max(quantity, 1)
 
         unit_price = raw_item.get("unitPrice")
@@ -627,10 +643,10 @@ def _normalize_order_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
         normalized.append(
             {
-                "articleId": article_id,
+                "articleId": article_id if has_article_id else article_id_raw,
                 "code": code,
                 "name": name,
-                "unitPrice": round(float(unit_price or 0), 2),
+                "unitPrice": round(_safe_float(unit_price, default=0.0), 2),
                 "quantity": quantity,
                 "magazine": magazine,
             }

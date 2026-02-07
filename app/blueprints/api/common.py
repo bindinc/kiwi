@@ -23,6 +23,54 @@ def api_error(status: int, code: str, message: str, details: dict[str, Any] | No
     return payload, status
 
 
+def parse_int_value(
+    raw_value: Any,
+    *,
+    field_name: str,
+    default: int | None = None,
+    required: bool = True,
+    minimum: int | None = None,
+    maximum: int | None = None,
+    error_code: str = "invalid_payload",
+) -> tuple[int | None, tuple[dict[str, Any], int] | None]:
+    is_missing = raw_value is None or raw_value == ""
+    if is_missing:
+        if default is not None:
+            return default, None
+        if not required:
+            return None, None
+        return None, api_error(400, error_code, f"{field_name} is required")
+
+    try:
+        parsed = int(raw_value)
+    except (TypeError, ValueError):
+        return None, api_error(400, error_code, f"{field_name} must be an integer")
+
+    if minimum is not None and parsed < minimum:
+        return None, api_error(400, error_code, f"{field_name} must be >= {minimum}")
+    if maximum is not None and parsed > maximum:
+        return None, api_error(400, error_code, f"{field_name} must be <= {maximum}")
+
+    return parsed, None
+
+
+def parse_query_int(
+    name: str,
+    *,
+    default: int | None = None,
+    minimum: int | None = None,
+    maximum: int | None = None,
+) -> tuple[int | None, tuple[dict[str, Any], int] | None]:
+    return parse_int_value(
+        request.args.get(name),
+        field_name=name,
+        default=default,
+        minimum=minimum,
+        maximum=maximum,
+        error_code="invalid_query_parameter",
+    )
+
+
 def is_api_authenticated() -> bool:
     profile = session.get("oidc_auth_profile")
     token = session.get("oidc_auth_token")

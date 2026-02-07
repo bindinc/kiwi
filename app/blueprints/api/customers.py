@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
-
 from flask import Blueprint, request, session
 
-from blueprints.api.common import api_error
+from blueprints.api.common import api_error, parse_query_int
 from services import poc_state
 
 BLUEPRINT_NAME = "customers_api"
@@ -51,8 +49,14 @@ def read_customers() -> tuple[dict, int]:
         sort_by=sort_by,
     )
 
-    page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("pageSize", 20))
+    page, page_error = parse_query_int("page", default=1, minimum=1)
+    if page_error:
+        return page_error
+
+    page_size, size_error = parse_query_int("pageSize", default=20, minimum=1, maximum=200)
+    if size_error:
+        return size_error
+
     payload = _paginate(filtered, page=page, page_size=page_size)
     return payload, 200
 
@@ -78,6 +82,9 @@ def read_customer_state() -> tuple[dict, int]:
 @customers_bp.put("/state")
 def write_customer_state() -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+
     customers = payload.get("customers")
 
     if not isinstance(customers, list):
@@ -123,8 +130,13 @@ def read_contact_history(customer_id: int) -> tuple[dict, int]:
     history = customer.get("contactHistory", [])
     sorted_history = sorted(history, key=lambda item: str(item.get("date", "")), reverse=True)
 
-    page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("pageSize", 20))
+    page, page_error = parse_query_int("page", default=1, minimum=1)
+    if page_error:
+        return page_error
+
+    page_size, size_error = parse_query_int("pageSize", default=20, minimum=1, maximum=200)
+    if size_error:
+        return size_error
 
     payload = _paginate(sorted_history, page=page, page_size=page_size)
     return payload, 200
@@ -148,6 +160,9 @@ def create_contact_history_entry(customer_id: int) -> tuple[dict, int]:
 @customers_bp.put("/<int:customer_id>/delivery-remarks")
 def update_delivery_remarks(customer_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+
     default_remark = str(payload.get("default", "")).strip()
     updated_by = str(payload.get("updatedBy", "Agent"))
 
@@ -156,7 +171,7 @@ def update_delivery_remarks(customer_id: int) -> tuple[dict, int]:
     if customer is None:
         return api_error(404, "customer_not_found", "Customer not found")
 
-    now = datetime.utcnow().isoformat()
+    now = poc_state.utc_now_iso()
     remarks = customer.setdefault(
         "deliveryRemarks",
         {
@@ -199,6 +214,9 @@ def update_delivery_remarks(customer_id: int) -> tuple[dict, int]:
 @customers_bp.post("/<int:customer_id>/editorial-complaints")
 def create_editorial_complaint(customer_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return api_error(400, "invalid_payload", "JSON object expected")
+
     magazine = str(payload.get("magazine", "")).strip()
     complaint_type = str(payload.get("type", "klacht")).strip().lower()
     category = str(payload.get("category", "overig")).strip().lower()

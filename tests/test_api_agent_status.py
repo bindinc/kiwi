@@ -95,7 +95,14 @@ class AgentStatusApiTests(unittest.TestCase):
         response = self.client.post("/api/v1/agent-status", json={"status": "unknown"})
         self.assertEqual(response.status_code, 400)
         payload = response.get_json()
-        self.assertIn("allowed_statuses", payload)
+        self.assertEqual(payload["error"]["code"], "invalid_payload")
+        self.assertIn("allowed_statuses", payload["error"]["details"])
+
+    def test_post_rejects_non_object_payload(self):
+        response = self.client.post("/api/v1/agent-status", json=["ready"])
+        self.assertEqual(response.status_code, 400)
+        payload = response.get_json()
+        self.assertEqual(payload["error"]["code"], "invalid_payload")
 
     def test_post_updates_local_status_and_returns_sync_result(self):
         with mock.patch(
