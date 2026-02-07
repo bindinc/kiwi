@@ -87,7 +87,7 @@ class PocApiV1Tests(unittest.TestCase):
     def test_subscription_signup_and_customer_mutations(self):
         self._authenticate()
 
-        customers_response = self.client.get("/api/v1/customers")
+        customers_response = self.client.get("/api/v1/persons")
         self.assertEqual(customers_response.status_code, 200)
         existing_customer_id = customers_response.get_json()["items"][0]["id"]
 
@@ -114,14 +114,14 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(signup_payload["subscription"]["magazine"], "Avrobode")
 
         patch_response = self.client.patch(
-            f"/api/v1/customers/{existing_customer_id}",
+            f"/api/v1/persons/{existing_customer_id}",
             json={"city": "Zwolle"},
         )
         self.assertEqual(patch_response.status_code, 200)
         self.assertEqual(patch_response.get_json()["city"], "Zwolle")
 
         remarks_response = self.client.put(
-            f"/api/v1/customers/{existing_customer_id}/delivery-remarks",
+            f"/api/v1/persons/{existing_customer_id}/delivery-remarks",
             json={"default": "Test opmerking", "updatedBy": "Unit Test"},
         )
         self.assertEqual(remarks_response.status_code, 200)
@@ -279,14 +279,14 @@ class PocApiV1Tests(unittest.TestCase):
     def test_customer_resource_endpoints(self):
         self._authenticate()
 
-        customers_response = self.client.get("/api/v1/customers?postalCode=1012AB&houseNumber=42&page=1&pageSize=5")
+        customers_response = self.client.get("/api/v1/persons?postalCode=1012AB&houseNumber=42&page=1&pageSize=5")
         self.assertEqual(customers_response.status_code, 200)
         customers_payload = customers_response.get_json()
         self.assertGreaterEqual(customers_payload["total"], 1)
         customer_id = int(customers_payload["items"][0]["id"])
 
         created_response = self.client.post(
-            "/api/v1/customers",
+            "/api/v1/persons",
             json={
                 "salutation": "Mevr.",
                 "firstName": "Eva",
@@ -303,43 +303,43 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(created_response.status_code, 201)
         created_customer_id = int(created_response.get_json()["id"])
 
-        read_customer_response = self.client.get(f"/api/v1/customers/{created_customer_id}")
+        read_customer_response = self.client.get(f"/api/v1/persons/{created_customer_id}")
         self.assertEqual(read_customer_response.status_code, 200)
         self.assertEqual(read_customer_response.get_json()["id"], created_customer_id)
 
         update_customer_response = self.client.patch(
-            f"/api/v1/customers/{created_customer_id}",
+            f"/api/v1/persons/{created_customer_id}",
             json={"city": "Zwolle", "phone": "0699999999"},
         )
         self.assertEqual(update_customer_response.status_code, 200)
         self.assertEqual(update_customer_response.get_json()["city"], "Zwolle")
 
-        customer_state_response = self.client.get("/api/v1/customers/state")
+        customer_state_response = self.client.get("/api/v1/persons/state")
         self.assertEqual(customer_state_response.status_code, 200)
         customer_state_payload = customer_state_response.get_json()
         self.assertIn("customers", customer_state_payload)
 
         write_state_response = self.client.put(
-            "/api/v1/customers/state",
+            "/api/v1/persons/state",
             json={"customers": customer_state_payload["customers"]},
         )
         self.assertEqual(write_state_response.status_code, 200)
         self.assertGreaterEqual(write_state_response.get_json()["count"], 1)
 
-        read_history_response = self.client.get(f"/api/v1/customers/{customer_id}/contact-history?page=1&pageSize=2")
+        read_history_response = self.client.get(f"/api/v1/persons/{customer_id}/contact-history?page=1&pageSize=2")
         self.assertEqual(read_history_response.status_code, 200)
         history_payload = read_history_response.get_json()
         self.assertEqual(history_payload["pageSize"], 2)
 
         create_history_response = self.client.post(
-            f"/api/v1/customers/{customer_id}/contact-history",
+            f"/api/v1/persons/{customer_id}/contact-history",
             json={"type": "Test", "description": "Handmatig testcontactmoment"},
         )
         self.assertEqual(create_history_response.status_code, 201)
         self.assertEqual(create_history_response.get_json()["type"], "Test")
 
         delivery_remarks_response = self.client.put(
-            f"/api/v1/customers/{customer_id}/delivery-remarks",
+            f"/api/v1/persons/{customer_id}/delivery-remarks",
             json={"default": "Graag achterom bezorgen", "updatedBy": "Unit Test"},
         )
         self.assertEqual(delivery_remarks_response.status_code, 200)
@@ -349,7 +349,7 @@ class PocApiV1Tests(unittest.TestCase):
         )
 
         complaint_response = self.client.post(
-            f"/api/v1/customers/{customer_id}/editorial-complaints",
+            f"/api/v1/persons/{customer_id}/editorial-complaints",
             json={
                 "magazine": "Avrobode",
                 "type": "klacht",
@@ -362,7 +362,7 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(complaint_response.status_code, 201)
         self.assertIn("entry", complaint_response.get_json())
 
-        article_orders_response = self.client.get(f"/api/v1/customers/{customer_id}/article-orders")
+        article_orders_response = self.client.get(f"/api/v1/persons/{customer_id}/article-orders")
         self.assertEqual(article_orders_response.status_code, 200)
         self.assertIn("items", article_orders_response.get_json())
 
@@ -397,7 +397,7 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(winback_decline_response.status_code, 200)
         self.assertEqual(winback_decline_response.get_json()["status"], "cancelled")
 
-        customer_after_decline_response = self.client.get("/api/v1/customers/1")
+        customer_after_decline_response = self.client.get("/api/v1/persons/1")
         self.assertEqual(customer_after_decline_response.status_code, 200)
         remaining_subscriptions = customer_after_decline_response.get_json()["subscriptions"]
         self.assertFalse(any(int(subscription["id"]) == 5 for subscription in remaining_subscriptions))
@@ -656,7 +656,7 @@ class PocApiV1Tests(unittest.TestCase):
     def test_invalid_numeric_and_payload_inputs_return_400(self):
         self._authenticate()
 
-        invalid_page_response = self.client.get("/api/v1/customers?page=abc")
+        invalid_page_response = self.client.get("/api/v1/persons?page=abc")
         self.assertEqual(invalid_page_response.status_code, 400)
         self.assertEqual(invalid_page_response.get_json()["error"]["code"], "invalid_query_parameter")
 
@@ -751,14 +751,14 @@ class PocApiV1Tests(unittest.TestCase):
 
         document = document_response.get_json()
         self.assertEqual(document["openapi"], "3.0.3")
-        self.assertIn("/api/v1/customers", document["paths"])
+        self.assertIn("/api/v1/persons", document["paths"])
         self.assertIn("/api/v1/call-session/disposition", document["paths"])
         self.assertIn("/api/v1/status", document["paths"])
         self.assertIn("get", document["paths"]["/api/v1/status"])
         self.assertNotIn("head", document["paths"]["/api/v1/status"])
         self.assertIn("cookieAuth", document["components"]["securitySchemes"])
 
-        customers_get = document["paths"]["/api/v1/customers"]["get"]
+        customers_get = document["paths"]["/api/v1/persons"]["get"]
         self.assertEqual(customers_get["security"], [{"cookieAuth": []}])
 
         status_get = document["paths"]["/api/v1/status"]["get"]

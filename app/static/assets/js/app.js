@@ -33,8 +33,8 @@ const translate = (key, params, fallback) => {
 
 const bootstrapApiUrl = '/api/v1/bootstrap';
 const offersApiUrl = '/api/v1/catalog/offers';
-const customersStateApiUrl = '/api/v1/customers/state';
-const customersApiUrl = '/api/v1/customers';
+const personsStateApiUrl = '/api/v1/persons/state';
+const personsApiUrl = '/api/v1/persons';
 const subscriptionsApiUrl = '/api/v1/subscriptions';
 const workflowsApiUrl = '/api/v1/workflows';
 const callQueueApiUrl = '/api/v1/call-queue';
@@ -1100,7 +1100,7 @@ function pushContactHistory(customer, entry, options = {}) {
     if (persist) {
         if (window.kiwiApi && customer.id !== undefined && customer.id !== null) {
             window.kiwiApi
-                .post(`${customersApiUrl}/${customer.id}/contact-history`, normalizedEntry)
+                .post(`${personsApiUrl}/${customer.id}/contact-history`, normalizedEntry)
                 .then((savedEntry) => {
                     if (savedEntry && savedEntry.id) {
                         normalizedEntry.id = savedEntry.id;
@@ -2684,7 +2684,7 @@ function saveCustomers() {
         return;
     }
 
-    window.kiwiApi.put(customersStateApiUrl, { customers }).catch((error) => {
+    window.kiwiApi.put(personsStateApiUrl, { customers }).catch((error) => {
         console.error('Kon klantstaat niet opslaan via API', error);
     });
 }
@@ -2825,7 +2825,7 @@ async function searchCustomer() {
         query.set('pageSize', '200');
 
         try {
-            const payload = await window.kiwiApi.get(`/api/v1/customers?${query.toString()}`);
+            const payload = await window.kiwiApi.get(`/api/v1/persons?${query.toString()}`);
             results = Array.isArray(payload && payload.items) ? payload.items : [];
         } catch (error) {
             console.error('Kon klanten niet zoeken via API', error);
@@ -3280,7 +3280,7 @@ async function selectCustomer(customerId) {
 
     if (window.kiwiApi) {
         try {
-            customer = await window.kiwiApi.get(`/api/v1/customers/${customerId}`);
+            customer = await window.kiwiApi.get(`/api/v1/persons/${customerId}`);
             const existingIndex = customers.findIndex(c => c.id === customerId);
             if (existingIndex >= 0) {
                 customers[existingIndex] = customer;
@@ -4043,8 +4043,8 @@ async function saveCustomerEdit(event) {
 
     if (window.kiwiApi) {
         try {
-            await window.kiwiApi.patch(`${customersApiUrl}/${customerId}`, updates);
-            await window.kiwiApi.post(`${customersApiUrl}/${customerId}/contact-history`, {
+            await window.kiwiApi.patch(`${personsApiUrl}/${customerId}`, updates);
+            await window.kiwiApi.post(`${personsApiUrl}/${customerId}/contact-history`, {
                 type: 'Gegevens gewijzigd',
                 description: 'Klantgegevens bijgewerkt.'
             });
@@ -4230,7 +4230,7 @@ async function submitEditorialComplaint() {
 
     if (window.kiwiApi) {
         try {
-            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/editorial-complaints`, {
+            await window.kiwiApi.post(`${personsApiUrl}/${currentCustomer.id}/editorial-complaints`, {
                 magazine,
                 type,
                 category,
@@ -4352,7 +4352,7 @@ async function saveSubscriptionEdit(event) {
                 changes.push(`Status gewijzigd van ${statusNames[oldStatus]} naar ${statusNames[updates.status]}`);
             }
 
-            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/contact-history`, {
+            await window.kiwiApi.post(`${personsApiUrl}/${currentCustomer.id}/contact-history`, {
                 type: 'Abonnement gewijzigd',
                 description: `Abonnement bewerkt. ${changes.join('. ')}.`
             });
@@ -5663,7 +5663,7 @@ async function saveDeliveryRemarks() {
 
     if (window.kiwiApi) {
         try {
-            const payload = await window.kiwiApi.put(`${customersApiUrl}/${currentCustomer.id}/delivery-remarks`, {
+            const payload = await window.kiwiApi.put(`${personsApiUrl}/${currentCustomer.id}/delivery-remarks`, {
                 default: newRemarks,
                 updatedBy: document.getElementById('agentName').textContent
             });

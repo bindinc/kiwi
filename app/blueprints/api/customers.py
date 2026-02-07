@@ -5,8 +5,8 @@ from flask import Blueprint, request, session
 from blueprints.api.common import api_error, parse_query_int
 from services import poc_state
 
-BLUEPRINT_NAME = "customers_api"
-URL_PREFIX = "/customers"
+BLUEPRINT_NAME = "persons_api"
+URL_PREFIX = "/persons"
 
 customers_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=URL_PREFIX)
 
