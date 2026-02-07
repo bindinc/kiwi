@@ -2,6 +2,12 @@
     const defaultHeaders = {
         'Accept': 'application/json'
     };
+    const configuredBasePath = typeof window !== 'undefined' && typeof window.kiwiBasePath === 'string'
+        ? window.kiwiBasePath
+        : '';
+    const basePath = configuredBasePath && configuredBasePath !== '/'
+        ? configuredBasePath.replace(/\/+$/, '')
+        : '';
 
     function buildHeaders(extraHeaders) {
         return {
@@ -10,7 +16,28 @@
         };
     }
 
+    function buildRequestUrl(url) {
+        if (!url || typeof url !== 'string') {
+            return url;
+        }
+
+        // Absolute URLs should pass through unchanged.
+        if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) {
+            return url;
+        }
+
+        // Only prefix root-relative app API paths.
+        const isRootRelative = url.startsWith('/') && !url.startsWith('//');
+        if (!isRootRelative || !basePath) {
+            return url;
+        }
+
+        const alreadyPrefixed = url === basePath || url.startsWith(`${basePath}/`);
+        return alreadyPrefixed ? url : `${basePath}${url}`;
+    }
+
     async function request(method, url, payload, options) {
+        const requestUrl = buildRequestUrl(url);
         const requestOptions = {
             method,
             credentials: 'same-origin',
@@ -22,13 +49,13 @@
             requestOptions.headers['Content-Type'] = 'application/json';
         }
 
-        const response = await fetch(url, requestOptions);
+        const response = await fetch(requestUrl, requestOptions);
         const contentType = response.headers.get('content-type') || '';
         const hasJsonBody = contentType.includes('application/json');
         const body = hasJsonBody ? await response.json() : null;
 
         if (response.status === 401) {
-            const loginUrl = '/';
+            const loginUrl = basePath ? `${basePath}/` : '/';
             window.location.href = loginUrl;
             throw new Error('unauthorized');
         }
