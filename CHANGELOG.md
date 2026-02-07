@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Consolidate werfsleutels and winback offers into one atomic endpoint `GET /api/v1/catalog/offers` and update frontend consumers accordingly.
 - Move subscription mutation endpoints from the customers namespace to `/api/v1/subscriptions/...` to keep `/api/v1/persons` focused on person resources.
 - Rename subscription action routes to `POST /api/v1/subscriptions/{customer_id}/{subscription_id}/complaint` and `POST /api/v1/subscriptions/{customer_id}/{subscription_id}`.
+- Make the "Nieuw abonnement" werfsleutel search call `/api/v1/catalog/offers` during typing and Enter selection instead of only filtering a local in-memory list.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.

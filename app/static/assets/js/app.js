@@ -127,6 +127,10 @@ const euroFormatter = new Intl.NumberFormat('nl-NL', {
 
 let werfsleutelCatalog = [];
 let werfsleutelLoadAttempted = false;
+const WERFSLEUTEL_SEARCH_LIMIT = 5;
+const WERFSLEUTEL_SEARCH_DEBOUNCE_MS = 180;
+let werfsleutelSearchDebounceTimer = null;
+let werfsleutelSearchRequestId = 0;
 
 let werfsleutelChannels = {};
 
@@ -157,6 +161,107 @@ async function ensureWerfsleutelsLoaded() {
         console.warn('Fout bij laden van werfsleutels via API.', error);
         werfsleutelCatalog = [];
     }
+}
+
+function isWerfsleutelBarcodeQuery(value) {
+    return /^\d{6,}$/.test(value);
+}
+
+function rememberWerfsleutels(items) {
+    if (!Array.isArray(items) || items.length === 0) {
+        return;
+    }
+
+    const catalogByCode = new Map(
+        werfsleutelCatalog
+            .filter((item) => item && item.salesCode)
+            .map((item) => [item.salesCode, item])
+    );
+
+    for (const item of items) {
+        if (!item || !item.salesCode) {
+            continue;
+        }
+        catalogByCode.set(item.salesCode, item);
+    }
+
+    werfsleutelCatalog = Array.from(catalogByCode.values());
+}
+
+async function searchWerfsleutelsViaApi(query) {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery || !window.kiwiApi) {
+        return null;
+    }
+
+    const params = new URLSearchParams({
+        type: 'werfsleutels',
+        limit: String(WERFSLEUTEL_SEARCH_LIMIT)
+    });
+
+    if (isWerfsleutelBarcodeQuery(normalizedQuery)) {
+        params.set('barcode', normalizedQuery.replace(/[^0-9]/g, ''));
+    } else {
+        params.set('query', normalizedQuery);
+    }
+
+    const payload = await window.kiwiApi.get(`${offersApiUrl}?${params.toString()}`);
+    const items = Array.isArray(payload && payload.items) ? payload.items : [];
+    rememberWerfsleutels(items);
+    return items;
+}
+
+async function findWerfsleutelMatches(query) {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) {
+        return [];
+    }
+
+    if (window.kiwiApi) {
+        try {
+            return await searchWerfsleutelsViaApi(normalizedQuery);
+        } catch (error) {
+            console.warn('Werfsleutel zoeken via API mislukt, lokale fallback gebruikt.', error);
+        }
+    }
+
+    return filterWerfsleutelCatalog(normalizedQuery);
+}
+
+async function findWerfsleutelCandidate(query) {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) {
+        return null;
+    }
+
+    const exactLocalMatch = werfsleutelCatalog.find(
+        (item) => item.salesCode.toLowerCase() === normalizedQuery.toLowerCase()
+    );
+    if (exactLocalMatch) {
+        return exactLocalMatch;
+    }
+
+    const matches = await findWerfsleutelMatches(normalizedQuery);
+    if (!Array.isArray(matches) || matches.length === 0) {
+        return null;
+    }
+
+    const exactApiMatch = matches.find(
+        (item) => item.salesCode.toLowerCase() === normalizedQuery.toLowerCase()
+    );
+    if (exactApiMatch) {
+        return exactApiMatch;
+    }
+
+    if (isWerfsleutelBarcodeQuery(normalizedQuery)) {
+        const normalizedBarcode = normalizedQuery.replace(/[^0-9]/g, '');
+        const barcodeMatch = matches.find((item) => String(item.barcode || '') === normalizedBarcode);
+        if (barcodeMatch) {
+            return barcodeMatch;
+        }
+    }
+
+    return matches[0];
 }
 
 function inferMagazineFromTitle(title = '') {
@@ -284,15 +389,21 @@ async function initWerfsleutelPicker() {
     }
 
     input.addEventListener('input', (event) => handleWerfsleutelQuery(event.target.value));
-    input.addEventListener('keydown', (event) => {
+    input.addEventListener('keydown', async (event) => {
         if (event.key === 'Enter') {
             event.preventDefault();
+            if (werfsleutelSearchDebounceTimer) {
+                window.clearTimeout(werfsleutelSearchDebounceTimer);
+                werfsleutelSearchDebounceTimer = null;
+            }
+            werfsleutelSearchRequestId += 1;
+
             const trimmed = input.value.trim();
             if (trimmed) {
-                const exactMatch = werfsleutelCatalog.find((item) => item.salesCode.toLowerCase() === trimmed.toLowerCase());
-                if (exactMatch) {
-                    selectWerfsleutel(exactMatch.salesCode);
-                } else if (/^\d{6,}$/.test(trimmed)) {
+                const candidate = await findWerfsleutelCandidate(trimmed);
+                if (candidate) {
+                    selectWerfsleutel(candidate.salesCode);
+                } else if (isWerfsleutelBarcodeQuery(trimmed)) {
                     validateWerfsleutelBarcode(trimmed);
                 } else {
                     const firstSuggestion = filterWerfsleutelCatalog(trimmed)[0];
@@ -322,19 +433,30 @@ async function initWerfsleutelPicker() {
 
 function handleWerfsleutelQuery(rawValue) {
     const query = rawValue.trim();
+    const requestId = ++werfsleutelSearchRequestId;
+
+    if (werfsleutelSearchDebounceTimer) {
+        window.clearTimeout(werfsleutelSearchDebounceTimer);
+        werfsleutelSearchDebounceTimer = null;
+    }
 
     if (!query) {
         renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
         return;
     }
 
-    const matches = filterWerfsleutelCatalog(query);
-    renderWerfsleutelSuggestions(matches);
+    werfsleutelSearchDebounceTimer = window.setTimeout(async () => {
+        const matches = await findWerfsleutelMatches(query);
+        if (requestId !== werfsleutelSearchRequestId) {
+            return;
+        }
 
-    if (/^\d{6,}$/.test(query)) {
-        validateWerfsleutelBarcode(query);
-        return;
-    }
+        renderWerfsleutelSuggestions(matches);
+
+        if (isWerfsleutelBarcodeQuery(query)) {
+            validateWerfsleutelBarcode(query);
+        }
+    }, WERFSLEUTEL_SEARCH_DEBOUNCE_MS);
 }
 
 function filterWerfsleutelCatalog(query) {
