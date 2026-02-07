@@ -14,6 +14,7 @@ from blueprints.api.catalog import catalog_bp  # noqa: E402
 from blueprints.api.customers import customers_bp  # noqa: E402
 from blueprints.api.debug import debug_bp  # noqa: E402
 from blueprints.api.me import me_bp  # noqa: E402
+from blueprints.api.offers import offers_bp  # noqa: E402
 from blueprints.api.status import status_bp  # noqa: E402
 from blueprints.api.subscriptions import subscriptions_bp  # noqa: E402
 from blueprints.api.swagger import swagger_bp  # noqa: E402
@@ -25,6 +26,7 @@ register_api_blueprint(me_bp)
 register_api_blueprint(bootstrap_bp)
 register_api_blueprint(debug_bp)
 register_api_blueprint(catalog_bp)
+register_api_blueprint(offers_bp)
 register_api_blueprint(customers_bp)
 register_api_blueprint(subscriptions_bp)
 register_api_blueprint(workflows_bp)
@@ -201,13 +203,13 @@ class PocApiV1Tests(unittest.TestCase):
     def test_catalog_endpoints(self):
         self._authenticate()
 
-        werfsleutels_response = self.client.get("/api/v1/catalog/werfsleutels?query=avro&limit=5")
+        werfsleutels_response = self.client.get("/api/v1/offers/werfsleutels?query=avro&limit=5")
         self.assertEqual(werfsleutels_response.status_code, 200)
         werfsleutels_payload = werfsleutels_response.get_json()
         self.assertGreater(len(werfsleutels_payload["items"]), 0)
 
         barcode = werfsleutels_payload["items"][0]["barcode"]
-        barcode_response = self.client.get(f"/api/v1/catalog/werfsleutels?barcode={barcode}&limit=5")
+        barcode_response = self.client.get(f"/api/v1/offers/werfsleutels?barcode={barcode}&limit=5")
         self.assertEqual(barcode_response.status_code, 200)
         self.assertGreaterEqual(barcode_response.get_json()["total"], 1)
 
@@ -250,7 +252,7 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(invalid_coupon_response.status_code, 200)
         self.assertFalse(invalid_coupon_response.get_json()["coupon"]["valid"])
 
-        winback_response = self.client.get("/api/v1/catalog/winback-offers?reason=delivery")
+        winback_response = self.client.get("/api/v1/offers/winback?reason=delivery")
         self.assertEqual(winback_response.status_code, 200)
         self.assertGreaterEqual(len(winback_response.get_json()["items"]), 1)
 

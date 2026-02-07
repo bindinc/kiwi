@@ -32,8 +32,8 @@ const translate = (key, params, fallback) => {
 };
 
 const bootstrapApiUrl = '/api/v1/bootstrap';
-const werfsleutelsApiUrl = '/api/v1/catalog/werfsleutels';
-const winbackOffersApiUrl = '/api/v1/catalog/winback-offers';
+const werfsleutelsApiUrl = '/api/v1/offers/werfsleutels';
+const winbackOffersApiUrl = '/api/v1/offers/winback';
 const customersStateApiUrl = '/api/v1/customers/state';
 const customersApiUrl = '/api/v1/customers';
 const workflowsApiUrl = '/api/v1/workflows';
@@ -4514,77 +4514,24 @@ function winbackPrevStep(stepNumber) {
 
 // Generate Winback Offers
 async function generateWinbackOffers(reason) {
-    const offers = {
-        price: [
-            {
-                id: 1,
-                title: '3 Maanden 50% Korting',
-                description: 'Profiteer van 50% korting op de komende 3 maanden',
-                discount: '50% korting'
-            },
-            {
-                id: 2,
-                title: '6 Maanden 25% Korting',
-                description: 'Krijg 25% korting gedurende 6 maanden',
-                discount: '25% korting'
-            }
-        ],
-        content: [
-            {
-                id: 3,
-                title: 'Gratis Upgrade',
-                description: 'Upgrade naar premium editie zonder extra kosten',
-                discount: 'Gratis upgrade'
-            },
-            {
-                id: 4,
-                title: 'Extra Content Pakket',
-                description: 'Ontvang toegang tot online extra content',
-                discount: 'Gratis extra\'s'
-            }
-        ],
-        delivery: [
-            {
-                id: 5,
-                title: 'Prioriteit Levering',
-                description: 'Gegarandeerde levering voor 12:00 op vrijdag',
-                discount: 'Premium service'
-            },
-            {
-                id: 6,
-                title: '1 Maand Gratis',
-                description: 'Als excuus: volgende maand gratis',
-                discount: '1 maand gratis'
-            }
-        ],
-        other: [
-            {
-                id: 7,
-                title: '2 Maanden Gratis',
-                description: 'Blijf nog 1 jaar en krijg 2 maanden cadeau',
-                discount: '2 maanden gratis'
-            },
-            {
-                id: 8,
-                title: 'Flexibel Abonnement',
-                description: 'Pas op ieder moment zonder kosten aan of stop',
-                discount: 'Flexibele voorwaarden'
-            }
-        ]
-    };
+    if (!window.kiwiApi) {
+        showToast('Winback-aanbiedingen via backend zijn niet beschikbaar', 'error');
+        return;
+    }
 
-    let relevantOffers = offers[reason] || offers.other;
+    let relevantOffers = [];
+    try {
+        const query = new URLSearchParams({ reason: reason || 'other' }).toString();
+        const payload = await window.kiwiApi.get(`${winbackOffersApiUrl}?${query}`);
+        relevantOffers = payload && Array.isArray(payload.items) ? payload.items : [];
+    } catch (error) {
+        console.warn('Winback-aanbiedingen laden via backend mislukt.', error);
+        showToast(error.message || 'Winback-aanbiedingen laden mislukt', 'error');
+        return;
+    }
 
-    if (window.kiwiApi) {
-        try {
-            const query = new URLSearchParams({ reason: reason || 'other' }).toString();
-            const payload = await window.kiwiApi.get(`${winbackOffersApiUrl}?${query}`);
-            if (payload && Array.isArray(payload.items) && payload.items.length > 0) {
-                relevantOffers = payload.items;
-            }
-        } catch (error) {
-            console.warn('Winback-aanbiedingen laden via backend mislukt, fallback wordt gebruikt.', error);
-        }
+    if (!relevantOffers.length) {
+        showToast('Geen winback-aanbiedingen beschikbaar voor deze reden', 'warning');
     }
 
     const offersContainer = document.getElementById('winbackOffers');

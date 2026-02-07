@@ -13,18 +13,6 @@ URL_PREFIX = "/catalog"
 catalog_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=URL_PREFIX)
 
 
-@catalog_bp.get("/werfsleutels")
-def read_werfsleutels() -> tuple[dict, int]:
-    query = request.args.get("query", "")
-    barcode = request.args.get("barcode", "")
-    limit, error = parse_query_int("limit", default=20, minimum=1, maximum=250)
-    if error:
-        return error
-
-    items = poc_catalog.search_werfsleutels(query=query, barcode=barcode, limit=limit)
-    return {"items": items, "total": len(items)}, 200
-
-
 @catalog_bp.get("/articles")
 def read_articles() -> tuple[dict, int]:
     query = request.args.get("query", "")
@@ -67,13 +55,6 @@ def quote_article_order() -> tuple[dict, int]:
 
     quote = poc_catalog.quote_article_order(items=items, coupon_code=coupon_code)
     return quote, 200
-
-
-@catalog_bp.get("/winback-offers")
-def read_winback_offers() -> tuple[dict, int]:
-    reason = request.args.get("reason")
-    offers = poc_catalog.get_winback_offers(reason)
-    return {"reason": reason or "other", "items": offers}, 200
 
 
 @catalog_bp.get("/delivery-calendar")

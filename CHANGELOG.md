@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Validate numeric query/body inputs across `/api/v1` endpoints and return structured `400` API errors instead of `500` for malformed values.
 - Generate workflow subscription/article-order IDs from server-side counters and use timezone-aware UTC timestamps.
 - Remove remaining frontend mock domain duplication for service numbers, werfsleutel channels/catalog fallbacks, and queue generation fallback so bootstrap/API remains the source of truth.
+- Consolidate werfsleutel and winback offer APIs under `/api/v1/offers/*` and update frontend consumers to use the new offers namespace.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
