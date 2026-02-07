@@ -398,47 +398,52 @@
                                 </div>
                             </div>
 
-                            <h3 class="form-subtitle">Aanhef *</h3>
-                            <div class="aanhef-row">
-                                <label><input type="radio" name="subSalutation" value="Dhr." required checked> Dhr.</label>
-                                <label><input type="radio" name="subSalutation" value="Mevr."> Mevr.</label>
-                                <label><input type="radio" name="subSalutation" value="Anders"> Anders</label>
-                            </div>
-                            
-                            <div class="form-row">
-                                <input type="text" id="subInitials" placeholder="Voorletters*" required>
-                                <input type="text" id="subMiddleName" placeholder="Tussenvoegsel">
-                                <input type="text" id="subLastName" placeholder="Achternaam*" required>
-                            </div>
-
-                            <div class="form-row">
-                                <input type="text" id="subPostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
-                                <input type="text" id="subHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required>
-                                <input type="text" id="subHouseExt" placeholder="Toevoeging" maxlength="10">
-                            </div>
-                            
-                            <div class="form-row">
-                                <input type="text" id="subAddress" placeholder="Straat*" required>
-                                <input type="text" id="subCity" placeholder="Plaats*" required>
+                            <h3 class="form-subtitle">Ontvanger abonnement</h3>
+                            <div class="party-role-panel" id="recipientRolePanel">
+                                <div class="party-mode-toggle">
+                                    <label><input type="radio" name="recipientMode" value="existing" checked onchange="setSubscriptionRoleMode('recipient', this.value)"> Bestaande persoon</label>
+                                    <label><input type="radio" name="recipientMode" value="create" onchange="setSubscriptionRoleMode('recipient', this.value)"> Nieuwe persoon</label>
+                                </div>
+                                <div id="recipientExistingSection">
+                                    <div class="form-row">
+                                        <input type="search" id="recipientSearchQuery" class="form-control" placeholder="Zoek ontvanger op naam">
+                                        <button type="button" class="btn btn-secondary" onclick="searchSubscriptionRolePerson('recipient')">Zoeken</button>
+                                    </div>
+                                    <div id="recipientSearchResults" class="party-search-results"></div>
+                                    <div id="recipientSelectedPerson" class="party-selected-person empty">Geen ontvanger geselecteerd</div>
+                                </div>
+                                <div id="recipientCreateSection" style="display: none;">
+                                    <div id="recipientCreateForm"></div>
+                                </div>
                             </div>
 
-                            <div class="form-row">
-                                <input type="tel" id="subPhone" placeholder="Telefoonnummer">
-                                <input type="email" id="subEmail" placeholder="E-mailadres*" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Geboortedatum</label>
-                                <div class="form-row">
-                                    <select id="subBirthdayDay">
-                                        <option value="">Dag</option>
-                                    </select>
-                                    <select id="subBirthdayMonth">
-                                        <option value="">Maand</option>
-                                    </select>
-                                    <select id="subBirthdayYear">
-                                        <option value="">Jaar</option>
-                                    </select>
+                            <h3 class="form-subtitle">Aanvrager / betaler</h3>
+                            <div class="party-role-panel" id="requesterRolePanel">
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="requesterSameAsRecipient" checked onchange="toggleRequesterSameAsRecipient()">
+                                        Zelfde persoon als ontvanger
+                                    </label>
+                                </div>
+                                <div id="requesterSameSummary" class="party-selected-person">
+                                    Aanvrager/betaler volgt de geselecteerde ontvanger.
+                                </div>
+                                <div id="requesterRoleDetails" style="display: none;">
+                                    <div class="party-mode-toggle">
+                                        <label><input type="radio" name="requesterMode" value="existing" checked onchange="setSubscriptionRoleMode('requester', this.value)"> Bestaande persoon</label>
+                                        <label><input type="radio" name="requesterMode" value="create" onchange="setSubscriptionRoleMode('requester', this.value)"> Nieuwe persoon</label>
+                                    </div>
+                                    <div id="requesterExistingSection">
+                                        <div class="form-row">
+                                            <input type="search" id="requesterSearchQuery" class="form-control" placeholder="Zoek aanvrager/betaler op naam">
+                                            <button type="button" class="btn btn-secondary" onclick="searchSubscriptionRolePerson('requester')">Zoeken</button>
+                                        </div>
+                                        <div id="requesterSearchResults" class="party-search-results"></div>
+                                        <div id="requesterSelectedPerson" class="party-selected-person empty">Geen aanvrager/betaler geselecteerd</div>
+                                    </div>
+                                    <div id="requesterCreateSection" style="display: none;">
+                                        <div id="requesterCreateForm"></div>
+                                    </div>
                                 </div>
                             </div>
                             

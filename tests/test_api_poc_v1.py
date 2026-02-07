@@ -90,11 +90,20 @@ class PocApiV1Tests(unittest.TestCase):
         customers_response = self.client.get("/api/v1/persons")
         self.assertEqual(customers_response.status_code, 200)
         existing_customer_id = customers_response.get_json()["items"][0]["id"]
+        existing_requester_id = customers_response.get_json()["items"][1]["id"]
+
+        recipient_before = self.client.get(f"/api/v1/persons/{existing_customer_id}")
+        self.assertEqual(recipient_before.status_code, 200)
+        requester_before = self.client.get(f"/api/v1/persons/{existing_requester_id}")
+        self.assertEqual(requester_before.status_code, 200)
+        recipient_subscription_count_before = len(recipient_before.get_json()["subscriptions"])
+        requester_subscription_count_before = len(requester_before.get_json()["subscriptions"])
 
         signup_response = self.client.post(
             "/api/v1/workflows/subscription-signup",
             json={
-                "customerId": existing_customer_id,
+                "recipient": {"personId": existing_customer_id},
+                "requester": {"personId": existing_requester_id},
                 "subscription": {
                     "magazine": "Avrobode",
                     "duration": "1-jaar",
@@ -110,8 +119,26 @@ class PocApiV1Tests(unittest.TestCase):
         )
         self.assertEqual(signup_response.status_code, 201)
         signup_payload = signup_response.get_json()
-        self.assertEqual(signup_payload["customer"]["id"], existing_customer_id)
+        self.assertEqual(signup_payload["recipient"]["id"], existing_customer_id)
+        self.assertEqual(signup_payload["requester"]["id"], existing_requester_id)
+        self.assertEqual(signup_payload["subscription"]["recipientPersonId"], existing_customer_id)
+        self.assertEqual(signup_payload["subscription"]["requesterPersonId"], existing_requester_id)
+        self.assertFalse(signup_payload["createdRecipient"])
+        self.assertFalse(signup_payload["createdRequester"])
         self.assertEqual(signup_payload["subscription"]["magazine"], "Avrobode")
+
+        recipient_after = self.client.get(f"/api/v1/persons/{existing_customer_id}")
+        self.assertEqual(recipient_after.status_code, 200)
+        requester_after = self.client.get(f"/api/v1/persons/{existing_requester_id}")
+        self.assertEqual(requester_after.status_code, 200)
+        self.assertEqual(
+            len(recipient_after.get_json()["subscriptions"]),
+            recipient_subscription_count_before + 1,
+        )
+        self.assertEqual(
+            len(requester_after.get_json()["subscriptions"]),
+            requester_subscription_count_before,
+        )
 
         patch_response = self.client.patch(
             f"/api/v1/persons/{existing_customer_id}",
@@ -138,7 +165,7 @@ class PocApiV1Tests(unittest.TestCase):
             "/api/v1/workflows/article-order",
             json={
                 "customer": {
-                    "salutation": "Dhr.",
+                    "salutation": "Mevr.",
                     "firstName": "Order",
                     "middleName": "",
                     "lastName": "Tester",
@@ -453,7 +480,8 @@ class PocApiV1Tests(unittest.TestCase):
         existing_customer_signup = self.client.post(
             "/api/v1/workflows/subscription-signup",
             json={
-                "customerId": 2,
+                "recipient": {"personId": 2},
+                "requester": {"sameAsRecipient": True},
                 "subscription": {
                     "magazine": "Avrobode",
                     "duration": "1-jaar",
@@ -464,22 +492,40 @@ class PocApiV1Tests(unittest.TestCase):
             },
         )
         self.assertEqual(existing_customer_signup.status_code, 201)
-        self.assertFalse(existing_customer_signup.get_json()["createdCustomer"])
+        self.assertFalse(existing_customer_signup.get_json()["createdRecipient"])
+        self.assertFalse(existing_customer_signup.get_json()["createdRequester"])
+        self.assertEqual(existing_customer_signup.get_json()["requester"]["id"], 2)
 
         new_customer_signup = self.client.post(
             "/api/v1/workflows/subscription-signup",
             json={
-                "customer": {
-                    "salutation": "Dhr.",
-                    "firstName": "Workflow",
-                    "middleName": "",
-                    "lastName": "Nieuw",
-                    "postalCode": "1234ZZ",
-                    "houseNumber": "7",
-                    "address": "Workflowlaan 7",
-                    "city": "Api City",
-                    "email": "workflow.nieuw@example.org",
-                    "phone": "0600000000",
+                "recipient": {
+                    "person": {
+                        "salutation": "Dhr.",
+                        "firstName": "Workflow",
+                        "middleName": "",
+                        "lastName": "Nieuw",
+                        "postalCode": "1234ZZ",
+                        "houseNumber": "7",
+                        "address": "Workflowlaan 7",
+                        "city": "Api City",
+                        "email": "workflow.nieuw@example.org",
+                        "phone": "0600000000",
+                    }
+                },
+                "requester": {
+                    "person": {
+                        "salutation": "Mevr.",
+                        "firstName": "Requester",
+                        "middleName": "",
+                        "lastName": "Workflow",
+                        "postalCode": "7654ZX",
+                        "houseNumber": "99",
+                        "address": "Requesterstraat 99",
+                        "city": "Api Stad",
+                        "email": "requester.workflow@example.org",
+                        "phone": "0611111111",
+                    }
                 },
                 "subscription": {
                     "magazine": "Mikrogids",
@@ -489,7 +535,12 @@ class PocApiV1Tests(unittest.TestCase):
             },
         )
         self.assertEqual(new_customer_signup.status_code, 201)
-        self.assertTrue(new_customer_signup.get_json()["createdCustomer"])
+        self.assertTrue(new_customer_signup.get_json()["createdRecipient"])
+        self.assertTrue(new_customer_signup.get_json()["createdRequester"])
+        self.assertNotEqual(
+            new_customer_signup.get_json()["subscription"]["recipientPersonId"],
+            new_customer_signup.get_json()["subscription"]["requesterPersonId"],
+        )
 
         existing_customer_order = self.client.post(
             "/api/v1/workflows/article-order",
@@ -511,7 +562,7 @@ class PocApiV1Tests(unittest.TestCase):
             "/api/v1/workflows/article-order",
             json={
                 "customer": {
-                    "salutation": "Mevr.",
+                    "salutation": "Dhr.",
                     "firstName": "Order",
                     "middleName": "",
                     "lastName": "Nieuw",
@@ -531,6 +582,157 @@ class PocApiV1Tests(unittest.TestCase):
         )
         self.assertEqual(new_customer_order.status_code, 201)
         self.assertTrue(new_customer_order.get_json()["createdCustomer"])
+
+    def test_subscription_signup_rejects_invalid_role_payloads(self):
+        self._authenticate()
+
+        valid_subscription = {
+            "magazine": "Avrobode",
+            "duration": "1-jaar",
+            "durationLabel": "1 jaar",
+            "startDate": "2026-03-01",
+        }
+        new_person_payload = {
+            "salutation": "Dhr.",
+            "firstName": "Invalid",
+            "middleName": "",
+            "lastName": "Case",
+            "postalCode": "1234AB",
+            "houseNumber": "10",
+            "address": "Teststraat 10",
+            "city": "Teststad",
+            "email": "invalid.case@example.org",
+            "phone": "0600000000",
+        }
+
+        recipient_both_mode_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "recipient": {"personId": 1, "person": new_person_payload},
+                "requester": {"sameAsRecipient": True},
+                "subscription": valid_subscription,
+            },
+        )
+        self.assertEqual(recipient_both_mode_response.status_code, 400)
+        self.assertEqual(recipient_both_mode_response.get_json()["error"]["code"], "invalid_payload")
+
+        recipient_missing_mode_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "recipient": {},
+                "requester": {"sameAsRecipient": True},
+                "subscription": valid_subscription,
+            },
+        )
+        self.assertEqual(recipient_missing_mode_response.status_code, 400)
+        self.assertEqual(recipient_missing_mode_response.get_json()["error"]["code"], "invalid_payload")
+
+        requester_both_mode_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "recipient": {"personId": 1},
+                "requester": {"personId": 2, "sameAsRecipient": True},
+                "subscription": valid_subscription,
+            },
+        )
+        self.assertEqual(requester_both_mode_response.status_code, 400)
+        self.assertEqual(requester_both_mode_response.get_json()["error"]["code"], "invalid_payload")
+
+        requester_missing_mode_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "recipient": {"personId": 1},
+                "requester": {},
+                "subscription": valid_subscription,
+            },
+        )
+        self.assertEqual(requester_missing_mode_response.status_code, 400)
+        self.assertEqual(requester_missing_mode_response.get_json()["error"]["code"], "invalid_payload")
+
+    def test_subscription_signup_rejects_legacy_customer_payload(self):
+        self._authenticate()
+
+        legacy_payload_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "customerId": 1,
+                "subscription": {"magazine": "Avrobode", "duration": "1-jaar"},
+            },
+        )
+        self.assertEqual(legacy_payload_response.status_code, 400)
+        self.assertEqual(legacy_payload_response.get_json()["error"]["code"], "invalid_payload")
+
+    def test_subscription_signup_contact_history_for_different_and_same_person(self):
+        self._authenticate()
+
+        recipient_before = self.client.get("/api/v1/persons/1")
+        self.assertEqual(recipient_before.status_code, 200)
+        requester_before = self.client.get("/api/v1/persons/2")
+        self.assertEqual(requester_before.status_code, 200)
+        recipient_history_before = len(recipient_before.get_json()["contactHistory"])
+        requester_history_before = len(requester_before.get_json()["contactHistory"])
+
+        different_person_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "recipient": {"personId": 1},
+                "requester": {"personId": 2},
+                "subscription": {
+                    "magazine": "Avrobode",
+                    "duration": "1-jaar",
+                    "durationLabel": "1 jaar",
+                    "startDate": "2026-05-01",
+                },
+                "contactEntry": {
+                    "type": "Nieuw abonnement",
+                    "description": "Aangemaakt vanuit unittest.",
+                },
+            },
+        )
+        self.assertEqual(different_person_response.status_code, 201)
+
+        recipient_after = self.client.get("/api/v1/persons/1")
+        self.assertEqual(recipient_after.status_code, 200)
+        requester_after = self.client.get("/api/v1/persons/2")
+        self.assertEqual(requester_after.status_code, 200)
+        self.assertEqual(len(recipient_after.get_json()["contactHistory"]), recipient_history_before + 1)
+        self.assertEqual(len(requester_after.get_json()["contactHistory"]), requester_history_before + 1)
+        self.assertIn("persoon #2", recipient_after.get_json()["contactHistory"][0]["description"])
+        self.assertIn("persoon #1", requester_after.get_json()["contactHistory"][0]["description"])
+
+        same_recipient_before = self.client.get("/api/v1/persons/3")
+        self.assertEqual(same_recipient_before.status_code, 200)
+        same_recipient_history_before = len(same_recipient_before.get_json()["contactHistory"])
+        requester_two_before_second_signup = self.client.get("/api/v1/persons/2")
+        self.assertEqual(requester_two_before_second_signup.status_code, 200)
+        requester_two_history_before_second_signup = len(requester_two_before_second_signup.get_json()["contactHistory"])
+
+        same_person_response = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "recipient": {"personId": 3},
+                "requester": {"sameAsRecipient": True},
+                "subscription": {
+                    "magazine": "Mikrogids",
+                    "duration": "1-jaar",
+                    "durationLabel": "1 jaar",
+                    "startDate": "2026-05-15",
+                },
+            },
+        )
+        self.assertEqual(same_person_response.status_code, 201)
+        self.assertEqual(same_person_response.get_json()["recipient"]["id"], 3)
+        self.assertEqual(same_person_response.get_json()["requester"]["id"], 3)
+
+        same_recipient_after = self.client.get("/api/v1/persons/3")
+        self.assertEqual(same_recipient_after.status_code, 200)
+        self.assertEqual(len(same_recipient_after.get_json()["contactHistory"]), same_recipient_history_before + 1)
+        requester_two_after_second_signup = self.client.get("/api/v1/persons/2")
+        self.assertEqual(requester_two_after_second_signup.status_code, 200)
+        self.assertEqual(
+            len(requester_two_after_second_signup.get_json()["contactHistory"]),
+            requester_two_history_before_second_signup,
+        )
 
     def test_call_queue_and_session_endpoints(self):
         self._authenticate()
@@ -671,12 +873,16 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(invalid_wait_time_response.status_code, 400)
         self.assertEqual(invalid_wait_time_response.get_json()["error"]["code"], "invalid_payload")
 
-        invalid_customer_id_response = self.client.post(
+        invalid_recipient_person_id_response = self.client.post(
             "/api/v1/workflows/subscription-signup",
-            json={"customerId": "abc", "subscription": {"magazine": "Avrobode"}},
+            json={
+                "recipient": {"personId": "abc"},
+                "requester": {"sameAsRecipient": True},
+                "subscription": {"magazine": "Avrobode"},
+            },
         )
-        self.assertEqual(invalid_customer_id_response.status_code, 400)
-        self.assertEqual(invalid_customer_id_response.get_json()["error"]["code"], "invalid_payload")
+        self.assertEqual(invalid_recipient_person_id_response.status_code, 400)
+        self.assertEqual(invalid_recipient_person_id_response.get_json()["error"]["code"], "invalid_payload")
 
         invalid_queue_size_response = self.client.post(
             "/api/v1/call-queue/debug-generate",
@@ -698,14 +904,16 @@ class PocApiV1Tests(unittest.TestCase):
         first_signup_response = self.client.post(
             "/api/v1/workflows/subscription-signup",
             json={
-                "customerId": 1,
+                "recipient": {"personId": 1},
+                "requester": {"sameAsRecipient": True},
                 "subscription": {"magazine": "Avrobode", "duration": "1-jaar"},
             },
         )
         second_signup_response = self.client.post(
             "/api/v1/workflows/subscription-signup",
             json={
-                "customerId": 1,
+                "recipient": {"personId": 1},
+                "requester": {"sameAsRecipient": True},
                 "subscription": {"magazine": "Mikrogids", "duration": "1-jaar"},
             },
         )

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+
 from flask import Blueprint, request, session
 
 from blueprints.api.common import api_error, parse_int_value
@@ -11,7 +13,7 @@ URL_PREFIX = "/workflows"
 workflows_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=URL_PREFIX)
 
 
-def _build_subscription(state: dict, payload: dict) -> dict:
+def _build_subscription(state: dict, payload: dict, recipient_person_id: int, requester_person_id: int) -> dict:
     return {
         "id": payload.get("id") or poc_state.next_subscription_id(state),
         "magazine": payload.get("magazine"),
@@ -20,7 +22,91 @@ def _build_subscription(state: dict, payload: dict) -> dict:
         "startDate": payload.get("startDate"),
         "status": payload.get("status", "active"),
         "lastEdition": payload.get("lastEdition") or poc_state.utc_today_iso(),
+        "recipientPersonId": recipient_person_id,
+        "requesterPersonId": requester_person_id,
     }
+
+
+def _parse_role_payload(role_payload: object, *, role_name: str, allow_same_as_recipient: bool) -> tuple[dict | None, tuple[dict, int] | None]:
+    if not isinstance(role_payload, dict):
+        return None, api_error(400, "invalid_payload", f"{role_name} must be an object")
+
+    has_person_id = role_payload.get("personId") not in (None, "")
+    has_person_payload = isinstance(role_payload.get("person"), dict)
+    has_same_as_recipient = bool(role_payload.get("sameAsRecipient")) if allow_same_as_recipient else False
+
+    selected_modes = int(has_person_id) + int(has_person_payload) + int(has_same_as_recipient)
+    if selected_modes != 1:
+        allowed = "personId or person"
+        if allow_same_as_recipient:
+            allowed = "personId, person, or sameAsRecipient=true"
+        return None, api_error(400, "invalid_payload", f"{role_name} must contain exactly one of {allowed}")
+
+    if has_same_as_recipient:
+        return {"mode": "same_as_recipient"}, None
+
+    if has_person_id:
+        person_id, person_id_error = parse_int_value(
+            role_payload.get("personId"),
+            field_name=f"{role_name}.personId",
+            required=True,
+            minimum=1,
+        )
+        if person_id_error:
+            return None, person_id_error
+        return {"mode": "existing", "person_id": person_id}, None
+
+    person_payload = role_payload.get("person")
+    if not isinstance(person_payload, dict) or not person_payload:
+        return None, api_error(400, "invalid_payload", f"{role_name}.person must be a non-empty object")
+    return {"mode": "new", "person_payload": person_payload}, None
+
+
+def _resolve_role_person(state: dict, role_spec: dict, *, role_name: str) -> tuple[dict | None, bool, tuple[dict, int] | None]:
+    if role_spec["mode"] == "existing":
+        person = poc_state.find_customer(state, int(role_spec["person_id"]))
+        if person is None:
+            return None, False, api_error(404, "customer_not_found", f"{role_name} person not found")
+        return person, False, None
+
+    if role_spec["mode"] == "new":
+        person = poc_state.create_customer(state, dict(role_spec["person_payload"]))
+        return person, True, None
+
+    return None, False, api_error(400, "invalid_payload", f"{role_name} resolution failed")
+
+
+def _build_signup_history_entries(
+    *,
+    subscription_payload: dict,
+    recipient_id: int,
+    requester_id: int,
+    contact_entry: dict | None,
+) -> tuple[dict, dict | None]:
+    magazine = subscription_payload.get("magazine") or "Onbekend magazine"
+    duration = subscription_payload.get("durationLabel") or subscription_payload.get("duration") or "onbekende looptijd"
+
+    if contact_entry:
+        recipient_entry = copy.deepcopy(contact_entry)
+        recipient_entry.setdefault("type", "Nieuw abonnement")
+        base_description = str(recipient_entry.get("description", "")).strip()
+    else:
+        recipient_entry = {"type": "Nieuw abonnement"}
+        base_description = f"Abonnement {magazine} ({duration}) aangemaakt."
+
+    if requester_id != recipient_id:
+        if base_description:
+            recipient_entry["description"] = f"{base_description} Aangevraagd/betaald door persoon #{requester_id}."
+        else:
+            recipient_entry["description"] = f"Aangevraagd/betaald door persoon #{requester_id}."
+        requester_entry = {
+            "type": "Abonnement aangevraagd",
+            "description": f"Abonnement {magazine} ({duration}) aangevraagd/betaald voor persoon #{recipient_id}.",
+        }
+        return recipient_entry, requester_entry
+
+    recipient_entry["description"] = base_description
+    return recipient_entry, None
 
 
 @workflows_bp.post("/subscription-signup")
@@ -29,48 +115,83 @@ def create_subscription_signup() -> tuple[dict, int]:
     if not isinstance(payload, dict):
         return api_error(400, "invalid_payload", "JSON object expected")
 
-    customer_id_raw = payload.get("customerId")
-    customer_payload = payload.get("customer") if isinstance(payload.get("customer"), dict) else {}
+    if "customerId" in payload or "customer" in payload:
+        return api_error(
+            400,
+            "invalid_payload",
+            "Legacy customerId/customer payload is not supported; use recipient/requester instead",
+        )
+
+    recipient_raw = payload.get("recipient")
+    requester_raw = payload.get("requester")
     subscription_payload = payload.get("subscription") if isinstance(payload.get("subscription"), dict) else {}
     contact_entry = payload.get("contactEntry") if isinstance(payload.get("contactEntry"), dict) else None
 
     if not subscription_payload:
         return api_error(400, "invalid_payload", "subscription payload is required")
 
-    state = poc_state.get_state(session)
-    customer = None
-    created_customer = False
-
-    customer_id, customer_id_error = parse_int_value(
-        customer_id_raw,
-        field_name="customerId",
-        required=False,
-        minimum=1,
+    recipient_spec, recipient_spec_error = _parse_role_payload(
+        recipient_raw,
+        role_name="recipient",
+        allow_same_as_recipient=False,
     )
-    if customer_id_error:
-        return customer_id_error
+    if recipient_spec_error:
+        return recipient_spec_error
 
-    if customer_id is not None:
-        customer = poc_state.find_customer(state, customer_id)
-        if customer is None:
-            return api_error(404, "customer_not_found", "Customer not found")
+    requester_spec, requester_spec_error = _parse_role_payload(
+        requester_raw,
+        role_name="requester",
+        allow_same_as_recipient=True,
+    )
+    if requester_spec_error:
+        return requester_spec_error
+
+    state = poc_state.get_state(session)
+    recipient, created_recipient, recipient_error = _resolve_role_person(
+        state,
+        recipient_spec,
+        role_name="recipient",
+    )
+    if recipient_error:
+        return recipient_error
+
+    if requester_spec["mode"] == "same_as_recipient":
+        requester = recipient
+        created_requester = False
     else:
-        if not customer_payload:
-            return api_error(400, "invalid_payload", "customer payload is required when customerId is not provided")
-        customer = poc_state.create_customer(state, customer_payload)
-        created_customer = True
+        requester, created_requester, requester_error = _resolve_role_person(
+            state,
+            requester_spec,
+            role_name="requester",
+        )
+        if requester_error:
+            return requester_error
 
-    subscription = _build_subscription(state, subscription_payload)
-    customer.setdefault("subscriptions", []).append(subscription)
+    subscription = _build_subscription(
+        state,
+        subscription_payload,
+        recipient_person_id=int(recipient["id"]),
+        requester_person_id=int(requester["id"]),
+    )
+    recipient.setdefault("subscriptions", []).append(subscription)
 
-    if contact_entry:
-        poc_state.append_contact_history(state, int(customer["id"]), contact_entry)
+    recipient_entry, requester_entry = _build_signup_history_entries(
+        subscription_payload=subscription_payload,
+        recipient_id=int(recipient["id"]),
+        requester_id=int(requester["id"]),
+        contact_entry=contact_entry,
+    )
+    poc_state.append_contact_history(state, int(recipient["id"]), recipient_entry)
+    if requester_entry:
+        poc_state.append_contact_history(state, int(requester["id"]), requester_entry)
 
     session.modified = True
     return {
-        "customer": customer,
+        "recipient": recipient,
+        "requester": requester,
         "subscription": subscription,
-        "createdCustomer": created_customer,
+        "createdRecipient": created_recipient,
+        "createdRequester": created_requester,
     }, 201
 
 
