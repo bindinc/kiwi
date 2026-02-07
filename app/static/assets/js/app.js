@@ -4122,7 +4122,7 @@ async function resendMagazine() {
 
     if (window.kiwiApi) {
         try {
-            await window.kiwiApi.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subId}/resend`, { reason });
+            await window.kiwiApi.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subId}/complaint`, { reason });
             closeForm('resendMagazineForm');
             showToast(
                 translate('resend.editionResent', { magazine: subscription.magazine }, `Editie van ${subscription.magazine} wordt opnieuw verzonden!`),
@@ -5142,7 +5142,7 @@ async function completeWinback() {
     
     if (window.kiwiApi) {
         try {
-            await window.kiwiApi.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subId}/winback`, {
+            await window.kiwiApi.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subId}`, {
                 result: result.value,
                 offer: selectedOffer
             });

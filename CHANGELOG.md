@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove remaining frontend mock domain duplication for service numbers, werfsleutel channels/catalog fallbacks, and queue generation fallback so bootstrap/API remains the source of truth.
 - Consolidate werfsleutels and winback offers into one atomic endpoint `GET /api/v1/catalog/offers` and update frontend consumers accordingly.
 - Move subscription mutation endpoints from the customers namespace to `/api/v1/subscriptions/...` to keep `/api/v1/customers` focused on customer resources.
+- Rename subscription action routes to `POST /api/v1/subscriptions/{customer_id}/{subscription_id}/complaint` and `POST /api/v1/subscriptions/{customer_id}/{subscription_id}`.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.

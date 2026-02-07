@@ -40,8 +40,8 @@ def update_subscription(customer_id: int, subscription_id: int) -> tuple[dict, i
     return {"subscription": subscription}, 200
 
 
-@subscriptions_bp.post("/<int:customer_id>/<int:subscription_id>/resend")
-def resend_subscription(customer_id: int, subscription_id: int) -> tuple[dict, int]:
+@subscriptions_bp.post("/<int:customer_id>/<int:subscription_id>/complaint")
+def create_subscription_complaint(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
     if not isinstance(payload, dict):
         return api_error(400, "invalid_payload", "JSON object expected")
@@ -77,7 +77,7 @@ def resend_subscription(customer_id: int, subscription_id: int) -> tuple[dict, i
     return {"subscription": subscription, "entry": entry}, 200
 
 
-@subscriptions_bp.post("/<int:customer_id>/<int:subscription_id>/winback")
+@subscriptions_bp.post("/<int:customer_id>/<int:subscription_id>")
 def complete_winback(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
     if not isinstance(payload, dict):

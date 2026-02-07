@@ -377,21 +377,21 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(update_response.get_json()["subscription"]["duration"], "2-jaar")
 
         resend_response = self.client.post(
-            "/api/v1/subscriptions/1/1/resend",
+            "/api/v1/subscriptions/1/1/complaint",
             json={"reason": "damaged"},
         )
         self.assertEqual(resend_response.status_code, 200)
         self.assertIn("entry", resend_response.get_json())
 
         winback_accept_response = self.client.post(
-            "/api/v1/subscriptions/1/1/winback",
+            "/api/v1/subscriptions/1/1",
             json={"result": "accepted", "offer": {"title": "Speciale deal"}},
         )
         self.assertEqual(winback_accept_response.status_code, 200)
         self.assertEqual(winback_accept_response.get_json()["status"], "retained")
 
         winback_decline_response = self.client.post(
-            "/api/v1/subscriptions/1/5/winback",
+            "/api/v1/subscriptions/1/5",
             json={"result": "declined"},
         )
         self.assertEqual(winback_decline_response.status_code, 200)
