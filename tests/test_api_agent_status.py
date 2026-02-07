@@ -17,6 +17,11 @@ class AgentStatusApiTests(unittest.TestCase):
         app.config["TEAMS_PRESENCE_SYNC_ENABLED"] = True
         app.register_blueprint(agent_status_bp, url_prefix="/api/v1/agent-status")
         self.client = app.test_client()
+        with self.client.session_transaction() as session_data:
+            session_data["oidc_auth_profile"] = {
+                "name": "Test Agent",
+                "roles": ["bink8s.app.kiwi.user"],
+            }
 
     def test_get_returns_local_default_when_teams_status_is_unavailable(self):
         with mock.patch(

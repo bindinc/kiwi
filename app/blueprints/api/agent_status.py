@@ -1,5 +1,6 @@
 from flask import Blueprint, current_app, request, session
 
+from blueprints.api.common import require_api_access
 from services import teams_presence_sync
 
 BLUEPRINT_NAME = "agent_status_api"
@@ -22,6 +23,11 @@ def normalize_status(value: object) -> str | None:
     return None
 
 agent_status_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=URL_PREFIX)
+
+
+@agent_status_bp.before_request
+def enforce_api_access():
+    return require_api_access()
 
 
 def get_current_status() -> str:
