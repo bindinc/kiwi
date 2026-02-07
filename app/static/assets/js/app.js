@@ -35,6 +35,7 @@ const bootstrapApiUrl = '/api/v1/bootstrap';
 const offersApiUrl = '/api/v1/catalog/offers';
 const customersStateApiUrl = '/api/v1/customers/state';
 const customersApiUrl = '/api/v1/customers';
+const subscriptionsApiUrl = '/api/v1/subscriptions';
 const workflowsApiUrl = '/api/v1/workflows';
 const callQueueApiUrl = '/api/v1/call-queue';
 const callSessionApiUrl = '/api/v1/call-session';
@@ -4121,7 +4122,7 @@ async function resendMagazine() {
 
     if (window.kiwiApi) {
         try {
-            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/subscriptions/${subId}/resend`, { reason });
+            await window.kiwiApi.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subId}/resend`, { reason });
             closeForm('resendMagazineForm');
             showToast(
                 translate('resend.editionResent', { magazine: subscription.magazine }, `Editie van ${subscription.magazine} wordt opnieuw verzonden!`),
@@ -4331,7 +4332,7 @@ async function saveSubscriptionEdit(event) {
 
     if (window.kiwiApi) {
         try {
-            await window.kiwiApi.patch(`${customersApiUrl}/${currentCustomer.id}/subscriptions/${subId}`, updates);
+            await window.kiwiApi.patch(`${subscriptionsApiUrl}/${currentCustomer.id}/${subId}`, updates);
 
             const oldPricing = subscriptionPricing[oldDuration]?.description || 'onbekend';
             const newPricing = subscriptionPricing[updates.duration]?.description || 'onbekend';
@@ -4859,7 +4860,7 @@ async function completeRestitutionTransfer(event) {
     if (window.kiwiApi) {
         try {
             await window.kiwiApi.post(
-                `${customersApiUrl}/${currentCustomer.id}/subscriptions/${subscriptionId}/restitution-transfer`,
+                `${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}/restitution-transfer`,
                 { transferData }
             );
         } catch (error) {
@@ -4986,7 +4987,7 @@ async function completeAllDeceasedActions() {
     
     if (window.kiwiApi) {
         try {
-            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/subscriptions/deceased-actions`, {
+            await window.kiwiApi.post(`${subscriptionsApiUrl}/${currentCustomer.id}/deceased-actions`, {
                 actions: actionsPayload
             });
         } catch (error) {
@@ -5141,7 +5142,7 @@ async function completeWinback() {
     
     if (window.kiwiApi) {
         try {
-            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/subscriptions/${subId}/winback`, {
+            await window.kiwiApi.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subId}/winback`, {
                 result: result.value,
                 offer: selectedOffer
             });

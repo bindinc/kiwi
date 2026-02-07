@@ -6,7 +6,7 @@ from blueprints.api.common import api_error, parse_int_value
 from services import poc_state
 
 BLUEPRINT_NAME = "subscriptions_api"
-URL_PREFIX = "/customers"
+URL_PREFIX = "/subscriptions"
 
 subscriptions_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=URL_PREFIX)
 
@@ -18,7 +18,7 @@ def _find_subscription(customer: dict, subscription_id: int) -> dict | None:
     return None
 
 
-@subscriptions_bp.patch("/<int:customer_id>/subscriptions/<int:subscription_id>")
+@subscriptions_bp.patch("/<int:customer_id>/<int:subscription_id>")
 def update_subscription(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
     if not isinstance(payload, dict):
@@ -40,7 +40,7 @@ def update_subscription(customer_id: int, subscription_id: int) -> tuple[dict, i
     return {"subscription": subscription}, 200
 
 
-@subscriptions_bp.post("/<int:customer_id>/subscriptions/<int:subscription_id>/resend")
+@subscriptions_bp.post("/<int:customer_id>/<int:subscription_id>/resend")
 def resend_subscription(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
     if not isinstance(payload, dict):
@@ -77,7 +77,7 @@ def resend_subscription(customer_id: int, subscription_id: int) -> tuple[dict, i
     return {"subscription": subscription, "entry": entry}, 200
 
 
-@subscriptions_bp.post("/<int:customer_id>/subscriptions/<int:subscription_id>/winback")
+@subscriptions_bp.post("/<int:customer_id>/<int:subscription_id>/winback")
 def complete_winback(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
     if not isinstance(payload, dict):
@@ -123,7 +123,7 @@ def complete_winback(customer_id: int, subscription_id: int) -> tuple[dict, int]
     return response, 200
 
 
-@subscriptions_bp.post("/<int:customer_id>/subscriptions/deceased-actions")
+@subscriptions_bp.post("/<int:customer_id>/deceased-actions")
 def process_deceased_actions(customer_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
     if not isinstance(payload, dict):
@@ -189,7 +189,7 @@ def process_deceased_actions(customer_id: int) -> tuple[dict, int]:
     return {"processed": processed}, 200
 
 
-@subscriptions_bp.post("/<int:customer_id>/subscriptions/<int:subscription_id>/restitution-transfer")
+@subscriptions_bp.post("/<int:customer_id>/<int:subscription_id>/restitution-transfer")
 def complete_restitution_transfer(customer_id: int, subscription_id: int) -> tuple[dict, int]:
     payload = request.get_json(silent=True) or {}
     if not isinstance(payload, dict):

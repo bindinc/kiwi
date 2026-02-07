@@ -370,28 +370,28 @@ class PocApiV1Tests(unittest.TestCase):
         self._authenticate()
 
         update_response = self.client.patch(
-            "/api/v1/customers/1/subscriptions/1",
+            "/api/v1/subscriptions/1/1",
             json={"status": "active", "duration": "2-jaar"},
         )
         self.assertEqual(update_response.status_code, 200)
         self.assertEqual(update_response.get_json()["subscription"]["duration"], "2-jaar")
 
         resend_response = self.client.post(
-            "/api/v1/customers/1/subscriptions/1/resend",
+            "/api/v1/subscriptions/1/1/resend",
             json={"reason": "damaged"},
         )
         self.assertEqual(resend_response.status_code, 200)
         self.assertIn("entry", resend_response.get_json())
 
         winback_accept_response = self.client.post(
-            "/api/v1/customers/1/subscriptions/1/winback",
+            "/api/v1/subscriptions/1/1/winback",
             json={"result": "accepted", "offer": {"title": "Speciale deal"}},
         )
         self.assertEqual(winback_accept_response.status_code, 200)
         self.assertEqual(winback_accept_response.get_json()["status"], "retained")
 
         winback_decline_response = self.client.post(
-            "/api/v1/customers/1/subscriptions/5/winback",
+            "/api/v1/subscriptions/1/5/winback",
             json={"result": "declined"},
         )
         self.assertEqual(winback_decline_response.status_code, 200)
@@ -403,7 +403,7 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertFalse(any(int(subscription["id"]) == 5 for subscription in remaining_subscriptions))
 
         deceased_response = self.client.post(
-            "/api/v1/customers/4/subscriptions/deceased-actions",
+            "/api/v1/subscriptions/4/deceased-actions",
             json={
                 "actions": [
                     {
@@ -431,7 +431,7 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(len(processed), 2)
 
         restitution_transfer_response = self.client.post(
-            "/api/v1/customers/2/subscriptions/3/restitution-transfer",
+            "/api/v1/subscriptions/2/3/restitution-transfer",
             json={
                 "transferData": {
                     "name": "Nieuwe Ontvanger",
