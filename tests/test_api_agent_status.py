@@ -17,11 +17,42 @@ class AgentStatusApiTests(unittest.TestCase):
         app.config["TEAMS_PRESENCE_SYNC_ENABLED"] = True
         app.register_blueprint(agent_status_bp, url_prefix="/api/v1/agent-status")
         self.client = app.test_client()
+
+        self._set_authentication(["bink8s.app.kiwi.user"])
+
+    def _set_authentication(self, roles):
         with self.client.session_transaction() as session_data:
             session_data["oidc_auth_profile"] = {
                 "name": "Test Agent",
-                "roles": ["bink8s.app.kiwi.user"],
+                "roles": roles,
             }
+
+    def _clear_authentication(self):
+        with self.client.session_transaction() as session_data:
+            session_data.pop("oidc_auth_profile", None)
+            session_data.pop("oidc_auth_token", None)
+
+    def test_endpoints_require_authentication(self):
+        self._clear_authentication()
+
+        get_response = self.client.get("/api/v1/agent-status")
+        self.assertEqual(get_response.status_code, 401)
+        self.assertEqual(get_response.get_json()["error"]["code"], "unauthorized")
+
+        post_response = self.client.post("/api/v1/agent-status", json={"status": "ready"})
+        self.assertEqual(post_response.status_code, 401)
+        self.assertEqual(post_response.get_json()["error"]["code"], "unauthorized")
+
+    def test_endpoints_require_allowed_roles(self):
+        self._set_authentication(["no.access.role"])
+
+        get_response = self.client.get("/api/v1/agent-status")
+        self.assertEqual(get_response.status_code, 403)
+        self.assertEqual(get_response.get_json()["error"]["code"], "forbidden")
+
+        post_response = self.client.post("/api/v1/agent-status", json={"status": "ready"})
+        self.assertEqual(post_response.status_code, 403)
+        self.assertEqual(post_response.get_json()["error"]["code"], "forbidden")
 
     def test_get_returns_local_default_when_teams_status_is_unavailable(self):
         with mock.patch(

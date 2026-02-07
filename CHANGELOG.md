@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Sync Avaya call start to Teams `InACall` activity by using Graph session presence APIs for call-state updates.
 - Restrict automatic status changes to call transitions only: enter call -> `in_call`, leave call -> restore prior external/manual status.
 - Refactor `app.js`, `article-search.js`, and `delivery-date-picker.js` to remove mock/localStorage backend behavior and use authenticated `/api/v1` endpoints with a shared frontend API client.
+- Expand API unit tests to cover all migrated `/api/v1` POC endpoints, including catalog, customer, subscription, workflow, queue/session, debug-reset, and agent-status auth guards.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
