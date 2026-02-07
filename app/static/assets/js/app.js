@@ -43,8 +43,36 @@ const agentDisplayName = (() => {
     return fallbackName || 'Onbekende agent';
 })();
 
-const werfsleutelsUrl = 'static/assets/onepager_werfsleutels.md';
-const agentStatusApiUrl = 'api/v1/agent-status';
+const bootstrapApiUrl = '/api/v1/bootstrap';
+const werfsleutelsApiUrl = '/api/v1/catalog/werfsleutels';
+const winbackOffersApiUrl = '/api/v1/catalog/winback-offers';
+const customersStateApiUrl = '/api/v1/customers/state';
+const customersApiUrl = '/api/v1/customers';
+const workflowsApiUrl = '/api/v1/workflows';
+const callQueueApiUrl = '/api/v1/call-queue';
+const callSessionApiUrl = '/api/v1/call-session';
+const debugResetApiUrl = '/api/v1/debug/reset-poc-state';
+const agentStatusApiUrl = '/api/v1/agent-status';
+
+let bootstrapState = null;
+
+function upsertCustomerInCache(customer) {
+    if (!customer || typeof customer !== 'object' || customer.id === undefined || customer.id === null) {
+        return;
+    }
+
+    const customerId = Number(customer.id);
+    const existingIndex = customers.findIndex((entry) => Number(entry.id) === customerId);
+    if (existingIndex >= 0) {
+        customers[existingIndex] = customer;
+    } else {
+        customers.push(customer);
+    }
+
+    if (currentCustomer && Number(currentCustomer.id) === customerId) {
+        currentCustomer = customer;
+    }
+}
 
 // Phase 1A: Call Session State Management
 let callSession = {
@@ -225,22 +253,20 @@ async function ensureWerfsleutelsLoaded() {
     werfsleutelLoadAttempted = true;
 
     try {
-        const response = await fetch(werfsleutelsUrl, { cache: 'no-store' });
-        if (!response.ok) {
-            throw new Error(`Kan werfsleutels niet laden (${response.status})`);
-        }
-
-        const markdown = await response.text();
-        const parsed = convertMarkdownToWerfsleutels(markdown);
-
-        if (parsed.length > 0) {
-            werfsleutelCatalog = parsed;
+        if (window.kiwiApi) {
+            const payload = await window.kiwiApi.get(`${werfsleutelsApiUrl}?limit=250`);
+            const items = Array.isArray(payload && payload.items) ? payload.items : [];
+            if (items.length > 0) {
+                werfsleutelCatalog = items;
+            } else {
+                console.warn('Geen werfsleutels gevonden via API, fallback wordt gebruikt.');
+                werfsleutelCatalog = [...fallbackWerfsleutels];
+            }
         } else {
-            console.warn('Geen werfsleutels gevonden in markdown, fallback wordt gebruikt.');
             werfsleutelCatalog = [...fallbackWerfsleutels];
         }
     } catch (error) {
-        console.warn('Fout bij laden van werfsleutels, fallback wordt gebruikt.', error);
+        console.warn('Fout bij laden van werfsleutels via API, fallback wordt gebruikt.', error);
         werfsleutelCatalog = [...fallbackWerfsleutels];
     }
 }
@@ -1285,7 +1311,20 @@ function pushContactHistory(customer, entry, options = {}) {
     customer.contactHistory.unshift(normalizedEntry);
 
     if (persist) {
-        saveCustomers();
+        if (window.kiwiApi && customer.id !== undefined && customer.id !== null) {
+            window.kiwiApi
+                .post(`${customersApiUrl}/${customer.id}/contact-history`, normalizedEntry)
+                .then((savedEntry) => {
+                    if (savedEntry && savedEntry.id) {
+                        normalizedEntry.id = savedEntry.id;
+                    }
+                })
+                .catch((error) => {
+                    console.warn('Kon contacthistorie niet opslaan via API', error);
+                });
+        } else {
+            saveCustomers();
+        }
     }
 
     const isCurrentCustomer = currentCustomer && currentCustomer.id === customer.id;
@@ -1396,6 +1435,7 @@ function startCallSession() {
     
     // Update "Dit is de beller" knoppen zichtbaarheid
     updateIdentifyCallerButtons();
+    saveCallSession();
 }
 
 // Update Call Duration Timer
@@ -1407,15 +1447,16 @@ function updateCallDuration() {
 }
 
 // End Call Session
-function endCallSession(forcedByCustomer = false) {
+async function endCallSession(forcedByCustomer = false) {
     if (!callSession.active) return;
-    
+
     const callDuration = Math.floor((Date.now() - callSession.startTime) / 1000);
     agentStatus.callsHandled += 1;
     updateAgentWorkSummary();
-    
-    // Voeg contact moment toe als beller geïdentificeerd was
-    if (callSession.customerId) {
+
+    // Voeg contact moment toe als beller geïdentificeerd was.
+    // Bij API-mode doet de backend dit.
+    if (callSession.customerId && !window.kiwiApi) {
         const endReason = forcedByCustomer ? 'call_ended_by_customer' : 'call_ended_by_agent';
         addContactMoment(
             callSession.customerId,
@@ -1423,40 +1464,56 @@ function endCallSession(forcedByCustomer = false) {
             `${callSession.serviceNumber} call beëindigd (duur: ${formatTime(callDuration)}, wacht: ${formatTime(callSession.waitTime)})`
         );
     }
-    
+
+    if (window.kiwiApi) {
+        try {
+            const payload = await window.kiwiApi.post('/api/v1/call-session/end', { forcedByCustomer });
+            if (payload && typeof payload === 'object') {
+                lastCallSession = payload.last_call_session || lastCallSession;
+                const serverSession = payload.call_session;
+                if (serverSession && typeof serverSession === 'object') {
+                    callSession = {
+                        ...callSession,
+                        ...serverSession
+                    };
+                }
+            }
+        } catch (error) {
+            console.warn('Kon beëindigde call niet naar backend syncen', error);
+        }
+    } else {
+        lastCallSession = {
+            customerId: callSession.customerId,
+            customerName: callSession.customerName,
+            serviceNumber: callSession.serviceNumber,
+            waitTime: callSession.waitTime,
+            startTime: callSession.startTime,
+            callDuration: callDuration,
+            totalHoldTime: callSession.totalHoldTime
+        };
+        callSession = {
+            active: false,
+            callerType: 'anonymous',
+            customerId: null,
+            customerName: null,
+            serviceNumber: null,
+            waitTime: 0,
+            startTime: null,
+            pendingIdentification: null,
+            durationInterval: null,
+            recordingActive: false,
+            totalHoldTime: 0,
+            holdStartTime: null,
+            onHold: false
+        };
+    }
+
     // Stop timer
     if (callSession.durationInterval) {
         clearInterval(callSession.durationInterval);
     }
-    
-    // Save call session data for ACW/disposition
-    lastCallSession = {
-        customerId: callSession.customerId,
-        customerName: callSession.customerName,
-        serviceNumber: callSession.serviceNumber,
-        waitTime: callSession.waitTime,
-        startTime: callSession.startTime,
-        callDuration: callDuration,
-        totalHoldTime: callSession.totalHoldTime
-    };
-    
-    // Reset session state
-    callSession = {
-        active: false,
-        callerType: 'anonymous',
-        customerId: null,
-        customerName: null,
-        serviceNumber: null,
-        waitTime: 0,
-        startTime: null,
-        pendingIdentification: null,
-        durationInterval: null,
-        recordingActive: false,
-        totalHoldTime: 0,
-        holdStartTime: null,
-        onHold: false
-    };
-    
+    callSession.durationInterval = null;
+
     // Verberg UI elementen
     document.getElementById('sessionInfo').style.display = 'none';
     const holdBtn = document.getElementById('holdCallBtn');
@@ -1468,25 +1525,24 @@ function endCallSession(forcedByCustomer = false) {
         debugEndBtn.style.display = 'none';
     }
     updateIdentifyCallerButtons();
-    
+
     // Update agent status naar ACW (will be implemented in Phase 5)
     autoSetAgentStatus('call_ended');
-    
+
     // Na gesprek: check of er meer bellers zijn in queue
     if (callQueue.enabled && callQueue.queue.length > 0 && callQueue.autoAdvance) {
-        // Update queue display zodat volgende beller zichtbaar wordt
         setTimeout(() => {
             updateQueueDisplay();
         }, 1000);
     }
-    
+
     if (!forcedByCustomer) {
         showToast(translate('calls.ended', {}, 'Gesprek beëindigd'), 'success');
     }
 }
 
 // Identify Caller as Customer
-function identifyCallerAsCustomer(customerId) {
+async function identifyCallerAsCustomer(customerId) {
     if (!callSession.active || callSession.callerType !== 'anonymous') {
         return;
     }
@@ -1497,10 +1553,28 @@ function identifyCallerAsCustomer(customerId) {
         return;
     }
     
-    // Update sessie state
-    callSession.callerType = 'identified';
-    callSession.customerId = customerId;
-    callSession.customerName = `${customer.initials || customer.firstName} ${customer.middleName ? customer.middleName + ' ' : ''}${customer.lastName}`;
+    if (window.kiwiApi) {
+        try {
+            const payload = await window.kiwiApi.post(`${callSessionApiUrl}/identify-caller`, { customerId });
+            if (payload && typeof payload === 'object') {
+                callSession = {
+                    ...callSession,
+                    ...payload
+                };
+            }
+        } catch (error) {
+            showToast(error.message || 'Identificatie via backend mislukt', 'error');
+            return;
+        }
+    } else {
+        callSession.callerType = 'identified';
+        callSession.customerId = customerId;
+        callSession.customerName = `${customer.initials || customer.firstName} ${customer.middleName ? customer.middleName + ' ' : ''}${customer.lastName}`;
+    }
+
+    if (!callSession.customerName) {
+        callSession.customerName = `${customer.initials || customer.firstName} ${customer.middleName ? customer.middleName + ' ' : ''}${customer.lastName}`;
+    }
     
     // Update UI
     document.getElementById('sessionCallerName').textContent = callSession.customerName;
@@ -1508,9 +1582,12 @@ function identifyCallerAsCustomer(customerId) {
     // Verberg alle "Dit is de beller" knoppen
     updateIdentifyCallerButtons();
     
-    // Voeg contact moment toe
-    addContactMoment(customerId, 'call_identified', 
-        `Beller geïdentificeerd tijdens ${callSession.serviceNumber} call`);
+    // Voeg contact moment toe (backend regelt dit in API-mode)
+    if (!window.kiwiApi) {
+        addContactMoment(customerId, 'call_identified',
+            `Beller geïdentificeerd tijdens ${callSession.serviceNumber} call`);
+        saveCallSession();
+    }
     
     showToast(translate('calls.identifiedAs', { name: callSession.customerName }, `Beller geïdentificeerd als ${callSession.customerName}`), 'success');
 }
@@ -1536,10 +1613,29 @@ function updateIdentifyCallerButtons() {
 // ============================================================================
 
 // Toggle Call Hold
-function toggleCallHold() {
+async function toggleCallHold() {
     if (!callSession.active) return;
-    
-    callSession.onHold = !callSession.onHold;
+
+    const willHold = !callSession.onHold;
+    const previousHoldStart = callSession.holdStartTime;
+
+    if (window.kiwiApi) {
+        try {
+            const endpoint = willHold ? `${callSessionApiUrl}/hold` : `${callSessionApiUrl}/resume`;
+            const payload = await window.kiwiApi.post(endpoint, {});
+            if (payload && typeof payload === 'object') {
+                callSession = {
+                    ...callSession,
+                    ...payload
+                };
+            }
+        } catch (error) {
+            showToast(error.message || 'Call hold/resume via backend mislukt', 'error');
+            return;
+        }
+    } else {
+        callSession.onHold = willHold;
+    }
     
     const holdBtn = document.getElementById('holdCallBtn');
     const sessionInfo = document.getElementById('sessionInfo');
@@ -1559,8 +1655,9 @@ function toggleCallHold() {
         holdIndicator.innerHTML = '🎵 Klant in wacht';
         sessionInfo.appendChild(holdIndicator);
         
-        // Track hold time
-        callSession.holdStartTime = Date.now();
+        if (!window.kiwiApi) {
+            callSession.holdStartTime = Date.now();
+        }
         
         showToast(translate('calls.onHold', {}, 'Gesprek in wacht gezet'), 'info');
         
@@ -1584,8 +1681,11 @@ function toggleCallHold() {
         if (holdIndicator) holdIndicator.remove();
         
         // Calculate hold duration
-        const holdDuration = Math.floor((Date.now() - callSession.holdStartTime) / 1000);
-        callSession.totalHoldTime = (callSession.totalHoldTime || 0) + holdDuration;
+        const startedAt = previousHoldStart || callSession.holdStartTime;
+        const holdDuration = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+        if (!window.kiwiApi) {
+            callSession.totalHoldTime = (callSession.totalHoldTime || 0) + holdDuration;
+        }
         
         showToast(
             translate('calls.resumed', { duration: formatTime(holdDuration) }, `Gesprek hervat (wacht: ${formatTime(holdDuration)})`),
@@ -1600,6 +1700,10 @@ function toggleCallHold() {
                 `Gesprek hervat na ${formatTime(holdDuration)} wachttijd`
             );
         }
+    }
+
+    if (!window.kiwiApi) {
+        saveCallSession();
     }
 }
 
@@ -1817,21 +1921,11 @@ function applyAgentStatusLocally(newStatus, options = {}) {
 
 async function syncAgentStatusWithBackend(newStatus) {
     try {
-        const response = await fetch(agentStatusApiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ status: newStatus })
-        });
-
-        if (!response.ok) {
-            console.warn(`Agent status sync failed with HTTP ${response.status}`);
+        if (!window.kiwiApi) {
             return null;
         }
 
-        const payload = await response.json();
+        const payload = await window.kiwiApi.post(agentStatusApiUrl, { status: newStatus });
         const serverStatus = normalizeAgentStatus(payload && payload.status);
         const teamsSyncResult = payload && payload.teams_sync ? payload.teams_sync : null;
 
@@ -1859,18 +1953,11 @@ async function syncAgentStatusWithBackend(newStatus) {
 
 async function initializeAgentStatusFromBackend() {
     try {
-        const response = await fetch(agentStatusApiUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
+        if (!window.kiwiApi) {
             return;
         }
 
-        const payload = await response.json();
+        const payload = await window.kiwiApi.get(agentStatusApiUrl);
         const serverStatus = normalizeAgentStatus(payload && payload.status);
         const teamsSyncResult = payload && payload.teams_sync ? payload.teams_sync : null;
 
@@ -2322,36 +2409,64 @@ function cancelDisposition() {
 // ============================================================================
 
 /**
- * Initialize queue from localStorage
+ * Initialize queue from API-backed session state
  */
 function initializeQueue() {
-    const savedQueue = localStorage.getItem('callQueue');
-    if (savedQueue) {
-        try {
-            callQueue = JSON.parse(savedQueue);
+    if (!window.kiwiApi) {
+        updateQueueDisplay();
+        updateDebugQueuePreview();
+        return;
+    }
+
+    window.kiwiApi.get(callQueueApiUrl).then((payload) => {
+        if (payload && typeof payload === 'object') {
+            callQueue = {
+                ...callQueue,
+                ...payload
+            };
             updateQueueDisplay();
             updateDebugQueuePreview();
-        } catch (e) {
-            console.error('Error loading queue from localStorage:', e);
-            callQueue = {
-                enabled: false,
-                queue: [],
-                currentPosition: 0,
-                autoAdvance: true
-            };
         }
-    }
+    }).catch((error) => {
+        console.error('Error loading queue from API:', error);
+        updateQueueDisplay();
+        updateDebugQueuePreview();
+    });
 }
 
 /**
- * Save queue to localStorage
+ * Persist queue to authenticated API state
  */
 function saveQueue() {
-    try {
-        localStorage.setItem('callQueue', JSON.stringify(callQueue));
-    } catch (e) {
-        console.error('Error saving queue to localStorage:', e);
+    if (!window.kiwiApi) {
+        return;
     }
+
+    const queuePayload = {
+        enabled: Boolean(callQueue.enabled),
+        queue: Array.isArray(callQueue.queue) ? callQueue.queue : [],
+        currentPosition: Number(callQueue.currentPosition || 0),
+        autoAdvance: callQueue.autoAdvance !== false
+    };
+
+    window.kiwiApi.put(callQueueApiUrl, queuePayload).catch((error) => {
+        console.error('Error saving queue to API:', error);
+    });
+}
+
+function saveCallSession() {
+    if (!window.kiwiApi) {
+        return;
+    }
+
+    const payload = {
+        ...callSession
+    };
+    delete payload.durationInterval;
+
+    window.kiwiApi.put(callSessionApiUrl, payload).catch((error) => {
+        console.error('Error saving call session to API:', error);
+    });
 }
 
 /**
@@ -2393,36 +2508,39 @@ function generateQueueEntry(customerId = null, callerType = 'anonymous') {
  * Generate queue with specified size and mix
  * Called from debug menu
  */
-function debugGenerateQueue() {
+async function debugGenerateQueue() {
     const queueSize = parseInt(document.getElementById('debugQueueSize')?.value) || 5;
     const queueMix = document.getElementById('debugQueueMix')?.value || 'balanced';
-    
-    // Clear bestaande queue
-    callQueue.queue = [];
-    callQueue.currentPosition = 0;
-    
-    // Bepaal verdeling
-    let knownPercentage = 0.5;
-    switch(queueMix) {
-        case 'mostly_known': knownPercentage = 0.8; break;
-        case 'mostly_anonymous': knownPercentage = 0.2; break;
-        case 'all_known': knownPercentage = 1.0; break;
-        case 'all_anonymous': knownPercentage = 0.0; break;
-    }
-    
-    // Genereer queue entries
-    for (let i = 0; i < queueSize; i++) {
-        const isKnown = Math.random() < knownPercentage && customers.length > 0;
-        
-        if (isKnown) {
-            const randomCustomer = customers[Math.floor(Math.random() * customers.length)];
-            callQueue.queue.push(generateQueueEntry(randomCustomer.id, 'known'));
-        } else {
-            callQueue.queue.push(generateQueueEntry(null, 'anonymous'));
+
+    if (window.kiwiApi) {
+        try {
+            const payload = await window.kiwiApi.post('/api/v1/call-queue/debug-generate', {
+                queueSize,
+                queueMix
+            });
+            callQueue = {
+                ...callQueue,
+                ...(payload || {})
+            };
+        } catch (error) {
+            showToast(error.message || 'Queue genereren via backend mislukt', 'error');
+            return;
         }
+    } else {
+        // Clear bestaande queue
+        callQueue.queue = [];
+        callQueue.currentPosition = 0;
+        for (let i = 0; i < queueSize; i++) {
+            const randomCustomer = customers[i % Math.max(customers.length, 1)];
+            if (randomCustomer) {
+                callQueue.queue.push(generateQueueEntry(randomCustomer.id, 'known'));
+            } else {
+                callQueue.queue.push(generateQueueEntry(null, 'anonymous'));
+            }
+        }
+        callQueue.enabled = true;
     }
-    
-    callQueue.enabled = true;
+
     saveQueue();
     updateQueueDisplay();
     updateDebugQueuePreview();
@@ -2525,7 +2643,7 @@ function startQueueWaitTimeUpdate() {
         // Update debug preview if visible
         updateDebugQueuePreview();
         
-        // Save to localStorage periodically (every 5 seconds to reduce writes)
+        // Persist queue state periodically (every 5 seconds to reduce writes)
         if (nextCaller && nextCaller.waitTime % 5 === 0) {
             saveQueue();
         }
@@ -2545,18 +2663,32 @@ function stopQueueWaitTimeUpdate() {
 /**
  * Clear queue (debug function)
  */
-function debugClearQueue() {
+async function debugClearQueue() {
     if (confirm('🗑️ Wachtrij volledig wissen?')) {
         // Stop wait time updates
         stopQueueWaitTimeUpdate();
-        
-        callQueue = {
-            enabled: false,
-            queue: [],
-            currentPosition: 0,
-            autoAdvance: true,
-            waitTimeInterval: null
-        };
+
+        if (window.kiwiApi) {
+            try {
+                const payload = await window.kiwiApi.delete('/api/v1/call-queue');
+                callQueue = {
+                    ...callQueue,
+                    ...(payload || {}),
+                    waitTimeInterval: null
+                };
+            } catch (error) {
+                showToast(error.message || 'Queue wissen via backend mislukt', 'error');
+                return;
+            }
+        } else {
+            callQueue = {
+                enabled: false,
+                queue: [],
+                currentPosition: 0,
+                autoAdvance: true,
+                waitTimeInterval: null
+            };
+        }
         
         saveQueue();
         updateQueueDisplay();
@@ -2627,7 +2759,7 @@ function formatTime(seconds) {
 /**
  * Accept next call from queue
  */
-function acceptNextCall() {
+async function acceptNextCall() {
     if (!callQueue.enabled || callQueue.queue.length === 0) {
         showToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
         return;
@@ -2647,8 +2779,29 @@ function acceptNextCall() {
         return;
     }
     
-    // Haal eerste entry uit queue
-    const nextEntry = callQueue.queue.shift();
+    let nextEntry = null;
+    if (window.kiwiApi) {
+        try {
+            const payload = await window.kiwiApi.post('/api/v1/call-queue/accept-next', {});
+            nextEntry = payload && payload.accepted ? payload.accepted : null;
+            if (payload && payload.call_queue) {
+                callQueue = {
+                    ...callQueue,
+                    ...payload.call_queue
+                };
+            }
+        } catch (error) {
+            showToast(error.message || 'Volgende call ophalen via backend mislukt', 'error');
+            return;
+        }
+    } else {
+        // Haal eerste entry uit queue
+        nextEntry = callQueue.queue.shift();
+    }
+    if (!nextEntry) {
+        showToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
+        return;
+    }
     
     // Start call session met queue entry data
     startCallFromQueue(nextEntry);
@@ -2698,7 +2851,8 @@ function startCallFromQueue(queueEntry) {
 }
 
 // Initialize App
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadBootstrapState();
     initializeData();
     initializeQueue();
     updateTime();
@@ -2726,11 +2880,52 @@ document.addEventListener('DOMContentLoaded', () => {
     setAdditionalFiltersOpen(hasAdvancedValues);
 });
 
+async function loadBootstrapState() {
+    if (!window.kiwiApi) {
+        bootstrapState = null;
+        return;
+    }
+
+    try {
+        bootstrapState = await window.kiwiApi.get(bootstrapApiUrl);
+    } catch (error) {
+        console.warn('Kon bootstrap state niet laden, fallback wordt gebruikt.', error);
+        bootstrapState = null;
+    }
+}
+
 // Initialize Demo Data
 function initializeData() {
-    const savedCustomers = localStorage.getItem('customers');
-    if (savedCustomers) {
-        customers = JSON.parse(savedCustomers);
+    if (bootstrapState && Array.isArray(bootstrapState.customers)) {
+        customers = bootstrapState.customers;
+
+        if (bootstrapState.call_queue && typeof bootstrapState.call_queue === 'object') {
+            callQueue = {
+                ...callQueue,
+                ...bootstrapState.call_queue
+            };
+        }
+
+        if (bootstrapState.call_session && typeof bootstrapState.call_session === 'object') {
+            callSession = {
+                ...callSession,
+                ...bootstrapState.call_session
+            };
+        }
+
+        lastCallSession = bootstrapState.last_call_session || null;
+
+        const servicePayload = bootstrapState.catalog && bootstrapState.catalog.serviceNumbers;
+        if (servicePayload && typeof servicePayload === 'object') {
+            Object.keys(serviceNumbers).forEach((key) => {
+                if (servicePayload[key]) {
+                    serviceNumbers[key] = {
+                        ...serviceNumbers[key],
+                        ...servicePayload[key]
+                    };
+                }
+            });
+        }
     } else {
         customers = [
             {
@@ -2985,13 +3180,18 @@ function initializeData() {
                 ]
             }
         ];
-        saveCustomers();
     }
 }
 
-// Save Customers to LocalStorage
+// Persist Customers to authenticated API state
 function saveCustomers() {
-    localStorage.setItem('customers', JSON.stringify(customers));
+    if (!window.kiwiApi) {
+        return;
+    }
+
+    window.kiwiApi.put(customersStateApiUrl, { customers }).catch((error) => {
+        console.error('Kon klantstaat niet opslaan via API', error);
+    });
 }
 
 // Update Customer Action Buttons visibility
@@ -3114,18 +3314,40 @@ function toggleAdditionalFilters() {
     setAdditionalFiltersOpen(willOpen);
 }
 
-function searchCustomer() {
+async function searchCustomer() {
     const filters = getSearchFilters();
+    let results = [];
 
-    const results = customers.filter(customer => {
-        const matchPostal = !filters.postalCode || customer.postalCode === filters.postalCode;
-        const matchHouse = !filters.houseNumber || customer.houseNumber === filters.houseNumber;
-        const matchName = matchesCustomerName(customer, filters.name);
-        const matchPhone = matchesCustomerPhone(customer, filters.phone);
-        const matchEmail = matchesCustomerEmail(customer, filters.email);
-        
-        return matchPostal && matchHouse && matchName && matchPhone && matchEmail;
-    });
+    if (window.kiwiApi) {
+        const query = new URLSearchParams();
+        if (filters.postalCode) query.set('postalCode', filters.postalCode);
+        if (filters.houseNumber) query.set('houseNumber', filters.houseNumber);
+        if (filters.name) query.set('name', filters.name);
+        if (filters.phone) query.set('phone', filters.phone);
+        if (filters.email) query.set('email', filters.email);
+        query.set('sortBy', searchState.sortBy || 'name');
+        query.set('page', '1');
+        query.set('pageSize', '200');
+
+        try {
+            const payload = await window.kiwiApi.get(`/api/v1/customers?${query.toString()}`);
+            results = Array.isArray(payload && payload.items) ? payload.items : [];
+        } catch (error) {
+            console.error('Kon klanten niet zoeken via API', error);
+            showToast('Zoeken via backend mislukt', 'error');
+            return;
+        }
+    } else {
+        results = customers.filter(customer => {
+            const matchPostal = !filters.postalCode || customer.postalCode === filters.postalCode;
+            const matchHouse = !filters.houseNumber || customer.houseNumber === filters.houseNumber;
+            const matchName = matchesCustomerName(customer, filters.name);
+            const matchPhone = matchesCustomerPhone(customer, filters.phone);
+            const matchEmail = matchesCustomerEmail(customer, filters.email);
+            
+            return matchPostal && matchHouse && matchName && matchPhone && matchEmail;
+        });
+    }
 
     // Update search state
     searchState.results = results;
@@ -3558,8 +3780,26 @@ function displaySearchResults(results) {
 }
 
 // Select Customer
-function selectCustomer(customerId) {
-    currentCustomer = customers.find(c => c.id === customerId);
+async function selectCustomer(customerId) {
+    let customer = customers.find(c => c.id === customerId);
+
+    if (window.kiwiApi) {
+        try {
+            customer = await window.kiwiApi.get(`/api/v1/customers/${customerId}`);
+            const existingIndex = customers.findIndex(c => c.id === customerId);
+            if (existingIndex >= 0) {
+                customers[existingIndex] = customer;
+            } else {
+                customers.push(customer);
+            }
+        } catch (error) {
+            console.error('Kon klantdetail niet laden via API', error);
+            showToast('Kon klantdetail niet laden', 'error');
+            return;
+        }
+    }
+
+    currentCustomer = customer;
     if (!currentCustomer) return;
 
     contactHistoryState.currentPage = 1;
@@ -3770,7 +4010,7 @@ function displaySubscriptions() {
             return `
                 <div class="subscription-item subscription-transferred">
                     <div class="subscription-info">
-                        <div class="subscription-name">� ${sub.magazine}</div>
+                        <div class="subscription-name">📰 ${sub.magazine}</div>
                         <div class="subscription-details">
                             Start: ${formatDate(sub.startDate)} • 
                             Laatste editie: ${formatDate(sub.lastEdition)}<br>
@@ -4006,7 +4246,7 @@ function showNewSubscription() {
 }
 
 // Create Subscription
-function createSubscription(event) {
+async function createSubscription(event) {
     event.preventDefault();
 
     if (!werfsleutelState.selectedKey) {
@@ -4074,6 +4314,83 @@ function createSubscription(event) {
     const durationDisplay = formData.duration
         ? (subscriptionPricing[formData.duration]?.description || formData.durationLabel)
         : formData.durationLabel;
+
+    if (window.kiwiApi) {
+        const hadCurrentCustomer = Boolean(currentCustomer);
+        const subscriptionPayload = {
+            magazine: formData.magazine,
+            duration: formData.duration,
+            durationLabel: formData.durationLabel,
+            startDate: formData.startDate,
+            status: 'active',
+            lastEdition: new Date().toISOString().split('T')[0]
+        };
+        const contactEntry = {
+            type: hadCurrentCustomer ? 'Extra abonnement' : 'Nieuw abonnement',
+            description: hadCurrentCustomer
+                ? `Extra abonnement ${formData.magazine} (${durationDisplay}) toegevoegd. ${werfsleutelNote}.`
+                : `Abonnement ${formData.magazine} (${durationDisplay}) aangemaakt via telefonische bestelling. ${werfsleutelNote}.`
+        };
+        const payload = {
+            subscription: subscriptionPayload,
+            contactEntry
+        };
+
+        if (hadCurrentCustomer) {
+            payload.customerId = currentCustomer.id;
+        } else {
+            payload.customer = {
+                salutation: formData.salutation,
+                firstName: formData.firstName,
+                middleName: formData.middleName,
+                lastName: formData.lastName,
+                birthday: formData.birthday,
+                postalCode: formData.postalCode,
+                houseNumber: formData.houseNumber,
+                address: formData.address,
+                city: formData.city,
+                email: formData.email,
+                phone: formData.phone,
+                optinEmail: formData.optinEmail,
+                optinPhone: formData.optinPhone,
+                optinPost: formData.optinPost,
+                subscriptions: [],
+                articles: [],
+                contactHistory: []
+            };
+        }
+
+        try {
+            const response = await window.kiwiApi.post(`${workflowsApiUrl}/subscription-signup`, payload);
+            const savedCustomer = response && response.customer ? response.customer : null;
+
+            if (savedCustomer) {
+                upsertCustomerInCache(savedCustomer);
+            }
+
+            closeForm('newSubscriptionForm');
+            showToast(
+                hadCurrentCustomer
+                    ? translate('subscription.extraAdded', {}, 'Extra abonnement succesvol toegevoegd!')
+                    : translate('subscription.created', {}, 'Nieuw abonnement succesvol aangemaakt!'),
+                'success'
+            );
+
+            if (savedCustomer && savedCustomer.id) {
+                await selectCustomer(savedCustomer.id);
+                if (!hadCurrentCustomer) {
+                    showSuccessIdentificationPrompt(savedCustomer.id, `${savedCustomer.firstName} ${savedCustomer.lastName}`);
+                }
+            }
+        } catch (error) {
+            showToast(error.message || 'Abonnement aanmaken via backend mislukt', 'error');
+            return;
+        }
+
+        document.getElementById('subscriptionForm').reset();
+        resetWerfsleutelPicker();
+        return;
+    }
 
     // Check if this is for an existing customer
     if (currentCustomer) {
@@ -4198,7 +4515,7 @@ function editCustomer() {
 }
 
 // Save Customer Edit
-function saveCustomerEdit(event) {
+async function saveCustomerEdit(event) {
     event.preventDefault();
 
     const customerId = parseInt(document.getElementById('editCustomerId').value);
@@ -4209,26 +4526,57 @@ function saveCustomerEdit(event) {
     const birthday = ensureBirthdayValue('edit', false);
     if (birthday === null) return;
 
-    // Get form values
-    customer.salutation = document.querySelector('input[name="editSalutation"]:checked').value;
-    customer.firstName = document.getElementById('editInitials').value;
-    customer.middleName = document.getElementById('editMiddleName').value;
-    customer.lastName = document.getElementById('editLastName').value;
-    customer.birthday = birthday;
-    customer.postalCode = document.getElementById('editPostalCode').value.toUpperCase();
-    
+    const updates = {
+        salutation: document.querySelector('input[name="editSalutation"]:checked').value,
+        firstName: document.getElementById('editInitials').value,
+        middleName: document.getElementById('editMiddleName').value,
+        lastName: document.getElementById('editLastName').value,
+        birthday: birthday,
+        postalCode: document.getElementById('editPostalCode').value.toUpperCase()
+    };
+
     const houseNumber = document.getElementById('editHouseNumber').value;
     const houseExt = document.getElementById('editHouseExt').value;
-    customer.houseNumber = houseExt ? `${houseNumber}${houseExt}` : houseNumber;
-    customer.address = `${document.getElementById('editAddress').value} ${customer.houseNumber}`;
-    customer.city = document.getElementById('editCity').value;
-    customer.email = document.getElementById('editEmail').value;
-    customer.phone = document.getElementById('editPhone').value;
-    
-    // Save optin preferences
-    customer.optinEmail = document.querySelector('input[name="editOptinEmail"]:checked').value;
-    customer.optinPhone = document.querySelector('input[name="editOptinPhone"]:checked').value;
-    customer.optinPost = document.querySelector('input[name="editOptinPost"]:checked').value;
+    updates.houseNumber = houseExt ? `${houseNumber}${houseExt}` : houseNumber;
+    updates.address = `${document.getElementById('editAddress').value} ${updates.houseNumber}`;
+    updates.city = document.getElementById('editCity').value;
+    updates.email = document.getElementById('editEmail').value;
+    updates.phone = document.getElementById('editPhone').value;
+    updates.optinEmail = document.querySelector('input[name="editOptinEmail"]:checked').value;
+    updates.optinPhone = document.querySelector('input[name="editOptinPhone"]:checked').value;
+    updates.optinPost = document.querySelector('input[name="editOptinPost"]:checked').value;
+
+    if (window.kiwiApi) {
+        try {
+            await window.kiwiApi.patch(`${customersApiUrl}/${customerId}`, updates);
+            await window.kiwiApi.post(`${customersApiUrl}/${customerId}/contact-history`, {
+                type: 'Gegevens gewijzigd',
+                description: 'Klantgegevens bijgewerkt.'
+            });
+            closeForm('editCustomerForm');
+            showToast(translate('customer.updated', {}, 'Klantgegevens succesvol bijgewerkt!'), 'success');
+            await selectCustomer(customerId);
+        } catch (error) {
+            showToast(error.message || 'Klantgegevens bijwerken via backend mislukt', 'error');
+        }
+        return;
+    }
+
+    // Get form values
+    customer.salutation = updates.salutation;
+    customer.firstName = updates.firstName;
+    customer.middleName = updates.middleName;
+    customer.lastName = updates.lastName;
+    customer.birthday = updates.birthday;
+    customer.postalCode = updates.postalCode;
+    customer.houseNumber = updates.houseNumber;
+    customer.address = updates.address;
+    customer.city = updates.city;
+    customer.email = updates.email;
+    customer.phone = updates.phone;
+    customer.optinEmail = updates.optinEmail;
+    customer.optinPhone = updates.optinPhone;
+    customer.optinPost = updates.optinPost;
 
     // Add to contact history
     pushContactHistory(
@@ -4265,7 +4613,7 @@ function showResendMagazine() {
 }
 
 // Resend Magazine
-function resendMagazine() {
+async function resendMagazine() {
     const subId = parseInt(document.getElementById('resendSubscription').value);
     const reason = document.getElementById('resendReason').value;
     
@@ -4276,6 +4624,21 @@ function resendMagazine() {
 
     const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
     if (!subscription) return;
+
+    if (window.kiwiApi) {
+        try {
+            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/subscriptions/${subId}/resend`, { reason });
+            closeForm('resendMagazineForm');
+            showToast(
+                translate('resend.editionResent', { magazine: subscription.magazine }, `Editie van ${subscription.magazine} wordt opnieuw verzonden!`),
+                'success'
+            );
+            await selectCustomer(currentCustomer.id);
+        } catch (error) {
+            showToast(error.message || 'Opnieuw verzenden via backend mislukt', 'error');
+        }
+        return;
+    }
 
     // Add to contact history
     const reasonText = {
@@ -4334,7 +4697,7 @@ function showEditorialComplaintForm() {
 }
 
 // Submit Editorial Complaint
-function submitEditorialComplaint() {
+async function submitEditorialComplaint() {
     const magazine = document.getElementById('editorialComplaintMagazine').value;
     const type = document.getElementById('editorialComplaintType').value;
     const category = document.getElementById('editorialComplaintCategory').value;
@@ -4353,7 +4716,6 @@ function submitEditorialComplaint() {
         return;
     }
 
-    // Build contact history description
     const typeLabels = {
         'klacht': 'Klacht',
         'opmerking': 'Opmerking',
@@ -4371,6 +4733,29 @@ function submitEditorialComplaint() {
         'overig': 'Overig'
     };
 
+    if (window.kiwiApi) {
+        try {
+            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/editorial-complaints`, {
+                magazine,
+                type,
+                category,
+                description,
+                edition,
+                followup
+            });
+            closeForm('editorialComplaintForm');
+            showToast(
+                translate('editorial.registered', { typeLabel: typeLabels[type] }, `${typeLabels[type]} voor redactie geregistreerd!`),
+                'success'
+            );
+            await selectCustomer(currentCustomer.id);
+        } catch (error) {
+            showToast(error.message || 'Redactie-item registreren via backend mislukt', 'error');
+        }
+        return;
+    }
+
+    // Build contact history description
     let historyDescription = `${typeLabels[type]} voor redactie ${magazine} - ${categoryLabels[category]}. ${description}`;
     
     if (edition) {
@@ -4425,7 +4810,7 @@ function editSubscription(subId) {
 }
 
 // Save Subscription Edit
-function saveSubscriptionEdit(event) {
+async function saveSubscriptionEdit(event) {
     event.preventDefault();
     
     if (!currentCustomer) return;
@@ -4443,11 +4828,54 @@ function saveSubscriptionEdit(event) {
     const oldDuration = subscription.duration;
     const oldStatus = subscription.status;
     
+    const updates = {
+        magazine: document.getElementById('editSubMagazine').value,
+        duration: document.getElementById('editSubDuration').value,
+        startDate: document.getElementById('editSubStartDate').value,
+        status: document.getElementById('editSubStatus').value
+    };
+
+    if (window.kiwiApi) {
+        try {
+            await window.kiwiApi.patch(`${customersApiUrl}/${currentCustomer.id}/subscriptions/${subId}`, updates);
+
+            const oldPricing = subscriptionPricing[oldDuration]?.description || 'onbekend';
+            const newPricing = subscriptionPricing[updates.duration]?.description || 'onbekend';
+            const statusNames = {
+                'active': 'Actief',
+                'paused': 'Gepauzeerd',
+                'cancelled': 'Opgezegd'
+            };
+            const changes = [];
+            if (oldMagazine !== updates.magazine) {
+                changes.push(`Magazine gewijzigd van ${oldMagazine} naar ${updates.magazine}`);
+            }
+            if (oldDuration !== updates.duration) {
+                changes.push(`Duur gewijzigd van ${oldPricing} naar ${newPricing}`);
+            }
+            if (oldStatus !== updates.status) {
+                changes.push(`Status gewijzigd van ${statusNames[oldStatus]} naar ${statusNames[updates.status]}`);
+            }
+
+            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/contact-history`, {
+                type: 'Abonnement gewijzigd',
+                description: `Abonnement bewerkt. ${changes.join('. ')}.`
+            });
+
+            closeForm('editSubscriptionForm');
+            showToast(translate('subscription.updated', {}, 'Abonnement succesvol bijgewerkt!'), 'success');
+            await selectCustomer(currentCustomer.id);
+        } catch (error) {
+            showToast(error.message || 'Abonnement bijwerken via backend mislukt', 'error');
+        }
+        return;
+    }
+
     // Update subscription
-    subscription.magazine = document.getElementById('editSubMagazine').value;
-    subscription.duration = document.getElementById('editSubDuration').value;
-    subscription.startDate = document.getElementById('editSubStartDate').value;
-    subscription.status = document.getElementById('editSubStatus').value;
+    subscription.magazine = updates.magazine;
+    subscription.duration = updates.duration;
+    subscription.startDate = updates.startDate;
+    subscription.status = updates.status;
     
     // Build change description
     let changes = [];
@@ -4518,7 +4946,7 @@ function showWinbackFlow() {
 
     // If no subscription is selected yet, use the first active subscription
     if (!window.cancellingSubscriptionId && currentCustomer.subscriptions.length > 0) {
-        const activeSubscription = currentCustomer.subscriptions.find(s => s.status === 'Actief');
+        const activeSubscription = currentCustomer.subscriptions.find(s => s.status === 'active');
         if (activeSubscription) {
             window.cancellingSubscriptionId = activeSubscription.id;
         } else if (currentCustomer.subscriptions.length > 0) {
@@ -4537,7 +4965,7 @@ function showWinbackFlow() {
 }
 
 // Winback Next Step
-function winbackNextStep(stepNumber) {
+async function winbackNextStep(stepNumber) {
     // Validation
     if (stepNumber === 2) {
         const selectedReason = document.querySelector('input[name="cancelReason"]:checked');
@@ -4553,7 +4981,7 @@ function winbackNextStep(stepNumber) {
         }
         
         // Generate offers based on reason
-        generateWinbackOffers(selectedReason.value);
+        await generateWinbackOffers(selectedReason.value);
     }
     
     if (stepNumber === 3) {
@@ -4591,7 +5019,7 @@ function winbackPrevStep(stepNumber) {
 }
 
 // Generate Winback Offers
-function generateWinbackOffers(reason) {
+async function generateWinbackOffers(reason) {
     const offers = {
         price: [
             {
@@ -4651,27 +5079,46 @@ function generateWinbackOffers(reason) {
         ]
     };
 
-    const relevantOffers = offers[reason] || offers.other;
+    let relevantOffers = offers[reason] || offers.other;
+
+    if (window.kiwiApi) {
+        try {
+            const query = new URLSearchParams({ reason: reason || 'other' }).toString();
+            const payload = await window.kiwiApi.get(`${winbackOffersApiUrl}?${query}`);
+            if (payload && Array.isArray(payload.items) && payload.items.length > 0) {
+                relevantOffers = payload.items;
+            }
+        } catch (error) {
+            console.warn('Winback-aanbiedingen laden via backend mislukt, fallback wordt gebruikt.', error);
+        }
+    }
+
     const offersContainer = document.getElementById('winbackOffers');
     
-    offersContainer.innerHTML = relevantOffers.map(offer => `
-        <div class="offer-card" onclick="selectOffer(${offer.id}, '${offer.title}', '${offer.description}')">
+    offersContainer.innerHTML = relevantOffers.map(offer => {
+        const escapedTitle = String(offer.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const escapedDescription = String(offer.description || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return `
+        <div class="offer-card" onclick="selectOffer(${offer.id}, '${escapedTitle}', '${escapedDescription}', event)">
             <div class="offer-title">${offer.title}</div>
             <div class="offer-description">${offer.description}</div>
             <div class="offer-discount">${offer.discount}</div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // Select Offer
-function selectOffer(offerId, title, description) {
+function selectOffer(offerId, title, description, domEvent) {
     selectedOffer = { id: offerId, title, description };
     
     // Update UI
     document.querySelectorAll('.offer-card').forEach(card => {
         card.classList.remove('selected');
     });
-    event.currentTarget.classList.add('selected');
+    if (domEvent && domEvent.currentTarget) {
+        domEvent.currentTarget.classList.add('selected');
+    }
 }
 
 // Generate Winback Script
@@ -4925,7 +5372,7 @@ function toggleRestitutionTransferAddress() {
 }
 
 // Complete Restitution Transfer
-function completeRestitutionTransfer(event) {
+async function completeRestitutionTransfer(event) {
     event.preventDefault();
     
     const subscriptionId = window.restitutionRevertSubId;
@@ -4963,35 +5410,46 @@ function completeRestitutionTransfer(event) {
         return;
     }
     
-    // Update subscription with transfer info
-    subscription.status = 'transferred';
-    subscription.transferredTo = {
-        ...transferData,
-        transferDate: new Date().toISOString()
-    };
-    delete subscription.refundInfo;
-    
     // Add contact history entry
     const newCustomerName = transferData.middleName 
         ? `${transferData.salutation} ${transferData.firstName} ${transferData.middleName} ${transferData.lastName}`
         : `${transferData.salutation} ${transferData.firstName} ${transferData.lastName}`;
-    
-    pushContactHistory(
-        currentCustomer,
-        {
-            type: 'Restitutie Ongedaan - Abonnement Overgezet',
-            description: `Restitutie van ${subscription.magazine} ongedaan gemaakt. Abonnement overgezet naar ${newCustomerName} (${transferData.email}) op ${transferData.address}, ${transferData.postalCode} ${transferData.city}.`
-        },
-        { highlight: true, persist: false }
-    );
 
-    saveCustomers();
+    if (window.kiwiApi) {
+        try {
+            await window.kiwiApi.post(
+                `${customersApiUrl}/${currentCustomer.id}/subscriptions/${subscriptionId}/restitution-transfer`,
+                { transferData }
+            );
+        } catch (error) {
+            showToast(error.message || 'Overzetten via backend mislukt', 'error');
+            return;
+        }
+    } else {
+        subscription.status = 'transferred';
+        subscription.transferredTo = {
+            ...transferData,
+            transferDate: new Date().toISOString()
+        };
+        delete subscription.refundInfo;
+
+        pushContactHistory(
+            currentCustomer,
+            {
+                type: 'Restitutie Ongedaan - Abonnement Overgezet',
+                description: `Restitutie van ${subscription.magazine} ongedaan gemaakt. Abonnement overgezet naar ${newCustomerName} (${transferData.email}) op ${transferData.address}, ${transferData.postalCode} ${transferData.city}.`
+            },
+            { highlight: true, persist: false }
+        );
+
+        saveCustomers();
+    }
     
     // Close form
     closeForm('restitutionTransferForm');
     
     // Refresh display
-    selectCustomer(currentCustomer.id);
+    await selectCustomer(currentCustomer.id);
     
     showToast(
         translate('subscription.transferred', { magazine: subscription.magazine, name: newCustomerName }, `${subscription.magazine} overgezet naar ${newCustomerName}`),
@@ -5003,7 +5461,7 @@ function completeRestitutionTransfer(event) {
 }
 
 // Complete All Deceased Actions
-function completeAllDeceasedActions() {
+async function completeAllDeceasedActions() {
     // Determine which form is active
     const step1c = document.getElementById('winbackStep1c');
     const step1d = document.getElementById('winbackStep1d');
@@ -5045,29 +5503,25 @@ function completeAllDeceasedActions() {
         }
     }
     
-    // Process all actions
     const processedMagazines = [];
-    
-    // Process transfers
+    const actionsPayload = [];
+
     for (const action of transferActions) {
-        action.subscription.transferredTo = {
-            ...transferData,
-            transferDate: new Date().toISOString()
-        };
-        action.subscription.status = 'transferred';
         processedMagazines.push(`${action.subscription.magazine} (overgezet)`);
+        actionsPayload.push({
+            subscriptionId: action.subscription.id,
+            action: 'transfer',
+            transferData
+        });
     }
-    
-    // Process refunds (mark as restituted instead of removing)
+
     for (const action of refundActions) {
-        action.subscription.status = 'restituted';
-        action.subscription.endDate = new Date().toISOString();
-        action.subscription.refundInfo = {
-            email: refundData.email,
-            notes: refundData.notes,
-            refundDate: new Date().toISOString()
-        };
         processedMagazines.push(`${action.subscription.magazine} (gerestitueerd)`);
+        actionsPayload.push({
+            subscriptionId: action.subscription.id,
+            action: 'cancel_refund',
+            refundData
+        });
     }
     
     // Create contact history entry
@@ -5089,20 +5543,51 @@ function completeAllDeceasedActions() {
         }
     }
     
-    pushContactHistory(
-        currentCustomer,
-        {
-            type: 'Overlijden - Meerdere Abonnementen',
-            description: historyDescription
-        },
-        { highlight: true, persist: false }
-    );
+    if (window.kiwiApi) {
+        try {
+            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/subscriptions/deceased-actions`, {
+                actions: actionsPayload
+            });
+        } catch (error) {
+            showToast(error.message || 'Verwerken overlijden via backend mislukt', 'error');
+            return;
+        }
+    } else {
+        // Process all actions locally
+        for (const action of transferActions) {
+            action.subscription.transferredTo = {
+                ...transferData,
+                transferDate: new Date().toISOString()
+            };
+            action.subscription.status = 'transferred';
+        }
 
-    saveCustomers();
+        for (const action of refundActions) {
+            action.subscription.status = 'restituted';
+            action.subscription.endDate = new Date().toISOString();
+            action.subscription.refundInfo = {
+                email: refundData.email,
+                notes: refundData.notes,
+                refundDate: new Date().toISOString()
+            };
+        }
+
+        pushContactHistory(
+            currentCustomer,
+            {
+                type: 'Overlijden - Meerdere Abonnementen',
+                description: historyDescription
+            },
+            { highlight: true, persist: false }
+        );
+
+        saveCustomers();
+    }
+
     closeForm('winbackFlow');
     
     // Refresh display
-    selectCustomer(currentCustomer.id);
+    await selectCustomer(currentCustomer.id);
     
     showToast(
         translate(
@@ -5202,7 +5687,7 @@ function validateRefundData(data) {
 
 
 // Complete Winback
-function completeWinback() {
+async function completeWinback() {
     const result = document.querySelector('input[name="winbackResult"]:checked');
     
     if (!result) {
@@ -5213,7 +5698,17 @@ function completeWinback() {
     const subId = window.cancellingSubscriptionId;
     const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
     
-    if (result.value === 'accepted') {
+    if (window.kiwiApi) {
+        try {
+            await window.kiwiApi.post(`${customersApiUrl}/${currentCustomer.id}/subscriptions/${subId}/winback`, {
+                result: result.value,
+                offer: selectedOffer
+            });
+        } catch (error) {
+            showToast(error.message || 'Winback opslaan via backend mislukt', 'error');
+            return;
+        }
+    } else if (result.value === 'accepted') {
         // Customer accepted offer
         pushContactHistory(
             currentCustomer,
@@ -5223,12 +5718,10 @@ function completeWinback() {
             },
             { highlight: true, persist: false }
         );
-        
-        showToast(translate('winback.success', {}, 'Winback succesvol! Klant blijft abonnee.'), 'success');
     } else {
         // Customer declined, cancel subscription
         currentCustomer.subscriptions = currentCustomer.subscriptions.filter(s => s.id !== subId);
-        
+
         pushContactHistory(
             currentCustomer,
             {
@@ -5237,15 +5730,21 @@ function completeWinback() {
             },
             { highlight: true, persist: false }
         );
-        
-        showToast(translate('subscription.cancelled', {}, 'Abonnement opgezegd'), 'error');
     }
 
-    saveCustomers();
+    if (!window.kiwiApi) {
+        saveCustomers();
+    }
     closeForm('winbackFlow');
     
     // Refresh display
-    selectCustomer(currentCustomer.id);
+    await selectCustomer(currentCustomer.id);
+
+    if (result.value === 'accepted') {
+        showToast(translate('winback.success', {}, 'Winback succesvol! Klant blijft abonnee.'), 'success');
+    } else {
+        showToast(translate('subscription.cancelled', {}, 'Abonnement opgezegd'), 'error');
+    }
     
     // Reset
     selectedOffer = null;
@@ -5424,7 +5923,7 @@ function addDeliveryRemark(remark) {
 // Update Article Price - handled by article-search.js
 
 // Create Article Sale
-function createArticleSale(event) {
+async function createArticleSale(event) {
     event.preventDefault();
 
     // Check if there are items in the order
@@ -5446,7 +5945,13 @@ function createArticleSale(event) {
     }
 
     // Get order data
-    const orderData = getOrderData();
+    let orderData;
+    try {
+        orderData = await getOrderData();
+    } catch (error) {
+        showToast(error.message || 'Bestelberekening via backend mislukt', 'error');
+        return;
+    }
     
     const formData = {
         salutation: salutation,
@@ -5511,6 +6016,86 @@ function createArticleSale(event) {
     }
     
     const couponNote = orderData.couponCode ? ` Kortingscode: ${orderData.couponCode}.` : '';
+    const fullLastName = middleName ? `${middleName} ${lastName}` : lastName;
+    const contactDescription = `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription}${couponNote} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`;
+    const hadCurrentCustomer = Boolean(currentCustomer);
+
+    if (window.kiwiApi) {
+        const orderPayload = {
+            orderDate: new Date().toISOString().split('T')[0],
+            desiredDeliveryDate: formData.desiredDeliveryDate,
+            deliveryStatus: 'ordered',
+            trackingNumber: trackingNumber,
+            paymentStatus: 'paid',
+            paymentMethod: formData.paymentMethod,
+            paymentDate: new Date().toISOString().split('T')[0],
+            actualDeliveryDate: null,
+            returnDeadline: returnDeadlineStr,
+            notes: formData.notes,
+            items: orderData.items,
+            couponCode: orderData.couponCode || null
+        };
+        const payload = {
+            order: orderPayload,
+            contactEntry: {
+                type: 'Artikel bestelling',
+                description: contactDescription
+            }
+        };
+
+        if (currentCustomer) {
+            payload.customerId = currentCustomer.id;
+        } else {
+            payload.customer = {
+                salutation: formData.salutation,
+                firstName: formData.firstName,
+                middleName: formData.middleName,
+                lastName: fullLastName,
+                birthday: formData.birthday,
+                postalCode: formData.postalCode,
+                houseNumber: formData.houseNumber,
+                address: formData.address,
+                city: formData.city,
+                email: formData.email,
+                phone: formData.phone,
+                subscriptions: [],
+                articles: [],
+                contactHistory: []
+            };
+        }
+
+        try {
+            const response = await window.kiwiApi.post(`${workflowsApiUrl}/article-order`, payload);
+            const savedCustomer = response && response.customer ? response.customer : null;
+            if (savedCustomer) {
+                upsertCustomerInCache(savedCustomer);
+            }
+
+            orderItems = [];
+            renderOrderItems();
+
+            closeForm('articleSaleForm');
+            showToast(
+                hadCurrentCustomer
+                    ? translate('articleOrders.created', {}, 'Artikel bestelling succesvol aangemaakt!')
+                    : translate('articleOrders.createdWithCustomer', {}, 'Nieuwe klant en artikel bestelling succesvol aangemaakt!'),
+                'success'
+            );
+
+            if (savedCustomer && savedCustomer.id) {
+                await selectCustomer(savedCustomer.id);
+                if (!hadCurrentCustomer) {
+                    showSuccessIdentificationPrompt(savedCustomer.id, `${savedCustomer.firstName} ${savedCustomer.lastName}`);
+                }
+            }
+        } catch (error) {
+            showToast(error.message || 'Artikel bestelling aanmaken via backend mislukt', 'error');
+            return;
+        }
+
+        document.getElementById('articleForm').reset();
+        return;
+    }
     
     // Check if this is for an existing customer
     if (currentCustomer) {
@@ -5525,7 +6110,7 @@ function createArticleSale(event) {
             currentCustomer,
             {
                 type: 'Artikel bestelling',
-                description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription}${couponNote} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
+                description: contactDescription
             },
             { highlight: true, persist: false }
         );
@@ -5543,8 +6128,6 @@ function createArticleSale(event) {
         selectCustomer(currentCustomer.id);
     } else {
         // Create new customer with order
-        const fullLastName = middleName ? `${middleName} ${lastName}` : lastName;
-        
         const newCustomer = {
             id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
             salutation: formData.salutation,
@@ -5565,7 +6148,7 @@ function createArticleSale(event) {
                     id: 1,
                     type: 'Artikel bestelling',
                     date: new Date().toISOString(),
-                    description: `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription}${couponNote} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`
+                    description: contactDescription
                 }
             ]
         };
@@ -5631,10 +6214,28 @@ function addDeliveryRemarkToModal(remark) {
 }
 
 // Save Delivery Remarks
-function saveDeliveryRemarks() {
+async function saveDeliveryRemarks() {
     if (!currentCustomer) return;
     
     const newRemarks = document.getElementById('editCustomerDeliveryRemarks').value.trim();
+
+    if (window.kiwiApi) {
+        try {
+            const payload = await window.kiwiApi.put(`${customersApiUrl}/${currentCustomer.id}/delivery-remarks`, {
+                default: newRemarks,
+                updatedBy: document.getElementById('agentName').textContent
+            });
+            if (payload && payload.deliveryRemarks) {
+                currentCustomer.deliveryRemarks = payload.deliveryRemarks;
+            }
+            closeEditRemarksModal();
+            showToast(translate('delivery.remarksSaved', {}, 'Bezorgvoorkeuren opgeslagen!'), 'success');
+            await selectCustomer(currentCustomer.id);
+        } catch (error) {
+            showToast(error.message || 'Bezorgvoorkeuren opslaan via backend mislukt', 'error');
+        }
+        return;
+    }
     
     // Initialize deliveryRemarks object if it doesn't exist
     if (!currentCustomer.deliveryRemarks) {
@@ -5841,11 +6442,11 @@ function populateDebugKnownCustomers() {
 }
 
 // Debug: Start Call Simulation
-function debugStartCall() {
+async function debugStartCall() {
     // Check if there's already an active call
     if (callSession.active) {
         if (confirm('⚠️ Er is al een actieve call. Wil je deze beëindigen en een nieuwe starten?')) {
-            endCallSession();
+            await endCallSession(true);
         } else {
             return;
         }
@@ -5863,34 +6464,66 @@ function debugStartCall() {
         waitTime = parseInt(waitTimeOption);
     }
     
-    // Initialize call session
-    callSession = {
-        active: true,
-        callerType: callerType,
-        serviceNumber: serviceNumber,
-        waitTime: waitTime,
-        startTime: Date.now(),
-        customerId: null,
-        customerName: null,
-        pendingIdentification: null,
-        durationInterval: null,
-        recordingActive: false,
-        totalHoldTime: 0
-    };
+    const customerIdValue = document.getElementById('debugKnownCustomer').value;
+    const knownCustomerId = customerIdValue ? parseInt(customerIdValue) : null;
+    const knownCustomer = knownCustomerId ? customers.find(c => c.id === knownCustomerId) : null;
+
+    if (window.kiwiApi) {
+        const payload = {
+            callerType,
+            serviceNumber,
+            waitTime
+        };
+        if (callerType === 'known' && knownCustomerId) {
+            payload.customerId = knownCustomerId;
+            payload.customerName = knownCustomer
+                ? `${knownCustomer.initials || knownCustomer.firstName} ${knownCustomer.middleName ? `${knownCustomer.middleName} ` : ''}${knownCustomer.lastName}`.trim()
+                : null;
+        }
+
+        try {
+            const response = await window.kiwiApi.post(`${callSessionApiUrl}/start-debug`, payload);
+            if (response && typeof response === 'object') {
+                callSession = {
+                    ...callSession,
+                    ...response,
+                    durationInterval: null
+                };
+            }
+        } catch (error) {
+            showToast(error.message || 'Debug call starten via backend mislukt', 'error');
+            return;
+        }
+    } else {
+        // Initialize call session
+        callSession = {
+            active: true,
+            callerType: callerType,
+            serviceNumber: serviceNumber,
+            waitTime: waitTime,
+            startTime: Date.now(),
+            customerId: null,
+            customerName: null,
+            pendingIdentification: null,
+            durationInterval: null,
+            recordingActive: false,
+            totalHoldTime: 0,
+            holdStartTime: null,
+            onHold: false
+        };
+    }
     
     // Voor bekende beller, koppel direct
     if (callerType === 'known') {
-        const customerId = document.getElementById('debugKnownCustomer').value;
-        if (customerId) {
-            const customer = customers.find(c => c.id === parseInt(customerId));
-            if (customer) {
-                callSession.customerId = parseInt(customerId);
-                callSession.customerName = `${customer.initials || customer.firstName} ${customer.middleName ? customer.middleName + ' ' : ''}${customer.lastName}`;
+        if (knownCustomerId) {
+            if (knownCustomer) {
+                callSession.customerId = knownCustomerId;
+                callSession.customerName = `${knownCustomer.initials || knownCustomer.firstName} ${knownCustomer.middleName ? knownCustomer.middleName + ' ' : ''}${knownCustomer.lastName}`;
                 callSession.callerType = 'identified';
                 
                 // Automatically open customer record
                 setTimeout(() => {
-                    selectCustomer(parseInt(customerId));
+                    selectCustomer(knownCustomerId);
                 }, 500);
             }
         }
@@ -5950,16 +6583,22 @@ function closeDebugModal() {
     modal.classList.remove('show');
 }
 
-// Full Reset - Clear all local storage and reload
+// Full Reset - Clear session-backed POC data and reload
 function fullReset() {
-    if (confirm('⚠️ Dit zal alle lokale data wissen en de pagina herladen. Weet je het zeker?')) {
-        // Clear local storage
-        localStorage.clear();
-        
-        // Show toast
-        showToast(translate('storage.cleared', {}, 'Lokale opslag gewist. Pagina wordt herladen...'), 'info');
-        
-        // Reload after short delay
+    if (confirm('⚠️ Dit zal alle sessiedata wissen en de pagina herladen. Weet je het zeker?')) {
+        if (window.kiwiApi) {
+            window.kiwiApi.post(debugResetApiUrl, {}).then(() => {
+                showToast(translate('storage.cleared', {}, 'Sessiestaat gewist. Pagina wordt herladen...'), 'info');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }).catch((error) => {
+                showToast(error.message || 'Reset via backend mislukt', 'error');
+            });
+            return;
+        }
+
+        showToast(translate('storage.cleared', {}, 'Pagina wordt herladen...'), 'info');
         setTimeout(() => {
             window.location.reload();
         }, 1000);

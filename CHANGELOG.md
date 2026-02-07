@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add a `make compose-smoke-oidc` smoke test for fallback OIDC token/role validation.
 - Add agent workday stats to the status menu, including active session time and handled call count.
 - Add `/api/v1/agent-status` API with optional Microsoft Teams presence sync for Entra sessions.
+- Add authenticated `/api/v1` POC API blueprints for bootstrap, customer domain flows, subscriptions, article workflows, catalog data, call queue/session controls, debug reset, and current-user context.
+- Add server-side session-backed POC state and catalog services plus API integration tests that verify auth guarding and core workflow behavior.
 
 ### Changed
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
@@ -29,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Update default external OIDC scopes to include Graph presence scopes (`Presence.Read`, `Presence.ReadWrite`).
 - Sync Avaya call start to Teams `InACall` activity by using Graph session presence APIs for call-state updates.
 - Restrict automatic status changes to call transitions only: enter call -> `in_call`, leave call -> restore prior external/manual status.
+- Refactor `app.js`, `article-search.js`, and `delivery-date-picker.js` to remove mock/localStorage backend behavior and use authenticated `/api/v1` endpoints with a shared frontend API client.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
