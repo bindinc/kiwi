@@ -16,6 +16,7 @@ from blueprints.api.debug import debug_bp  # noqa: E402
 from blueprints.api.me import me_bp  # noqa: E402
 from blueprints.api.status import status_bp  # noqa: E402
 from blueprints.api.subscriptions import subscriptions_bp  # noqa: E402
+from blueprints.api.swagger import swagger_bp  # noqa: E402
 from blueprints.api.workflows import workflows_bp  # noqa: E402
 
 
@@ -29,6 +30,7 @@ register_api_blueprint(subscriptions_bp)
 register_api_blueprint(workflows_bp)
 register_api_blueprint(call_queue_bp)
 register_api_blueprint(call_session_bp)
+register_api_blueprint(swagger_bp)
 
 
 class PocApiV1Tests(unittest.TestCase):
@@ -645,6 +647,31 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(reset_payload["status"], "ok")
         self.assertFalse(reset_payload["call_queue"]["enabled"])
         self.assertFalse(reset_payload["call_session"]["active"])
+
+    def test_swagger_endpoints(self):
+        self._authenticate()
+
+        document_response = self.client.get("/api/v1/swagger.json")
+        self.assertEqual(document_response.status_code, 200)
+
+        document = document_response.get_json()
+        self.assertEqual(document["openapi"], "3.0.3")
+        self.assertIn("/api/v1/customers", document["paths"])
+        self.assertIn("/api/v1/call-session/disposition", document["paths"])
+        self.assertIn("/api/v1/status", document["paths"])
+        self.assertIn("get", document["paths"]["/api/v1/status"])
+        self.assertNotIn("head", document["paths"]["/api/v1/status"])
+        self.assertIn("cookieAuth", document["components"]["securitySchemes"])
+
+        customers_get = document["paths"]["/api/v1/customers"]["get"]
+        self.assertEqual(customers_get["security"], [{"cookieAuth": []}])
+
+        status_get = document["paths"]["/api/v1/status"]["get"]
+        self.assertNotIn("security", status_get)
+
+        ui_response = self.client.get("/api/v1/swagger")
+        self.assertEqual(ui_response.status_code, 200)
+        self.assertIn("SwaggerUIBundle", ui_response.get_data(as_text=True))
 
 
 if __name__ == "__main__":

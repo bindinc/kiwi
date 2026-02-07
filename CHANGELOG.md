@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add `/api/v1/agent-status` API with optional Microsoft Teams presence sync for Entra sessions.
 - Add authenticated `/api/v1` POC API blueprints for bootstrap, customer domain flows, subscriptions, article workflows, catalog data, call queue/session controls, debug reset, and current-user context.
 - Add server-side session-backed POC state and catalog services plus API integration tests that verify auth guarding and core workflow behavior.
+- Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
