@@ -1,5 +1,4 @@
-// Delivery Date Picker Component
-// Advanced date picker with business logic for magazine delivery
+// Delivery date picker backed by /api/v1/catalog/delivery-calendar.
 
 function translateDelivery(key, params, fallback) {
     if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
@@ -11,175 +10,11 @@ function translateDelivery(key, params, fallback) {
     return fallback !== undefined ? fallback : key;
 }
 
-// Dutch Holidays Configuration
-const fallbackHolidays = [
-    { name: 'Nieuwjaarsdag', date: '01-01' },
-    { name: 'Koningsdag', date: '04-27' },
-    { name: 'Bevrijdingsdag', date: '05-05', everyFiveYears: true },
-    { name: 'Eerste Kerstdag', date: '12-25' },
-    { name: 'Tweede Kerstdag', date: '12-26' }
-];
+const deliveryCalendarApiUrl = '/api/v1/catalog/delivery-calendar';
+const deliveryCalendarCache = new Map();
+let currentCalendarDate = new Date();
+let selectedDeliveryDate = null;
 
-const translatedHolidays = translateDelivery('delivery.holidays');
-const dutchHolidays = Array.isArray(translatedHolidays) ? translatedHolidays : fallbackHolidays;
-
-const fallbackDayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
-const translatedDayNames = translateDelivery('delivery.dayNames');
-const dayNames = Array.isArray(translatedDayNames) ? translatedDayNames : fallbackDayNames;
-
-const fallbackMonthNames = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
-const translatedMonthNames = translateDelivery('delivery.monthNames');
-const monthNames = Array.isArray(translatedMonthNames) ? translatedMonthNames : fallbackMonthNames;
-
-const fallbackShortDayNames = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
-const translatedShortDays = translateDelivery('delivery.dayNamesShort');
-const dayNamesShort = Array.isArray(translatedShortDays) ? translatedShortDays : fallbackShortDayNames;
-
-// Easter calculation (Computus algorithm)
-function calculateEaster(year) {
-    const a = year % 19;
-    const b = Math.floor(year / 100);
-    const c = year % 100;
-    const d = Math.floor(b / 4);
-    const e = b % 4;
-    const f = Math.floor((b + 8) / 25);
-    const g = Math.floor((b - f + 1) / 3);
-    const h = (19 * a + b - d - g + 15) % 30;
-    const i = Math.floor(c / 4);
-    const k = c % 4;
-    const l = (32 + 2 * e + 2 * i - h - k) % 7;
-    const m = Math.floor((a + 11 * h + 22 * l) / 451);
-    const month = Math.floor((h + l - 7 * m + 114) / 31);
-    const day = ((h + l - 7 * m + 114) % 31) + 1;
-    return new Date(year, month - 1, day);
-}
-
-// Get all Dutch holidays for a given year
-function getDutchHolidays(year) {
-    const holidays = [];
-    
-    // Fixed holidays
-    dutchHolidays.forEach(holiday => {
-        // Handle Bevrijdingsdag (every 5 years rule)
-        if (holiday.name === 'Bevrijdingsdag' && holiday.everyFiveYears) {
-            if (year % 5 === 0) {
-                const [month, day] = holiday.date.split('-');
-                holidays.push(new Date(year, parseInt(month) - 1, parseInt(day)));
-            }
-        } else {
-            const [month, day] = holiday.date.split('-');
-            holidays.push(new Date(year, parseInt(month) - 1, parseInt(day)));
-        }
-    });
-    
-    // Calculate Easter and related holidays
-    const easter = calculateEaster(year);
-    
-    // Goede Vrijdag (Good Friday - 2 days before Easter)
-    const goodFriday = new Date(easter);
-    goodFriday.setDate(easter.getDate() - 2);
-    holidays.push(goodFriday);
-    
-    // Eerste Paasdag (Easter Sunday)
-    holidays.push(easter);
-    
-    // Tweede Paasdag (Easter Monday)
-    const easterMonday = new Date(easter);
-    easterMonday.setDate(easter.getDate() + 1);
-    holidays.push(easterMonday);
-    
-    // Hemelvaartsdag (Ascension Day - 39 days after Easter)
-    const ascension = new Date(easter);
-    ascension.setDate(easter.getDate() + 39);
-    holidays.push(ascension);
-    
-    // Eerste Pinksterdag (Pentecost - 49 days after Easter)
-    const pentecost = new Date(easter);
-    pentecost.setDate(easter.getDate() + 49);
-    holidays.push(pentecost);
-    
-    // Tweede Pinksterdag (Whit Monday - 50 days after Easter)
-    const pentecostMonday = new Date(easter);
-    pentecostMonday.setDate(easter.getDate() + 50);
-    holidays.push(pentecostMonday);
-    
-    return holidays;
-}
-
-// Check if a date is a Dutch holiday
-function isHoliday(date) {
-    const year = date.getFullYear();
-    const holidays = getDutchHolidays(year);
-    
-    return holidays.some(holiday => 
-        holiday.getDate() === date.getDate() &&
-        holiday.getMonth() === date.getMonth() &&
-        holiday.getFullYear() === date.getFullYear()
-    );
-}
-
-// Check if delivery is available on a given date (without minimum date check)
-function isDeliveryAvailableBasic(date) {
-    const day = date.getDay();
-    
-    // No delivery on Sundays (0)
-    if (day === 0) return false;
-    
-    // No delivery on holidays
-    if (isHoliday(date)) return false;
-    
-    return true;
-}
-
-// Check if delivery is available on a given date (with minimum date check)
-function isDeliveryAvailable(date) {
-    if (!isDeliveryAvailableBasic(date)) return false;
-    
-    // Check minimum lead time (2 business days)
-    const minDate = getMinimumDeliveryDate();
-    if (date < minDate) return false;
-    
-    return true;
-}
-
-// Calculate minimum delivery date (2 business days from now)
-function getMinimumDeliveryDate() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    let businessDays = 0;
-    let date = new Date(today);
-    
-    while (businessDays < 2) {
-        date.setDate(date.getDate() + 1);
-        if (isDeliveryAvailableBasic(date)) {
-            businessDays++;
-        }
-    }
-    
-    return date;
-}
-
-// Get recommended (earliest) delivery date
-function getRecommendedDate() {
-    return getMinimumDeliveryDate();
-}
-
-// Format date with Dutch day name
-function formatDeliveryDate(date) {
-    const dayName = dayNames[date.getDay()];
-    const day = date.getDate();
-    const month = monthNames[date.getMonth()];
-    
-    return `${dayName} ${day} ${month}`;
-}
-
-// Format date for display (short version)
-function formatDateShort(date) {
-    return dayNamesShort[date.getDay()];
-}
-
-// Format date for hidden input without timezone shifts
 function formatDateInputValue(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -191,79 +26,114 @@ if (typeof module !== 'undefined') {
     module.exports = { formatDateInputValue };
 }
 
-// Initialize the delivery date picker
-function initDeliveryDatePicker() {
+function calendarCacheKey(year, month) {
+    return `${year}-${month}`;
+}
+
+async function fetchDeliveryCalendar(year, month) {
+    const key = calendarCacheKey(year, month);
+    if (deliveryCalendarCache.has(key)) {
+        return deliveryCalendarCache.get(key);
+    }
+
+    if (!window.kiwiApi) {
+        throw new Error('kiwiApi client unavailable');
+    }
+
+    const payload = await window.kiwiApi.get(`${deliveryCalendarApiUrl}?year=${year}&month=${month}`);
+    deliveryCalendarCache.set(key, payload);
+    return payload;
+}
+
+function formatDeliveryDateLabel(isoDate) {
+    const date = new Date(`${isoDate}T12:00:00`);
+    const fallbackMonths = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+    const fallbackDays = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+
+    const translatedMonths = translateDelivery('delivery.monthNames');
+    const translatedDays = translateDelivery('delivery.dayNames');
+
+    const monthNames = Array.isArray(translatedMonths) ? translatedMonths : fallbackMonths;
+    const dayNames = Array.isArray(translatedDays) ? translatedDays : fallbackDays;
+
+    return `${dayNames[date.getDay()]} ${date.getDate()} ${monthNames[date.getMonth()]}`;
+}
+
+async function initDeliveryDatePicker() {
     const container = document.getElementById('deliveryDatePickerContainer');
     if (!container) return;
-    
+
     const hiddenInput = document.getElementById('articleDesiredDelivery');
     const displayDiv = document.getElementById('deliveryDateDisplay');
     const calendarDiv = document.getElementById('deliveryCalendar');
-    
+
     if (!displayDiv || !calendarDiv || !hiddenInput) return;
-    
-    // Set recommended date by default
-    const recommendedDate = getRecommendedDate();
-    selectDeliveryDate(recommendedDate);
-    
-    // Remove old event listener by cloning and replacing (to avoid duplicates)
+
+    const today = new Date();
+    currentCalendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    try {
+        const initialCalendar = await fetchDeliveryCalendar(today.getFullYear(), today.getMonth() + 1);
+        if (initialCalendar && initialCalendar.recommendedDate) {
+            selectDeliveryDateByString(initialCalendar.recommendedDate);
+        }
+    } catch (error) {
+        console.error('Kan bezorgkalender niet laden', error);
+    }
+
     const newDisplayDiv = displayDiv.cloneNode(true);
     displayDiv.parentNode.replaceChild(newDisplayDiv, displayDiv);
-    
-    // Toggle calendar on click
-    newDisplayDiv.addEventListener('click', (e) => {
-        e.stopPropagation();
+
+    newDisplayDiv.addEventListener('click', async (event) => {
+        event.stopPropagation();
         const isVisible = calendarDiv.classList.contains('is-open');
-        
         if (isVisible) {
             closeCalendar();
         } else {
-            openCalendar();
+            await openCalendar();
         }
     });
-    
-    // Close calendar when clicking outside (use a named function to avoid duplicates)
+
     if (!window._deliveryCalendarClickHandler) {
-        window._deliveryCalendarClickHandler = (e) => {
+        window._deliveryCalendarClickHandler = (event) => {
             const currentContainer = document.getElementById('deliveryDatePickerContainer');
-            if (currentContainer && !currentContainer.contains(e.target)) {
+            if (currentContainer && !currentContainer.contains(event.target)) {
                 closeCalendar();
             }
         };
         document.addEventListener('click', window._deliveryCalendarClickHandler);
     }
-    
-    // Allow Escape key to close the calendar
+
     if (!window._deliveryCalendarKeyHandler) {
-        window._deliveryCalendarKeyHandler = (e) => {
-            if (e.key === 'Escape') {
+        window._deliveryCalendarKeyHandler = (event) => {
+            if (event.key === 'Escape') {
                 closeCalendar();
             }
         };
         document.addEventListener('keydown', window._deliveryCalendarKeyHandler);
     }
-    
+
     if (!window._deliveryCalendarResizeHandlerAttached) {
         window.addEventListener('resize', handleCalendarResize);
         window._deliveryCalendarResizeHandlerAttached = true;
     }
 }
 
-function openCalendar() {
+async function openCalendar() {
     const calendarDiv = document.getElementById('deliveryCalendar');
     if (!calendarDiv) return;
-    
-    generateCalendar(currentCalendarDate);
+
+    await generateCalendar(currentCalendarDate);
     calendarDiv.style.display = 'block';
     calendarDiv.classList.add('is-open');
-    
+
     requestAnimationFrame(positionCalendarWithinViewport);
 }
 
 function closeCalendar() {
     const calendarDiv = document.getElementById('deliveryCalendar');
     if (!calendarDiv) return;
-    
+
     calendarDiv.style.display = 'none';
     calendarDiv.classList.remove('is-open');
     calendarDiv.classList.remove('align-top');
@@ -278,18 +148,18 @@ function handleCalendarResize() {
 function positionCalendarWithinViewport() {
     const calendarDiv = document.getElementById('deliveryCalendar');
     if (!calendarDiv) return;
-    
+
     calendarDiv.classList.remove('align-top');
     const rect = calendarDiv.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
-    
+
     const bottomOverflow = rect.bottom - viewportHeight;
     const spaceAbove = rect.top;
-    
+
     if (bottomOverflow > 0 && spaceAbove > rect.height + 16) {
         calendarDiv.classList.add('align-top');
     }
-    
+
     const updatedRect = calendarDiv.getBoundingClientRect();
     if (updatedRect.bottom > viewportHeight) {
         calendarDiv.scrollIntoView({ block: 'end', behavior: 'smooth' });
@@ -298,139 +168,147 @@ function positionCalendarWithinViewport() {
     }
 }
 
-// Generate calendar grid
-function generateCalendar(startDate) {
+async function generateCalendar(startDate) {
     const calendarDiv = document.getElementById('deliveryCalendar');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    currentCalendarDate = new Date(startDate);
-    
-    const hiddenInput = document.getElementById('articleDesiredDelivery');
-    const selectedDate = hiddenInput ? hiddenInput.value : '';
-    const recommendedDate = getRecommendedDate();
-    
+    if (!calendarDiv) {
+        return;
+    }
+
+    const year = startDate.getFullYear();
+    const month = startDate.getMonth() + 1;
+
+    let calendarData;
+    try {
+        calendarData = await fetchDeliveryCalendar(year, month);
+    } catch (error) {
+        calendarDiv.innerHTML = '<div class="delivery-calendar-content"><p>Kan kalender niet laden</p></div>';
+        return;
+    }
+
+    currentCalendarDate = new Date(year, month - 1, 1);
+
+    const selectedDate = selectedDeliveryDate;
+    const recommendedDate = calendarData.recommendedDate;
+
     let html = '<div class="delivery-calendar-content">';
-    
-    // Quick selection buttons
     html += '<div class="delivery-quick-buttons">';
     html += '<button type="button" class="delivery-quick-btn" onclick="selectRecommendedDate(event)" aria-label="Selecteer eerst beschikbare datum"><span aria-hidden="true">★</span> Eerst beschikbare</button>';
     html += '</div>';
-    
-    // Calendar header with navigation
-    const displayMonth = startDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+
     html += '<div class="delivery-calendar-header">';
     html += '<button type="button" class="calendar-nav" onclick="navigateCalendar(-1, event)" aria-label="Vorige maand"><span aria-hidden="true">&lsaquo;</span></button>';
-    html += '<span class="calendar-month" aria-live="polite">' + displayMonth + '</span>';
+    html += `<span class="calendar-month" aria-live="polite">${calendarData.monthLabel}</span>`;
     html += '<button type="button" class="calendar-nav" onclick="navigateCalendar(1, event)" aria-label="Volgende maand"><span aria-hidden="true">&rsaquo;</span></button>';
     html += '</div>';
-    
-    // Day headers
+
     html += '<div class="delivery-calendar-grid">';
-    const dayHeaders = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
-    dayHeaders.forEach(day => {
+    ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].forEach((day) => {
         html += `<div class="delivery-day-header">${day}</div>`;
     });
-    
-    // Get first day of month (Monday = 0, Sunday = 6)
-    const firstDay = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-    let firstDayOfWeek = firstDay.getDay() - 1;
-    if (firstDayOfWeek === -1) firstDayOfWeek = 6;
-    
-    // Add empty cells for days before month starts
-    for (let i = 0; i < firstDayOfWeek; i++) {
+
+    const firstOfMonth = new Date(`${year}-${String(month).padStart(2, '0')}-01T12:00:00`);
+    let firstDayOfWeek = firstOfMonth.getDay() - 1;
+    if (firstDayOfWeek === -1) {
+        firstDayOfWeek = 6;
+    }
+
+    for (let index = 0; index < firstDayOfWeek; index += 1) {
         html += '<div class="delivery-day-cell empty"></div>';
     }
-    
-    // Add days of the month
-    const daysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
-    
-    for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(startDate.getFullYear(), startDate.getMonth(), day);
-        const dateStr = formatDateInputValue(date);
-        const isAvailable = isDeliveryAvailable(date);
-        const isPast = date < today;
-        const isRecommended = date.getTime() === recommendedDate.getTime();
-        const isSelected = dateStr === selectedDate;
-        const dayName = formatDateShort(date);
-        const dayLabel = formatDeliveryDate(date);
-        const ariaParts = [dayLabel];
-        
+
+    calendarData.days.forEach((dayItem) => {
+        const isSelected = dayItem.date === selectedDate;
+        const isRecommended = dayItem.date === recommendedDate;
+
         let cellClass = 'delivery-day-cell';
-        if (isPast) {
+        if (dayItem.past) {
             cellClass += ' past';
-            ariaParts.push('verlopen datum');
-        } else if (!isAvailable) {
+        } else if (!dayItem.available) {
             cellClass += ' unavailable';
-            ariaParts.push('niet beschikbaar');
         } else if (isSelected) {
             cellClass += ' selected';
-            ariaParts.push('geselecteerd');
         } else if (isRecommended) {
             cellClass += ' recommended';
-            ariaParts.push('aanbevolen');
         } else {
             cellClass += ' available';
+        }
+
+        const ariaParts = [dayItem.title];
+        if (dayItem.past) {
+            ariaParts.push('verlopen datum');
+        } else if (!dayItem.available) {
+            ariaParts.push('niet beschikbaar');
+        } else if (isSelected) {
+            ariaParts.push('geselecteerd');
+        } else if (isRecommended) {
+            ariaParts.push('aanbevolen');
+        } else {
             ariaParts.push('beschikbaar');
         }
-        
-        const cellAttributes = [];
-        if (isAvailable && !isPast) {
-            cellAttributes.push(`role="button"`);
-            cellAttributes.push(`tabindex="0"`);
-            cellAttributes.push(`onclick="selectDeliveryDateByString('${dateStr}', event)"`);
-            cellAttributes.push(`onkeydown="handleDayCellKeydown(event, '${dateStr}')"`);
+
+        const attrs = [];
+        if (dayItem.available && !dayItem.past) {
+            attrs.push('role="button"');
+            attrs.push('tabindex="0"');
+            attrs.push(`onclick="selectDeliveryDateByString('${dayItem.date}', event)"`);
+            attrs.push(`onkeydown="handleDayCellKeydown(event, '${dayItem.date}')"`);
         }
-        cellAttributes.push(`title="${dayLabel}"`);
-        cellAttributes.push(`aria-label="${ariaParts.join(' - ')}"`);
-        
-        html += `<div class="${cellClass}" ${cellAttributes.join(' ')}>`;
-        html += `<div class="day-number">${day}</div>`;
-        html += `<div class="day-name">${dayName}</div>`;
+        attrs.push(`title="${dayItem.title}"`);
+        attrs.push(`aria-label="${ariaParts.join(' - ')}"`);
+
+        html += `<div class="${cellClass}" ${attrs.join(' ')}>`;
+        html += `<div class="day-number">${dayItem.day}</div>`;
+        html += `<div class="day-name">${dayItem.weekdayShort}</div>`;
         if (isRecommended && !isSelected) {
             html += '<div class="day-badge recommended-badge" aria-hidden="true">Aanr.</div>';
         }
-        if (!isAvailable && !isPast) {
+        if (!dayItem.available && !dayItem.past) {
             html += '<div class="day-badge unavailable-badge" aria-hidden="true">X</div>';
         }
         html += '</div>';
-    }
-    
-    html += '</div>'; // Close grid
-    html += '</div>'; // Close content
-    
+    });
+
+    html += '</div>';
+    html += '</div>';
+
     calendarDiv.innerHTML = html;
 }
 
-// Navigate calendar months
-let currentCalendarDate = new Date();
-function navigateCalendar(direction, event) {
+async function navigateCalendar(direction, event) {
     if (event) {
         event.stopPropagation();
     }
+
     currentCalendarDate.setMonth(currentCalendarDate.getMonth() + direction);
-    generateCalendar(currentCalendarDate);
+    await generateCalendar(currentCalendarDate);
 }
 
-// Select delivery date
 function selectDeliveryDate(date) {
     const hiddenInput = document.getElementById('articleDesiredDelivery');
     const displayDiv = document.getElementById('deliveryDateDisplay');
+    if (!hiddenInput || !displayDiv) {
+        return;
+    }
 
     const dateStr = formatDateInputValue(date);
+    selectedDeliveryDate = dateStr;
     hiddenInput.value = dateStr;
-    displayDiv.textContent = formatDeliveryDate(date);
+    displayDiv.textContent = formatDeliveryDateLabel(dateStr);
     displayDiv.classList.add('selected');
-    
+
     closeCalendar();
 }
 
-// Select date by string (called from calendar)
 function selectDeliveryDateByString(dateStr, event) {
     if (event) {
         event.stopPropagation();
     }
-    const date = new Date(dateStr + 'T12:00:00');
+
+    const date = new Date(`${dateStr}T12:00:00`);
+    if (Number.isNaN(date.getTime())) {
+        return;
+    }
+
     selectDeliveryDate(date);
 }
 
@@ -441,37 +319,56 @@ function handleDayCellKeydown(event, dateStr) {
     }
 }
 
-// Quick selection functions
-function selectRecommendedDate(event) {
+async function selectRecommendedDate(event) {
     if (event) {
         event.stopPropagation();
     }
-    const date = getRecommendedDate();
-    selectDeliveryDate(date);
+
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth() + 1;
+    const calendarData = await fetchDeliveryCalendar(year, month);
+    if (calendarData && calendarData.recommendedDate) {
+        selectDeliveryDateByString(calendarData.recommendedDate);
+    }
 }
 
-function selectNextWeek() {
-    const today = new Date();
-    let date = new Date(today);
-    date.setDate(date.getDate() + 7);
-    
-    // Find next available delivery date from that point
-    while (!isDeliveryAvailable(date)) {
-        date.setDate(date.getDate() + 1);
+async function findNextAvailableDate(startDate) {
+    let year = startDate.getFullYear();
+    let month = startDate.getMonth() + 1;
+    let iterations = 0;
+
+    while (iterations < 24) {
+        const calendarData = await fetchDeliveryCalendar(year, month);
+        const candidate = calendarData.days.find((day) => day.available && day.date >= formatDateInputValue(startDate));
+        if (candidate) {
+            return candidate.date;
+        }
+
+        month += 1;
+        if (month > 12) {
+            month = 1;
+            year += 1;
+        }
+        iterations += 1;
     }
-    
-    selectDeliveryDate(date);
+
+    return null;
 }
 
-function selectTwoWeeks() {
-    const today = new Date();
-    let date = new Date(today);
-    date.setDate(date.getDate() + 14);
-    
-    // Find next available delivery date from that point
-    while (!isDeliveryAvailable(date)) {
-        date.setDate(date.getDate() + 1);
+async function selectNextWeek() {
+    const candidate = new Date();
+    candidate.setDate(candidate.getDate() + 7);
+    const nextAvailable = await findNextAvailableDate(candidate);
+    if (nextAvailable) {
+        selectDeliveryDateByString(nextAvailable);
     }
-    
-    selectDeliveryDate(date);
+}
+
+async function selectTwoWeeks() {
+    const candidate = new Date();
+    candidate.setDate(candidate.getDate() + 14);
+    const nextAvailable = await findNextAvailableDate(candidate);
+    if (nextAvailable) {
+        selectDeliveryDateByString(nextAvailable);
+    }
 }

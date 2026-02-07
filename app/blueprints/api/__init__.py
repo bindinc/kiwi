@@ -1,10 +1,16 @@
 from flask import Blueprint
+from blueprints.api.common import require_api_access
 
 BLUEPRINT_NAME = "api_v1"
 API_V1_PREFIX = "/api/v1"
 
 api_v1_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=API_V1_PREFIX)
 _registered_children: set[str] = set()
+
+
+@api_v1_bp.before_request
+def enforce_api_access():
+    return require_api_access()
 
 
 def register_api_blueprint(child: Blueprint, **kwargs) -> None:

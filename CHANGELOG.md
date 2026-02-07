@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add a `make compose-smoke-oidc` smoke test for fallback OIDC token/role validation.
 - Add agent workday stats to the status menu, including active session time and handled call count.
 - Add `/api/v1/agent-status` API with optional Microsoft Teams presence sync for Entra sessions.
+- Add authenticated `/api/v1` POC API blueprints for bootstrap, customer domain flows, subscriptions, article workflows, catalog data, call queue/session controls, debug reset, and current-user context.
+- Add server-side session-backed POC state and catalog services plus API integration tests that verify auth guarding and core workflow behavior.
+- Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
@@ -29,10 +32,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Update default external OIDC scopes to include Graph presence scopes (`Presence.Read`, `Presence.ReadWrite`).
 - Sync Avaya call start to Teams `InACall` activity by using Graph session presence APIs for call-state updates.
 - Restrict automatic status changes to call transitions only: enter call -> `in_call`, leave call -> restore prior external/manual status.
+- Refactor `app.js`, `article-search.js`, and `delivery-date-picker.js` to remove mock/localStorage backend behavior and use authenticated `/api/v1` endpoints with a shared frontend API client.
+- Expand API unit tests to cover all migrated `/api/v1` POC endpoints, including catalog, customer, subscription, workflow, queue/session, debug-reset, and agent-status auth guards.
+- Validate numeric query/body inputs across `/api/v1` endpoints and return structured `400` API errors instead of `500` for malformed values.
+- Generate workflow subscription/article-order IDs from server-side counters and use timezone-aware UTC timestamps.
+- Remove remaining frontend mock domain duplication for service numbers, werfsleutel channels/catalog fallbacks, and queue generation fallback so bootstrap/API remains the source of truth.
+- Consolidate werfsleutels and winback offers into one atomic endpoint `GET /api/v1/catalog/offers` and update frontend consumers accordingly.
+- Move subscription mutation endpoints from the customers namespace to `/api/v1/subscriptions/...` to keep `/api/v1/persons` focused on person resources.
+- Rename subscription action routes to `POST /api/v1/subscriptions/{customer_id}/{subscription_id}/complaint` and `POST /api/v1/subscriptions/{customer_id}/{subscription_id}`.
+- Make the "Nieuw abonnement" werfsleutel search call `/api/v1/catalog/offers` during typing and Enter selection instead of only filtering a local in-memory list.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
 - Make menu logout terminate local session and attempt OIDC provider logout before landing on a logged-out page.
+- Prefix frontend API requests with the active script root (`/kiwi` or `/kiwi-preview`) so API calls resolve correctly behind the local gateway path.
 
 ## [v1.0.6]
 

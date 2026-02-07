@@ -18,6 +18,42 @@ class AgentStatusApiTests(unittest.TestCase):
         app.register_blueprint(agent_status_bp, url_prefix="/api/v1/agent-status")
         self.client = app.test_client()
 
+        self._set_authentication(["bink8s.app.kiwi.user"])
+
+    def _set_authentication(self, roles):
+        with self.client.session_transaction() as session_data:
+            session_data["oidc_auth_profile"] = {
+                "name": "Test Agent",
+                "roles": roles,
+            }
+
+    def _clear_authentication(self):
+        with self.client.session_transaction() as session_data:
+            session_data.pop("oidc_auth_profile", None)
+            session_data.pop("oidc_auth_token", None)
+
+    def test_endpoints_require_authentication(self):
+        self._clear_authentication()
+
+        get_response = self.client.get("/api/v1/agent-status")
+        self.assertEqual(get_response.status_code, 401)
+        self.assertEqual(get_response.get_json()["error"]["code"], "unauthorized")
+
+        post_response = self.client.post("/api/v1/agent-status", json={"status": "ready"})
+        self.assertEqual(post_response.status_code, 401)
+        self.assertEqual(post_response.get_json()["error"]["code"], "unauthorized")
+
+    def test_endpoints_require_allowed_roles(self):
+        self._set_authentication(["no.access.role"])
+
+        get_response = self.client.get("/api/v1/agent-status")
+        self.assertEqual(get_response.status_code, 403)
+        self.assertEqual(get_response.get_json()["error"]["code"], "forbidden")
+
+        post_response = self.client.post("/api/v1/agent-status", json={"status": "ready"})
+        self.assertEqual(post_response.status_code, 403)
+        self.assertEqual(post_response.get_json()["error"]["code"], "forbidden")
+
     def test_get_returns_local_default_when_teams_status_is_unavailable(self):
         with mock.patch(
             "blueprints.api.agent_status.teams_presence_sync.fetch_teams_presence_status",
@@ -59,7 +95,14 @@ class AgentStatusApiTests(unittest.TestCase):
         response = self.client.post("/api/v1/agent-status", json={"status": "unknown"})
         self.assertEqual(response.status_code, 400)
         payload = response.get_json()
-        self.assertIn("allowed_statuses", payload)
+        self.assertEqual(payload["error"]["code"], "invalid_payload")
+        self.assertIn("allowed_statuses", payload["error"]["details"])
+
+    def test_post_rejects_non_object_payload(self):
+        response = self.client.post("/api/v1/agent-status", json=["ready"])
+        self.assertEqual(response.status_code, 400)
+        payload = response.get_json()
+        self.assertEqual(payload["error"]["code"], "invalid_payload")
 
     def test_post_updates_local_status_and_returns_sync_result(self):
         with mock.patch(
