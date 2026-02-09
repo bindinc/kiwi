@@ -50,6 +50,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
 - Make menu logout terminate local session and attempt OIDC provider logout before landing on a logged-out page.
 - Prefix frontend API requests with the active script root (`/kiwi` or `/kiwi-preview`) so API calls resolve correctly behind the local gateway path.
+- Clear selected werfsleutel/channel state when a barcode scan resolves to no match or an inactive offer, preventing stale submissions.
+- Restore API fallback for Enter-based non-barcode werfsleutel lookups when the local cache misses, and clear stale selection when operators type a new query.
 
 ## [v1.0.6]
 
