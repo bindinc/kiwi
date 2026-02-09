@@ -131,6 +131,23 @@ const WERFSLEUTEL_SEARCH_LIMIT = 5;
 const WERFSLEUTEL_FULL_SYNC_LIMIT = 250;
 const WERFSLEUTEL_SEARCH_DEBOUNCE_MS = 180;
 const WERFSLEUTEL_CACHE_TTL_MS = 15 * 60 * 1000;
+const DUPLICATE_CHECK_DEBOUNCE_MS = 750;
+const DUPLICATE_CHECK_MIN_API_INTERVAL_MS = 1500;
+const DUPLICATE_CHECK_CACHE_TTL_MS = 90 * 1000;
+const DUPLICATE_CHECK_FETCH_LIMIT = 5;
+const DUPLICATE_CHECK_VISIBLE_LIMIT = 3;
+const SUBSCRIPTION_DUPLICATE_INPUT_FIELDS = [
+    'Initials',
+    'MiddleName',
+    'LastName',
+    'PostalCode',
+    'HouseNumber',
+    'HouseExt',
+    'Address',
+    'City',
+    'Email',
+    'Phone'
+];
 let werfsleutelSearchDebounceTimer = null;
 let werfsleutelCatalogSyncPromise = null;
 let werfsleutelCatalogSyncedAt = 0;
@@ -160,6 +177,29 @@ const subscriptionRoleState = {
         searchResults: []
     },
     requesterSameAsRecipient: true
+};
+
+function createSubscriptionDuplicateRoleState() {
+    return {
+        debounceTimer: null,
+        requestVersion: 0,
+        lastApiStartedAt: 0,
+        lastApiFingerprint: '',
+        lastFingerprint: 'none',
+        acknowledgedFingerprint: '',
+        expandedFingerprint: '',
+        isExpanded: false,
+        isChecking: false,
+        apiWarning: '',
+        cache: {},
+        resolvedFingerprints: {},
+        strongMatches: []
+    };
+}
+
+const subscriptionDuplicateState = {
+    recipient: createSubscriptionDuplicateRoleState(),
+    requester: createSubscriptionDuplicateRoleState()
 };
 
 async function ensureWerfsleutelsLoaded() {
@@ -1306,6 +1346,7 @@ function getSubscriptionRoleConfig(role) {
             existingSectionId: 'recipientExistingSection',
             createSectionId: 'recipientCreateSection',
             createFormContainerId: 'recipientCreateForm',
+            duplicateCheckId: 'recipientDuplicateCheck',
             searchQueryId: 'recipientSearchQuery',
             searchResultsId: 'recipientSearchResults',
             selectedPersonId: 'recipientSelectedPerson'
@@ -1320,6 +1361,7 @@ function getSubscriptionRoleConfig(role) {
             existingSectionId: 'requesterExistingSection',
             createSectionId: 'requesterCreateSection',
             createFormContainerId: 'requesterCreateForm',
+            duplicateCheckId: 'requesterDuplicateCheck',
             searchQueryId: 'requesterSearchQuery',
             searchResultsId: 'requesterSearchResults',
             selectedPersonId: 'requesterSelectedPerson'
@@ -1411,6 +1453,7 @@ function clearSubscriptionRoleCreateForm(role) {
     if (!formContainer) return;
 
     formContainer.innerHTML = '';
+    clearSubscriptionDuplicateUi(role);
 }
 
 function ensureSubscriptionRoleCreateForm(role) {
@@ -1418,14 +1461,19 @@ function ensureSubscriptionRoleCreateForm(role) {
     if (!cfg) return;
 
     const formContainer = document.getElementById(cfg.createFormContainerId);
-    if (!formContainer || formContainer.childElementCount > 0) return;
+    if (!formContainer) return;
 
-    renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
-        includePhone: true,
-        includeEmail: true,
-        phoneRequired: false,
-        emailRequired: true
-    });
+    if (formContainer.childElementCount === 0) {
+        renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
+            includePhone: true,
+            includeEmail: true,
+            phoneRequired: false,
+            emailRequired: true
+        });
+    }
+
+    bindSubscriptionDuplicateListeners(role);
+    void evaluateSubscriptionDuplicateRole(role);
 }
 
 function setSubscriptionRoleMode(role, mode) {
@@ -1449,6 +1497,7 @@ function setSubscriptionRoleMode(role, mode) {
         subscriptionRoleState[role].selectedPerson = null;
         renderSubscriptionRoleSelectedPerson(role);
     } else {
+        resetSubscriptionDuplicateRoleState(role);
         clearSubscriptionRoleCreateForm(role);
     }
 
@@ -1474,6 +1523,7 @@ function toggleRequesterSameAsRecipient() {
     }
 
     if (sameCheckbox.checked) {
+        resetSubscriptionDuplicateRoleState('requester');
         clearSubscriptionRoleCreateForm('requester');
         renderRequesterSameSummary();
     } else if (subscriptionRoleState.requester.mode === 'create') {
@@ -1483,6 +1533,707 @@ function toggleRequesterSameAsRecipient() {
 
 function normalizeRoleSearchQuery(value) {
     return String(value || '').trim();
+}
+
+function getSubscriptionDuplicateRoleState(role) {
+    return subscriptionDuplicateState[role] || null;
+}
+
+function clearSubscriptionDuplicateDebounceTimer(roleDuplicateState) {
+    if (!roleDuplicateState || !roleDuplicateState.debounceTimer) {
+        return;
+    }
+    window.clearTimeout(roleDuplicateState.debounceTimer);
+    roleDuplicateState.debounceTimer = null;
+}
+
+function clearSubscriptionDuplicateUi(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) return;
+
+    const duplicateNode = document.getElementById(cfg.duplicateCheckId);
+    if (!duplicateNode) return;
+
+    duplicateNode.classList.add('hidden');
+    duplicateNode.innerHTML = '';
+}
+
+function resetSubscriptionDuplicateRoleState(role) {
+    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+    if (!roleDuplicateState) {
+        return;
+    }
+
+    clearSubscriptionDuplicateDebounceTimer(roleDuplicateState);
+    roleDuplicateState.requestVersion += 1;
+    roleDuplicateState.lastApiStartedAt = 0;
+    roleDuplicateState.lastApiFingerprint = '';
+    roleDuplicateState.lastFingerprint = 'none';
+    roleDuplicateState.acknowledgedFingerprint = '';
+    roleDuplicateState.expandedFingerprint = '';
+    roleDuplicateState.isExpanded = false;
+    roleDuplicateState.isChecking = false;
+    roleDuplicateState.apiWarning = '';
+    roleDuplicateState.cache = {};
+    roleDuplicateState.resolvedFingerprints = {};
+    roleDuplicateState.strongMatches = [];
+    clearSubscriptionDuplicateUi(role);
+}
+
+function resetAllSubscriptionDuplicateStates() {
+    resetSubscriptionDuplicateRoleState('recipient');
+    resetSubscriptionDuplicateRoleState('requester');
+}
+
+function normalizeDuplicatePostalCode(value) {
+    return String(value || '').replace(/\s+/g, '').toUpperCase();
+}
+
+function normalizeDuplicateHouseToken(houseNumber, houseExt = '') {
+    const combined = `${String(houseNumber || '').trim()}${String(houseExt || '').trim()}`;
+    return combined.replace(/\s+/g, '').toUpperCase();
+}
+
+function normalizeDuplicateEmail(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function normalizeDuplicateLastName(value) {
+    return normalizeNameFragment(String(value || '').trim());
+}
+
+function buildSubscriptionDuplicateFingerprint(normalizedInput) {
+    if (
+        normalizedInput.postalCode
+        && normalizedInput.houseToken
+        && normalizedInput.lastNameNormalized
+    ) {
+        return `address:${normalizedInput.postalCode}:${normalizedInput.houseToken}:${normalizedInput.lastNameNormalized}`;
+    }
+
+    if (normalizedInput.email) {
+        return `email:${normalizedInput.email}`;
+    }
+
+    if (normalizedInput.phoneDigits.length >= 9 && normalizedInput.lastNameNormalized) {
+        return `phone:${normalizedInput.phoneDigits}:${normalizedInput.lastNameNormalized}`;
+    }
+
+    return 'none';
+}
+
+function normalizeSubscriptionDuplicateInput(data) {
+    const lastNameRaw = String(data.lastName || '').trim();
+    const middleNameRaw = String(data.middleName || '').trim();
+    const postalCode = normalizeDuplicatePostalCode(data.postalCode);
+    const houseToken = normalizeDuplicateHouseToken(data.houseNumber, data.houseExt);
+    const email = normalizeDuplicateEmail(data.email);
+    const phoneDigits = normalizePhone(String(data.phone || ''));
+    const lastNameNormalized = normalizeDuplicateLastName(lastNameRaw);
+    const fullLastNameNormalized = normalizeDuplicateLastName(`${middleNameRaw} ${lastNameRaw}`.trim());
+
+    return {
+        lastNameRaw,
+        middleNameRaw,
+        postalCode,
+        houseToken,
+        email,
+        phoneDigits,
+        lastNameNormalized,
+        fullLastNameNormalized,
+        fingerprint: buildSubscriptionDuplicateFingerprint({
+            postalCode,
+            houseToken,
+            email,
+            phoneDigits,
+            lastNameNormalized
+        })
+    };
+}
+
+function collectSubscriptionRoleDuplicateInput(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) {
+        return null;
+    }
+
+    const roleState = subscriptionRoleState[role];
+    if (!roleState || roleState.mode !== 'create') {
+        return null;
+    }
+
+    const data = getCustomerFormData(cfg.prefix);
+    return normalizeSubscriptionDuplicateInput(data);
+}
+
+function buildSubscriptionDuplicateApiRequest(normalizedInput) {
+    if (!normalizedInput || normalizedInput.fingerprint === 'none') {
+        return null;
+    }
+
+    const params = new URLSearchParams({
+        page: '1',
+        pageSize: String(DUPLICATE_CHECK_FETCH_LIMIT),
+        sortBy: 'name'
+    });
+
+    if (normalizedInput.fingerprint.startsWith('address:')) {
+        params.set('postalCode', normalizedInput.postalCode);
+        params.set('houseNumber', normalizedInput.houseToken);
+        params.set('name', normalizedInput.lastNameRaw.toLowerCase());
+    } else if (normalizedInput.fingerprint.startsWith('email:')) {
+        params.set('email', normalizedInput.email);
+    } else if (normalizedInput.fingerprint.startsWith('phone:')) {
+        params.set('phone', normalizedInput.phoneDigits);
+    } else {
+        return null;
+    }
+
+    return {
+        fingerprint: normalizedInput.fingerprint,
+        params
+    };
+}
+
+function normalizeCandidateHouseToken(candidate) {
+    return normalizeDuplicateHouseToken(candidate.houseNumber, candidate.houseExt || '');
+}
+
+function isStrongDuplicateCandidate(candidate, normalizedInput) {
+    if (!candidate || !normalizedInput) {
+        return false;
+    }
+
+    const candidateEmail = normalizeDuplicateEmail(candidate.email);
+    const candidatePhone = normalizePhone(String(candidate.phone || ''));
+    const candidatePostalCode = normalizeDuplicatePostalCode(candidate.postalCode);
+    const candidateHouseToken = normalizeCandidateHouseToken(candidate);
+    const candidateLastName = normalizeDuplicateLastName(candidate.lastName);
+
+    const emailMatch = Boolean(
+        normalizedInput.email
+        && candidateEmail
+        && normalizedInput.email === candidateEmail
+    );
+
+    const phoneMatch = Boolean(
+        normalizedInput.phoneDigits.length >= 9
+        && candidatePhone
+        && normalizedInput.phoneDigits === candidatePhone
+    );
+
+    const lastNameMatches = Boolean(
+        candidateLastName
+        && (
+            candidateLastName === normalizedInput.lastNameNormalized
+            || (normalizedInput.fullLastNameNormalized && candidateLastName === normalizedInput.fullLastNameNormalized)
+        )
+    );
+
+    const addressMatch = Boolean(
+        normalizedInput.postalCode
+        && normalizedInput.houseToken
+        && normalizedInput.lastNameNormalized
+        && candidatePostalCode === normalizedInput.postalCode
+        && candidateHouseToken === normalizedInput.houseToken
+        && lastNameMatches
+    );
+
+    return emailMatch || phoneMatch || addressMatch;
+}
+
+function findStrongDuplicateMatches(normalizedInput, persons) {
+    if (!normalizedInput || !Array.isArray(persons) || persons.length === 0) {
+        return [];
+    }
+
+    const matches = [];
+    const seenIds = new Set();
+    for (const person of persons) {
+        if (!person || person.id === undefined || person.id === null) {
+            continue;
+        }
+        const personId = Number(person.id);
+        if (seenIds.has(personId)) {
+            continue;
+        }
+        if (!isStrongDuplicateCandidate(person, normalizedInput)) {
+            continue;
+        }
+        seenIds.add(personId);
+        matches.push(person);
+    }
+
+    return matches;
+}
+
+function mergeDuplicateMatchLists(primaryMatches, secondaryMatches) {
+    const merged = [];
+    const seenIds = new Set();
+
+    for (const candidate of [...(primaryMatches || []), ...(secondaryMatches || [])]) {
+        if (!candidate || candidate.id === undefined || candidate.id === null) {
+            continue;
+        }
+        const candidateId = Number(candidate.id);
+        if (seenIds.has(candidateId)) {
+            continue;
+        }
+        seenIds.add(candidateId);
+        merged.push(candidate);
+    }
+
+    return merged;
+}
+
+function getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, fingerprint) {
+    if (!roleDuplicateState || !fingerprint || fingerprint === 'none') {
+        return null;
+    }
+
+    const cacheEntry = roleDuplicateState.cache[fingerprint];
+    if (!cacheEntry) {
+        return null;
+    }
+
+    if (Date.now() - cacheEntry.cachedAt > DUPLICATE_CHECK_CACHE_TTL_MS) {
+        delete roleDuplicateState.cache[fingerprint];
+        return null;
+    }
+
+    return cacheEntry;
+}
+
+function refreshSubscriptionDuplicateMatches(role, normalizedInput) {
+    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+    if (!roleDuplicateState || !normalizedInput) {
+        return [];
+    }
+
+    const localStrongMatches = findStrongDuplicateMatches(normalizedInput, customers);
+    const cacheEntry = getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, normalizedInput.fingerprint);
+    const cachedStrongMatches = cacheEntry ? cacheEntry.matches : [];
+
+    roleDuplicateState.strongMatches = mergeDuplicateMatchLists(localStrongMatches, cachedStrongMatches);
+    return roleDuplicateState.strongMatches;
+}
+
+function renderSubscriptionDuplicateCheck(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+    if (!cfg || !roleDuplicateState) return;
+
+    const duplicateNode = document.getElementById(cfg.duplicateCheckId);
+    if (!duplicateNode) return;
+
+    const roleState = subscriptionRoleState[role];
+    if (!roleState || roleState.mode !== 'create') {
+        clearSubscriptionDuplicateUi(role);
+        return;
+    }
+
+    const matches = roleDuplicateState.strongMatches || [];
+    const hasMatches = matches.length > 0;
+    const hasFingerprint = roleDuplicateState.lastFingerprint !== 'none';
+    const shouldShowChecking = hasFingerprint && roleDuplicateState.isChecking;
+    const shouldShowWarning = Boolean(roleDuplicateState.apiWarning);
+
+    if (!hasMatches && !shouldShowChecking && !shouldShowWarning) {
+        clearSubscriptionDuplicateUi(role);
+        return;
+    }
+
+    duplicateNode.classList.remove('hidden');
+
+    if (!hasMatches) {
+        const checkingLine = shouldShowChecking
+            ? `<div class="subscription-duplicate-inline-status">${escapeHtml(translate('subscription.duplicateCheck.checking', {}, 'Zoeken naar bestaande personen...'))}</div>`
+            : '';
+        const warningLine = shouldShowWarning
+            ? `<div class="subscription-duplicate-inline-status muted">${escapeHtml(roleDuplicateState.apiWarning)}</div>`
+            : '';
+        duplicateNode.innerHTML = `${checkingLine}${warningLine}`;
+        return;
+    }
+
+    const isExpanded = roleDuplicateState.isExpanded && roleDuplicateState.expandedFingerprint === roleDuplicateState.lastFingerprint;
+    const toggleLabel = isExpanded
+        ? translate('subscription.duplicateCheck.hideMatches', {}, 'Verberg matches')
+        : translate('subscription.duplicateCheck.showMatches', {}, 'Toon matches');
+    const duplicateTitle = translate(
+        'subscription.duplicateCheck.possibleFound',
+        { count: matches.length },
+        `Mogelijk bestaande persoon gevonden (${matches.length}).`
+    );
+    const createAnywayLabel = translate('subscription.duplicateCheck.createAnyway', {}, 'Toch nieuwe persoon');
+    const useExistingLabel = translate('subscription.duplicateCheck.useExisting', {}, 'Gebruik bestaande');
+    const visibleMatches = matches.slice(0, DUPLICATE_CHECK_VISIBLE_LIMIT);
+
+    const matchRows = visibleMatches.map((person) => {
+        const safeId = escapeHtml(person.id);
+        const safeName = escapeHtml(buildPersonDisplayName(person) || `Persoon #${person.id}`);
+        const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
+        const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
+        return `
+            <div class="subscription-duplicate-item">
+                <div>
+                    <strong>${safeName}</strong>
+                    <div class="subscription-duplicate-item-meta">persoon #${safeId}${safeAddressLine}</div>
+                </div>
+                <button type="button" class="subscription-duplicate-action" onclick="selectSubscriptionDuplicatePerson('${role}', ${Number(person.id)})">${escapeHtml(useExistingLabel)}</button>
+            </div>
+        `;
+    }).join('');
+
+    const moreMatchesLine = matches.length > DUPLICATE_CHECK_VISIBLE_LIMIT
+        ? `<div class="subscription-duplicate-more">Nog ${matches.length - DUPLICATE_CHECK_VISIBLE_LIMIT} mogelijke match(es).</div>`
+        : '';
+    const checkingLine = shouldShowChecking
+        ? `<div class="subscription-duplicate-inline-status">${escapeHtml(translate('subscription.duplicateCheck.checking', {}, 'Zoeken naar bestaande personen...'))}</div>`
+        : '';
+    const warningLine = shouldShowWarning
+        ? `<div class="subscription-duplicate-inline-status muted">${escapeHtml(roleDuplicateState.apiWarning)}</div>`
+        : '';
+
+    duplicateNode.innerHTML = `
+        <div class="subscription-duplicate-banner">
+            <div class="subscription-duplicate-header">
+                <div class="subscription-duplicate-title">${escapeHtml(duplicateTitle)}</div>
+                <div class="subscription-duplicate-actions">
+                    <button type="button" class="subscription-duplicate-action" onclick="toggleSubscriptionDuplicateMatches('${role}')">${escapeHtml(toggleLabel)}</button>
+                    <button type="button" class="subscription-duplicate-action warning" onclick="acknowledgeSubscriptionDuplicateWarning('${role}')">${escapeHtml(createAnywayLabel)}</button>
+                </div>
+            </div>
+            ${checkingLine}
+            ${warningLine}
+            ${isExpanded ? `<div class="subscription-duplicate-list">${matchRows}</div>${moreMatchesLine}` : ''}
+        </div>
+    `;
+}
+
+function toggleSubscriptionDuplicateMatches(role) {
+    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+    if (!roleDuplicateState || roleDuplicateState.lastFingerprint === 'none') {
+        return;
+    }
+
+    const shouldExpand = !(roleDuplicateState.isExpanded && roleDuplicateState.expandedFingerprint === roleDuplicateState.lastFingerprint);
+    roleDuplicateState.isExpanded = shouldExpand;
+    roleDuplicateState.expandedFingerprint = shouldExpand ? roleDuplicateState.lastFingerprint : '';
+    renderSubscriptionDuplicateCheck(role);
+}
+
+function acknowledgeSubscriptionDuplicateWarning(role) {
+    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+    if (!roleDuplicateState || roleDuplicateState.lastFingerprint === 'none') {
+        return;
+    }
+
+    roleDuplicateState.acknowledgedFingerprint = roleDuplicateState.lastFingerprint;
+    roleDuplicateState.isExpanded = false;
+    roleDuplicateState.expandedFingerprint = '';
+    renderSubscriptionDuplicateCheck(role);
+}
+
+function selectSubscriptionDuplicatePerson(role, personId) {
+    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+    if (!roleDuplicateState) {
+        return;
+    }
+
+    const selectedPerson = (roleDuplicateState.strongMatches || [])
+        .find((entry) => Number(entry.id) === Number(personId));
+    if (!selectedPerson) {
+        showToast('Geselecteerde persoon niet gevonden in controlelijst', 'error');
+        return;
+    }
+
+    upsertCustomerInCache(selectedPerson);
+    subscriptionRoleState[role].searchResults = [selectedPerson];
+    subscriptionRoleState[role].selectedPerson = selectedPerson;
+    setSubscriptionRoleMode(role, 'existing');
+    renderSubscriptionRoleSelectedPerson(role);
+
+    if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
+        renderRequesterSameSummary();
+    }
+}
+
+function waitForTimeout(milliseconds) {
+    if (milliseconds <= 0) {
+        return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, milliseconds);
+    });
+}
+
+async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, options = {}) {
+    const { force = false } = options;
+    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+    if (!roleDuplicateState || !window.kiwiApi || !expectedFingerprint || expectedFingerprint === 'none') {
+        return;
+    }
+
+    const roleState = subscriptionRoleState[role];
+    if (!roleState || roleState.mode !== 'create') {
+        return;
+    }
+
+    const normalizedInput = collectSubscriptionRoleDuplicateInput(role);
+    if (!normalizedInput || normalizedInput.fingerprint !== expectedFingerprint) {
+        roleDuplicateState.isChecking = false;
+        renderSubscriptionDuplicateCheck(role);
+        return;
+    }
+
+    const cacheEntry = getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, expectedFingerprint);
+    if (cacheEntry) {
+        roleDuplicateState.resolvedFingerprints[expectedFingerprint] = true;
+        refreshSubscriptionDuplicateMatches(role, normalizedInput);
+        roleDuplicateState.isChecking = false;
+        renderSubscriptionDuplicateCheck(role);
+        return;
+    }
+
+    if (!force && roleDuplicateState.resolvedFingerprints[expectedFingerprint]) {
+        roleDuplicateState.isChecking = false;
+        renderSubscriptionDuplicateCheck(role);
+        return;
+    }
+
+    const apiRequest = buildSubscriptionDuplicateApiRequest(normalizedInput);
+    if (!apiRequest || apiRequest.fingerprint !== expectedFingerprint) {
+        roleDuplicateState.isChecking = false;
+        renderSubscriptionDuplicateCheck(role);
+        return;
+    }
+
+    const elapsedSinceLastApi = Date.now() - roleDuplicateState.lastApiStartedAt;
+    const minimumWait = Math.max(0, DUPLICATE_CHECK_MIN_API_INTERVAL_MS - elapsedSinceLastApi);
+    await waitForTimeout(minimumWait);
+
+    const postWaitInput = collectSubscriptionRoleDuplicateInput(role);
+    if (!postWaitInput || postWaitInput.fingerprint !== expectedFingerprint) {
+        roleDuplicateState.isChecking = false;
+        renderSubscriptionDuplicateCheck(role);
+        return;
+    }
+
+    const requestVersion = roleDuplicateState.requestVersion + 1;
+    roleDuplicateState.requestVersion = requestVersion;
+    roleDuplicateState.lastApiStartedAt = Date.now();
+    roleDuplicateState.lastApiFingerprint = expectedFingerprint;
+    roleDuplicateState.apiWarning = '';
+    roleDuplicateState.isChecking = true;
+    renderSubscriptionDuplicateCheck(role);
+
+    try {
+        const payload = await window.kiwiApi.get(`${personsApiUrl}?${apiRequest.params.toString()}`);
+        if (requestVersion !== roleDuplicateState.requestVersion) {
+            return;
+        }
+
+        const latestInput = collectSubscriptionRoleDuplicateInput(role);
+        if (!latestInput || latestInput.fingerprint !== expectedFingerprint) {
+            return;
+        }
+
+        const items = Array.isArray(payload && payload.items) ? payload.items : [];
+        const apiStrongMatches = findStrongDuplicateMatches(latestInput, items);
+        roleDuplicateState.cache[expectedFingerprint] = {
+            cachedAt: Date.now(),
+            matches: apiStrongMatches
+        };
+        roleDuplicateState.resolvedFingerprints[expectedFingerprint] = true;
+        refreshSubscriptionDuplicateMatches(role, latestInput);
+        roleDuplicateState.isChecking = false;
+        roleDuplicateState.apiWarning = '';
+        renderSubscriptionDuplicateCheck(role);
+    } catch (error) {
+        if (requestVersion !== roleDuplicateState.requestVersion) {
+            return;
+        }
+
+        const latestInput = collectSubscriptionRoleDuplicateInput(role);
+        if (!latestInput || latestInput.fingerprint !== expectedFingerprint) {
+            return;
+        }
+
+        roleDuplicateState.resolvedFingerprints[expectedFingerprint] = true;
+        roleDuplicateState.isChecking = false;
+        roleDuplicateState.apiWarning = translate(
+            'subscription.duplicateCheck.apiFallback',
+            {},
+            'Controle via backend tijdelijk niet beschikbaar. Lokale controle blijft actief.'
+        );
+        refreshSubscriptionDuplicateMatches(role, latestInput);
+        renderSubscriptionDuplicateCheck(role);
+        console.warn('Achtergrondcontrole van dubbele personen via API mislukt.', error);
+    }
+}
+
+function scheduleSubscriptionDuplicateApiCheck(role, expectedFingerprint) {
+    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+    if (!roleDuplicateState || !expectedFingerprint || expectedFingerprint === 'none') {
+        return;
+    }
+
+    clearSubscriptionDuplicateDebounceTimer(roleDuplicateState);
+    const elapsedSinceLastApi = Date.now() - roleDuplicateState.lastApiStartedAt;
+    const minimumWait = Math.max(0, DUPLICATE_CHECK_MIN_API_INTERVAL_MS - elapsedSinceLastApi);
+    const waitMs = Math.max(DUPLICATE_CHECK_DEBOUNCE_MS, minimumWait);
+
+    roleDuplicateState.isChecking = true;
+    roleDuplicateState.apiWarning = '';
+    renderSubscriptionDuplicateCheck(role);
+
+    roleDuplicateState.debounceTimer = window.setTimeout(() => {
+        roleDuplicateState.debounceTimer = null;
+        void runSubscriptionDuplicateApiCheck(role, expectedFingerprint);
+    }, waitMs);
+}
+
+async function evaluateSubscriptionDuplicateRole(role, options = {}) {
+    const { forceApi = false } = options;
+    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+    if (!roleDuplicateState) {
+        return {
+            fingerprint: 'none',
+            strongMatches: []
+        };
+    }
+
+    const normalizedInput = collectSubscriptionRoleDuplicateInput(role);
+    if (!normalizedInput) {
+        clearSubscriptionDuplicateDebounceTimer(roleDuplicateState);
+        roleDuplicateState.isChecking = false;
+        roleDuplicateState.strongMatches = [];
+        roleDuplicateState.lastFingerprint = 'none';
+        renderSubscriptionDuplicateCheck(role);
+        return {
+            fingerprint: 'none',
+            strongMatches: []
+        };
+    }
+
+    const previousFingerprint = roleDuplicateState.lastFingerprint;
+    roleDuplicateState.lastFingerprint = normalizedInput.fingerprint;
+    if (previousFingerprint !== normalizedInput.fingerprint) {
+        roleDuplicateState.isExpanded = false;
+        roleDuplicateState.expandedFingerprint = '';
+        roleDuplicateState.apiWarning = '';
+    }
+
+    refreshSubscriptionDuplicateMatches(role, normalizedInput);
+    roleDuplicateState.isChecking = false;
+    renderSubscriptionDuplicateCheck(role);
+
+    const apiRequest = buildSubscriptionDuplicateApiRequest(normalizedInput);
+    if (!apiRequest || !window.kiwiApi) {
+        clearSubscriptionDuplicateDebounceTimer(roleDuplicateState);
+        return {
+            fingerprint: normalizedInput.fingerprint,
+            strongMatches: roleDuplicateState.strongMatches
+        };
+    }
+
+    const cacheEntry = getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, normalizedInput.fingerprint);
+    if (cacheEntry) {
+        roleDuplicateState.resolvedFingerprints[normalizedInput.fingerprint] = true;
+        refreshSubscriptionDuplicateMatches(role, normalizedInput);
+        renderSubscriptionDuplicateCheck(role);
+        return {
+            fingerprint: normalizedInput.fingerprint,
+            strongMatches: roleDuplicateState.strongMatches
+        };
+    }
+
+    if (roleDuplicateState.resolvedFingerprints[normalizedInput.fingerprint] && !forceApi) {
+        return {
+            fingerprint: normalizedInput.fingerprint,
+            strongMatches: roleDuplicateState.strongMatches
+        };
+    }
+
+    if (forceApi) {
+        await runSubscriptionDuplicateApiCheck(role, normalizedInput.fingerprint, { force: true });
+        return {
+            fingerprint: roleDuplicateState.lastFingerprint,
+            strongMatches: roleDuplicateState.strongMatches
+        };
+    }
+
+    scheduleSubscriptionDuplicateApiCheck(role, normalizedInput.fingerprint);
+    return {
+        fingerprint: normalizedInput.fingerprint,
+        strongMatches: roleDuplicateState.strongMatches
+    };
+}
+
+function bindSubscriptionDuplicateListeners(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) return;
+
+    for (const inputSuffix of SUBSCRIPTION_DUPLICATE_INPUT_FIELDS) {
+        const inputNode = document.getElementById(`${cfg.prefix}${inputSuffix}`);
+        if (!inputNode || inputNode.dataset.subscriptionDuplicateBound === 'true') {
+            continue;
+        }
+
+        inputNode.dataset.subscriptionDuplicateBound = 'true';
+        inputNode.addEventListener('input', () => {
+            void evaluateSubscriptionDuplicateRole(role);
+            if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
+                renderRequesterSameSummary();
+            }
+        });
+        inputNode.addEventListener('blur', () => {
+            void evaluateSubscriptionDuplicateRole(role);
+        });
+    }
+}
+
+async function validateSubscriptionDuplicateSubmitGuard() {
+    const rolesToCheck = [];
+    if (subscriptionRoleState.recipient.mode === 'create') {
+        rolesToCheck.push('recipient');
+    }
+    if (!subscriptionRoleState.requesterSameAsRecipient && subscriptionRoleState.requester.mode === 'create') {
+        rolesToCheck.push('requester');
+    }
+
+    for (const role of rolesToCheck) {
+        await evaluateSubscriptionDuplicateRole(role, { forceApi: true });
+        const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
+        if (!roleDuplicateState) {
+            continue;
+        }
+
+        const fingerprint = roleDuplicateState.lastFingerprint;
+        const hasStrongMatches = Array.isArray(roleDuplicateState.strongMatches) && roleDuplicateState.strongMatches.length > 0;
+        const isAcknowledged = fingerprint !== 'none' && roleDuplicateState.acknowledgedFingerprint === fingerprint;
+        if (!hasStrongMatches || isAcknowledged) {
+            continue;
+        }
+
+        roleDuplicateState.isExpanded = true;
+        roleDuplicateState.expandedFingerprint = fingerprint;
+        renderSubscriptionDuplicateCheck(role);
+
+        const roleLabel = getSubscriptionRoleConfig(role)?.roleLabel || 'persoon';
+        showToast(
+            translate(
+                'subscription.duplicateCheck.submitAdvisory',
+                { roleLabel },
+                `Controleer mogelijke bestaande ${roleLabel} voordat u doorgaat.`
+            ),
+            'warning'
+        );
+        return false;
+    }
+
+    return true;
 }
 
 function searchPersonsLocallyForRole(query) {
@@ -1608,6 +2359,7 @@ function resetSubscriptionRoleState() {
     subscriptionRoleState.requester.selectedPerson = null;
     subscriptionRoleState.requester.searchResults = [];
     subscriptionRoleState.requesterSameAsRecipient = true;
+    resetAllSubscriptionDuplicateStates();
 }
 
 function createPersonPayloadFromForm(prefix, optinData = null) {
@@ -4469,6 +5221,11 @@ async function createSubscription(event) {
         return;
     }
 
+    const duplicateGuardPassed = await validateSubscriptionDuplicateSubmitGuard();
+    if (!duplicateGuardPassed) {
+        return;
+    }
+
     const werfsleutelChannelLabel = formData.werfsleutelChannelLabel || translate('werfsleutel.unknownChannel', {}, 'Onbekend kanaal');
     const werfsleutelNote = `Werfsleutel ${formData.werfsleutel} (${formData.werfsleutelTitle}, ${formatEuro(formData.werfsleutelPrice)}) via ${formData.werfsleutelChannel} (${werfsleutelChannelLabel})`;
     const durationDisplay = formData.duration
@@ -6313,6 +7070,10 @@ function closeEditRemarksModal() {
 
 // Close Form
 function closeForm(formId) {
+    if (formId === 'newSubscriptionForm') {
+        resetAllSubscriptionDuplicateStates();
+    }
+
     const form = document.getElementById(formId);
     if (form) {
         form.style.display = 'none';
