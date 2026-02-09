@@ -662,6 +662,43 @@ class PocApiV1Tests(unittest.TestCase):
         self.assertEqual(legacy_payload_response.status_code, 400)
         self.assertEqual(legacy_payload_response.get_json()["error"]["code"], "invalid_payload")
 
+    def test_subscription_signup_is_atomic_when_requester_validation_fails(self):
+        self._authenticate()
+
+        failed_signup = self.client.post(
+            "/api/v1/workflows/subscription-signup",
+            json={
+                "recipient": {
+                    "person": {
+                        "salutation": "Dhr.",
+                        "firstName": "Atomic",
+                        "middleName": "",
+                        "lastName": "Recipient",
+                        "postalCode": "5678CD",
+                        "houseNumber": "11",
+                        "address": "Teststraat 11",
+                        "city": "Teststad",
+                        "email": "atomic.recipient@example.org",
+                        "phone": "0601010101",
+                    }
+                },
+                "requester": {"personId": 999999},
+                "subscription": {
+                    "magazine": "Avrobode",
+                    "duration": "1-jaar",
+                    "durationLabel": "1 jaar",
+                    "startDate": "2026-05-01",
+                },
+            },
+        )
+        self.assertEqual(failed_signup.status_code, 404)
+        self.assertEqual(failed_signup.get_json()["error"]["code"], "customer_not_found")
+
+        recipient_lookup = self.client.get("/api/v1/persons?email=atomic.recipient@example.org&page=1&pageSize=20")
+        self.assertEqual(recipient_lookup.status_code, 200)
+        self.assertEqual(recipient_lookup.get_json()["total"], 0)
+        self.assertEqual(recipient_lookup.get_json()["items"], [])
+
     def test_subscription_signup_contact_history_for_different_and_same_person(self):
         self._authenticate()
 
