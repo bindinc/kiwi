@@ -24,12 +24,18 @@ const nl = {
         unknown: 'Onbekende werfsleutel.',
         unknownTitle: 'Onbekende werfsleutel',
         notActive: 'Deze werfsleutel is niet meer actief.',
+        noMatches: 'Geen werfsleutels gevonden',
         unknownChannel: 'Onbekend kanaal',
         channelMismatch: 'Dit kanaal hoort niet bij de gekozen werfsleutel.',
+        channelSelected: 'Kanaal gekozen',
+        channelRequiredHint: 'Kanaal nog kiezen',
         selectKey: 'Selecteer eerst een actieve werfsleutel.',
+        selectKeyFirst: 'Selecteer eerst een werfsleutel',
         selectChannel: 'Kies een kanaal voor deze werfsleutel.',
-        confirmViaSummary: 'Bevestig de werfsleutel via het overzicht.',
-        confirmed: 'Werfsleutel bevestigd.'
+        noChannels: 'Geen kanalen beschikbaar voor deze werfsleutel',
+        catalogRefreshing: 'Werfsleutels worden op de achtergrond ververst.',
+        catalogRefreshFailed: 'Werfsleutel verversen mislukt, bestaande lijst blijft actief.',
+        catalogUnavailable: 'kiwiApi niet beschikbaar; werfsleutels konden niet geladen worden.'
     },
     common: {
         unknown: 'Onbekend',

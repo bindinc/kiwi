@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Move subscription mutation endpoints from the customers namespace to `/api/v1/subscriptions/...` to keep `/api/v1/persons` focused on person resources.
 - Rename subscription action routes to `POST /api/v1/subscriptions/{customer_id}/{subscription_id}/complaint` and `POST /api/v1/subscriptions/{customer_id}/{subscription_id}`.
 - Make the "Nieuw abonnement" werfsleutel search call `/api/v1/catalog/offers` during typing and Enter selection instead of only filtering a local in-memory list.
+- Rework the "Nieuw abonnement" werfsleutel picker to a keyboard-first local-first flow with stale-while-revalidate catalog sync, inline status summary, and allowed-only channel selection without a blocking confirmation modal.
 - Redesign the new subscription workflow to always resolve two roles (`recipient` and `requester`) and persist ID-only linkage with `recipientPersonId` and `requesterPersonId`.
 - Hard-switch `POST /api/v1/workflows/subscription-signup` away from `customerId/customer` to `recipient/requester` payload objects, including `sameAsRecipient` requester resolution.
 - Update the frontend subscription form to support recipient and requester/payer selection or inline person creation without storing a relation-type enum.
@@ -49,6 +50,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
 - Make menu logout terminate local session and attempt OIDC provider logout before landing on a logged-out page.
 - Prefix frontend API requests with the active script root (`/kiwi` or `/kiwi-preview`) so API calls resolve correctly behind the local gateway path.
+- Clear selected werfsleutel/channel state when a barcode scan resolves to no match or an inactive offer, preventing stale submissions.
+- Restore API fallback for Enter-based non-barcode werfsleutel lookups when the local cache misses, and clear stale selection when operators type a new query.
 - Make `POST /api/v1/workflows/subscription-signup` atomic by validating both roles before creating new persons, preventing partial state writes on error responses.
 - Remove hidden requester create-form controls when `sameAsRecipient` is enabled so browser required-field validation no longer blocks valid submit paths.
 

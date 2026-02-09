@@ -128,16 +128,24 @@ const euroFormatter = new Intl.NumberFormat('nl-NL', {
 let werfsleutelCatalog = [];
 let werfsleutelLoadAttempted = false;
 const WERFSLEUTEL_SEARCH_LIMIT = 5;
+const WERFSLEUTEL_FULL_SYNC_LIMIT = 250;
 const WERFSLEUTEL_SEARCH_DEBOUNCE_MS = 180;
+const WERFSLEUTEL_CACHE_TTL_MS = 15 * 60 * 1000;
 let werfsleutelSearchDebounceTimer = null;
-let werfsleutelSearchRequestId = 0;
+let werfsleutelCatalogSyncPromise = null;
+let werfsleutelCatalogSyncedAt = 0;
 
 let werfsleutelChannels = {};
 
 const werfsleutelState = {
     selectedKey: null,
-    selectedChannel: null,
-    confirmed: false
+    selectedChannel: null
+};
+
+const werfsleutelPickerState = {
+    visibleMatches: [],
+    activeIndex: -1,
+    latestQuery: ''
 };
 
 const subscriptionRoleState = {
@@ -155,26 +163,70 @@ const subscriptionRoleState = {
 };
 
 async function ensureWerfsleutelsLoaded() {
-    if (werfsleutelLoadAttempted) {
+    if (!werfsleutelLoadAttempted || werfsleutelCatalog.length === 0) {
+        werfsleutelLoadAttempted = true;
+        await syncWerfsleutelsCatalog({ force: true });
         return;
     }
 
-    werfsleutelLoadAttempted = true;
+    if (isWerfsleutelCatalogStale()) {
+        void syncWerfsleutelsCatalog({ force: true, background: true });
+    }
+}
+
+function isWerfsleutelCatalogStale() {
+    if (!werfsleutelCatalogSyncedAt) {
+        return true;
+    }
+    return Date.now() - werfsleutelCatalogSyncedAt > WERFSLEUTEL_CACHE_TTL_MS;
+}
+
+async function syncWerfsleutelsCatalog(options = {}) {
+    const { force = false, background = false } = options;
+
     if (!window.kiwiApi) {
-        console.warn('kiwiApi niet beschikbaar; werfsleutels konden niet geladen worden.');
-        werfsleutelCatalog = [];
-        return;
+        if (!background) {
+            console.warn(translate('werfsleutel.catalogUnavailable', {}, 'kiwiApi niet beschikbaar; werfsleutels konden niet geladen worden.'));
+        }
+        return werfsleutelCatalog;
     }
 
-    try {
-        const query = new URLSearchParams({ type: 'werfsleutels', limit: '250' }).toString();
-        const payload = await window.kiwiApi.get(`${offersApiUrl}?${query}`);
-        const items = Array.isArray(payload && payload.items) ? payload.items : [];
-        werfsleutelCatalog = items;
-    } catch (error) {
-        console.warn('Fout bij laden van werfsleutels via API.', error);
-        werfsleutelCatalog = [];
+    const shouldRefresh = force || werfsleutelCatalog.length === 0 || isWerfsleutelCatalogStale();
+    if (!shouldRefresh) {
+        return werfsleutelCatalog;
     }
+
+    if (werfsleutelCatalogSyncPromise) {
+        return werfsleutelCatalogSyncPromise;
+    }
+
+    if (background) {
+        console.info(translate('werfsleutel.catalogRefreshing', {}, 'Werfsleutels worden op de achtergrond ververst.'));
+    }
+
+    const query = new URLSearchParams({
+        type: 'werfsleutels',
+        limit: String(WERFSLEUTEL_FULL_SYNC_LIMIT)
+    }).toString();
+
+    werfsleutelCatalogSyncPromise = window.kiwiApi.get(`${offersApiUrl}?${query}`)
+        .then((payload) => {
+            const items = Array.isArray(payload && payload.items) ? payload.items : [];
+            if (items.length > 0) {
+                rememberWerfsleutels(items);
+            }
+            werfsleutelCatalogSyncedAt = Date.now();
+            return werfsleutelCatalog;
+        })
+        .catch((error) => {
+            console.warn(translate('werfsleutel.catalogRefreshFailed', {}, 'Werfsleutel verversen mislukt, bestaande lijst blijft actief.'), error);
+            return werfsleutelCatalog;
+        })
+        .finally(() => {
+            werfsleutelCatalogSyncPromise = null;
+        });
+
+    return werfsleutelCatalogSyncPromise;
 }
 
 function isWerfsleutelBarcodeQuery(value) {
@@ -205,7 +257,7 @@ function rememberWerfsleutels(items) {
 async function searchWerfsleutelsViaApi(query) {
     const normalizedQuery = query.trim();
     if (!normalizedQuery || !window.kiwiApi) {
-        return null;
+        return [];
     }
 
     const params = new URLSearchParams({
@@ -225,57 +277,67 @@ async function searchWerfsleutelsViaApi(query) {
     return items;
 }
 
-async function findWerfsleutelMatches(query) {
-    const normalizedQuery = query.trim();
-    if (!normalizedQuery) {
-        return [];
-    }
-
-    if (window.kiwiApi) {
-        try {
-            return await searchWerfsleutelsViaApi(normalizedQuery);
-        } catch (error) {
-            console.warn('Werfsleutel zoeken via API mislukt, lokale fallback gebruikt.', error);
-        }
-    }
-
-    return filterWerfsleutelCatalog(normalizedQuery);
-}
-
 async function findWerfsleutelCandidate(query) {
     const normalizedQuery = query.trim();
     if (!normalizedQuery) {
         return null;
     }
 
-    const exactLocalMatch = werfsleutelCatalog.find(
-        (item) => item.salesCode.toLowerCase() === normalizedQuery.toLowerCase()
-    );
-    if (exactLocalMatch) {
-        return exactLocalMatch;
-    }
-
-    const matches = await findWerfsleutelMatches(normalizedQuery);
-    if (!Array.isArray(matches) || matches.length === 0) {
-        return null;
-    }
-
-    const exactApiMatch = matches.find(
-        (item) => item.salesCode.toLowerCase() === normalizedQuery.toLowerCase()
-    );
-    if (exactApiMatch) {
-        return exactApiMatch;
-    }
-
-    if (isWerfsleutelBarcodeQuery(normalizedQuery)) {
-        const normalizedBarcode = normalizedQuery.replace(/[^0-9]/g, '');
-        const barcodeMatch = matches.find((item) => String(item.barcode || '') === normalizedBarcode);
+    const isBarcodeLookup = isWerfsleutelBarcodeQuery(normalizedQuery);
+    if (isBarcodeLookup) {
+        const barcodeMatch = findWerfsleutelByBarcode(normalizedQuery);
         if (barcodeMatch) {
             return barcodeMatch;
         }
     }
 
-    return matches[0];
+    const normalizedSalesCode = normalizedQuery.toLowerCase();
+    const exactLocalMatch = werfsleutelCatalog.find(
+        (item) => item.salesCode.toLowerCase() === normalizedSalesCode
+    );
+    if (exactLocalMatch) {
+        return exactLocalMatch;
+    }
+
+    if (!isBarcodeLookup) {
+        const localMatches = filterWerfsleutelCatalog(normalizedQuery);
+        if (localMatches.length > 0) {
+            return localMatches[0];
+        }
+    }
+
+    try {
+        const apiMatches = await searchWerfsleutelsViaApi(normalizedQuery);
+        if (!Array.isArray(apiMatches) || apiMatches.length === 0) {
+            return null;
+        }
+
+        if (isBarcodeLookup) {
+            const normalizedBarcode = normalizedQuery.replace(/[^0-9]/g, '');
+            const barcodeMatch = apiMatches.find((item) => String(item.barcode || '') === normalizedBarcode);
+            return barcodeMatch || apiMatches[0];
+        }
+
+        const exactApiMatch = apiMatches.find(
+            (item) => item.salesCode.toLowerCase() === normalizedSalesCode
+        );
+        return exactApiMatch || apiMatches[0];
+    } catch (error) {
+        console.warn('Werfsleutel zoeken via API mislukt.', error);
+        return null;
+    }
+}
+
+function findWerfsleutelByBarcode(rawValue) {
+    const normalizedBarcode = rawValue.replace(/[^0-9]/g, '');
+    return werfsleutelCatalog.find((item) => String(item.barcode || '') === normalizedBarcode) || null;
+}
+
+function clearWerfsleutelSelection() {
+    werfsleutelState.selectedKey = null;
+    werfsleutelState.selectedChannel = null;
+    renderWerfsleutelChannelOptions();
+    updateWerfsleutelSummary();
 }
 
 function inferMagazineFromTitle(title = '') {
@@ -395,59 +457,86 @@ async function initWerfsleutelPicker() {
 
     const input = document.getElementById('werfsleutelInput');
     const clearButton = document.getElementById('werfsleutelClear');
-    const confirmTrigger = document.getElementById('werfsleutelConfirmTrigger');
-    const confirmModalButton = document.getElementById('werfsleutelConfirmButton');
 
     if (!input) {
         return;
     }
 
     input.addEventListener('input', (event) => handleWerfsleutelQuery(event.target.value));
-    input.addEventListener('keydown', async (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            if (werfsleutelSearchDebounceTimer) {
-                window.clearTimeout(werfsleutelSearchDebounceTimer);
-                werfsleutelSearchDebounceTimer = null;
-            }
-            werfsleutelSearchRequestId += 1;
-
-            const trimmed = input.value.trim();
-            if (trimmed) {
-                const candidate = await findWerfsleutelCandidate(trimmed);
-                if (candidate) {
-                    selectWerfsleutel(candidate.salesCode);
-                } else if (isWerfsleutelBarcodeQuery(trimmed)) {
-                    validateWerfsleutelBarcode(trimmed);
-                } else {
-                    const firstSuggestion = filterWerfsleutelCatalog(trimmed)[0];
-                    if (firstSuggestion) {
-                        selectWerfsleutel(firstSuggestion.salesCode);
-                    }
-                }
-            }
-            requestWerfsleutelConfirmation();
-        }
+    input.addEventListener('keydown', (event) => {
+        void handleWerfsleutelInputKeyDown(event);
     });
 
     if (clearButton) {
         clearButton.addEventListener('click', () => resetWerfsleutelPicker());
     }
 
-    if (confirmTrigger) {
-        confirmTrigger.addEventListener('click', requestWerfsleutelConfirmation);
-    }
-
-    if (confirmModalButton) {
-        confirmModalButton.addEventListener('click', confirmWerfsleutelSelection);
-    }
-
     resetWerfsleutelPicker();
+}
+
+async function handleWerfsleutelInputKeyDown(event) {
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        moveWerfsleutelActiveSelection(1);
+        return;
+    }
+
+    if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        moveWerfsleutelActiveSelection(-1);
+        return;
+    }
+
+    if (event.key === 'Escape') {
+        renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
+        return;
+    }
+
+    if (event.key !== 'Enter') {
+        return;
+    }
+
+    event.preventDefault();
+
+    if (werfsleutelSearchDebounceTimer) {
+        window.clearTimeout(werfsleutelSearchDebounceTimer);
+        werfsleutelSearchDebounceTimer = null;
+    }
+
+    const activeMatch = getActiveWerfsleutelMatch();
+    if (activeMatch) {
+        if (!activeMatch.isActive) {
+            showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning');
+            return;
+        }
+        selectWerfsleutel(activeMatch.salesCode);
+        return;
+    }
+
+    const input = document.getElementById('werfsleutelInput');
+    const trimmed = input ? input.value.trim() : '';
+    if (!trimmed) {
+        return;
+    }
+
+    const candidate = await findWerfsleutelCandidate(trimmed);
+    if (!candidate) {
+        showToast(translate('werfsleutel.unknown', {}, 'Onbekende werfsleutel.'), 'error');
+        return;
+    }
+
+    selectWerfsleutel(candidate.salesCode);
 }
 
 function handleWerfsleutelQuery(rawValue) {
     const query = rawValue.trim();
-    const requestId = ++werfsleutelSearchRequestId;
+    werfsleutelPickerState.latestQuery = query;
+
+    const selectedSalesCode = werfsleutelState.selectedKey?.salesCode || '';
+    const queryMatchesSelection = selectedSalesCode.toLowerCase() === query.toLowerCase();
+    if (selectedSalesCode && !queryMatchesSelection) {
+        clearWerfsleutelSelection();
+    }
 
     if (werfsleutelSearchDebounceTimer) {
         window.clearTimeout(werfsleutelSearchDebounceTimer);
@@ -459,53 +548,85 @@ function handleWerfsleutelQuery(rawValue) {
         return;
     }
 
+    const localMatches = filterWerfsleutelCatalog(query);
+    renderWerfsleutelSuggestions(localMatches);
+
+    if (!isWerfsleutelBarcodeQuery(query) || findWerfsleutelByBarcode(query)) {
+        return;
+    }
+
     werfsleutelSearchDebounceTimer = window.setTimeout(async () => {
-        const matches = await findWerfsleutelMatches(query);
-        if (requestId !== werfsleutelSearchRequestId) {
+        const lookupQuery = query;
+        try {
+            await searchWerfsleutelsViaApi(lookupQuery);
+        } catch (error) {
+            console.warn('Werfsleutel barcode lookup via API mislukt.', error);
             return;
         }
 
-        renderWerfsleutelSuggestions(matches);
-
-        if (isWerfsleutelBarcodeQuery(query)) {
-            validateWerfsleutelBarcode(query);
+        if (werfsleutelPickerState.latestQuery !== lookupQuery) {
+            return;
         }
+
+        const refreshedMatches = filterWerfsleutelCatalog(lookupQuery);
+        renderWerfsleutelSuggestions(refreshedMatches);
+        validateWerfsleutelBarcode(lookupQuery);
     }, WERFSLEUTEL_SEARCH_DEBOUNCE_MS);
 }
 
 function filterWerfsleutelCatalog(query) {
     if (!query) {
-        return werfsleutelCatalog.slice(0, 5);
+        return werfsleutelCatalog.slice(0, WERFSLEUTEL_SEARCH_LIMIT);
     }
 
     const normalized = query.toLowerCase();
     return werfsleutelCatalog.filter((item) => {
         return item.salesCode.toLowerCase().includes(normalized) ||
             item.title.toLowerCase().includes(normalized) ||
-            String(item.price).includes(normalized);
-    }).slice(0, 5);
+            String(item.price).includes(normalized) ||
+            String(item.barcode || '').includes(normalized) ||
+            String(item.magazine || '').toLowerCase().includes(normalized);
+    }).slice(0, WERFSLEUTEL_SEARCH_LIMIT);
 }
 
 function renderWerfsleutelSuggestions(matches, options = {}) {
     const container = document.getElementById('werfsleutelSuggestions');
-    if (!container) return;
+    const input = document.getElementById('werfsleutelInput');
+    if (!container || !input) return;
 
-    const { hideWhenEmpty = false } = options;
+    const { hideWhenEmpty = false, preserveActiveIndex = false } = options;
 
     if (!matches || matches.length === 0) {
+        werfsleutelPickerState.visibleMatches = [];
+        werfsleutelPickerState.activeIndex = -1;
+
         if (hideWhenEmpty) {
             container.innerHTML = '';
             container.classList.add('hidden');
         } else {
-            container.innerHTML = '<div class="empty-state-small">Geen werfsleutels gevonden</div>';
+            container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.noMatches', {}, 'Geen werfsleutels gevonden')}</div>`;
             container.classList.remove('hidden');
         }
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
         return;
     }
 
+    werfsleutelPickerState.visibleMatches = matches.slice();
+    if (!preserveActiveIndex) {
+        werfsleutelPickerState.activeIndex = 0;
+    } else if (werfsleutelPickerState.activeIndex >= werfsleutelPickerState.visibleMatches.length) {
+        werfsleutelPickerState.activeIndex = werfsleutelPickerState.visibleMatches.length - 1;
+    }
+
     container.classList.remove('hidden');
-    container.innerHTML = matches.map((item) => `
-        <button type="button" class="werfsleutel-suggestion${item.isActive ? '' : ' inactive'}" data-code="${item.salesCode}">
+    container.innerHTML = werfsleutelPickerState.visibleMatches.map((item, index) => `
+        <button type="button"
+                role="option"
+                id="werfsleutelOption-${index}"
+                aria-selected="${index === werfsleutelPickerState.activeIndex ? 'true' : 'false'}"
+                class="werfsleutel-suggestion${item.isActive ? '' : ' inactive'}${index === werfsleutelPickerState.activeIndex ? ' active' : ''}"
+                data-code="${item.salesCode}">
             <span class="code">${item.salesCode}</span>
             <span class="title">${item.title}</span>
             <span class="price">${formatEuro(item.price)}</span>
@@ -515,13 +636,65 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
         </button>
     `).join('');
 
-    container.querySelectorAll('.werfsleutel-suggestion').forEach((button) => {
+    container.querySelectorAll('.werfsleutel-suggestion').forEach((button, index) => {
+        button.addEventListener('mouseenter', () => {
+            if (werfsleutelPickerState.activeIndex === index) {
+                return;
+            }
+            werfsleutelPickerState.activeIndex = index;
+            renderWerfsleutelSuggestions(werfsleutelPickerState.visibleMatches, { preserveActiveIndex: true });
+        });
+
         if (button.classList.contains('inactive')) {
             button.addEventListener('click', () => showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning'));
             return;
         }
         button.addEventListener('click', () => selectWerfsleutel(button.dataset.code));
     });
+
+    const activeOption = container.querySelector(`#werfsleutelOption-${werfsleutelPickerState.activeIndex}`);
+    input.setAttribute('aria-expanded', 'true');
+    if (activeOption) {
+        input.setAttribute('aria-activedescendant', activeOption.id);
+        activeOption.scrollIntoView({ block: 'nearest' });
+    } else {
+        input.removeAttribute('aria-activedescendant');
+    }
+}
+
+function getActiveWerfsleutelMatch() {
+    if (werfsleutelPickerState.activeIndex < 0) {
+        return null;
+    }
+    return werfsleutelPickerState.visibleMatches[werfsleutelPickerState.activeIndex] || null;
+}
+
+function moveWerfsleutelActiveSelection(delta) {
+    if (werfsleutelPickerState.visibleMatches.length === 0) {
+        const query = werfsleutelPickerState.latestQuery;
+        if (!query) {
+            return;
+        }
+        const matches = filterWerfsleutelCatalog(query);
+        if (matches.length === 0) {
+            return;
+        }
+        renderWerfsleutelSuggestions(matches);
+    }
+
+    const total = werfsleutelPickerState.visibleMatches.length;
+    if (total === 0) {
+        return;
+    }
+
+    const currentIndex = werfsleutelPickerState.activeIndex;
+    if (currentIndex < 0) {
+        werfsleutelPickerState.activeIndex = delta > 0 ? 0 : total - 1;
+    } else {
+        werfsleutelPickerState.activeIndex = (currentIndex + delta + total) % total;
+    }
+
+    renderWerfsleutelSuggestions(werfsleutelPickerState.visibleMatches, { preserveActiveIndex: true });
 }
 
 function selectWerfsleutel(salesCode) {
@@ -533,22 +706,24 @@ function selectWerfsleutel(salesCode) {
 
     if (!match.isActive) {
         showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning');
-        setBarcodeStatus('Werfsleutel is inactief', 'warning');
         return;
     }
 
     werfsleutelState.selectedKey = match;
-    werfsleutelState.confirmed = false;
     const input = document.getElementById('werfsleutelInput');
 
     if (input) {
         input.value = match.salesCode;
+        werfsleutelPickerState.latestQuery = match.salesCode;
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
     }
 
     if (!match.allowedChannels.includes(werfsleutelState.selectedChannel)) {
         werfsleutelState.selectedChannel = null;
     }
 
+    renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
     renderWerfsleutelChannelOptions();
     updateWerfsleutelSummary();
 }
@@ -560,42 +735,58 @@ function validateWerfsleutelBarcode(rawValue) {
         return;
     }
 
-    const match = werfsleutelCatalog.find((item) => item.barcode === barcode);
+    const match = findWerfsleutelByBarcode(barcode);
     if (!match) {
-        werfsleutelState.selectedKey = null;
-        werfsleutelState.confirmed = false;
-        updateWerfsleutelSummary();
-        return;
+        clearWerfsleutelSelection();
+        return false;
     }
 
     if (!match.isActive) {
-        werfsleutelState.selectedKey = null;
-        werfsleutelState.confirmed = false;
-        updateWerfsleutelSummary();
-        return;
+        clearWerfsleutelSelection();
+        showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning');
+        return false;
     }
 
     selectWerfsleutel(match.salesCode);
+    return true;
 }
 
 function renderWerfsleutelChannelOptions() {
     const container = document.getElementById('werfsleutelChannels');
     if (!container) return;
 
-    const allowed = werfsleutelState.selectedKey?.allowedChannels || Object.keys(werfsleutelChannels);
+    const selectedKey = werfsleutelState.selectedKey;
+    if (!selectedKey) {
+        container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.selectKeyFirst', {}, 'Selecteer eerst een werfsleutel')}</div>`;
+        return;
+    }
 
-    container.innerHTML = Object.entries(werfsleutelChannels).map(([code, meta]) => {
-        const isAvailable = allowed.includes(code);
+    const allowedChannels = Array.isArray(selectedKey.allowedChannels) ? selectedKey.allowedChannels : [];
+    const channelEntries = allowedChannels
+        .filter((code) => werfsleutelChannels[code])
+        .map((code) => [code, werfsleutelChannels[code]]);
+
+    if (channelEntries.length === 0) {
+        werfsleutelState.selectedChannel = null;
+        container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.noChannels', {}, 'Geen kanalen beschikbaar voor deze werfsleutel')}</div>`;
+        return;
+    }
+
+    const allowedCodes = channelEntries.map(([code]) => code);
+    if (!allowedCodes.includes(werfsleutelState.selectedChannel)) {
+        werfsleutelState.selectedChannel = null;
+    }
+    if (!werfsleutelState.selectedChannel && allowedCodes.length === 1) {
+        werfsleutelState.selectedChannel = allowedCodes[0];
+    }
+
+    container.innerHTML = channelEntries.map(([code, meta]) => {
         const isSelected = werfsleutelState.selectedChannel === code;
-        const disabledAttr = isAvailable ? '' : 'disabled';
-        const unavailableClass = isAvailable ? '' : ' unavailable';
-
         return `
             <button type="button"
-                    class="channel-chip${isSelected ? ' selected' : ''}${unavailableClass}"
+                    class="channel-chip${isSelected ? ' selected' : ''}"
                     data-channel="${code}"
-                    title="${meta.label}${isAvailable ? '' : ' (niet beschikbaar)'}"
-                    ${disabledAttr}>
+                    title="${meta.label}">
                 <span class="channel-icon">${meta.icon}</span>
                 <span class="channel-code">${code}</span>
                 <span class="channel-label">${meta.label}</span>
@@ -604,8 +795,6 @@ function renderWerfsleutelChannelOptions() {
     }).join('');
 
     container.querySelectorAll('.channel-chip').forEach((button) => {
-        if (button.disabled) return;
-
         button.addEventListener('click', () => {
             selectWerfsleutelChannel(button.dataset.channel);
         });
@@ -618,14 +807,13 @@ function selectWerfsleutelChannel(channelCode) {
         return;
     }
 
-    const allowed = werfsleutelState.selectedKey?.allowedChannels ?? Object.keys(werfsleutelChannels);
+    const allowed = werfsleutelState.selectedKey?.allowedChannels ?? [];
     if (allowed.length > 0 && !allowed.includes(channelCode)) {
         showToast(translate('werfsleutel.channelMismatch', {}, 'Dit kanaal hoort niet bij de gekozen werfsleutel.'), 'warning');
         return;
     }
 
     werfsleutelState.selectedChannel = channelCode;
-    werfsleutelState.confirmed = false;
     renderWerfsleutelChannelOptions();
     updateWerfsleutelSummary();
 }
@@ -641,23 +829,23 @@ function updateWerfsleutelSummary() {
     }
 
     const channelCode = werfsleutelState.selectedChannel;
-    const channelLabel = channelCode ? `${channelCode} · ${werfsleutelChannels[channelCode].label}` : 'Nog geen kanaal gekozen';
+    const channelLabel = channelCode
+        ? `${channelCode} · ${werfsleutelChannels[channelCode].label}`
+        : translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.');
     const key = werfsleutelState.selectedKey;
-
-    const confirmationLabel = werfsleutelState.confirmed ? 'Werfsleutel bevestigd' : 'Nog niet bevestigd';
-    const confirmationHint = werfsleutelState.confirmed
-        ? 'Klaar voor vervolgstappen'
-        : 'Bevestig via de knop naast het veld';
-    const confirmationClass = werfsleutelState.confirmed ? 'status-pill--success' : 'status-pill--warning';
+    const hasChannel = Boolean(channelCode);
+    const statusClass = hasChannel ? 'status-pill--success' : 'status-pill--warning';
+    const statusLabel = hasChannel
+        ? translate('werfsleutel.channelSelected', {}, 'Kanaal gekozen')
+        : translate('werfsleutel.channelRequiredHint', {}, 'Kanaal nog kiezen');
 
     summary.innerHTML = `
         <div>
             <strong>${key.salesCode}</strong> - ${key.title} (${formatEuro(key.price)})
-            <br> Kanaal: ${channelLabel}
         </div>
         <div class="werfsleutel-summary-status">
-            <span class="status-pill ${confirmationClass}">${confirmationLabel}</span>
-            <span>${confirmationHint}</span>
+            <span class="status-pill ${statusClass}">${statusLabel}</span>
+            <span>${channelLabel}</span>
         </div>
     `;
     summary.classList.add('visible');
@@ -666,82 +854,35 @@ function updateWerfsleutelSummary() {
 function resetWerfsleutelPicker() {
     werfsleutelState.selectedKey = null;
     werfsleutelState.selectedChannel = null;
-    werfsleutelState.confirmed = false;
+    werfsleutelPickerState.visibleMatches = [];
+    werfsleutelPickerState.activeIndex = -1;
+    werfsleutelPickerState.latestQuery = '';
 
     const input = document.getElementById('werfsleutelInput');
-    if (input) input.value = '';
+    if (input) {
+        input.value = '';
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+    }
 
     renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
     renderWerfsleutelChannelOptions();
     updateWerfsleutelSummary();
 }
 
-function requestWerfsleutelConfirmation() {
-    if (!werfsleutelState.selectedKey) {
-        showToast(translate('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
+function triggerWerfsleutelBackgroundRefreshIfStale() {
+    if (!isWerfsleutelCatalogStale()) {
         return;
     }
 
-    if (!werfsleutelState.selectedChannel) {
-        showToast(translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'warning');
-        return;
-    }
-
-    populateWerfsleutelConfirmationModal();
-    const modal = document.getElementById('werfsleutelOverviewModal');
-    if (modal) {
-        modal.style.display = 'flex';
-    }
-}
-
-function populateWerfsleutelConfirmationModal() {
-    const key = werfsleutelState.selectedKey;
-    if (!key) return;
-
-    const offerDetails = getWerfsleutelOfferDetails(key);
-    const titleLabel = offerDetails.magazine || 'Nog geen titel gekozen';
-    const durationLabel = offerDetails.durationLabel || 'Looptijd onbekend';
-    const actionLabel = key.title || key.salesCode;
-    const channelCode = werfsleutelState.selectedChannel;
-    const channelMeta = channelCode ? werfsleutelChannels[channelCode] : null;
-    const channelLabel = channelMeta ? `${channelCode} · ${channelMeta.label}` : 'Nog geen kanaal gekozen';
-
-    setElementText('werfsleutelOverviewTitle', titleLabel);
-    setElementText('werfsleutelOverviewDuration', durationLabel);
-    setElementText('werfsleutelOverviewAction', actionLabel);
-    setElementText('werfsleutelOverviewCode', key.salesCode);
-    setElementText('werfsleutelOverviewChannel', channelLabel);
-}
-
-function closeWerfsleutelOverviewModal() {
-    const modal = document.getElementById('werfsleutelOverviewModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-function confirmWerfsleutelSelection() {
-    if (!werfsleutelState.selectedKey) {
-        showToast(translate('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
-        return;
-    }
-
-    if (!werfsleutelState.selectedChannel) {
-        showToast(translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'warning');
-        return;
-    }
-
-    werfsleutelState.confirmed = true;
-    updateWerfsleutelSummary();
-    closeWerfsleutelOverviewModal();
-    showToast(translate('werfsleutel.confirmed', {}, 'Werfsleutel bevestigd.'), 'success');
-}
-
-function setElementText(elementId, value) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.textContent = value;
-    }
+    void syncWerfsleutelsCatalog({ force: true, background: true }).then(() => {
+        const input = document.getElementById('werfsleutelInput');
+        const query = input ? input.value.trim() : '';
+        if (!query) {
+            return;
+        }
+        renderWerfsleutelSuggestions(filterWerfsleutelCatalog(query));
+    });
 }
 
 // Phase 6: Call Queue State Management
@@ -4274,6 +4415,7 @@ function showNewSubscription() {
     document.getElementById('subStartDate').value = today;
 
     resetWerfsleutelPicker();
+    triggerWerfsleutelBackgroundRefreshIfStale();
     initializeSubscriptionRolesForForm();
     renderRequesterSameSummary();
     document.getElementById('newSubscriptionForm').style.display = 'flex';
@@ -4290,11 +4432,6 @@ async function createSubscription(event) {
 
     if (!werfsleutelState.selectedChannel) {
         showToast(translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'error');
-        return;
-    }
-
-    if (!werfsleutelState.confirmed) {
-        showToast(translate('werfsleutel.confirmViaSummary', {}, 'Bevestig de werfsleutel via het overzicht.'), 'warning');
         return;
     }
 
