@@ -52,6 +52,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Prefix frontend API requests with the active script root (`/kiwi` or `/kiwi-preview`) so API calls resolve correctly behind the local gateway path.
 - Clear selected werfsleutel/channel state when a barcode scan resolves to no match or an inactive offer, preventing stale submissions.
 - Restore API fallback for Enter-based non-barcode werfsleutel lookups when the local cache misses, and clear stale selection when operators type a new query.
+- Make `POST /api/v1/workflows/subscription-signup` atomic by validating both roles before creating new persons, preventing partial state writes on error responses.
+- Remove hidden requester create-form controls when `sameAsRecipient` is enabled so browser required-field validation no longer blocks valid submit paths.
 
 ## [v1.0.6]
 

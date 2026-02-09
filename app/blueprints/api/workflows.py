@@ -62,18 +62,14 @@ def _parse_role_payload(role_payload: object, *, role_name: str, allow_same_as_r
     return {"mode": "new", "person_payload": person_payload}, None
 
 
-def _resolve_role_person(state: dict, role_spec: dict, *, role_name: str) -> tuple[dict | None, bool, tuple[dict, int] | None]:
-    if role_spec["mode"] == "existing":
-        person = poc_state.find_customer(state, int(role_spec["person_id"]))
-        if person is None:
-            return None, False, api_error(404, "customer_not_found", f"{role_name} person not found")
-        return person, False, None
+def _resolve_existing_role_person(state: dict, role_spec: dict, *, role_name: str) -> tuple[dict | None, tuple[dict, int] | None]:
+    if role_spec["mode"] != "existing":
+        return None, None
 
-    if role_spec["mode"] == "new":
-        person = poc_state.create_customer(state, dict(role_spec["person_payload"]))
-        return person, True, None
-
-    return None, False, api_error(400, "invalid_payload", f"{role_name} resolution failed")
+    person = poc_state.find_customer(state, int(role_spec["person_id"]))
+    if person is None:
+        return None, api_error(404, "customer_not_found", f"{role_name} person not found")
+    return person, None
 
 
 def _build_signup_history_entries(
@@ -147,25 +143,32 @@ def create_subscription_signup() -> tuple[dict, int]:
         return requester_spec_error
 
     state = poc_state.get_state(session)
-    recipient, created_recipient, recipient_error = _resolve_role_person(
-        state,
-        recipient_spec,
-        role_name="recipient",
-    )
+
+    # Validate references first so error responses never persist partially-created customers.
+    recipient, recipient_error = _resolve_existing_role_person(state, recipient_spec, role_name="recipient")
     if recipient_error:
         return recipient_error
 
+    requester = None
+    requester_error = None
+    if requester_spec["mode"] == "same_as_recipient":
+        requester_error = None
+    else:
+        requester, requester_error = _resolve_existing_role_person(state, requester_spec, role_name="requester")
+    if requester_error:
+        return requester_error
+
+    created_recipient = False
+    if recipient is None:
+        recipient = poc_state.create_customer(state, dict(recipient_spec["person_payload"]))
+        created_recipient = True
+
+    created_requester = False
     if requester_spec["mode"] == "same_as_recipient":
         requester = recipient
-        created_requester = False
-    else:
-        requester, created_requester, requester_error = _resolve_role_person(
-            state,
-            requester_spec,
-            role_name="requester",
-        )
-        if requester_error:
-            return requester_error
+    elif requester is None:
+        requester = poc_state.create_customer(state, dict(requester_spec["person_payload"]))
+        created_requester = True
 
     subscription = _build_subscription(
         state,

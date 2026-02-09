@@ -1403,6 +1403,31 @@ function renderRequesterSameSummary() {
     summaryNode.textContent = 'Aanvrager/betaler volgt de geselecteerde ontvanger.';
 }
 
+function clearSubscriptionRoleCreateForm(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) return;
+
+    const formContainer = document.getElementById(cfg.createFormContainerId);
+    if (!formContainer) return;
+
+    formContainer.innerHTML = '';
+}
+
+function ensureSubscriptionRoleCreateForm(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) return;
+
+    const formContainer = document.getElementById(cfg.createFormContainerId);
+    if (!formContainer || formContainer.childElementCount > 0) return;
+
+    renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
+        includePhone: true,
+        includeEmail: true,
+        phoneRequired: false,
+        emailRequired: true
+    });
+}
+
 function setSubscriptionRoleMode(role, mode) {
     const cfg = getSubscriptionRoleConfig(role);
     if (!cfg) return;
@@ -1419,21 +1444,12 @@ function setSubscriptionRoleMode(role, mode) {
     if (existingSection) existingSection.style.display = subscriptionRoleState[role].mode === 'existing' ? 'block' : 'none';
     if (createSection) createSection.style.display = subscriptionRoleState[role].mode === 'create' ? 'block' : 'none';
 
-    const formContainer = document.getElementById(cfg.createFormContainerId);
     if (subscriptionRoleState[role].mode === 'create') {
-        if (formContainer) {
-            renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
-                includePhone: true,
-                includeEmail: true,
-                phoneRequired: false,
-                emailRequired: true
-            });
-        }
+        ensureSubscriptionRoleCreateForm(role);
         subscriptionRoleState[role].selectedPerson = null;
         renderSubscriptionRoleSelectedPerson(role);
-    } else if (formContainer) {
-        // Remove create-form required fields from DOM to avoid hidden-field validation blocking submit.
-        formContainer.innerHTML = '';
+    } else {
+        clearSubscriptionRoleCreateForm(role);
     }
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
@@ -1458,7 +1474,10 @@ function toggleRequesterSameAsRecipient() {
     }
 
     if (sameCheckbox.checked) {
+        clearSubscriptionRoleCreateForm('requester');
         renderRequesterSameSummary();
+    } else if (subscriptionRoleState.requester.mode === 'create') {
+        ensureSubscriptionRoleCreateForm('requester');
     }
 }
 
