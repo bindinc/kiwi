@@ -49,6 +49,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
 - Make menu logout terminate local session and attempt OIDC provider logout before landing on a logged-out page.
 - Prefix frontend API requests with the active script root (`/kiwi` or `/kiwi-preview`) so API calls resolve correctly behind the local gateway path.
+- Make `POST /api/v1/workflows/subscription-signup` atomic by validating both roles before creating new persons, preventing partial state writes on error responses.
+- Remove hidden requester create-form controls when `sameAsRecipient` is enabled so browser required-field validation no longer blocks valid submit paths.
 
 ## [v1.0.6]
 
