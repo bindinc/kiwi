@@ -96,6 +96,7 @@ const nl = {
         cancelled: 'Abonnement opgezegd',
         processed: '{count} abonnement(en) verwerkt. Bevestigingen worden verstuurd.',
         transferred: '{magazine} overgezet naar {name}',
+        samePersonAutoEnabled: 'Ontvanger en aanvrager zijn dezelfde persoon. "Zelfde persoon als ontvanger" is automatisch ingeschakeld.',
         duplicateCheck: {
             checking: 'Zoeken naar bestaande personen...',
             possibleFound: 'Mogelijk bestaande persoon gevonden ({count}).',

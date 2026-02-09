@@ -1531,6 +1531,63 @@ function toggleRequesterSameAsRecipient() {
     }
 }
 
+function getSelectedSubscriptionRolePersonId(role) {
+    const selectedPerson = subscriptionRoleState[role]?.selectedPerson;
+    if (!selectedPerson || selectedPerson.id === undefined || selectedPerson.id === null) {
+        return null;
+    }
+
+    const personId = Number(selectedPerson.id);
+    return Number.isFinite(personId) ? personId : null;
+}
+
+function hasSameSelectedExistingRecipientAndRequester() {
+    const recipientIsExisting = subscriptionRoleState.recipient.mode === 'existing';
+    const requesterIsExisting = subscriptionRoleState.requester.mode === 'existing';
+    if (!recipientIsExisting || !requesterIsExisting) {
+        return false;
+    }
+
+    const recipientId = getSelectedSubscriptionRolePersonId('recipient');
+    const requesterId = getSelectedSubscriptionRolePersonId('requester');
+    if (recipientId === null || requesterId === null) {
+        return false;
+    }
+
+    return recipientId === requesterId;
+}
+
+function normalizeRequesterSameAsRecipientSelection(options = {}) {
+    const { silent = false } = options;
+    if (subscriptionRoleState.requesterSameAsRecipient) {
+        return false;
+    }
+
+    if (!hasSameSelectedExistingRecipientAndRequester()) {
+        return false;
+    }
+
+    const sameCheckbox = document.getElementById('requesterSameAsRecipient');
+    if (sameCheckbox && !sameCheckbox.checked) {
+        sameCheckbox.checked = true;
+    }
+
+    toggleRequesterSameAsRecipient();
+
+    if (!silent) {
+        showToast(
+            translate(
+                'subscription.samePersonAutoEnabled',
+                {},
+                'Ontvanger en aanvrager zijn dezelfde persoon. "Zelfde persoon als ontvanger" is automatisch ingeschakeld.'
+            ),
+            'info'
+        );
+    }
+
+    return true;
+}
+
 function normalizeRoleSearchQuery(value) {
     return String(value || '').trim();
 }
@@ -2348,6 +2405,10 @@ function selectSubscriptionRolePerson(role, personId) {
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
+    }
+
+    if (!subscriptionRoleState.requesterSameAsRecipient) {
+        normalizeRequesterSameAsRecipientSelection();
     }
 }
 
@@ -5216,9 +5277,28 @@ async function createSubscription(event) {
         return;
     }
 
-    const requesterPayload = buildSubscriptionRolePayload('requester');
+    normalizeRequesterSameAsRecipientSelection({ silent: true });
+
+    let requesterPayload = buildSubscriptionRolePayload('requester');
     if (!requesterPayload) {
         return;
+    }
+
+    const recipientPersonId = recipientPayload.personId !== undefined ? Number(recipientPayload.personId) : null;
+    const requesterPersonId = requesterPayload.personId !== undefined ? Number(requesterPayload.personId) : null;
+    const requesterShouldFollowRecipient = (
+        !subscriptionRoleState.requesterSameAsRecipient
+        && recipientPersonId !== null
+        && requesterPersonId !== null
+        && recipientPersonId === requesterPersonId
+    );
+    if (requesterShouldFollowRecipient) {
+        requesterPayload = { sameAsRecipient: true };
+        const sameCheckbox = document.getElementById('requesterSameAsRecipient');
+        if (sameCheckbox && !sameCheckbox.checked) {
+            sameCheckbox.checked = true;
+        }
+        toggleRequesterSameAsRecipient();
     }
 
     const duplicateGuardPassed = await validateSubscriptionDuplicateSubmitGuard();

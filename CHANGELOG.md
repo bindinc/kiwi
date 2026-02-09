@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Hard-switch `POST /api/v1/workflows/subscription-signup` away from `customerId/customer` to `recipient/requester` payload objects, including `sameAsRecipient` requester resolution.
 - Update the frontend subscription form to support recipient and requester/payer selection or inline person creation without storing a relation-type enum.
 - Add a local-first, throttled background duplicate-person check in subscription create mode for both recipient and requester, with collapsed advisory UI, expandable matches, and a submit-time non-blocking confirmation guard.
+- Auto-enable "Zelfde persoon als ontvanger" when recipient and requester resolve to the same existing person while the checkbox is manually unchecked, and canonicalize submit payload as `sameAsRecipient` for this edge case.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
