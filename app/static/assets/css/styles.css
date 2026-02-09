@@ -2609,6 +2609,98 @@ select option {
     font-size: 0.95rem;
 }
 
+.onepager-container .subscription-duplicate-check {
+    margin-top: 0.65rem;
+}
+
+.onepager-container .subscription-duplicate-check.hidden {
+    display: none;
+}
+
+.onepager-container .subscription-duplicate-banner {
+    border: 1px solid #f3e3b0;
+    border-radius: var(--radius-sm);
+    background-color: #fffaf0;
+    padding: 0.55rem 0.65rem;
+}
+
+.onepager-container .subscription-duplicate-header {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.onepager-container .subscription-duplicate-title {
+    font-size: 0.88rem;
+    color: #8a5a00;
+    font-weight: 600;
+}
+
+.onepager-container .subscription-duplicate-inline-status {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.35rem;
+}
+
+.onepager-container .subscription-duplicate-inline-status.muted {
+    color: #6b7280;
+}
+
+.onepager-container .subscription-duplicate-actions {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.onepager-container .subscription-duplicate-action {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.2rem 0.5rem;
+    font-size: 0.78rem;
+    background-color: #fff;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.onepager-container .subscription-duplicate-action.warning {
+    border-color: #d8c27a;
+    color: #7a4b00;
+}
+
+.onepager-container .subscription-duplicate-action:hover {
+    background-color: var(--bg-secondary);
+}
+
+.onepager-container .subscription-duplicate-list {
+    margin-top: 0.55rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.onepager-container .subscription-duplicate-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.45rem 0.55rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.65rem;
+    align-items: center;
+    background: #fff;
+}
+
+.onepager-container .subscription-duplicate-item-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.onepager-container .subscription-duplicate-more {
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
 /* Payment Methods Styling */
 .onepager-container .payment-methods {
     width: 100%;

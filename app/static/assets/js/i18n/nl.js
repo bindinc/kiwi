@@ -95,7 +95,18 @@ const nl = {
         notFoundOrRefund: 'Abonnement niet gevonden of niet gerestitueerd',
         cancelled: 'Abonnement opgezegd',
         processed: '{count} abonnement(en) verwerkt. Bevestigingen worden verstuurd.',
-        transferred: '{magazine} overgezet naar {name}'
+        transferred: '{magazine} overgezet naar {name}',
+        samePersonAutoEnabled: 'Ontvanger en aanvrager zijn dezelfde persoon. "Zelfde persoon als ontvanger" is automatisch ingeschakeld.',
+        duplicateCheck: {
+            checking: 'Zoeken naar bestaande personen...',
+            possibleFound: 'Mogelijk bestaande persoon gevonden ({count}).',
+            showMatches: 'Toon matches',
+            hideMatches: 'Verberg matches',
+            useExisting: 'Gebruik bestaande',
+            createAnyway: 'Toch nieuwe persoon',
+            submitAdvisory: 'Controleer mogelijke bestaande {roleLabel} voordat u doorgaat.',
+            apiFallback: 'Controle via backend tijdelijk niet beschikbaar. Lokale controle blijft actief.'
+        }
     },
     resend: {
         editionResent: 'Editie van {magazine} wordt opnieuw verzonden!'
