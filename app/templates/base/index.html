@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="nl"
+      data-kiwi-base-path="{{ request.script_root | e }}"
+      data-kiwi-agent-name="{{ user_full_name | e }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1479,16 +1481,15 @@
     </div>
 
     <script>
-        window.kiwiBasePath = {{ request.script_root | tojson }};
+        const pageDataset = document.documentElement ? document.documentElement.dataset : {};
+        window.kiwiBasePath = pageDataset.kiwiBasePath || '';
+        window.kiwiAgentName = pageDataset.kiwiAgentName || '';
     </script>
     <script type="module" src="{{ url_for('static', filename='assets/js/i18n/index.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/feature-flags.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/api-client.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/delivery-date-picker.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/article-search.js') }}"></script>
-    <script>
-        window.kiwiAgentName = {{ user_full_name | tojson }};
-    </script>
     <script src="{{ url_for('static', filename='assets/js/app.js') }}"></script>
 </body>
 </html>
