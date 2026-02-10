@@ -211,6 +211,93 @@ function applyIndexHtmlTranslations() {
     }
 }
 
+const FALLBACK_APP_LOCALE = 'nl';
+const DATE_LOCALE_BY_APP_LOCALE = {
+    nl: 'nl-NL',
+    en: 'en-US'
+};
+
+function normalizeAppLocale(locale) {
+    if (!locale) {
+        return FALLBACK_APP_LOCALE;
+    }
+
+    return String(locale).split('-')[0].toLowerCase();
+}
+
+function getAppLocale() {
+    const i18nLocale = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLocale === 'function')
+        ? window.i18n.getLocale()
+        : null;
+    const availableLocales = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.availableLocales === 'function')
+        ? window.i18n.availableLocales().map((locale) => normalizeAppLocale(locale))
+        : [];
+    const documentLocale = (typeof document !== 'undefined' && document.documentElement)
+        ? document.documentElement.lang
+        : null;
+    const candidate = normalizeAppLocale(i18nLocale || documentLocale || FALLBACK_APP_LOCALE);
+
+    if (availableLocales.length > 0 && !availableLocales.includes(candidate)) {
+        return FALLBACK_APP_LOCALE;
+    }
+
+    if (!DATE_LOCALE_BY_APP_LOCALE[candidate]) {
+        return FALLBACK_APP_LOCALE;
+    }
+
+    return candidate;
+}
+
+function getDateLocaleForApp() {
+    const appLocale = getAppLocale();
+    return DATE_LOCALE_BY_APP_LOCALE[appLocale] || DATE_LOCALE_BY_APP_LOCALE[FALLBACK_APP_LOCALE];
+}
+
+function setDocumentLocale(locale) {
+    if (typeof document === 'undefined' || !document.documentElement) {
+        return;
+    }
+
+    document.documentElement.lang = normalizeAppLocale(locale);
+}
+
+function updateLocaleMenuSelection() {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const selectedLocale = getAppLocale();
+    const localeButtons = document.querySelectorAll('[data-locale-option]');
+    localeButtons.forEach((button) => {
+        const isCurrentLocale = normalizeAppLocale(button.dataset.localeOption) === selectedLocale;
+        button.classList.toggle('is-active', isCurrentLocale);
+    });
+}
+
+function applyLocaleToUi(options = {}) {
+    const shouldCloseMenu = options.closeMenu === true;
+    setDocumentLocale(getAppLocale());
+    applyIndexHtmlTranslations();
+    refreshAgentStatusLabels();
+    updateAgentStatusDisplay();
+    updateLocaleMenuSelection();
+    updateTime();
+
+    if (shouldCloseMenu) {
+        closeStatusMenu();
+    }
+}
+
+function setAppLocale(locale) {
+    if (!(typeof window !== 'undefined' && window.i18n && typeof window.i18n.setLocale === 'function')) {
+        return getAppLocale();
+    }
+
+    const nextLocale = window.i18n.setLocale(locale);
+    applyLocaleToUi({ closeMenu: true });
+    return normalizeAppLocale(nextLocale);
+}
+
 const bootstrapApiUrl = '/api/v1/bootstrap';
 const offersApiUrl = '/api/v1/catalog/offers';
 const personsStateApiUrl = '/api/v1/persons/state';
@@ -276,17 +363,40 @@ let agentStatus = {
     acwInterval: null
 };
 
+const agentStatusLabelConfig = {
+    ready: { key: 'agentStatus.ready', fallback: 'Beschikbaar' },
+    in_call: { key: 'agentStatus.in_call', fallback: 'In gesprek' },
+    busy: { key: 'agentStatus.busy', fallback: 'Bezet' },
+    dnd: { key: 'agentStatus.dnd', fallback: 'Niet storen' },
+    brb: { key: 'agentStatus.brb', fallback: 'Ben zo terug' },
+    away: { key: 'agentStatus.away', fallback: 'Als afwezig weergeven' },
+    offline: { key: 'agentStatus.offline', fallback: 'Offline' },
+    acw: { key: 'agentStatus.acw', fallback: 'Nabewerkingstijd' }
+};
+
 // Agent Status Definitions
 const agentStatuses = {
-    ready: { label: translate('agentStatus.ready', {}, 'Beschikbaar'), color: '#4ade80', badge: '✓', textColor: '#052e16' },
-    in_call: { label: translate('agentStatus.in_call', {}, 'In gesprek'), color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
-    busy: { label: translate('agentStatus.busy', {}, 'Bezet'), color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
-    dnd: { label: translate('agentStatus.dnd', {}, 'Niet storen'), color: '#dc2626', badge: '⛔', textColor: '#7f1d1d' },
-    brb: { label: translate('agentStatus.brb', {}, 'Ben zo terug'), color: '#f59e0b', badge: '↺', textColor: '#78350f' },
-    away: { label: translate('agentStatus.away', {}, 'Als afwezig weergeven'), color: '#fbbf24', badge: '◔', textColor: '#713f12' },
-    offline: { label: translate('agentStatus.offline', {}, 'Offline'), color: '#9ca3af', badge: '−', textColor: '#111827' },
-    acw: { label: translate('agentStatus.acw', {}, 'Nabewerkingstijd'), color: '#facc15', badge: '~', textColor: '#422006' },
+    ready: { label: '', color: '#4ade80', badge: '✓', textColor: '#052e16' },
+    in_call: { label: '', color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
+    busy: { label: '', color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
+    dnd: { label: '', color: '#dc2626', badge: '⛔', textColor: '#7f1d1d' },
+    brb: { label: '', color: '#f59e0b', badge: '↺', textColor: '#78350f' },
+    away: { label: '', color: '#fbbf24', badge: '◔', textColor: '#713f12' },
+    offline: { label: '', color: '#9ca3af', badge: '−', textColor: '#111827' },
+    acw: { label: '', color: '#facc15', badge: '~', textColor: '#422006' }
 };
+
+function refreshAgentStatusLabels() {
+    for (const [status, statusConfig] of Object.entries(agentStatuses)) {
+        const labelConfig = agentStatusLabelConfig[status];
+        if (!labelConfig) {
+            continue;
+        }
+        statusConfig.label = translate(labelConfig.key, {}, labelConfig.fallback);
+    }
+}
+
+refreshAgentStatusLabels();
 
 const agentStatusAliases = {
     break: 'away'
@@ -299,11 +409,20 @@ const transientAgentStatuses = new Set(['in_call']);
 let serviceNumbers = {};
 
 // Currency formatter reused for werfsleutels and notes
-const euroFormatter = new Intl.NumberFormat('nl-NL', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2
-});
+const euroFormattersByLocale = {};
+
+function getEuroFormatter() {
+    const locale = getDateLocaleForApp();
+    if (!euroFormattersByLocale[locale]) {
+        euroFormattersByLocale[locale] = new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: 2
+        });
+    }
+
+    return euroFormattersByLocale[locale];
+}
 
 let werfsleutelCatalog = [];
 let werfsleutelLoadAttempted = false;
@@ -665,6 +784,7 @@ function generateSubscriptionNumber(customerId, subscriptionId) {
 }
 
 function formatEuro(amount) {
+    const euroFormatter = getEuroFormatter();
     if (typeof amount !== 'number') {
         const numericValue = Number(amount);
         return euroFormatter.format(Number.isFinite(numericValue) ? numericValue : 0);
@@ -4290,7 +4410,7 @@ function startCallFromQueue(queueEntry) {
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
-    applyIndexHtmlTranslations();
+    applyLocaleToUi();
     await loadBootstrapState();
     initializeData();
     initializeQueue();
@@ -4402,12 +4522,13 @@ function updateCustomerActionButtons() {
 // Update Time Display
 function updateTime() {
     const now = new Date();
-    const timeString = now.toLocaleTimeString('nl-NL', { 
+    const locale = getDateLocaleForApp();
+    const timeString = now.toLocaleTimeString(locale, {
         hour: '2-digit', 
         minute: '2-digit',
         second: '2-digit'
     });
-    const dateString = now.toLocaleDateString('nl-NL', {
+    const dateString = now.toLocaleDateString(locale, {
         weekday: 'long',
         year: 'numeric',
         month: 'long',

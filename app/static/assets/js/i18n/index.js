@@ -1,10 +1,12 @@
 import nl from './nl.js';
+import en from './en.js';
 
 const FALLBACK_LOCALE = 'nl';
 const LOCALE_STORAGE_KEY = 'kiwi.locale';
 
 const locales = {
-    nl
+    nl,
+    en
 };
 
 function normalizeLocale(locale) {
