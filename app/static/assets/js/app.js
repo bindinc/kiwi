@@ -31,6 +31,136 @@ const translate = (key, params, fallback) => {
     return fallback !== undefined ? fallback : key;
 };
 
+const STATIC_PAGE_TRANSLATABLE_ATTRIBUTES = ['placeholder', 'title', 'aria-label'];
+const STATIC_PAGE_NON_TRANSLATABLE_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME', 'CODE', 'PRE', 'TEXTAREA']);
+
+function normalizeStaticLiteral(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function shouldTranslateStaticLiteral(value) {
+    if (!value) {
+        return false;
+    }
+
+    if (/\{\{|\}\}|\{%|%\}/.test(value)) {
+        return false;
+    }
+
+    return /[A-Za-zÀ-ÿ]/.test(value);
+}
+
+function hashStaticLiteral(input) {
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < input.length; index += 1) {
+        hash ^= input.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function buildStaticLiteralSlug(value) {
+    const normalized = value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+
+    const safeNormalized = normalized || 'value';
+    return `${safeNormalized.slice(0, 72)}_${hashStaticLiteral(value)}`;
+}
+
+function buildIndexHtmlI18nKey(literal, section = 'text') {
+    return `indexHtml.${section}.${buildStaticLiteralSlug(literal)}`;
+}
+
+function applyIndexHtmlTranslations() {
+    if (typeof document === 'undefined' || !document.body) {
+        return;
+    }
+
+    const textNodes = [];
+    const textWalker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        {
+            acceptNode(node) {
+                const parent = node.parentElement;
+                if (!parent) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+
+                if (STATIC_PAGE_NON_TRANSLATABLE_TAGS.has(parent.tagName)) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+
+                if (parent.closest('script, style, noscript, iframe, code, pre, textarea')) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+
+                if (!/\S/.test(node.nodeValue || '')) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        }
+    );
+
+    while (textWalker.nextNode()) {
+        textNodes.push(textWalker.currentNode);
+    }
+
+    for (const textNode of textNodes) {
+        const originalValue = textNode.nodeValue || '';
+        const normalizedLiteral = normalizeStaticLiteral(originalValue);
+        if (!shouldTranslateStaticLiteral(normalizedLiteral)) {
+            continue;
+        }
+
+        const translatedLiteral = translate(
+            buildIndexHtmlI18nKey(normalizedLiteral, 'text'),
+            {},
+            normalizedLiteral
+        );
+
+        if (translatedLiteral === normalizedLiteral) {
+            continue;
+        }
+
+        const leadingWhitespace = originalValue.match(/^\s*/)?.[0] || '';
+        const trailingWhitespace = originalValue.match(/\s*$/)?.[0] || '';
+        textNode.nodeValue = `${leadingWhitespace}${translatedLiteral}${trailingWhitespace}`;
+    }
+
+    const elements = document.body.querySelectorAll('*');
+    for (const element of elements) {
+        for (const attributeName of STATIC_PAGE_TRANSLATABLE_ATTRIBUTES) {
+            const originalValue = element.getAttribute(attributeName);
+            if (!originalValue) {
+                continue;
+            }
+
+            const normalizedLiteral = normalizeStaticLiteral(originalValue);
+            if (!shouldTranslateStaticLiteral(normalizedLiteral)) {
+                continue;
+            }
+
+            const section = attributeName === 'aria-label' ? 'ariaLabel' : attributeName;
+            const translatedLiteral = translate(
+                buildIndexHtmlI18nKey(normalizedLiteral, section),
+                {},
+                normalizedLiteral
+            );
+
+            if (translatedLiteral !== normalizedLiteral) {
+                element.setAttribute(attributeName, translatedLiteral);
+            }
+        }
+    }
+}
+
 const bootstrapApiUrl = '/api/v1/bootstrap';
 const offersApiUrl = '/api/v1/catalog/offers';
 const personsStateApiUrl = '/api/v1/persons/state';
@@ -4110,6 +4240,7 @@ function startCallFromQueue(queueEntry) {
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
+    applyIndexHtmlTranslations();
     await loadBootstrapState();
     initializeData();
     initializeQueue();

@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
+- Make `app/templates/base/index.html` fully i18n-backed by translating static text/placeholder/title literals through `window.i18n`, and add matching `indexHtml` keys in `app/static/assets/js/i18n/nl.js`.
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
 - Make `make compose-up` fail fast with actionable guidance when local OIDC prerequisites are not met.
 - Make missing `client_secrets.json` automatically activate local fallback OIDC instead of failing startup.
