@@ -1,0 +1,258 @@
+<template id="tpl-empty-state">
+    <div class="empty-state">
+        <span class="empty-icon" data-empty-icon></span>
+        <h2 data-empty-title></h2>
+        <p data-empty-text></p>
+    </div>
+</template>
+
+<template id="tpl-empty-state-small">
+    <div class="empty-state-small">
+        <p data-empty-text></p>
+    </div>
+</template>
+
+<template id="tpl-werfsleutel-suggestion">
+    <button type="button" role="option" class="werfsleutel-suggestion" data-werfsleutel-code>
+        <span class="code" data-werfsleutel-code-label></span>
+        <span class="title" data-werfsleutel-title></span>
+        <span class="price" data-werfsleutel-price></span>
+        <span class="status-pill" data-werfsleutel-status></span>
+    </button>
+</template>
+
+<template id="tpl-werfsleutel-channel-chip">
+    <button type="button" class="channel-chip" data-channel-code>
+        <span class="channel-icon" data-channel-icon></span>
+        <span class="channel-code" data-channel-code-label></span>
+        <span class="channel-label" data-channel-label></span>
+    </button>
+</template>
+
+<template id="tpl-werfsleutel-summary">
+    <div class="werfsleutel-summary-content">
+        <div data-summary-main>
+            <strong data-summary-sales-code></strong>
+            <span data-summary-title></span>
+            <span data-summary-price></span>
+        </div>
+        <div class="werfsleutel-summary-status">
+            <span class="status-pill" data-summary-status></span>
+            <span data-summary-channel></span>
+        </div>
+    </div>
+</template>
+
+<template id="tpl-customer-form">
+    <div class="customer-form-root">
+        <h3 class="form-subtitle">Aanhef *</h3>
+        <div class="aanhef-row" data-salutation-row>
+            <label><input type="radio" data-field="Salutation" value="Dhr." required checked> Dhr.</label>
+            <label><input type="radio" data-field="Salutation" value="Mevr."> Mevr.</label>
+            <label><input type="radio" data-field="Salutation" value="Anders"> Anders</label>
+        </div>
+
+        <div class="form-row">
+            <input type="text" data-field="Initials" placeholder="Voorletters*" required>
+            <input type="text" data-field="MiddleName" placeholder="Tussenvoegsel">
+            <input type="text" data-field="LastName" placeholder="Achternaam*" required>
+        </div>
+
+        <div class="form-group">
+            <label>Geboortedatum</label>
+            <div class="form-row">
+                <select data-field="BirthdayDay">
+                    <option value="">Dag</option>
+                </select>
+                <select data-field="BirthdayMonth">
+                    <option value="">Maand</option>
+                </select>
+                <select data-field="BirthdayYear">
+                    <option value="">Jaar</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row customer-address-row" data-address-row>
+            <input type="text" data-field="PostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
+            <input type="text" data-field="HouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required>
+            <input type="text" data-field="HouseExt" placeholder="Toevoeging" maxlength="10">
+        </div>
+
+        <div class="form-row customer-address-row" data-address-row>
+            <input type="text" data-field="Address" placeholder="Straat*" required>
+            <input type="text" data-field="City" placeholder="Plaats*" required>
+        </div>
+
+        <div class="form-row" data-contact-row>
+            <input type="tel" data-field="Phone" placeholder="Telefoonnummer">
+            <input type="email" data-field="Email" placeholder="E-mailadres*" required>
+        </div>
+
+        <div class="form-group is-hidden" data-same-address-wrapper>
+            <label>
+                <input type="checkbox" data-field="SameAddress">
+                Zelfde adres als originele abonnee
+            </label>
+        </div>
+    </div>
+</template>
+
+<template id="tpl-party-search-result">
+    <div class="party-search-result">
+        <div>
+            <strong data-person-name></strong>
+            <div class="party-search-result-meta" data-person-meta></div>
+        </div>
+        <button type="button" class="btn btn-small" data-person-select> Selecteer</button>
+    </div>
+</template>
+
+<template id="tpl-subscription-duplicate-banner">
+    <div class="subscription-duplicate-banner">
+        <div class="subscription-duplicate-header">
+            <div class="subscription-duplicate-title" data-duplicate-title></div>
+            <div class="subscription-duplicate-actions">
+                <button type="button" class="subscription-duplicate-action" data-duplicate-toggle></button>
+                <button type="button" class="subscription-duplicate-action warning" data-duplicate-create-anyway></button>
+            </div>
+        </div>
+        <div class="subscription-duplicate-inline-status is-hidden" data-duplicate-checking></div>
+        <div class="subscription-duplicate-inline-status muted is-hidden" data-duplicate-warning></div>
+        <div class="subscription-duplicate-list is-hidden" data-duplicate-list></div>
+        <div class="subscription-duplicate-more is-hidden" data-duplicate-more></div>
+    </div>
+</template>
+
+<template id="tpl-subscription-duplicate-item">
+    <div class="subscription-duplicate-item">
+        <div>
+            <strong data-person-name></strong>
+            <div class="subscription-duplicate-item-meta" data-person-meta></div>
+        </div>
+        <button type="button" class="subscription-duplicate-action" data-duplicate-use-existing></button>
+    </div>
+</template>
+
+<template id="tpl-debug-queue-item">
+    <div class="debug-queue-item">
+        <div class="debug-queue-item-info">
+            <div class="debug-queue-item-name" data-queue-name></div>
+            <div class="debug-queue-item-details" data-queue-details></div>
+        </div>
+        <div class="debug-queue-item-wait" data-queue-wait></div>
+    </div>
+</template>
+
+<template id="tpl-search-result-row">
+    <tr class="result-row">
+        <td class="result-row-lastname" data-lastname></td>
+        <td class="result-row-initials">
+            <span class="initials-value" data-initials></span>
+        </td>
+        <td class="result-row-address">
+            <span data-address-line-1></span><br>
+            <span data-address-line-2></span>
+        </td>
+        <td class="result-row-subscriptions" data-subscriptions></td>
+        <td class="result-row-subscriber-number" data-subscriber-number></td>
+        <td class="result-row-actions" data-actions></td>
+    </tr>
+</template>
+
+<template id="tpl-page-button">
+    <button type="button" class="page-btn" data-page-button></button>
+</template>
+
+<template id="tpl-page-ellipsis">
+    <span class="page-ellipsis">...</span>
+</template>
+
+<template id="tpl-deceased-banner">
+    <div class="deceased-status-banner">
+        <div class="deceased-banner-icon">⚠️</div>
+        <div class="deceased-banner-content">
+            <strong data-banner-title></strong>
+            <p data-banner-text></p>
+        </div>
+    </div>
+</template>
+
+<template id="tpl-subscription-group">
+    <div class="subscription-group">
+        <h4 class="subscription-group-title" data-group-title></h4>
+        <div data-group-items></div>
+    </div>
+</template>
+
+<template id="tpl-subscription-item">
+    <div class="subscription-item">
+        <div class="subscription-info">
+            <div class="subscription-name" data-subscription-name></div>
+            <div class="subscription-details" data-subscription-details></div>
+        </div>
+        <div class="subscription-actions" data-subscription-actions></div>
+    </div>
+</template>
+
+<template id="tpl-timeline-item">
+    <div class="timeline-item" data-contact-id>
+        <div class="timeline-dot" data-timeline-dot></div>
+        <div class="timeline-header" data-timeline-header>
+            <span class="timeline-type" data-timeline-type></span>
+            <span class="timeline-expand expanded" data-timeline-expand>▼</span>
+            <span class="timeline-date" data-timeline-date></span>
+        </div>
+        <div class="timeline-content expanded" data-timeline-content></div>
+    </div>
+</template>
+
+<template id="tpl-timeline-pagination">
+    <div class="timeline-pagination">
+        <button type="button" class="timeline-nav-btn" data-prev-page>← Vorige</button>
+        <span class="timeline-page-indicator" data-page-indicator></span>
+        <button type="button" class="timeline-nav-btn" data-next-page>Volgende →</button>
+    </div>
+</template>
+
+<template id="tpl-offer-card">
+    <div class="offer-card" data-offer-id>
+        <div class="offer-title" data-offer-title></div>
+        <div class="offer-description" data-offer-description></div>
+        <div class="offer-discount" data-offer-discount></div>
+    </div>
+</template>
+
+<template id="tpl-deceased-subscription-card">
+    <div class="deceased-subscription-card" data-subscription-id>
+        <div class="deceased-sub-header">
+            <h4 data-subscription-title></h4>
+            <span class="sub-start-date" data-subscription-start-date></span>
+        </div>
+        <div class="form-group">
+            <label>Actie voor dit abonnement:</label>
+            <div class="radio-group" data-action-options></div>
+        </div>
+    </div>
+</template>
+
+<template id="tpl-subscription-action-list">
+    <div class="subscription-action-list">
+        <p><strong data-action-title></strong></p>
+        <ul data-action-items></ul>
+    </div>
+</template>
+
+<template id="tpl-article-item">
+    <div class="article-item">
+        <div class="article-info">
+            <div class="article-name" data-article-name></div>
+            <div class="article-details" data-article-details></div>
+        </div>
+        <div class="article-actions" data-article-actions></div>
+    </div>
+</template>
+
+<template id="tpl-select-option">
+    <option></option>
+</template>

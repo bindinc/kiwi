@@ -44,6 +44,173 @@ const agentStatusApiUrl = '/api/v1/agent-status';
 
 let bootstrapState = null;
 
+const templateIds = {
+    emptyState: 'tpl-empty-state',
+    emptyStateSmall: 'tpl-empty-state-small',
+    werfsleutelSuggestion: 'tpl-werfsleutel-suggestion',
+    werfsleutelChannelChip: 'tpl-werfsleutel-channel-chip',
+    werfsleutelSummary: 'tpl-werfsleutel-summary',
+    customerForm: 'tpl-customer-form',
+    partySearchResult: 'tpl-party-search-result',
+    subscriptionDuplicateBanner: 'tpl-subscription-duplicate-banner',
+    subscriptionDuplicateItem: 'tpl-subscription-duplicate-item',
+    debugQueueItem: 'tpl-debug-queue-item',
+    searchResultRow: 'tpl-search-result-row',
+    pageButton: 'tpl-page-button',
+    pageEllipsis: 'tpl-page-ellipsis',
+    deceasedBanner: 'tpl-deceased-banner',
+    subscriptionGroup: 'tpl-subscription-group',
+    subscriptionItem: 'tpl-subscription-item',
+    timelineItem: 'tpl-timeline-item',
+    timelinePagination: 'tpl-timeline-pagination',
+    offerCard: 'tpl-offer-card',
+    deceasedSubscriptionCard: 'tpl-deceased-subscription-card',
+    subscriptionActionList: 'tpl-subscription-action-list',
+    articleItem: 'tpl-article-item',
+    selectOption: 'tpl-select-option'
+};
+
+const agentStatusClassPrefix = 'status-';
+
+const timelineAccentClassByColor = {
+    '#fbbf24': 'timeline-accent-amber',
+    '#3b82f6': 'timeline-accent-blue',
+    '#10b981': 'timeline-accent-green',
+    '#6b7280': 'timeline-accent-gray',
+    '#ef4444': 'timeline-accent-red',
+    '#f59e0b': 'timeline-accent-orange',
+    '#dc2626': 'timeline-accent-danger',
+    '#8b5cf6': 'timeline-accent-purple'
+};
+
+function getTemplate(templateId) {
+    const template = document.getElementById(templateId);
+    if (!(template instanceof HTMLTemplateElement)) {
+        throw new Error(`Template niet gevonden: ${templateId}`);
+    }
+    return template;
+}
+
+function cloneTemplate(templateId) {
+    return getTemplate(templateId).content.cloneNode(true);
+}
+
+function cloneTemplateElement(templateId) {
+    const fragment = cloneTemplate(templateId);
+    const element = fragment.firstElementChild;
+    if (!element) {
+        throw new Error(`Template zonder root element: ${templateId}`);
+    }
+    return element;
+}
+
+function replaceChildren(node, ...children) {
+    if (!node) {
+        return;
+    }
+    node.replaceChildren(...children);
+}
+
+function clearChildren(node) {
+    if (!node) {
+        return;
+    }
+    node.replaceChildren();
+}
+
+function setText(node, selector, value) {
+    if (!node) {
+        return;
+    }
+    const target = selector ? node.querySelector(selector) : node;
+    if (!target) {
+        return;
+    }
+    target.textContent = value === undefined || value === null ? '' : String(value);
+}
+
+function setNodeHidden(node, hidden = true) {
+    if (!node) {
+        return;
+    }
+    node.classList.toggle('is-hidden', hidden);
+}
+
+function showElement(node) {
+    setNodeHidden(node, false);
+}
+
+function hideElement(node) {
+    setNodeHidden(node, true);
+}
+
+function isHidden(node) {
+    if (!node) {
+        return true;
+    }
+    return node.classList.contains('is-hidden');
+}
+
+function createSelectOption(value, label, options = {}) {
+    const { disabled = false, selected = false } = options;
+    const option = cloneTemplateElement(templateIds.selectOption);
+    option.value = value;
+    option.textContent = label;
+    option.disabled = disabled;
+    option.selected = selected;
+    return option;
+}
+
+function appendLineBreakSeparatedText(container, value) {
+    if (!container) {
+        return;
+    }
+
+    const lines = String(value || '').split('\n');
+    lines.forEach((line, index) => {
+        container.appendChild(document.createTextNode(line));
+        if (index < lines.length - 1) {
+            container.appendChild(document.createElement('br'));
+        }
+    });
+}
+
+function createIconText(icon, text) {
+    const fragment = document.createDocumentFragment();
+    if (icon) {
+        fragment.appendChild(document.createTextNode(`${icon} `));
+    }
+    fragment.appendChild(document.createTextNode(text));
+    return fragment;
+}
+
+function createStrongLabelValue(label, value, options = {}) {
+    const { withLineBreak = false } = options;
+    const fragment = document.createDocumentFragment();
+    const strongNode = document.createElement('strong');
+    strongNode.textContent = label;
+    fragment.appendChild(strongNode);
+    fragment.appendChild(document.createTextNode(` ${value}`));
+    if (withLineBreak) {
+        fragment.appendChild(document.createElement('br'));
+    }
+    return fragment;
+}
+
+function createEmptyStateNode(icon, title, text) {
+    const node = cloneTemplateElement(templateIds.emptyState);
+    setText(node, '[data-empty-icon]', icon);
+    setText(node, '[data-empty-title]', title);
+    setText(node, '[data-empty-text]', text);
+    return node;
+}
+
+function createEmptyStateSmallNode(text) {
+    const node = cloneTemplateElement(templateIds.emptyStateSmall);
+    setText(node, '[data-empty-text]', text);
+    return node;
+}
+
 function upsertCustomerInCache(customer) {
     if (!customer || typeof customer !== 'object' || customer.id === undefined || customer.id === null) {
         return;
@@ -641,10 +808,13 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
         werfsleutelPickerState.activeIndex = -1;
 
         if (hideWhenEmpty) {
-            container.innerHTML = '';
+            clearChildren(container);
             container.classList.add('hidden');
         } else {
-            container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.noMatches', {}, 'Geen werfsleutels gevonden')}</div>`;
+            replaceChildren(
+                container,
+                createEmptyStateSmallNode(translate('werfsleutel.noMatches', {}, 'Geen werfsleutels gevonden'))
+            );
             container.classList.remove('hidden');
         }
         input.setAttribute('aria-expanded', 'false');
@@ -660,23 +830,29 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
     }
 
     container.classList.remove('hidden');
-    container.innerHTML = werfsleutelPickerState.visibleMatches.map((item, index) => `
-        <button type="button"
-                role="option"
-                id="werfsleutelOption-${index}"
-                aria-selected="${index === werfsleutelPickerState.activeIndex ? 'true' : 'false'}"
-                class="werfsleutel-suggestion${item.isActive ? '' : ' inactive'}${index === werfsleutelPickerState.activeIndex ? ' active' : ''}"
-                data-code="${item.salesCode}">
-            <span class="code">${item.salesCode}</span>
-            <span class="title">${item.title}</span>
-            <span class="price">${formatEuro(item.price)}</span>
-            <span class="status-pill ${item.isActive ? 'status-pill--success' : 'status-pill--warning'}">
-                ${item.isActive ? 'Actief' : 'Inactief'}
-            </span>
-        </button>
-    `).join('');
+    const fragment = document.createDocumentFragment();
+    werfsleutelPickerState.visibleMatches.forEach((item, index) => {
+        const button = cloneTemplateElement(templateIds.werfsleutelSuggestion);
+        const isActive = Boolean(item.isActive);
+        const isSelected = index === werfsleutelPickerState.activeIndex;
 
-    container.querySelectorAll('.werfsleutel-suggestion').forEach((button, index) => {
+        button.id = `werfsleutelOption-${index}`;
+        button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        button.dataset.code = item.salesCode;
+        button.classList.toggle('inactive', !isActive);
+        button.classList.toggle('active', isSelected);
+
+        setText(button, '[data-werfsleutel-code-label]', item.salesCode);
+        setText(button, '[data-werfsleutel-title]', item.title);
+        setText(button, '[data-werfsleutel-price]', formatEuro(item.price));
+
+        const statusNode = button.querySelector('[data-werfsleutel-status]');
+        if (statusNode) {
+            statusNode.classList.toggle('status-pill--success', isActive);
+            statusNode.classList.toggle('status-pill--warning', !isActive);
+            statusNode.textContent = isActive ? 'Actief' : 'Inactief';
+        }
+
         button.addEventListener('mouseenter', () => {
             if (werfsleutelPickerState.activeIndex === index) {
                 return;
@@ -685,12 +861,20 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
             renderWerfsleutelSuggestions(werfsleutelPickerState.visibleMatches, { preserveActiveIndex: true });
         });
 
-        if (button.classList.contains('inactive')) {
-            button.addEventListener('click', () => showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning'));
-            return;
+        if (!isActive) {
+            button.addEventListener('click', () => {
+                showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning');
+            });
+        } else {
+            button.addEventListener('click', () => {
+                selectWerfsleutel(item.salesCode);
+            });
         }
-        button.addEventListener('click', () => selectWerfsleutel(button.dataset.code));
+
+        fragment.appendChild(button);
     });
+
+    replaceChildren(container, fragment);
 
     const activeOption = container.querySelector(`#werfsleutelOption-${werfsleutelPickerState.activeIndex}`);
     input.setAttribute('aria-expanded', 'true');
@@ -797,7 +981,10 @@ function renderWerfsleutelChannelOptions() {
 
     const selectedKey = werfsleutelState.selectedKey;
     if (!selectedKey) {
-        container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.selectKeyFirst', {}, 'Selecteer eerst een werfsleutel')}</div>`;
+        replaceChildren(
+            container,
+            createEmptyStateSmallNode(translate('werfsleutel.selectKeyFirst', {}, 'Selecteer eerst een werfsleutel'))
+        );
         return;
     }
 
@@ -808,7 +995,10 @@ function renderWerfsleutelChannelOptions() {
 
     if (channelEntries.length === 0) {
         werfsleutelState.selectedChannel = null;
-        container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.noChannels', {}, 'Geen kanalen beschikbaar voor deze werfsleutel')}</div>`;
+        replaceChildren(
+            container,
+            createEmptyStateSmallNode(translate('werfsleutel.noChannels', {}, 'Geen kanalen beschikbaar voor deze werfsleutel'))
+        );
         return;
     }
 
@@ -820,25 +1010,23 @@ function renderWerfsleutelChannelOptions() {
         werfsleutelState.selectedChannel = allowedCodes[0];
     }
 
-    container.innerHTML = channelEntries.map(([code, meta]) => {
+    const fragment = document.createDocumentFragment();
+    channelEntries.forEach(([code, meta]) => {
         const isSelected = werfsleutelState.selectedChannel === code;
-        return `
-            <button type="button"
-                    class="channel-chip${isSelected ? ' selected' : ''}"
-                    data-channel="${code}"
-                    title="${meta.label}">
-                <span class="channel-icon">${meta.icon}</span>
-                <span class="channel-code">${code}</span>
-                <span class="channel-label">${meta.label}</span>
-            </button>
-        `;
-    }).join('');
-
-    container.querySelectorAll('.channel-chip').forEach((button) => {
-        button.addEventListener('click', () => {
-            selectWerfsleutelChannel(button.dataset.channel);
+        const chip = cloneTemplateElement(templateIds.werfsleutelChannelChip);
+        chip.dataset.channel = code;
+        chip.title = meta.label;
+        chip.classList.toggle('selected', isSelected);
+        setText(chip, '[data-channel-icon]', meta.icon);
+        setText(chip, '[data-channel-code-label]', code);
+        setText(chip, '[data-channel-label]', meta.label);
+        chip.addEventListener('click', () => {
+            selectWerfsleutelChannel(code);
         });
+        fragment.appendChild(chip);
     });
+
+    replaceChildren(container, fragment);
 }
 
 function selectWerfsleutelChannel(channelCode) {
@@ -864,7 +1052,7 @@ function updateWerfsleutelSummary() {
 
     if (!werfsleutelState.selectedKey) {
         summary.classList.remove('visible');
-        summary.textContent = '';
+        clearChildren(summary);
         return;
     }
 
@@ -879,15 +1067,19 @@ function updateWerfsleutelSummary() {
         ? translate('werfsleutel.channelSelected', {}, 'Kanaal gekozen')
         : translate('werfsleutel.channelRequiredHint', {}, 'Kanaal nog kiezen');
 
-    summary.innerHTML = `
-        <div>
-            <strong>${key.salesCode}</strong> - ${key.title} (${formatEuro(key.price)})
-        </div>
-        <div class="werfsleutel-summary-status">
-            <span class="status-pill ${statusClass}">${statusLabel}</span>
-            <span>${channelLabel}</span>
-        </div>
-    `;
+    const summaryNode = cloneTemplateElement(templateIds.werfsleutelSummary);
+    setText(summaryNode, '[data-summary-sales-code]', key.salesCode);
+    setText(summaryNode, '[data-summary-title]', ` - ${key.title}`);
+    setText(summaryNode, '[data-summary-price]', ` (${formatEuro(key.price)})`);
+    setText(summaryNode, '[data-summary-channel]', channelLabel);
+
+    const statusNode = summaryNode.querySelector('[data-summary-status]');
+    if (statusNode) {
+        statusNode.classList.add(statusClass);
+        statusNode.textContent = statusLabel;
+    }
+
+    replaceChildren(summary, summaryNode);
     summary.classList.add('visible');
 }
 
@@ -1011,14 +1203,15 @@ function endSession() {
     selectedOffer = null;
     
     // Hide customer detail
-    document.getElementById('customerDetail').style.display = 'none';
+    hideElement(document.getElementById('customerDetail'));
     
     // Show welcome message
-    document.getElementById('welcomeMessage').style.display = 'block';
+    showElement(document.getElementById('welcomeMessage'));
+    renderDefaultWelcomeState();
     
     // Hide end call button
     const endCallBtn = document.getElementById('endCallBtn');
-    if (endCallBtn) endCallBtn.style.display = 'none';
+    if (endCallBtn) hideElement(endCallBtn);
     
     // Clear search form
     document.getElementById('searchName').value = '';
@@ -1032,8 +1225,10 @@ function endSession() {
     
     // Hide search results
     const searchResults = document.getElementById('searchResults');
-    searchResults.style.display = 'none';
-    document.getElementById('resultsContainer').innerHTML = '';
+    if (searchResults) {
+        hideElement(searchResults);
+    }
+    clearChildren(document.getElementById('resultsContainer'));
     
     // Close any open forms
     closeForm('newSubscriptionForm');
@@ -1196,64 +1391,58 @@ function renderCustomerForm(containerId, prefix, config = {}) {
     };
     const cfg = { ...defaults, ...config };
 
-    const html = `
-        <h3 class="form-subtitle">Aanhef *</h3>
-        <div class="aanhef-row">
-            <label><input type="radio" name="${prefix}Salutation" value="Dhr." required checked> Dhr.</label>
-            <label><input type="radio" name="${prefix}Salutation" value="Mevr."> Mevr.</label>
-            <label><input type="radio" name="${prefix}Salutation" value="Anders"> Anders</label>
-        </div>
-        
-        <div class="form-row">
-            <input type="text" id="${prefix}Initials" placeholder="Voorletters*" required>
-            <input type="text" id="${prefix}MiddleName" placeholder="Tussenvoegsel">
-            <input type="text" id="${prefix}LastName" placeholder="Achternaam*" required>
-        </div>
+    const container = document.getElementById(containerId);
+    if (!container) {
+        return;
+    }
 
-        <div class="form-group">
-            <label>Geboortedatum</label>
-            <div class="form-row">
-                <select id="${prefix}BirthdayDay">
-                    <option value="">Dag</option>
-                </select>
-                <select id="${prefix}BirthdayMonth">
-                    <option value="">Maand</option>
-                </select>
-                <select id="${prefix}BirthdayYear">
-                    <option value="">Jaar</option>
-                </select>
-            </div>
-        </div>
+    const formNode = cloneTemplateElement(templateIds.customerForm);
+    formNode.querySelectorAll('[data-field]').forEach((fieldNode) => {
+        const fieldName = fieldNode.dataset.field;
+        if (!fieldName) {
+            return;
+        }
 
-        <div class="form-row">
-            <input type="text" id="${prefix}PostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
-            <input type="text" id="${prefix}HouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required>
-            <input type="text" id="${prefix}HouseExt" placeholder="Toevoeging" maxlength="10">
-        </div>
-        
-        <div class="form-row">
-            <input type="text" id="${prefix}Address" placeholder="Straat*" required>
-            <input type="text" id="${prefix}City" placeholder="Plaats*" required>
-        </div>
-        
-        ${cfg.includePhone || cfg.includeEmail ? `
-        <div class="form-row">
-            ${cfg.includePhone ? `<input type="tel" id="${prefix}Phone" placeholder="Telefoonnummer${cfg.phoneRequired ? '*' : ''}" ${cfg.phoneRequired ? 'required' : ''}>` : ''}
-            ${cfg.includeEmail ? `<input type="email" id="${prefix}Email" placeholder="E-mailadres${cfg.emailRequired ? '*' : ''}" ${cfg.emailRequired ? 'required' : ''}>` : ''}
-        </div>
-        ` : ''}
-        
-        ${cfg.showSameAddressCheckbox ? `
-        <div class="form-group">
-            <label>
-                <input type="checkbox" id="${prefix}SameAddress" onchange="toggleCustomerFormAddress('${prefix}')">
-                Zelfde adres als originele abonnee
-            </label>
-        </div>
-        ` : ''}
-    `;
+        fieldNode.id = `${prefix}${fieldName}`;
+        if (fieldName === 'Salutation') {
+            fieldNode.name = `${prefix}Salutation`;
+        }
+    });
 
-    document.getElementById(containerId).innerHTML = html;
+    const contactRow = formNode.querySelector('[data-contact-row]');
+    const phoneInput = formNode.querySelector(`[data-field="Phone"]`);
+    const emailInput = formNode.querySelector(`[data-field="Email"]`);
+
+    if (phoneInput && !cfg.includePhone) {
+        phoneInput.remove();
+    } else if (phoneInput) {
+        phoneInput.placeholder = `Telefoonnummer${cfg.phoneRequired ? '*' : ''}`;
+        phoneInput.required = cfg.phoneRequired;
+    }
+
+    if (emailInput && !cfg.includeEmail) {
+        emailInput.remove();
+    } else if (emailInput) {
+        emailInput.placeholder = `E-mailadres${cfg.emailRequired ? '*' : ''}`;
+        emailInput.required = cfg.emailRequired;
+    }
+
+    if (contactRow && contactRow.childElementCount === 0) {
+        contactRow.remove();
+    }
+
+    const sameAddressWrapper = formNode.querySelector('[data-same-address-wrapper]');
+    const sameAddressCheckbox = formNode.querySelector(`[data-field="SameAddress"]`);
+    if (cfg.showSameAddressCheckbox) {
+        showElement(sameAddressWrapper);
+        if (sameAddressCheckbox) {
+            sameAddressCheckbox.addEventListener('change', () => toggleCustomerFormAddress(prefix));
+        }
+    } else {
+        hideElement(sameAddressWrapper);
+    }
+
+    replaceChildren(container, formNode);
     populateBirthdayFields(prefix);
 }
 
@@ -1308,6 +1497,9 @@ function setCustomerFormData(prefix, data) {
  */
 function toggleCustomerFormAddress(prefix) {
     const checkbox = document.getElementById(`${prefix}SameAddress`);
+    if (!checkbox) {
+        return;
+    }
     const addressFields = ['PostalCode', 'HouseNumber', 'HouseExt', 'Address', 'City'];
     
     addressFields.forEach(field => {
@@ -1316,25 +1508,16 @@ function toggleCustomerFormAddress(prefix) {
             if (checkbox.checked) {
                 element.disabled = true;
                 element.removeAttribute('required');
-                element.style.opacity = '0.5';
+                element.classList.add('address-field-disabled');
             } else {
                 element.disabled = false;
                 if (!field.includes('HouseExt') && !field.includes('MiddleName')) {
                     element.setAttribute('required', '');
                 }
-                element.style.opacity = '1';
+                element.classList.remove('address-field-disabled');
             }
         }
     });
-}
-
-function escapeHtml(value) {
-    return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }
 
 function getSubscriptionRoleConfig(role) {
@@ -1407,12 +1590,14 @@ function renderSubscriptionRoleSelectedPerson(role) {
         return;
     }
 
-    const name = escapeHtml(buildPersonDisplayName(selectedPerson) || `Persoon #${selectedPerson.id}`);
-    const address = escapeHtml(buildPersonDisplayAddress(selectedPerson));
-    const personId = escapeHtml(selectedPerson.id);
-    const addressLine = address ? ` · ${address}` : '';
+    const name = buildPersonDisplayName(selectedPerson) || `Persoon #${selectedPerson.id}`;
+    const address = buildPersonDisplayAddress(selectedPerson);
+    const personId = String(selectedPerson.id);
     selectedNode.classList.remove('empty');
-    selectedNode.innerHTML = `<strong>${name}</strong> · persoon #${personId}${addressLine}`;
+    const strong = document.createElement('strong');
+    strong.textContent = name;
+    const textSuffix = ` · persoon #${personId}${address ? ` · ${address}` : ''}`;
+    replaceChildren(selectedNode, strong, document.createTextNode(textSuffix));
 }
 
 function renderRequesterSameSummary() {
@@ -1426,8 +1611,11 @@ function renderRequesterSameSummary() {
 
     const recipient = subscriptionRoleState.recipient.selectedPerson;
     if (recipient && recipient.id !== undefined && recipient.id !== null) {
-        const name = escapeHtml(buildPersonDisplayName(recipient) || `Persoon #${recipient.id}`);
-        summaryNode.innerHTML = `Aanvrager/betaler volgt de ontvanger: <strong>${name}</strong> · persoon #${escapeHtml(recipient.id)}.`;
+        const prefixText = document.createTextNode('Aanvrager/betaler volgt de ontvanger: ');
+        const strong = document.createElement('strong');
+        strong.textContent = buildPersonDisplayName(recipient) || `Persoon #${recipient.id}`;
+        const suffixText = document.createTextNode(` · persoon #${recipient.id}.`);
+        replaceChildren(summaryNode, prefixText, strong, suffixText);
         return;
     }
 
@@ -1437,7 +1625,11 @@ function renderRequesterSameSummary() {
         const lastName = document.getElementById('subRecipientLastName')?.value?.trim() || '';
         const composedName = [initials, middleName, lastName].filter(Boolean).join(' ');
         if (composedName) {
-            summaryNode.innerHTML = `Aanvrager/betaler volgt de nieuwe ontvanger: <strong>${escapeHtml(composedName)}</strong>.`;
+            const prefixText = document.createTextNode('Aanvrager/betaler volgt de nieuwe ontvanger: ');
+            const strong = document.createElement('strong');
+            strong.textContent = composedName;
+            const suffixText = document.createTextNode('.');
+            replaceChildren(summaryNode, prefixText, strong, suffixText);
             return;
         }
     }
@@ -1452,7 +1644,7 @@ function clearSubscriptionRoleCreateForm(role) {
     const formContainer = document.getElementById(cfg.createFormContainerId);
     if (!formContainer) return;
 
-    formContainer.innerHTML = '';
+    clearChildren(formContainer);
     clearSubscriptionDuplicateUi(role);
 }
 
@@ -1489,8 +1681,12 @@ function setSubscriptionRoleMode(role, mode) {
 
     const existingSection = document.getElementById(cfg.existingSectionId);
     const createSection = document.getElementById(cfg.createSectionId);
-    if (existingSection) existingSection.style.display = subscriptionRoleState[role].mode === 'existing' ? 'block' : 'none';
-    if (createSection) createSection.style.display = subscriptionRoleState[role].mode === 'create' ? 'block' : 'none';
+    if (existingSection) {
+        setNodeHidden(existingSection, subscriptionRoleState[role].mode !== 'existing');
+    }
+    if (createSection) {
+        setNodeHidden(createSection, subscriptionRoleState[role].mode !== 'create');
+    }
 
     if (subscriptionRoleState[role].mode === 'create') {
         ensureSubscriptionRoleCreateForm(role);
@@ -1516,10 +1712,10 @@ function toggleRequesterSameAsRecipient() {
 
     subscriptionRoleState.requesterSameAsRecipient = sameCheckbox.checked;
     if (requesterDetails) {
-        requesterDetails.style.display = sameCheckbox.checked ? 'none' : 'block';
+        setNodeHidden(requesterDetails, sameCheckbox.checked);
     }
     if (sameSummary) {
-        sameSummary.style.display = sameCheckbox.checked ? 'block' : 'none';
+        setNodeHidden(sameSummary, !sameCheckbox.checked);
     }
 
     if (sameCheckbox.checked) {
@@ -1611,8 +1807,8 @@ function clearSubscriptionDuplicateUi(role) {
     const duplicateNode = document.getElementById(cfg.duplicateCheckId);
     if (!duplicateNode) return;
 
-    duplicateNode.classList.add('hidden');
-    duplicateNode.innerHTML = '';
+    duplicateNode.classList.add('hidden', 'is-hidden');
+    clearChildren(duplicateNode);
 }
 
 function resetSubscriptionDuplicateRoleState(role) {
@@ -1900,16 +2096,23 @@ function renderSubscriptionDuplicateCheck(role) {
         return;
     }
 
-    duplicateNode.classList.remove('hidden');
+    duplicateNode.classList.remove('hidden', 'is-hidden');
 
     if (!hasMatches) {
-        const checkingLine = shouldShowChecking
-            ? `<div class="subscription-duplicate-inline-status">${escapeHtml(translate('subscription.duplicateCheck.checking', {}, 'Zoeken naar bestaande personen...'))}</div>`
-            : '';
-        const warningLine = shouldShowWarning
-            ? `<div class="subscription-duplicate-inline-status muted">${escapeHtml(roleDuplicateState.apiWarning)}</div>`
-            : '';
-        duplicateNode.innerHTML = `${checkingLine}${warningLine}`;
+        const fragment = document.createDocumentFragment();
+        if (shouldShowChecking) {
+            const checkingLine = document.createElement('div');
+            checkingLine.className = 'subscription-duplicate-inline-status';
+            checkingLine.textContent = translate('subscription.duplicateCheck.checking', {}, 'Zoeken naar bestaande personen...');
+            fragment.appendChild(checkingLine);
+        }
+        if (shouldShowWarning) {
+            const warningLine = document.createElement('div');
+            warningLine.className = 'subscription-duplicate-inline-status muted';
+            warningLine.textContent = roleDuplicateState.apiWarning;
+            fragment.appendChild(warningLine);
+        }
+        replaceChildren(duplicateNode, fragment);
         return;
     }
 
@@ -1926,46 +2129,72 @@ function renderSubscriptionDuplicateCheck(role) {
     const useExistingLabel = translate('subscription.duplicateCheck.useExisting', {}, 'Gebruik bestaande');
     const visibleMatches = matches.slice(0, DUPLICATE_CHECK_VISIBLE_LIMIT);
 
-    const matchRows = visibleMatches.map((person) => {
-        const safeId = escapeHtml(person.id);
-        const safeName = escapeHtml(buildPersonDisplayName(person) || `Persoon #${person.id}`);
-        const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
-        const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
-        return `
-            <div class="subscription-duplicate-item">
-                <div>
-                    <strong>${safeName}</strong>
-                    <div class="subscription-duplicate-item-meta">persoon #${safeId}${safeAddressLine}</div>
-                </div>
-                <button type="button" class="subscription-duplicate-action" onclick="selectSubscriptionDuplicatePerson('${role}', ${Number(person.id)})">${escapeHtml(useExistingLabel)}</button>
-            </div>
-        `;
-    }).join('');
+    const banner = cloneTemplateElement(templateIds.subscriptionDuplicateBanner);
+    setText(banner, '[data-duplicate-title]', duplicateTitle);
+    setText(banner, '[data-duplicate-toggle]', toggleLabel);
+    setText(banner, '[data-duplicate-create-anyway]', createAnywayLabel);
 
-    const moreMatchesLine = matches.length > DUPLICATE_CHECK_VISIBLE_LIMIT
-        ? `<div class="subscription-duplicate-more">Nog ${matches.length - DUPLICATE_CHECK_VISIBLE_LIMIT} mogelijke match(es).</div>`
-        : '';
-    const checkingLine = shouldShowChecking
-        ? `<div class="subscription-duplicate-inline-status">${escapeHtml(translate('subscription.duplicateCheck.checking', {}, 'Zoeken naar bestaande personen...'))}</div>`
-        : '';
-    const warningLine = shouldShowWarning
-        ? `<div class="subscription-duplicate-inline-status muted">${escapeHtml(roleDuplicateState.apiWarning)}</div>`
-        : '';
+    const toggleButton = banner.querySelector('[data-duplicate-toggle]');
+    if (toggleButton) {
+        toggleButton.addEventListener('click', () => toggleSubscriptionDuplicateMatches(role));
+    }
+    const createAnywayButton = banner.querySelector('[data-duplicate-create-anyway]');
+    if (createAnywayButton) {
+        createAnywayButton.addEventListener('click', () => acknowledgeSubscriptionDuplicateWarning(role));
+    }
 
-    duplicateNode.innerHTML = `
-        <div class="subscription-duplicate-banner">
-            <div class="subscription-duplicate-header">
-                <div class="subscription-duplicate-title">${escapeHtml(duplicateTitle)}</div>
-                <div class="subscription-duplicate-actions">
-                    <button type="button" class="subscription-duplicate-action" onclick="toggleSubscriptionDuplicateMatches('${role}')">${escapeHtml(toggleLabel)}</button>
-                    <button type="button" class="subscription-duplicate-action warning" onclick="acknowledgeSubscriptionDuplicateWarning('${role}')">${escapeHtml(createAnywayLabel)}</button>
-                </div>
-            </div>
-            ${checkingLine}
-            ${warningLine}
-            ${isExpanded ? `<div class="subscription-duplicate-list">${matchRows}</div>${moreMatchesLine}` : ''}
-        </div>
-    `;
+    const checkingNode = banner.querySelector('[data-duplicate-checking]');
+    if (checkingNode) {
+        checkingNode.textContent = translate('subscription.duplicateCheck.checking', {}, 'Zoeken naar bestaande personen...');
+        setNodeHidden(checkingNode, !shouldShowChecking);
+    }
+
+    const warningNode = banner.querySelector('[data-duplicate-warning]');
+    if (warningNode) {
+        warningNode.textContent = roleDuplicateState.apiWarning || '';
+        setNodeHidden(warningNode, !shouldShowWarning);
+    }
+
+    const listNode = banner.querySelector('[data-duplicate-list]');
+    if (listNode) {
+        setNodeHidden(listNode, !isExpanded);
+        if (isExpanded) {
+            const listFragment = document.createDocumentFragment();
+            visibleMatches.forEach((person) => {
+                const row = cloneTemplateElement(templateIds.subscriptionDuplicateItem);
+                const safeName = buildPersonDisplayName(person) || `Persoon #${person.id}`;
+                const safeAddress = buildPersonDisplayAddress(person);
+                setText(row, '[data-person-name]', safeName);
+                setText(row, '[data-person-meta]', `persoon #${person.id}${safeAddress ? ` · ${safeAddress}` : ''}`);
+
+                const useExistingButton = row.querySelector('[data-duplicate-use-existing]');
+                if (useExistingButton) {
+                    useExistingButton.textContent = useExistingLabel;
+                    useExistingButton.addEventListener('click', () => {
+                        selectSubscriptionDuplicatePerson(role, Number(person.id));
+                    });
+                }
+
+                listFragment.appendChild(row);
+            });
+            replaceChildren(listNode, listFragment);
+        } else {
+            clearChildren(listNode);
+        }
+    }
+
+    const moreNode = banner.querySelector('[data-duplicate-more]');
+    if (moreNode) {
+        if (matches.length > DUPLICATE_CHECK_VISIBLE_LIMIT && isExpanded) {
+            moreNode.textContent = `Nog ${matches.length - DUPLICATE_CHECK_VISIBLE_LIMIT} mogelijke match(es).`;
+            setNodeHidden(moreNode, false);
+        } else {
+            setNodeHidden(moreNode, true);
+            moreNode.textContent = '';
+        }
+    }
+
+    replaceChildren(duplicateNode, banner);
 }
 
 function toggleSubscriptionDuplicateMatches(role) {
@@ -2321,25 +2550,27 @@ function renderSubscriptionRoleSearchResults(role) {
 
     const results = subscriptionRoleState[role].searchResults || [];
     if (results.length === 0) {
-        resultsNode.innerHTML = '';
+        clearChildren(resultsNode);
         return;
     }
 
-    resultsNode.innerHTML = results.map((person) => {
-        const safeName = escapeHtml(buildPersonDisplayName(person) || `Persoon #${person.id}`);
-        const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
-        const safeId = escapeHtml(person.id);
-        const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
-        return `
-            <div class="party-search-result">
-                <div>
-                    <strong>${safeName}</strong>
-                    <div class="party-search-result-meta">persoon #${safeId}${safeAddressLine}</div>
-                </div>
-                <button type="button" class="btn btn-small" onclick="selectSubscriptionRolePerson('${role}', ${Number(person.id)})">Selecteer</button>
-            </div>
-        `;
-    }).join('');
+    const fragment = document.createDocumentFragment();
+    results.forEach((person) => {
+        const row = cloneTemplateElement(templateIds.partySearchResult);
+        const personName = buildPersonDisplayName(person) || `Persoon #${person.id}`;
+        const personAddress = buildPersonDisplayAddress(person);
+        setText(row, '[data-person-name]', personName);
+        setText(row, '[data-person-meta]', `persoon #${person.id}${personAddress ? ` · ${personAddress}` : ''}`);
+        const selectButton = row.querySelector('[data-person-select]');
+        if (selectButton) {
+            selectButton.addEventListener('click', () => {
+                selectSubscriptionRolePerson(role, Number(person.id));
+            });
+        }
+        fragment.appendChild(row);
+    });
+
+    replaceChildren(resultsNode, fragment);
 }
 
 async function searchSubscriptionRolePerson(role) {
@@ -2400,7 +2631,7 @@ function selectSubscriptionRolePerson(role, personId) {
     const cfg = getSubscriptionRoleConfig(role);
     const resultsNode = document.getElementById(cfg.searchResultsId);
     if (resultsNode) {
-        resultsNode.innerHTML = '';
+        clearChildren(resultsNode);
     }
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
@@ -2683,7 +2914,7 @@ function addContactMoment(customerId, type, description) {
 // Start Call Session
 function startCallSession() {
     // Toon sessie info in bovenbalk
-    document.getElementById('sessionInfo').style.display = 'flex';
+    showElement(document.getElementById('sessionInfo'));
     
     // Update service nummer
     const serviceLabels = {
@@ -2704,7 +2935,7 @@ function startCallSession() {
         callSession.customerName || 'Anonieme Beller';
     
     // Toon gesprek beëindigen knop
-    document.getElementById('endCallBtn').style.display = 'inline-block';
+    showElement(document.getElementById('endCallBtn'));
     
     // Update agent status naar Busy
     autoSetAgentStatus('call_started');
@@ -2712,22 +2943,22 @@ function startCallSession() {
     // Toon hold button
     const holdBtn = document.getElementById('holdCallBtn');
     if (holdBtn) {
-        holdBtn.style.display = 'inline-block';
-        holdBtn.innerHTML = '⏸️ In Wacht Zetten';
+        showElement(holdBtn);
+        holdBtn.textContent = '⏸️ In Wacht Zetten';
         holdBtn.classList.remove('on-hold');
     }
     
     // Toon debug end call button
     const debugEndBtn = document.getElementById('debugEndCallBtn');
     if (debugEndBtn) {
-        debugEndBtn.style.display = 'block';
+        showElement(debugEndBtn);
     }
     
     // Toon recording indicator (Phase 2B)
     if (recordingConfig.enabled) {
         const recordingIndicator = document.getElementById('recordingIndicator');
         if (recordingIndicator) {
-            recordingIndicator.style.display = 'flex';
+            showElement(recordingIndicator);
             callSession.recordingActive = true;
         }
     }
@@ -2818,14 +3049,14 @@ async function endCallSession(forcedByCustomer = false) {
     callSession.durationInterval = null;
 
     // Verberg UI elementen
-    document.getElementById('sessionInfo').style.display = 'none';
+    hideElement(document.getElementById('sessionInfo'));
     const holdBtn = document.getElementById('holdCallBtn');
-    if (holdBtn) holdBtn.style.display = 'none';
+    if (holdBtn) hideElement(holdBtn);
     const recordingIndicator = document.getElementById('recordingIndicator');
-    if (recordingIndicator) recordingIndicator.style.display = 'none';
+    if (recordingIndicator) hideElement(recordingIndicator);
     const debugEndBtn = document.getElementById('debugEndCallBtn');
     if (debugEndBtn) {
-        debugEndBtn.style.display = 'none';
+        hideElement(debugEndBtn);
     }
     updateIdentifyCallerButtons();
 
@@ -2901,13 +3132,13 @@ function updateIdentifyCallerButtons() {
     
     // Update in search results
     document.querySelectorAll('.btn-identify-caller').forEach(btn => {
-        btn.style.display = shouldShow ? 'inline-block' : 'none';
+        setNodeHidden(btn, !shouldShow);
     });
     
     // Update in customer detail
     const identifyBtn = document.getElementById('identifyCallerBtn');
     if (identifyBtn) {
-        identifyBtn.style.display = shouldShow ? 'inline-block' : 'none';
+        setNodeHidden(identifyBtn, !shouldShow);
     }
 }
 
@@ -2945,7 +3176,7 @@ async function toggleCallHold() {
     
     if (callSession.onHold) {
         // Put call on hold
-        holdBtn.innerHTML = '▶️ Hervatten';
+        holdBtn.textContent = '▶️ Hervatten';
         holdBtn.classList.add('on-hold');
         
         // Show hold indicator
@@ -2955,7 +3186,7 @@ async function toggleCallHold() {
         const holdIndicator = document.createElement('div');
         holdIndicator.id = 'holdIndicator';
         holdIndicator.className = 'hold-indicator';
-        holdIndicator.innerHTML = '🎵 Klant in wacht';
+        holdIndicator.textContent = '🎵 Klant in wacht';
         sessionInfo.appendChild(holdIndicator);
         
         if (!window.kiwiApi) {
@@ -2974,7 +3205,7 @@ async function toggleCallHold() {
         }
     } else {
         // Resume call
-        holdBtn.innerHTML = '⏸️ In Wacht Zetten';
+        holdBtn.textContent = '⏸️ In Wacht Zetten';
         holdBtn.classList.remove('on-hold');
         
         sessionInfo.classList.remove('call-on-hold');
@@ -3317,8 +3548,10 @@ function updateAgentStatusDisplay() {
     }
     
     statusDot.textContent = statusConfig.badge;
-    statusDot.style.backgroundColor = statusConfig.color;
-    statusDot.style.color = statusConfig.textColor;
+    Object.keys(agentStatuses).forEach((statusKey) => {
+        statusDot.classList.remove(`${agentStatusClassPrefix}${statusKey}`);
+    });
+    statusDot.classList.add(`${agentStatusClassPrefix}${agentStatus.current}`);
 
     const statusTooltip = `Status: ${statusConfig.label}`;
     statusDot.title = statusTooltip;
@@ -3388,7 +3621,7 @@ function startACW() {
     // Show ACW bar
     const acwBar = document.getElementById('acwBar');
     if (acwBar) {
-        acwBar.style.display = 'block';
+        showElement(acwBar);
     }
     
     // Show disposition modal
@@ -3427,7 +3660,7 @@ function endACW(manual = false) {
     // Hide ACW bar
     const acwBar = document.getElementById('acwBar');
     if (acwBar) {
-        acwBar.style.display = 'none';
+        hideElement(acwBar);
     }
     
     if (manual) {
@@ -3441,7 +3674,7 @@ function endACW(manual = false) {
 function manualFinishACW() {
     // Check if disposition has been filled
     const dispositionModal = document.getElementById('dispositionModal');
-    const isModalOpen = dispositionModal && dispositionModal.style.display === 'flex';
+    const isModalOpen = dispositionModal && dispositionModal.classList.contains('show');
     
     if (isModalOpen) {
         showToast(
@@ -3502,9 +3735,9 @@ function showDispositionModal() {
     }
     
     document.getElementById('dispFollowUpRequired').checked = false;
-    document.getElementById('followUpSection').style.display = 'none';
+    hideElement(document.getElementById('followUpSection'));
     
-    modal.style.display = 'flex';
+    modal.classList.add('show');
 }
 
 // Determine Auto Disposition based on contact history
@@ -3611,27 +3844,25 @@ function updateDispositionOutcomes() {
     
     if (!category) {
         outcomeSelect.disabled = true;
-        outcomeSelect.innerHTML = '<option value="">Selecteer eerst een categorie</option>';
+        replaceChildren(outcomeSelect, createSelectOption('', 'Selecteer eerst een categorie', { selected: true }));
         return;
     }
     
     const outcomes = dispositionCategories[category].outcomes;
     outcomeSelect.disabled = false;
-    outcomeSelect.innerHTML = '<option value="">Selecteer uitkomst...</option>';
-    
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(createSelectOption('', 'Selecteer uitkomst...', { selected: true }));
     outcomes.forEach(outcome => {
-        const option = document.createElement('option');
-        option.value = outcome.code;
-        option.textContent = outcome.label;
-        outcomeSelect.appendChild(option);
+        fragment.appendChild(createSelectOption(outcome.code, outcome.label));
     });
+    replaceChildren(outcomeSelect, fragment);
 }
 
 // Toggle Follow-up Section
 function toggleFollowUpSection() {
     const checkbox = document.getElementById('dispFollowUpRequired');
     const section = document.getElementById('followUpSection');
-    section.style.display = checkbox.checked ? 'block' : 'none';
+    setNodeHidden(section, !checkbox.checked);
 }
 
 // Get Outcome Label
@@ -3692,7 +3923,7 @@ function saveDisposition() {
     }
     
     // Close modal
-    document.getElementById('dispositionModal').style.display = 'none';
+    document.getElementById('dispositionModal').classList.remove('show');
     
     showToast(translate('calls.completed', {}, 'Gesprek succesvol afgerond'), 'success');
     
@@ -3703,7 +3934,7 @@ function saveDisposition() {
 // Cancel Disposition
 function cancelDisposition() {
     // Just close modal, ACW timer continues
-    document.getElementById('dispositionModal').style.display = 'none';
+    document.getElementById('dispositionModal').classList.remove('show');
     showToast(translate('disposition.cancelled', {}, 'Disposition geannuleerd - ACW loopt door'), 'warning');
 }
 
@@ -3838,13 +4069,13 @@ function updateQueueDisplay() {
                        !callSession.active;
     
     if (!shouldShow) {
-        queueInfoBar.style.display = 'none';
+        hideElement(queueInfoBar);
         stopQueueWaitTimeUpdate();
         return;
     }
     
     // Toon queue info
-    queueInfoBar.style.display = 'block';
+    showElement(queueInfoBar);
     
     // Start wait time update interval als nog niet gestart
     startQueueWaitTimeUpdate();
@@ -3972,35 +4203,27 @@ function updateDebugQueuePreview() {
     }
     
     if (!callQueue.enabled || callQueue.queue.length === 0) {
-        previewContainer.style.display = 'none';
+        hideElement(previewContainer);
+        clearChildren(listContainer);
         return;
     }
     
-    previewContainer.style.display = 'block';
-    listContainer.innerHTML = '';
+    showElement(previewContainer);
+    clearChildren(listContainer);
     
+    const listFragment = document.createDocumentFragment();
     callQueue.queue.forEach((entry, index) => {
-        const item = document.createElement('div');
-        item.className = 'debug-queue-item';
-        if (index === 0) item.classList.add('current');
-        
-        item.innerHTML = `
-            <div class="debug-queue-item-info">
-                <div class="debug-queue-item-name">
-                    ${index + 1}. ${entry.customerName}
-                </div>
-                <div class="debug-queue-item-details">
-                    ${entry.serviceNumber} • 
-                    ${entry.callerType === 'known' ? '👤 Bekend' : '❓ Anoniem'}
-                </div>
-            </div>
-            <div class="debug-queue-item-wait">
-                ⏳ ${formatTime(entry.waitTime)}
-            </div>
-        `;
-        
-        listContainer.appendChild(item);
+        const item = cloneTemplateElement(templateIds.debugQueueItem);
+        if (index === 0) {
+            item.classList.add('current');
+        }
+        setText(item, '[data-queue-name]', `${index + 1}. ${entry.customerName}`);
+        const callerTypeLabel = entry.callerType === 'known' ? '👤 Bekend' : '❓ Anoniem';
+        setText(item, '[data-queue-details]', `${entry.serviceNumber} • ${callerTypeLabel}`);
+        setText(item, '[data-queue-wait]', `⏳ ${formatTime(entry.waitTime)}`);
+        listFragment.appendChild(item);
     });
+    replaceChildren(listContainer, listFragment);
 }
 
 /**
@@ -4211,10 +4434,10 @@ function updateCustomerActionButtons() {
     const winbackBtn = document.getElementById('winbackFlowBtn');
     
     if (resendBtn) {
-        resendBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
+        setNodeHidden(resendBtn, !hasCustomer);
     }
     if (winbackBtn) {
-        winbackBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
+        setNodeHidden(winbackBtn, !hasCustomer);
     }
 }
 
@@ -4308,10 +4531,8 @@ function setAdditionalFiltersOpen(isOpen) {
 
     if (isOpen) {
         panel.classList.add('is-open');
-        panel.style.display = 'grid';
     } else {
         panel.classList.remove('is-open');
-        panel.style.display = 'none';
     }
     toggle.setAttribute('aria-expanded', String(isOpen));
 }
@@ -4387,7 +4608,7 @@ function displayPaginatedResults() {
     const searchSummary = document.getElementById('searchSummary');
     const resultCount = document.getElementById('resultCount');
     resultCount.textContent = results.length;
-    searchSummary.style.display = results.length > 0 ? 'block' : 'none';
+    setNodeHidden(searchSummary, results.length === 0);
     
     // Show/hide views
     const searchResultsView = document.getElementById('searchResultsView');
@@ -4396,23 +4617,20 @@ function displayPaginatedResults() {
     
     if (results.length === 0) {
         // Show empty state in center panel
-        searchResultsView.style.display = 'none';
-        customerDetail.style.display = 'none';
-        welcomeMessage.style.display = 'flex';
-        welcomeMessage.innerHTML = `
-            <div class="empty-state">
-                <span class="empty-icon">🔍</span>
-                <h2>Geen klanten gevonden</h2>
-                <p>Pas je zoekcriteria aan en probeer opnieuw</p>
-            </div>
-        `;
+        hideElement(searchResultsView);
+        hideElement(customerDetail);
+        showElement(welcomeMessage);
+        replaceChildren(
+            welcomeMessage,
+            createEmptyStateNode('🔍', 'Geen klanten gevonden', 'Pas je zoekcriteria aan en probeer opnieuw')
+        );
         return;
     }
     
     // Hide welcome and customer detail, show results view
-    welcomeMessage.style.display = 'none';
-    customerDetail.style.display = 'none';
-    searchResultsView.style.display = 'block';
+    hideElement(welcomeMessage);
+    hideElement(customerDetail);
+    showElement(searchResultsView);
     
     // Calculate pagination
     const startIdx = (currentPage - 1) * itemsPerPage;
@@ -4427,7 +4645,11 @@ function displayPaginatedResults() {
     
     // Render results
     const container = document.getElementById('paginatedResults');
-    container.innerHTML = pageResults.map(customer => renderCustomerRow(customer)).join('');
+    const rowsFragment = document.createDocumentFragment();
+    pageResults.forEach((customer) => {
+        rowsFragment.appendChild(renderCustomerRow(customer));
+    });
+    replaceChildren(container, rowsFragment);
     
     // Render pagination
     renderPagination();
@@ -4494,34 +4716,60 @@ function getInitialsDisplay(customer) {
 
 function formatLastNameSection(customer) {
     const { lastName, insertion } = splitLastNameComponents(customer);
+    const fragment = document.createDocumentFragment();
 
-    if (!lastName && !insertion) return '';
-    if (!lastName) return insertion;
+    if (!lastName && !insertion) {
+        fragment.appendChild(document.createTextNode('-'));
+        return fragment;
+    }
 
-    return insertion
-        ? `<span class="last-name">${lastName}</span>, ${insertion}`
-        : `<span class="last-name">${lastName}</span>`;
+    if (!lastName) {
+        fragment.appendChild(document.createTextNode(insertion));
+        return fragment;
+    }
+
+    const lastNameNode = document.createElement('span');
+    lastNameNode.className = 'last-name';
+    lastNameNode.textContent = lastName;
+    fragment.appendChild(lastNameNode);
+
+    if (insertion) {
+        fragment.appendChild(document.createTextNode(`, ${insertion}`));
+    }
+
+    return fragment;
 }
 
 function renderCustomerRow(customer) {
-    const lastNameSection = formatLastNameSection(customer) || '-';
-    const { initials, rest } = getInitialsDisplay(customer);
+    const row = cloneTemplateElement(templateIds.searchResultRow);
+    row.addEventListener('click', () => {
+        void selectCustomer(customer.id);
+    });
+
+    const lastNameSection = formatLastNameSection(customer);
+    const { initials } = getInitialsDisplay(customer);
     
     const activeSubscriptions = customer.subscriptions.filter(s => s.status === 'active');
     const inactiveSubscriptions = customer.subscriptions.filter(s => s.status !== 'active');
     
-    // Build subscription badges with subscription numbers
-    let subscriptionBadges = '';
+    const subscriptionBadgesFragment = document.createDocumentFragment();
     if (activeSubscriptions.length > 0) {
-        subscriptionBadges = activeSubscriptions.map(s => 
-            `<span class="subscription-badge active">${s.magazine}</span>`
-        ).join('');
-    }
-    if (inactiveSubscriptions.length > 0 && activeSubscriptions.length === 0) {
-        subscriptionBadges = `<span class="subscription-badge inactive">${inactiveSubscriptions[0].magazine} (beëindigd)</span>`;
-    }
-    if (!subscriptionBadges) {
-        subscriptionBadges = '<span style="color: var(--text-secondary); font-size: 0.875rem;">Geen actief</span>';
+        activeSubscriptions.forEach((subscription) => {
+            const badge = document.createElement('span');
+            badge.className = 'subscription-badge active';
+            badge.textContent = subscription.magazine;
+            subscriptionBadgesFragment.appendChild(badge);
+        });
+    } else if (inactiveSubscriptions.length > 0) {
+        const badge = document.createElement('span');
+        badge.className = 'subscription-badge inactive';
+        badge.textContent = `${inactiveSubscriptions[0].magazine} (beëindigd)`;
+        subscriptionBadgesFragment.appendChild(badge);
+    } else {
+        const emptyBadge = document.createElement('span');
+        emptyBadge.className = 'text-muted-small';
+        emptyBadge.textContent = 'Geen actief';
+        subscriptionBadgesFragment.appendChild(emptyBadge);
     }
     
     // Get primary active subscription number (or first subscription if no active)
@@ -4536,32 +4784,39 @@ function renderCustomerRow(customer) {
     
     // Show identify button only during anonymous call
     const showIdentifyBtn = callSession.active && callSession.callerType === 'anonymous';
-    
-    return `
-        <tr class="result-row" onclick="selectCustomer(${customer.id})">
-            <td class="result-row-lastname">${lastNameSection}</td>
-            <td class="result-row-initials">
-                <span class="initials-value">${initials}</span>
-            </td>
-            <td class="result-row-address">
-                <span>${customer.address}</span><br>
-                <span>${customer.postalCode} ${customer.city}</span>
-            </td>
-            <td class="result-row-subscriptions">${subscriptionBadges}</td>
-            <td class="result-row-subscriber-number">${subscriberNumber}</td>
-            <td class="result-row-actions">
-                <button class="btn btn-small" onclick="event.stopPropagation(); selectCustomer(${customer.id})">
-                    Bekijken
-                </button>
-                ${showIdentifyBtn ? `
-                    <button class="btn btn-small btn-primary btn-identify-caller" 
-                            onclick="event.stopPropagation(); identifyCallerAsCustomer(${customer.id})">
-                        👤 Identificeer
-                    </button>
-                ` : ''}
-            </td>
-        </tr>
-    `;
+
+    const lastNameCell = row.querySelector('[data-lastname]');
+    replaceChildren(lastNameCell, lastNameSection);
+    setText(row, '[data-initials]', initials);
+    setText(row, '[data-address-line-1]', customer.address);
+    setText(row, '[data-address-line-2]', `${customer.postalCode} ${customer.city}`);
+
+    const subscriptionsCell = row.querySelector('[data-subscriptions]');
+    replaceChildren(subscriptionsCell, subscriptionBadgesFragment);
+    setText(row, '[data-subscriber-number]', subscriberNumber);
+
+    const actionsCell = row.querySelector('[data-actions]');
+    const viewButton = document.createElement('button');
+    viewButton.className = 'btn btn-small';
+    viewButton.textContent = 'Bekijken';
+    viewButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        void selectCustomer(customer.id);
+    });
+    actionsCell.appendChild(viewButton);
+
+    if (showIdentifyBtn) {
+        const identifyButton = document.createElement('button');
+        identifyButton.className = 'btn btn-small btn-primary btn-identify-caller';
+        identifyButton.textContent = '👤 Identificeer';
+        identifyButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            void identifyCallerAsCustomer(customer.id);
+        });
+        actionsCell.appendChild(identifyButton);
+    }
+
+    return row;
 }
 
 // Render Pagination Controls
@@ -4571,34 +4826,38 @@ function renderPagination() {
     const pagination = document.getElementById('pagination');
     
     if (totalPages <= 1) {
-        pagination.innerHTML = '';
+        clearChildren(pagination);
         return;
     }
     
-    let html = '';
-    
-    // Previous button
-    html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
-        ← Vorige
-    </button>`;
-    
-    // Page numbers (with smart ellipsis)
+    const fragment = document.createDocumentFragment();
+
+    const previousButton = cloneTemplateElement(templateIds.pageButton);
+    previousButton.textContent = '← Vorige';
+    previousButton.disabled = currentPage === 1;
+    previousButton.addEventListener('click', () => goToPage(currentPage - 1));
+    fragment.appendChild(previousButton);
+
     const pageNumbers = getPageNumbers(currentPage, totalPages);
-    pageNumbers.forEach(page => {
+    pageNumbers.forEach((page) => {
         if (page === '...') {
-            html += `<span class="page-ellipsis">...</span>`;
+            fragment.appendChild(cloneTemplateElement(templateIds.pageEllipsis));
         } else {
-            const activeClass = page === currentPage ? 'active' : '';
-            html += `<button class="page-btn ${activeClass}" onclick="goToPage(${page})">${page}</button>`;
+            const pageButton = cloneTemplateElement(templateIds.pageButton);
+            pageButton.textContent = String(page);
+            pageButton.classList.toggle('active', page === currentPage);
+            pageButton.addEventListener('click', () => goToPage(Number(page)));
+            fragment.appendChild(pageButton);
         }
     });
     
-    // Next button
-    html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
-        Volgende →
-    </button>`;
-    
-    pagination.innerHTML = html;
+    const nextButton = cloneTemplateElement(templateIds.pageButton);
+    nextButton.textContent = 'Volgende →';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.addEventListener('click', () => goToPage(currentPage + 1));
+    fragment.appendChild(nextButton);
+
+    replaceChildren(pagination, fragment);
 }
 
 // Get page numbers with smart ellipsis
@@ -4659,15 +4918,26 @@ function goToPage(page) {
     displayPaginatedResults();
 }
 
+function renderDefaultWelcomeState() {
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    if (!welcomeMessage) {
+        return;
+    }
+    replaceChildren(
+        welcomeMessage,
+        createEmptyStateNode('👤', 'Welkom bij Klantenservice', 'Zoek een klant of start een nieuwe actie')
+    );
+}
+
 // Scroll to results (from left panel button)
 function scrollToResults() {
     // Hide customer detail and welcome message
-    document.getElementById('customerDetail').style.display = 'none';
-    document.getElementById('welcomeMessage').style.display = 'none';
+    hideElement(document.getElementById('customerDetail'));
+    hideElement(document.getElementById('welcomeMessage'));
     
     // Show search results view
     const searchResultsView = document.getElementById('searchResultsView');
-    searchResultsView.style.display = 'block';
+    showElement(searchResultsView);
     
     // Scroll to results
     searchResultsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -4680,8 +4950,8 @@ function clearSearchResults() {
     searchState.currentPage = 1;
     
     // Hide search results view and summary
-    document.getElementById('searchResultsView').style.display = 'none';
-    document.getElementById('searchSummary').style.display = 'none';
+    hideElement(document.getElementById('searchResultsView'));
+    hideElement(document.getElementById('searchSummary'));
     
     // Clear search input fields
     document.getElementById('searchName').value = '';
@@ -4695,23 +4965,17 @@ function clearSearchResults() {
     
     // Always restore welcome message HTML (in case it was overwritten by empty search)
     const welcomeMessage = document.getElementById('welcomeMessage');
-    welcomeMessage.innerHTML = `
-        <div class="empty-state">
-            <span class="empty-icon">👤</span>
-            <h2>Welkom bij Klantenservice</h2>
-            <p>Zoek een klant of start een nieuwe actie</p>
-        </div>
-    `;
+    renderDefaultWelcomeState();
     
     // Check if there was a customer loaded before the search
     if (currentCustomer) {
         // Show the previously loaded customer detail
-        document.getElementById('customerDetail').style.display = 'block';
-        welcomeMessage.style.display = 'none';
+        showElement(document.getElementById('customerDetail'));
+        hideElement(welcomeMessage);
     } else {
         // No customer was loaded, show welcome message
-        document.getElementById('customerDetail').style.display = 'none';
-        welcomeMessage.style.display = 'flex';
+        hideElement(document.getElementById('customerDetail'));
+        showElement(welcomeMessage);
     }
     
     // Scroll to top
@@ -4724,22 +4988,16 @@ function closeCustomerDetail() {
     currentCustomer = null;
     
     // Hide customer detail
-    document.getElementById('customerDetail').style.display = 'none';
+    hideElement(document.getElementById('customerDetail'));
     
     // Restore and show welcome message
     const welcomeMessage = document.getElementById('welcomeMessage');
-    welcomeMessage.innerHTML = `
-        <div class="empty-state">
-            <span class="empty-icon">👤</span>
-            <h2>Welkom bij Klantenservice</h2>
-            <p>Zoek een klant of start een nieuwe actie</p>
-        </div>
-    `;
-    welcomeMessage.style.display = 'flex';
+    renderDefaultWelcomeState();
+    showElement(welcomeMessage);
     
     // Hide search results if visible
-    document.getElementById('searchResultsView').style.display = 'none';
-    document.getElementById('searchSummary').style.display = 'none';
+    hideElement(document.getElementById('searchResultsView'));
+    hideElement(document.getElementById('searchSummary'));
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4821,12 +5079,12 @@ async function selectCustomer(customerId) {
     }
 
     // Hide welcome message and search results view
-    document.getElementById('welcomeMessage').style.display = 'none';
-    document.getElementById('searchResultsView').style.display = 'none';
+    hideElement(document.getElementById('welcomeMessage'));
+    hideElement(document.getElementById('searchResultsView'));
     
     // Show customer detail
     const customerDetail = document.getElementById('customerDetail');
-    customerDetail.style.display = 'block';
+    showElement(customerDetail);
 
     // Populate customer info
     const fullName = currentCustomer.middleName 
@@ -4879,15 +5137,9 @@ function displayDeceasedStatusBanner() {
 
     if (hasDeceasedEntry) {
         // Create and insert the banner
-        const banner = document.createElement('div');
-        banner.className = 'deceased-status-banner';
-        banner.innerHTML = `
-            <div class="deceased-banner-icon">⚠️</div>
-            <div class="deceased-banner-content">
-                <strong>Deze klant is overleden</strong>
-                <p>Let op bij het verwerken van abonnementen en bestellingen</p>
-            </div>
-        `;
+        const banner = cloneTemplateElement(templateIds.deceasedBanner);
+        setText(banner, '[data-banner-title]', 'Deze klant is overleden');
+        setText(banner, '[data-banner-text]', 'Let op bij het verwerken van abonnementen en bestellingen');
         
         // Insert after customer header
         const customerDetail = document.getElementById('customerDetail');
@@ -4902,9 +5154,12 @@ function displayDeceasedStatusBanner() {
 // Display Subscriptions
 function displaySubscriptions() {
     const subscriptionsList = document.getElementById('subscriptionsList');
-    
+    if (!subscriptionsList || !currentCustomer) {
+        return;
+    }
+
     if (currentCustomer.subscriptions.length === 0) {
-        subscriptionsList.innerHTML = '<p class="empty-state-small">Geen abonnementen</p>';
+        replaceChildren(subscriptionsList, createEmptyStateSmallNode('Geen abonnementen'));
         return;
     }
 
@@ -4914,133 +5169,124 @@ function displaySubscriptions() {
     const restitutedSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'restituted');
     const transferredSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'transferred');
 
-    let html = '';
+    const groups = [
+        { title: 'Actieve Abonnementen', items: activeSubscriptions, variant: 'active' },
+        { title: 'Beëindigde Abonnementen', items: endedSubscriptions, variant: 'ended' },
+        { title: 'Gerestitueerde Abonnementen', items: restitutedSubscriptions, variant: 'restituted' },
+        { title: 'Overgezette Abonnementen', items: transferredSubscriptions, variant: 'transferred' }
+    ];
 
-    // Display active subscriptions
-    if (activeSubscriptions.length > 0) {
-        html += '<div class="subscription-group"><h4 class="subscription-group-title">Actieve Abonnementen</h4>';
-        html += activeSubscriptions.map(sub => {
-            const pricingInfo = getSubscriptionDurationDisplay(sub);
-            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
-            
-            return `
-                <div class="subscription-item">
-                    <div class="subscription-info">
-                        <div class="subscription-name">📰 ${sub.magazine}</div>
-                        <div class="subscription-details">
-                            Start: ${formatDate(sub.startDate)} • 
-                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${requesterMeta}
-                        </div>
-                    </div>
-                    <div class="subscription-actions">
-                        <span class="subscription-status status-active">Actief</span>
-                        <button class="icon-btn" onclick="editSubscription(${sub.id})" title="Bewerken">✏️</button>
-                        <button class="icon-btn" onclick="cancelSubscription(${sub.id})" title="Opzeggen">🚫</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        html += '</div>';
-    }
+    const listFragment = document.createDocumentFragment();
+    groups.forEach((group) => {
+        if (!group.items || group.items.length === 0) {
+            return;
+        }
 
-    // Display ended subscriptions
-    if (endedSubscriptions.length > 0) {
-        html += '<div class="subscription-group"><h4 class="subscription-group-title">Beëindigde Abonnementen</h4>';
-        html += endedSubscriptions.map(sub => {
-            const pricingInfo = getSubscriptionDurationDisplay(sub);
-            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
-            const statusClass = sub.status === 'cancelled' ? 'status-cancelled' : 'status-ended';
-            const statusText = sub.status === 'cancelled' ? 'Opgezegd' : 'Beëindigd';
-            
-            return `
-                <div class="subscription-item subscription-ended">
-                    <div class="subscription-info">
-                        <div class="subscription-name">📰 ${sub.magazine}</div>
-                        <div class="subscription-details">
-                            Start: ${formatDate(sub.startDate)} • 
-                            ${sub.endDate ? `Einde: ${formatDate(sub.endDate)} • ` : ''}
-                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${requesterMeta}
-                        </div>
-                    </div>
-                    <div class="subscription-actions">
-                        <span class="subscription-status ${statusClass}">${statusText}</span>
-                        <button class="btn btn-small btn-winback" onclick="startWinbackForSubscription(${sub.id})" title="Winback/Opzegging">
-                            🎯 Winback/Opzegging
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        html += '</div>';
-    }
+        const groupNode = cloneTemplateElement(templateIds.subscriptionGroup);
+        setText(groupNode, '[data-group-title]', group.title);
+        const groupItemsNode = groupNode.querySelector('[data-group-items]');
+        const groupItemsFragment = document.createDocumentFragment();
 
-    // Display restituted subscriptions (cancelled with refund due to deceased)
-    if (restitutedSubscriptions.length > 0) {
-        html += '<div class="subscription-group"><h4 class="subscription-group-title">Gerestitueerde Abonnementen</h4>';
-        html += restitutedSubscriptions.map(sub => {
-            const pricingInfo = getSubscriptionDurationDisplay(sub);
-            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
-            const refundInfo = sub.refundInfo ? `<br>Restitutie naar: ${sub.refundInfo.email}` : '';
-            
-            return `
-                <div class="subscription-item subscription-restituted">
-                    <div class="subscription-info">
-                        <div class="subscription-name">📰 ${sub.magazine}</div>
-                        <div class="subscription-details">
-                            Start: ${formatDate(sub.startDate)} • 
-                            ${sub.endDate ? `Einde: ${formatDate(sub.endDate)} • ` : ''}
-                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${requesterMeta}${refundInfo}
-                        </div>
-                    </div>
-                    <div class="subscription-actions">
-                        <span class="subscription-status status-restituted">Gerestitueerd</span>
-                        <button class="btn btn-small btn-secondary" onclick="revertRestitution(${sub.id})" title="Overzetten naar andere persoon">
-                            🔄 Overzetten
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        html += '</div>';
-    }
+        group.items.forEach((sub) => {
+            const itemNode = cloneTemplateElement(templateIds.subscriptionItem);
+            itemNode.classList.toggle('subscription-ended', group.variant === 'ended');
+            itemNode.classList.toggle('subscription-restituted', group.variant === 'restituted');
+            itemNode.classList.toggle('subscription-transferred', group.variant === 'transferred');
 
-    // Display transferred subscriptions (transferred to another person due to deceased)
-    if (transferredSubscriptions.length > 0) {
-        html += '<div class="subscription-group"><h4 class="subscription-group-title">Overgezette Abonnementen</h4>';
-        html += transferredSubscriptions.map(sub => {
-            const pricingInfo = getSubscriptionDurationDisplay(sub);
+            setText(itemNode, '[data-subscription-name]', `📰 ${sub.magazine}`);
+
+            const detailsNode = itemNode.querySelector('[data-subscription-details]');
+            const detailLines = [];
+            const baseLineParts = [`Start: ${formatDate(sub.startDate)}`];
+            if (sub.endDate && (group.variant === 'ended' || group.variant === 'restituted')) {
+                baseLineParts.push(`Einde: ${formatDate(sub.endDate)}`);
+            }
+            baseLineParts.push(`Laatste editie: ${formatDate(sub.lastEdition)}`);
+            detailLines.push(baseLineParts.join(' • '));
+            detailLines.push(getSubscriptionDurationDisplay(sub));
+
             const requesterMeta = getSubscriptionRequesterMetaLine(sub);
-            let transferInfo = '';
-            if (sub.transferredTo) {
-                const transferName = sub.transferredTo.middleName 
+            if (requesterMeta) {
+                detailLines.push(requesterMeta);
+            }
+
+            if (group.variant === 'restituted' && sub.refundInfo && sub.refundInfo.email) {
+                detailLines.push(`Restitutie naar: ${sub.refundInfo.email}`);
+            }
+            if (group.variant === 'transferred' && sub.transferredTo) {
+                const transferName = sub.transferredTo.middleName
                     ? `${sub.transferredTo.firstName} ${sub.transferredTo.middleName} ${sub.transferredTo.lastName}`
                     : `${sub.transferredTo.firstName} ${sub.transferredTo.lastName}`;
-                transferInfo = `<br>Overgezet naar: ${transferName} (${sub.transferredTo.email})`;
+                detailLines.push(`Overgezet naar: ${transferName} (${sub.transferredTo.email})`);
             }
-            
-            return `
-                <div class="subscription-item subscription-transferred">
-                    <div class="subscription-info">
-                        <div class="subscription-name">📰 ${sub.magazine}</div>
-                        <div class="subscription-details">
-                            Start: ${formatDate(sub.startDate)} • 
-                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${requesterMeta}${transferInfo}
-                        </div>
-                    </div>
-                    <div class="subscription-actions">
-                        <span class="subscription-status status-transferred">Overgezet</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        html += '</div>';
-    }
 
-    subscriptionsList.innerHTML = html;
+            detailLines.forEach((line, lineIndex) => {
+                detailsNode.appendChild(document.createTextNode(line));
+                if (lineIndex < detailLines.length - 1) {
+                    detailsNode.appendChild(document.createElement('br'));
+                }
+            });
+
+            const actionsNode = itemNode.querySelector('[data-subscription-actions]');
+            if (actionsNode) {
+                const statusNode = document.createElement('span');
+                statusNode.className = 'subscription-status';
+
+                if (group.variant === 'active') {
+                    statusNode.classList.add('status-active');
+                    statusNode.textContent = 'Actief';
+
+                    const editButton = document.createElement('button');
+                    editButton.className = 'icon-btn';
+                    editButton.title = 'Bewerken';
+                    editButton.textContent = '✏️';
+                    editButton.addEventListener('click', () => editSubscription(sub.id));
+
+                    const cancelButton = document.createElement('button');
+                    cancelButton.className = 'icon-btn';
+                    cancelButton.title = 'Opzeggen';
+                    cancelButton.textContent = '🚫';
+                    cancelButton.addEventListener('click', () => cancelSubscription(sub.id));
+
+                    actionsNode.append(statusNode, editButton, cancelButton);
+                } else if (group.variant === 'ended') {
+                    const statusClass = sub.status === 'cancelled' ? 'status-cancelled' : 'status-ended';
+                    statusNode.classList.add(statusClass);
+                    statusNode.textContent = sub.status === 'cancelled' ? 'Opgezegd' : 'Beëindigd';
+
+                    const winbackButton = document.createElement('button');
+                    winbackButton.className = 'btn btn-small btn-winback';
+                    winbackButton.title = 'Winback/Opzegging';
+                    winbackButton.textContent = '🎯 Winback/Opzegging';
+                    winbackButton.addEventListener('click', () => startWinbackForSubscription(sub.id));
+
+                    actionsNode.append(statusNode, winbackButton);
+                } else if (group.variant === 'restituted') {
+                    statusNode.classList.add('status-restituted');
+                    statusNode.textContent = 'Gerestitueerd';
+
+                    const revertButton = document.createElement('button');
+                    revertButton.className = 'btn btn-small btn-secondary';
+                    revertButton.title = 'Overzetten naar andere persoon';
+                    revertButton.textContent = '🔄 Overzetten';
+                    revertButton.addEventListener('click', () => revertRestitution(sub.id));
+
+                    actionsNode.append(statusNode, revertButton);
+                } else if (group.variant === 'transferred') {
+                    statusNode.classList.add('status-transferred');
+                    statusNode.textContent = 'Overgezet';
+                    actionsNode.append(statusNode);
+                }
+            }
+
+            groupItemsFragment.appendChild(itemNode);
+        });
+
+        replaceChildren(groupItemsNode, groupItemsFragment);
+        listFragment.appendChild(groupNode);
+    });
+
+    replaceChildren(subscriptionsList, listFragment);
 }
 
 // Phase 5B: Extended Contact Types for Better Display
@@ -5096,7 +5342,7 @@ function displayContactHistory() {
     }
 
     if (!currentCustomer || !Array.isArray(currentCustomer.contactHistory) || currentCustomer.contactHistory.length === 0) {
-        historyContainer.innerHTML = '<div class="empty-state-small"><p>Geen contactgeschiedenis beschikbaar</p></div>';
+        replaceChildren(historyContainer, createEmptyStateSmallNode('Geen contactgeschiedenis beschikbaar'));
         return;
     }
 
@@ -5119,50 +5365,87 @@ function displayContactHistory() {
     const startIndex = (contactHistoryState.currentPage - 1) * itemsPerPage;
     const pageItems = sortedHistory.slice(startIndex, startIndex + itemsPerPage);
 
-    const paginationMarkup = totalPages > 1
-        ? `
-        <div class="timeline-pagination">
-            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage === 1 ? 'disabled' : ''} onclick="changeContactHistoryPage(${contactHistoryState.currentPage - 1})">← Vorige</button>
-            <span class="timeline-page-indicator">Pagina ${contactHistoryState.currentPage} van ${totalPages}</span>
-            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage >= totalPages ? 'disabled' : ''} onclick="changeContactHistoryPage(${contactHistoryState.currentPage + 1})">Volgende →</button>
-        </div>
-        `
-        : '';
+    const createPaginationNode = () => {
+        const paginationNode = cloneTemplateElement(templateIds.timelinePagination);
+        const prevButton = paginationNode.querySelector('[data-prev-page]');
+        const nextButton = paginationNode.querySelector('[data-next-page]');
+        const indicator = paginationNode.querySelector('[data-page-indicator]');
 
-    const timelineItems = pageItems.map((item, index) => {
+        if (prevButton) {
+            prevButton.disabled = contactHistoryState.currentPage === 1;
+            prevButton.addEventListener('click', () => {
+                changeContactHistoryPage(contactHistoryState.currentPage - 1);
+            });
+        }
+
+        if (nextButton) {
+            nextButton.disabled = contactHistoryState.currentPage >= totalPages;
+            nextButton.addEventListener('click', () => {
+                changeContactHistoryPage(contactHistoryState.currentPage + 1);
+            });
+        }
+
+        if (indicator) {
+            indicator.textContent = `Pagina ${contactHistoryState.currentPage} van ${totalPages}`;
+        }
+        return paginationNode;
+    };
+
+    const timelineList = document.createElement('div');
+    timelineList.className = 'timeline-list';
+    pageItems.forEach((item, index) => {
         const typeInfo = getContactTypeInfo(item.type);
         const rawId = String(item.id ?? `${startIndex + index}`);
         const sanitizedId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
         const entryDomId = sanitizedId ? `ch-${sanitizedId}` : `ch-entry-${startIndex + index}`;
         const isHighlighted = contactHistoryState.highlightId && String(contactHistoryState.highlightId) === String(item.id);
-        const highlightClass = isHighlighted ? ' timeline-item--highlight' : '';
+        const accentClass = timelineAccentClassByColor[typeInfo.color] || 'timeline-accent-gray';
 
-        const descriptionHtml = (item.description || '').replace(/\n/g, '<br>');
+        const timelineItem = cloneTemplateElement(templateIds.timelineItem);
+        timelineItem.dataset.contactId = rawId;
+        timelineItem.classList.toggle('timeline-item--highlight', Boolean(isHighlighted));
 
-        return `
-        <div class="timeline-item${highlightClass}" data-contact-id="${rawId}">
-            <div class="timeline-dot" style="background-color: ${typeInfo.color}"></div>
-            <div class="timeline-header" onclick="toggleTimelineItem('${entryDomId}')">
-                <span class="timeline-type" style="color: ${typeInfo.color}">
-                    ${typeInfo.icon} ${typeInfo.label}
-                </span>
-                <span class="timeline-expand expanded" id="expand-${entryDomId}">▼</span>
-                <span class="timeline-date">${formatDateTime(item.date)}</span>
-            </div>
-            <div class="timeline-content expanded" id="content-${entryDomId}">
-                ${descriptionHtml}
-            </div>
-        </div>
-        `;
-    }).join('');
+        const dotNode = timelineItem.querySelector('[data-timeline-dot]');
+        const typeNode = timelineItem.querySelector('[data-timeline-type]');
+        const headerNode = timelineItem.querySelector('[data-timeline-header]');
+        const expandNode = timelineItem.querySelector('[data-timeline-expand]');
+        const dateNode = timelineItem.querySelector('[data-timeline-date]');
+        const contentNode = timelineItem.querySelector('[data-timeline-content]');
 
-    historyContainer.innerHTML = `
-        ${paginationMarkup}
-        <div class="timeline-list">
-            ${timelineItems}
-        </div>
-        ${paginationMarkup}
-    `;
+        if (dotNode) {
+            dotNode.classList.add(accentClass);
+        }
+        if (typeNode) {
+            typeNode.classList.add(accentClass);
+            typeNode.textContent = `${typeInfo.icon} ${typeInfo.label}`;
+        }
+        if (headerNode) {
+            headerNode.addEventListener('click', () => toggleTimelineItem(entryDomId));
+        }
+        if (expandNode) {
+            expandNode.id = `expand-${entryDomId}`;
+        }
+        if (dateNode) {
+            dateNode.textContent = formatDateTime(item.date);
+        }
+        if (contentNode) {
+            contentNode.id = `content-${entryDomId}`;
+            appendLineBreakSeparatedText(contentNode, item.description || '');
+        }
+
+        timelineList.appendChild(timelineItem);
+    });
+
+    const contentFragment = document.createDocumentFragment();
+    if (totalPages > 1) {
+        contentFragment.appendChild(createPaginationNode());
+    }
+    contentFragment.appendChild(timelineList);
+    if (totalPages > 1) {
+        contentFragment.appendChild(createPaginationNode());
+    }
+
+    replaceChildren(historyContainer, contentFragment);
 }
 
 // Toggle Timeline Item (Accordion)
@@ -5231,7 +5514,7 @@ function showNewSubscription() {
     triggerWerfsleutelBackgroundRefreshIfStale();
     initializeSubscriptionRolesForForm();
     renderRequesterSameSummary();
-    document.getElementById('newSubscriptionForm').style.display = 'flex';
+    showElement(document.getElementById('newSubscriptionForm'));
 }
 
 // Create Subscription
@@ -5388,7 +5671,7 @@ function getSubscriptionRequesterMetaLine(subscription) {
     if (currentCustomer && Number(subscription.requesterPersonId) === Number(currentCustomer.id)) {
         return '';
     }
-    return `<br>Aangevraagd/betaald door persoon #${subscription.requesterPersonId}`;
+    return `Aangevraagd/betaald door persoon #${subscription.requesterPersonId}`;
 }
 
 // Edit Customer
@@ -5428,7 +5711,7 @@ function editCustomer() {
     document.querySelector(`input[name="editOptinPhone"][value="${optinPhone}"]`).checked = true;
     document.querySelector(`input[name="editOptinPost"][value="${optinPost}"]`).checked = true;
 
-    document.getElementById('editCustomerForm').style.display = 'flex';
+    showElement(document.getElementById('editCustomerForm'));
 }
 
 // Save Customer Edit
@@ -5521,12 +5804,16 @@ function showResendMagazine() {
     }
 
     const select = document.getElementById('resendSubscription');
-    select.innerHTML = '<option value="">Selecteer abonnement...</option>' +
-        currentCustomer.subscriptions.map(sub => 
-            `<option value="${sub.id}">${sub.magazine} - Laatste editie: ${formatDate(sub.lastEdition)}</option>`
-        ).join('');
+    const optionsFragment = document.createDocumentFragment();
+    optionsFragment.appendChild(createSelectOption('', 'Selecteer abonnement...', { selected: true }));
+    currentCustomer.subscriptions.forEach((sub) => {
+        optionsFragment.appendChild(
+            createSelectOption(String(sub.id), `${sub.magazine} - Laatste editie: ${formatDate(sub.lastEdition)}`)
+        );
+    });
+    replaceChildren(select, optionsFragment);
 
-    document.getElementById('resendMagazineForm').style.display = 'flex';
+    showElement(document.getElementById('resendMagazineForm'));
 }
 
 // Resend Magazine
@@ -5595,13 +5882,17 @@ function showEditorialComplaintForm() {
     // Populate magazine dropdown with customer's subscriptions
     const select = document.getElementById('editorialComplaintMagazine');
     const uniqueMagazines = [...new Set(currentCustomer.subscriptions.map(sub => sub.magazine))];
-    
+
+    const optionsFragment = document.createDocumentFragment();
     if (uniqueMagazines.length === 0) {
-        select.innerHTML = '<option value="">Geen abonnementen beschikbaar</option>';
+        optionsFragment.appendChild(createSelectOption('', 'Geen abonnementen beschikbaar', { selected: true }));
     } else {
-        select.innerHTML = '<option value="">Selecteer magazine...</option>' +
-            uniqueMagazines.map(mag => `<option value="${mag}">${mag}</option>`).join('');
+        optionsFragment.appendChild(createSelectOption('', 'Selecteer magazine...', { selected: true }));
+        uniqueMagazines.forEach((magazine) => {
+            optionsFragment.appendChild(createSelectOption(magazine, magazine));
+        });
     }
+    replaceChildren(select, optionsFragment);
 
     // Reset form fields
     document.getElementById('editorialComplaintType').value = 'klacht';
@@ -5610,7 +5901,7 @@ function showEditorialComplaintForm() {
     document.getElementById('editorialComplaintEdition').value = '';
     document.getElementById('editorialComplaintFollowup').checked = false;
 
-    document.getElementById('editorialComplaintForm').style.display = 'flex';
+    showElement(document.getElementById('editorialComplaintForm'));
 }
 
 // Submit Editorial Complaint
@@ -5723,7 +6014,7 @@ function editSubscription(subId) {
     document.getElementById('editSubStatus').value = subscription.status || 'active';
     
     // Show form
-    document.getElementById('editSubscriptionForm').style.display = 'flex';
+    showElement(document.getElementById('editSubscriptionForm'));
 }
 
 // Save Subscription Edit
@@ -5854,6 +6145,17 @@ function startWinbackForSubscription(subId) {
     showWinbackFlow();
 }
 
+function hideAllWinbackSteps() {
+    document.querySelectorAll('.winback-step').forEach((stepNode) => {
+        hideElement(stepNode);
+    });
+}
+
+function showWinbackStep(stepId) {
+    hideAllWinbackSteps();
+    showElement(document.getElementById(stepId));
+}
+
 // Show Winback Flow
 function showWinbackFlow() {
     if (!currentCustomer) {
@@ -5872,13 +6174,12 @@ function showWinbackFlow() {
     }
 
     // Reset winback flow
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1').style.display = 'block';
+    showWinbackStep('winbackStep1');
     
     document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
     document.querySelector('[data-step="1"]').classList.add('active');
 
-    document.getElementById('winbackFlow').style.display = 'flex';
+    showElement(document.getElementById('winbackFlow'));
 }
 
 // Winback Next Step
@@ -5911,11 +6212,7 @@ async function winbackNextStep(stepNumber) {
         generateWinbackScript();
     }
 
-    // Hide all steps
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    
-    // Show selected step
-    document.getElementById(`winbackStep${stepNumber}`).style.display = 'block';
+    showWinbackStep(`winbackStep${stepNumber}`);
     
     // Update step indicator
     document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
@@ -5925,11 +6222,9 @@ async function winbackNextStep(stepNumber) {
 // Winback Previous Step
 function winbackPrevStep(stepNumber) {
     if (stepNumber === '1b') {
-        document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-        document.getElementById('winbackStep1b').style.display = 'block';
+        showWinbackStep('winbackStep1b');
     } else if (typeof stepNumber === 'string') {
-        document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-        document.getElementById(`winbackStep${stepNumber}`).style.display = 'block';
+        showWinbackStep(`winbackStep${stepNumber}`);
     } else {
         winbackNextStep(stepNumber);
     }
@@ -5958,30 +6253,37 @@ async function generateWinbackOffers(reason) {
     }
 
     const offersContainer = document.getElementById('winbackOffers');
-    
-    offersContainer.innerHTML = relevantOffers.map(offer => {
-        const escapedTitle = String(offer.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        const escapedDescription = String(offer.description || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        return `
-        <div class="offer-card" onclick="selectOffer(${offer.id}, '${escapedTitle}', '${escapedDescription}', event)">
-            <div class="offer-title">${offer.title}</div>
-            <div class="offer-description">${offer.description}</div>
-            <div class="offer-discount">${offer.discount}</div>
-        </div>
-    `;
-    }).join('');
+
+    const offersFragment = document.createDocumentFragment();
+    relevantOffers.forEach((offer) => {
+        const card = cloneTemplateElement(templateIds.offerCard);
+        card.dataset.offerId = String(offer.id);
+        setText(card, '[data-offer-title]', offer.title || '');
+        setText(card, '[data-offer-description]', offer.description || '');
+        setText(card, '[data-offer-discount]', offer.discount || '');
+        card.addEventListener('click', () => {
+            selectOffer(offer, card);
+        });
+        offersFragment.appendChild(card);
+    });
+
+    replaceChildren(offersContainer, offersFragment);
 }
 
 // Select Offer
-function selectOffer(offerId, title, description, domEvent) {
-    selectedOffer = { id: offerId, title, description };
+function selectOffer(offer, cardNode) {
+    selectedOffer = {
+        id: offer.id,
+        title: offer.title || '',
+        description: offer.description || ''
+    };
     
     // Update UI
     document.querySelectorAll('.offer-card').forEach(card => {
         card.classList.remove('selected');
     });
-    if (domEvent && domEvent.currentTarget) {
-        domEvent.currentTarget.classList.add('selected');
+    if (cardNode) {
+        cardNode.classList.add('selected');
     }
 }
 
@@ -5990,14 +6292,30 @@ function generateWinbackScript() {
     if (!selectedOffer) return;
     
     const scriptElement = document.getElementById('winbackScript');
-    scriptElement.innerHTML = `
-        <strong>Script voor aanbod presentatie:</strong><br><br>
-        "Ik begrijp dat u het abonnement wilt opzeggen. We waarderen u als klant enorm en willen graag dat u blijft. 
-        Daarom wil ik u een speciaal aanbod doen:<br><br>
-        <strong>${selectedOffer.title}</strong><br>
-        ${selectedOffer.description}<br><br>
-        Zou dit u helpen om het abonnement aan te houden?"
-    `;
+    if (!scriptElement) {
+        return;
+    }
+
+    clearChildren(scriptElement);
+    const introStrong = document.createElement('strong');
+    introStrong.textContent = 'Script voor aanbod presentatie:';
+    const offerStrong = document.createElement('strong');
+    offerStrong.textContent = selectedOffer.title;
+
+    scriptElement.appendChild(introStrong);
+    scriptElement.appendChild(document.createElement('br'));
+    scriptElement.appendChild(document.createElement('br'));
+    scriptElement.appendChild(document.createTextNode('"Ik begrijp dat u het abonnement wilt opzeggen. We waarderen u als klant enorm en willen graag dat u blijft.'));
+    scriptElement.appendChild(document.createElement('br'));
+    scriptElement.appendChild(document.createTextNode('Daarom wil ik u een speciaal aanbod doen:'));
+    scriptElement.appendChild(document.createElement('br'));
+    scriptElement.appendChild(document.createElement('br'));
+    scriptElement.appendChild(offerStrong);
+    scriptElement.appendChild(document.createElement('br'));
+    scriptElement.appendChild(document.createTextNode(selectedOffer.description));
+    scriptElement.appendChild(document.createElement('br'));
+    scriptElement.appendChild(document.createElement('br'));
+    scriptElement.appendChild(document.createTextNode('Zou dit u helpen om het abonnement aan te houden?"'));
 }
 
 // Handle Deceased Options - Show all subscriptions
@@ -6014,30 +6332,60 @@ function winbackHandleDeceased() {
     
     // Generate subscription cards
     const container = document.getElementById('deceasedSubscriptionsList');
-    container.innerHTML = activeSubscriptions.map(sub => `
-        <div class="deceased-subscription-card" data-sub-id="${sub.id}">
-            <div class="deceased-sub-header">
-                <h4>📰 ${sub.magazine}</h4>
-                <span class="sub-start-date">Start: ${formatDate(sub.startDate)}</span>
-            </div>
-            <div class="form-group">
-                <label>Actie voor dit abonnement:</label>
-                <div class="radio-group">
-                    <label class="radio-option">
-                        <input type="radio" name="action_${sub.id}" value="cancel_refund" required>
-                        <span>Opzeggen met restitutie</span>
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="action_${sub.id}" value="transfer" required>
-                        <span>Overzetten op andere persoon</span>
-                    </label>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1b').style.display = 'block';
+    const cardFragment = document.createDocumentFragment();
+    activeSubscriptions.forEach((sub) => {
+        const card = cloneTemplateElement(templateIds.deceasedSubscriptionCard);
+        card.dataset.subscriptionId = String(sub.id);
+        setText(card, '[data-subscription-title]', `📰 ${sub.magazine}`);
+        setText(card, '[data-subscription-start-date]', `Start: ${formatDate(sub.startDate)}`);
+
+        const actionsContainer = card.querySelector('[data-action-options]');
+        if (actionsContainer) {
+            const options = [
+                { value: 'cancel_refund', label: 'Opzeggen met restitutie' },
+                { value: 'transfer', label: 'Overzetten op andere persoon' }
+            ];
+            options.forEach((optionConfig) => {
+                const optionLabel = document.createElement('label');
+                optionLabel.className = 'radio-option';
+
+                const optionInput = document.createElement('input');
+                optionInput.type = 'radio';
+                optionInput.name = `action_${sub.id}`;
+                optionInput.value = optionConfig.value;
+                optionInput.required = true;
+
+                const optionText = document.createElement('span');
+                optionText.textContent = optionConfig.label;
+                optionLabel.append(optionInput, optionText);
+                actionsContainer.appendChild(optionLabel);
+            });
+        }
+        cardFragment.appendChild(card);
+    });
+    replaceChildren(container, cardFragment);
+    showWinbackStep('winbackStep1b');
+}
+
+function renderSubscriptionActionList(containerId, title, entries) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        return;
+    }
+
+    const listNode = cloneTemplateElement(templateIds.subscriptionActionList);
+    setText(listNode, '[data-action-title]', title);
+    const itemsNode = listNode.querySelector('[data-action-items]');
+    if (itemsNode) {
+        const itemsFragment = document.createDocumentFragment();
+        entries.forEach((entry) => {
+            const listItem = document.createElement('li');
+            listItem.textContent = `📰 ${entry.subscription.magazine}`;
+            itemsFragment.appendChild(listItem);
+        });
+        replaceChildren(itemsNode, itemsFragment);
+    }
+    replaceChildren(container, listNode);
 }
 
 // Process Deceased Subscriptions
@@ -6083,17 +6431,9 @@ function processDeceasedSubscriptions() {
 // Show Deceased Refund Form
 function showDeceasedRefundForm() {
     const refundSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'cancel_refund');
-    
-    const listHtml = `
-        <p><strong>Op te zeggen abonnementen:</strong></p>
-        <ul>
-            ${refundSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
-        </ul>
-    `;
-    document.getElementById('refundSubscriptionsList').innerHTML = listHtml;
-    
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1c').style.display = 'block';
+
+    renderSubscriptionActionList('refundSubscriptionsList', 'Op te zeggen abonnementen:', refundSubs);
+    showWinbackStep('winbackStep1c');
     
     // Pre-fill email placeholder
     const refundEmailInput = document.getElementById('refundEmail');
@@ -6105,17 +6445,9 @@ function showDeceasedRefundForm() {
 // Show Deceased Transfer Form
 function showDeceasedTransferForm() {
     const transferSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'transfer');
-    
-    const listHtml = `
-        <p><strong>Over te zetten abonnementen:</strong></p>
-        <ul>
-            ${transferSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
-        </ul>
-    `;
-    document.getElementById('transferSubscriptionsList').innerHTML = listHtml;
-    
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1d').style.display = 'block';
+
+    renderSubscriptionActionList('transferSubscriptionsList', 'Over te zetten abonnementen:', transferSubs);
+    showWinbackStep('winbackStep1d');
     
     // Render unified customer form
     renderCustomerForm('transferCustomerForm', 'transfer', {
@@ -6142,25 +6474,10 @@ function showDeceasedTransferForm() {
 function showDeceasedCombinedForm() {
     const transferSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'transfer');
     const refundSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'cancel_refund');
-    
-    const transferListHtml = `
-        <p><strong>Over te zetten abonnementen:</strong></p>
-        <ul>
-            ${transferSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
-        </ul>
-    `;
-    document.getElementById('combinedTransferList').innerHTML = transferListHtml;
-    
-    const refundListHtml = `
-        <p><strong>Op te zeggen abonnementen:</strong></p>
-        <ul>
-            ${refundSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
-        </ul>
-    `;
-    document.getElementById('combinedRefundList').innerHTML = refundListHtml;
-    
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1e').style.display = 'block';
+
+    renderSubscriptionActionList('combinedTransferList', 'Over te zetten abonnementen:', transferSubs);
+    renderSubscriptionActionList('combinedRefundList', 'Op te zeggen abonnementen:', refundSubs);
+    showWinbackStep('winbackStep1e');
     
     // Render unified customer form
     renderCustomerForm('transfer2CustomerForm', 'transfer2', {
@@ -6203,7 +6520,7 @@ function revertRestitution(subscriptionId) {
 // Show Transfer Form for Restitution Revert
 function showRestitutionTransferForm(subscription) {
     // Open the transfer form modal
-    document.getElementById('restitutionTransferForm').style.display = 'flex';
+    showElement(document.getElementById('restitutionTransferForm'));
     
     // Update form title
     document.getElementById('restitutionTransferTitle').textContent = `${subscription.magazine} Overzetten`;
@@ -6219,14 +6536,14 @@ function toggleRestitutionTransferAddress() {
     const addressFields = document.getElementById('restitutionTransferAddressFields');
     
     if (sameAddress) {
-        addressFields.style.display = 'none';
+        hideElement(addressFields);
         // Remove required attribute
         document.getElementById('restitutionTransferPostalCode').removeAttribute('required');
         document.getElementById('restitutionTransferHouseNumber').removeAttribute('required');
         document.getElementById('restitutionTransferAddress').removeAttribute('required');
         document.getElementById('restitutionTransferCity').removeAttribute('required');
     } else {
-        addressFields.style.display = 'block';
+        showElement(addressFields);
         // Add required attribute
         document.getElementById('restitutionTransferPostalCode').setAttribute('required', 'required');
         document.getElementById('restitutionTransferHouseNumber').setAttribute('required', 'required');
@@ -6335,14 +6652,14 @@ async function completeAllDeceasedActions() {
     let refundData = null;
     
     // Get the active form and extract data
-    if (step1e.style.display !== 'none') {
+    if (!isHidden(step1e)) {
         // Combined form
         transferData = getTransferDataFromForm(2);
         refundData = getRefundDataFromForm(2);
-    } else if (step1d.style.display !== 'none') {
+    } else if (!isHidden(step1d)) {
         // Only transfer
         transferData = getTransferDataFromForm(1);
-    } else if (step1c.style.display !== 'none') {
+    } else if (!isHidden(step1c)) {
         // Only refund
         refundData = getRefundDataFromForm(1);
     }
@@ -6620,9 +6937,12 @@ async function completeWinback() {
 // Display Articles
 function displayArticles() {
     const articlesList = document.getElementById('articlesList');
-    
+    if (!articlesList) {
+        return;
+    }
+
     if (!currentCustomer || !currentCustomer.articles || currentCustomer.articles.length === 0) {
-        articlesList.innerHTML = '<p class="empty-state-small">Geen artikelen</p>';
+        replaceChildren(articlesList, createEmptyStateSmallNode('Geen artikelen'));
         return;
     }
 
@@ -6631,8 +6951,9 @@ function displayArticles() {
         new Date(b.orderDate) - new Date(a.orderDate)
     );
 
-    let html = '<div class="articles-group">';
-    html += sortedArticles.map(order => {
+    const articlesGroup = document.createElement('div');
+    articlesGroup.className = 'articles-group';
+    sortedArticles.forEach((order) => {
         const deliveryStatusClass = {
             'ordered': 'status-ordered',
             'in_transit': 'status-transit',
@@ -6664,53 +6985,92 @@ function displayArticles() {
         
         // Check if this is a multi-item order (new format) or single item (old format)
         const isMultiItemOrder = order.items && Array.isArray(order.items);
-        
-        let itemsDisplay = '';
-        let priceDisplay = '';
-        
-        if (isMultiItemOrder) {
-            // New format: multiple items with discounts
-            itemsDisplay = order.items.map(item => 
-                `${item.name} (${item.quantity}x à €${item.unitPrice.toFixed(2)})`
-            ).join('<br>');
-            
-            priceDisplay = `
-                <strong>Subtotaal:</strong> €${order.subtotal.toFixed(2)}<br>
-                ${order.totalDiscount > 0 ? `<strong>Korting:</strong> <span style="color: #059669;">-€${order.totalDiscount.toFixed(2)}</span> 
-                (${order.discounts.map(d => d.type).join(', ')})<br>` : ''}
-                <strong>Totaal:</strong> €${order.total.toFixed(2)}
-            `;
-        } else {
-            // Old format: single item (backward compatibility)
-            itemsDisplay = `${order.articleName || 'Artikel'} (${order.quantity}x)`;
-            priceDisplay = `<strong>Prijs:</strong> €${order.price.toFixed(2)}`;
-        }
-        
-        return `
-            <div class="article-item">
-                <div class="article-info">
-                    <div class="article-name">🛒 Bestelling #${order.id}</div>
-                    <div class="article-details">
-                        <strong>Artikelen:</strong><br>${itemsDisplay}<br>
-                        ${priceDisplay}<br>
-                        <strong>Besteld:</strong> ${formatDate(order.orderDate)} • 
-                        <strong>Gewenste levering:</strong> ${formatDate(order.desiredDeliveryDate)}
-                        ${order.actualDeliveryDate ? `<br><strong>Geleverd:</strong> ${formatDate(order.actualDeliveryDate)}` : ''}
-                        ${order.trackingNumber ? `<br><strong>Track & Trace:</strong> ${order.trackingNumber}` : ''}
-                        ${order.notes ? `<br><strong>Opmerking:</strong> ${order.notes}` : ''}
-                        ${returnPossible ? `<br><strong>Retour mogelijk tot:</strong> ${formatDate(order.returnDeadline)}` : ''}
-                    </div>
-                </div>
-                <div class="article-actions">
-                    <span class="article-status ${deliveryStatusClass}">${deliveryStatusText}</span>
-                    <span class="article-status ${paymentStatusClass}">${paymentStatusText}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-    html += '</div>';
 
-    articlesList.innerHTML = html;
+        const articleNode = cloneTemplateElement(templateIds.articleItem);
+        setText(articleNode, '[data-article-name]', `🛒 Bestelling #${order.id}`);
+
+        const detailsNode = articleNode.querySelector('[data-article-details]');
+        if (detailsNode) {
+            const appendLabeledLine = (label, value, options = {}) => {
+                const { lineBreak = true, valueClassName = '' } = options;
+                const strongNode = document.createElement('strong');
+                strongNode.textContent = `${label}:`;
+                detailsNode.appendChild(strongNode);
+                detailsNode.appendChild(document.createTextNode(` ${value}`));
+                if (valueClassName) {
+                    const lastTextNode = detailsNode.lastChild;
+                    const valueNode = document.createElement('span');
+                    valueNode.className = valueClassName;
+                    valueNode.textContent = ` ${value}`;
+                    detailsNode.replaceChild(valueNode, lastTextNode);
+                }
+                if (lineBreak) {
+                    detailsNode.appendChild(document.createElement('br'));
+                }
+            };
+
+            const itemLines = isMultiItemOrder
+                ? order.items.map((item) => `${item.name} (${item.quantity}x à €${item.unitPrice.toFixed(2)})`)
+                : [`${order.articleName || 'Artikel'} (${order.quantity}x)`];
+
+            const itemsLabel = document.createElement('strong');
+            itemsLabel.textContent = 'Artikelen:';
+            detailsNode.appendChild(itemsLabel);
+            detailsNode.appendChild(document.createElement('br'));
+            itemLines.forEach((line) => {
+                detailsNode.appendChild(document.createTextNode(line));
+                detailsNode.appendChild(document.createElement('br'));
+            });
+
+            if (isMultiItemOrder) {
+                appendLabeledLine('Subtotaal', `€${order.subtotal.toFixed(2)}`);
+                if (order.totalDiscount > 0) {
+                    const discountTypes = (order.discounts || []).map((discount) => discount.type).join(', ');
+                    appendLabeledLine('Korting', `-€${order.totalDiscount.toFixed(2)} (${discountTypes})`, {
+                        valueClassName: 'discount-accent'
+                    });
+                }
+                appendLabeledLine('Totaal', `€${order.total.toFixed(2)}`);
+            } else {
+                appendLabeledLine('Prijs', `€${order.price.toFixed(2)}`);
+            }
+
+            detailsNode.appendChild(createStrongLabelValue('Besteld:', `${formatDate(order.orderDate)} • Gewenste levering: ${formatDate(order.desiredDeliveryDate)}`));
+            if (order.actualDeliveryDate) {
+                detailsNode.appendChild(document.createElement('br'));
+                detailsNode.appendChild(createStrongLabelValue('Geleverd:', formatDate(order.actualDeliveryDate)));
+            }
+            if (order.trackingNumber) {
+                detailsNode.appendChild(document.createElement('br'));
+                detailsNode.appendChild(createStrongLabelValue('Track & Trace:', order.trackingNumber));
+            }
+            if (order.notes) {
+                detailsNode.appendChild(document.createElement('br'));
+                detailsNode.appendChild(createStrongLabelValue('Opmerking:', order.notes));
+            }
+            if (returnPossible) {
+                detailsNode.appendChild(document.createElement('br'));
+                detailsNode.appendChild(createStrongLabelValue('Retour mogelijk tot:', formatDate(order.returnDeadline)));
+            }
+        }
+
+        const actionsNode = articleNode.querySelector('[data-article-actions]');
+        if (actionsNode) {
+            const deliveryStatusNode = document.createElement('span');
+            deliveryStatusNode.className = `article-status ${deliveryStatusClass}`;
+            deliveryStatusNode.textContent = deliveryStatusText;
+
+            const paymentStatusNode = document.createElement('span');
+            paymentStatusNode.className = `article-status ${paymentStatusClass}`;
+            paymentStatusNode.textContent = paymentStatusText;
+
+            actionsNode.append(deliveryStatusNode, paymentStatusNode);
+        }
+
+        articlesGroup.appendChild(articleNode);
+    });
+
+    replaceChildren(articlesList, articlesGroup);
 }
 
 // Show Article Sale Form
@@ -6763,7 +7123,7 @@ function showArticleSale() {
     orderItems = [];
     renderOrderItems();
     
-    document.getElementById('articleSaleForm').style.display = 'flex';
+    showElement(document.getElementById('articleSaleForm'));
 }
 
 // Add Delivery Remark
@@ -7056,7 +7416,7 @@ function editDeliveryRemarks() {
     remarksTextarea.value = currentCustomer.deliveryRemarks?.default || '';
     
     // Show modal
-    modal.style.display = 'flex';
+    modal.classList.add('show');
 }
 
 // Add Delivery Remark to Modal
@@ -7145,7 +7505,7 @@ async function saveDeliveryRemarks() {
 // Close Edit Remarks Modal
 function closeEditRemarksModal() {
     const modal = document.getElementById('editDeliveryRemarksModal');
-    modal.style.display = 'none';
+    modal.classList.remove('show');
 }
 
 // Close Form
@@ -7156,7 +7516,7 @@ function closeForm(formId) {
 
     const form = document.getElementById(formId);
     if (form) {
-        form.style.display = 'none';
+        hideElement(form);
     }
 }
 
@@ -7262,8 +7622,8 @@ document.addEventListener('keydown', (e) => {
         
         // Close forms
         document.querySelectorAll('.form-container').forEach(form => {
-            if (form.style.display === 'flex') {
-                form.style.display = 'none';
+            if (!isHidden(form)) {
+                hideElement(form);
             }
         });
     }
@@ -7285,10 +7645,10 @@ function toggleKnownCallerSelect() {
     const knownCallerSelect = document.getElementById('debugKnownCallerSelect');
     
     if (callerType === 'known') {
-        knownCallerSelect.style.display = 'flex';
+        showElement(knownCallerSelect);
         populateDebugKnownCustomers();
     } else {
-        knownCallerSelect.style.display = 'none';
+        hideElement(knownCallerSelect);
     }
 }
 
@@ -7297,16 +7657,18 @@ function populateDebugKnownCustomers() {
     const select = document.getElementById('debugKnownCustomer');
     
     if (customers.length === 0) {
-        select.innerHTML = '<option value="">Geen klanten beschikbaar</option>';
+        replaceChildren(select, createSelectOption('', 'Geen klanten beschikbaar', { selected: true }));
         return;
     }
-    
-    select.innerHTML = customers.map(customer => {
+
+    const optionsFragment = document.createDocumentFragment();
+    customers.forEach((customer) => {
         const fullName = customer.middleName 
             ? `${customer.initials || customer.firstName} ${customer.middleName} ${customer.lastName}`
             : `${customer.initials || customer.firstName} ${customer.lastName}`;
-        return `<option value="${customer.id}">${fullName}</option>`;
-    }).join('');
+        optionsFragment.appendChild(createSelectOption(String(customer.id), fullName));
+    });
+    replaceChildren(select, optionsFragment);
 }
 
 // Debug: Start Call Simulation
@@ -7420,7 +7782,7 @@ function debugEndCall() {
     
     if (confirm(`📞 Het telefoongesprek beëindigen?\n\nGespreksduur: ${formatTime(callDuration)}`)) {
         endCallSession(true);
-        document.getElementById('debugEndCallBtn').style.display = 'none';
+        hideElement(document.getElementById('debugEndCallBtn'));
     }
 }
 
@@ -7440,7 +7802,7 @@ function openDebugModal() {
     // Update debug end call button visibility
     const debugEndBtn = document.getElementById('debugEndCallBtn');
     if (debugEndBtn) {
-        debugEndBtn.style.display = callSession.active ? 'block' : 'none';
+        setNodeHidden(debugEndBtn, !callSession.active);
     }
     
     console.log('🔧 Debug mode activated');

@@ -188,6 +188,42 @@ body {
     line-height: 1;
 }
 
+.agent-status-badge.status-ready {
+    background: #4ade80;
+    color: #052e16;
+}
+
+.agent-status-badge.status-in_call,
+.agent-status-badge.status-busy {
+    background: #ef4444;
+    color: #7f1d1d;
+}
+
+.agent-status-badge.status-dnd {
+    background: #dc2626;
+    color: #7f1d1d;
+}
+
+.agent-status-badge.status-brb {
+    background: #f59e0b;
+    color: #78350f;
+}
+
+.agent-status-badge.status-away {
+    background: #fbbf24;
+    color: #713f12;
+}
+
+.agent-status-badge.status-offline {
+    background: #9ca3af;
+    color: #111827;
+}
+
+.agent-status-badge.status-acw {
+    background: #facc15;
+    color: #422006;
+}
+
 .agent-profile-menu {
     position: absolute;
     top: 100%;
@@ -212,6 +248,23 @@ body {
 
 .profile-menu-section + .profile-menu-section {
     border-top: 1px solid var(--border-color);
+}
+
+body .is-hidden {
+    display: none;
+}
+
+.text-muted-small {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.discount-accent {
+    color: #059669;
+}
+
+.address-field-disabled {
+    opacity: 0.5;
 }
 
 .profile-menu-header {
@@ -1864,6 +1917,15 @@ select option {
     color: var(--text-primary);
 }
 
+.info-box--danger {
+    background-color: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+}
+
+.info-box--top-space {
+    margin-top: 2rem;
+}
+
 .info-box strong {
     color: var(--primary-color);
 }
@@ -1938,6 +2000,70 @@ select option {
 .timeline-type {
     font-weight: 600;
     font-size: 0.9rem;
+}
+
+.timeline-dot.timeline-accent-amber {
+    background-color: #fbbf24;
+}
+
+.timeline-type.timeline-accent-amber {
+    color: #fbbf24;
+}
+
+.timeline-dot.timeline-accent-blue {
+    background-color: #3b82f6;
+}
+
+.timeline-type.timeline-accent-blue {
+    color: #3b82f6;
+}
+
+.timeline-dot.timeline-accent-green {
+    background-color: #10b981;
+}
+
+.timeline-type.timeline-accent-green {
+    color: #10b981;
+}
+
+.timeline-dot.timeline-accent-gray {
+    background-color: #6b7280;
+}
+
+.timeline-type.timeline-accent-gray {
+    color: #6b7280;
+}
+
+.timeline-dot.timeline-accent-red {
+    background-color: #ef4444;
+}
+
+.timeline-type.timeline-accent-red {
+    color: #ef4444;
+}
+
+.timeline-dot.timeline-accent-orange {
+    background-color: #f59e0b;
+}
+
+.timeline-type.timeline-accent-orange {
+    color: #f59e0b;
+}
+
+.timeline-dot.timeline-accent-danger {
+    background-color: #dc2626;
+}
+
+.timeline-type.timeline-accent-danger {
+    color: #dc2626;
+}
+
+.timeline-dot.timeline-accent-purple {
+    background-color: #8b5cf6;
+}
+
+.timeline-type.timeline-accent-purple {
+    color: #8b5cf6;
 }
 
 .timeline-date {

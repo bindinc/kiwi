@@ -79,7 +79,7 @@
                 </div>
                 
                 <!-- Call Queue Info Bar -->
-                <div id="queueInfo" class="queue-info" style="display: none;">
+                <div id="queueInfo" class="queue-info is-hidden">
                     <div class="queue-info-content">
                         <!-- Volgende beller informatie -->
                         <div class="queue-next-caller">
@@ -120,7 +120,7 @@
                 </div>
                 
                 <!-- Active Call Session Bar -->
-                <div id="sessionInfo" class="session-info" style="display: none;">
+                <div id="sessionInfo" class="session-info is-hidden">
                     <div class="session-info-content">
                         <div class="session-service">
                             <span class="service-icon">📞</span>
@@ -141,7 +141,7 @@
                         </div>
                         
                         <!-- Recording Indicator -->
-                        <div class="recording-indicator" id="recordingIndicator" style="display: none;">
+                        <div class="recording-indicator is-hidden" id="recordingIndicator">
                             <span class="rec-icon">🔴</span>
                             <span class="rec-text">REC</span>
                         </div>
@@ -149,14 +149,12 @@
                         <!-- Call Action Buttons -->
                         <div class="session-actions">
                             <button id="holdCallBtn" 
-                                    class="btn-hold-call" 
-                                    onclick="toggleCallHold()"
-                                    style="display: none;">
+                                    class="btn-hold-call is-hidden" 
+                                    onclick="toggleCallHold()">
                                 ⏸️ In Wacht
                             </button>
-                            <button id="endCallBtn" class="btn-end-call" 
-                                    onclick="endCallSession()" 
-                                    style="display: none;">
+                            <button id="endCallBtn" class="btn-end-call is-hidden" 
+                                    onclick="endCallSession()">
                                 📞 Beëindig Gesprek
                             </button>
                         </div>
@@ -164,7 +162,7 @@
                 </div>
                 
                 <!-- ACW (After Call Work) Bar -->
-                <div id="acwBar" class="acw-bar" style="display: none;">
+                <div id="acwBar" class="acw-bar is-hidden">
                     <div class="acw-bar-content">
                         <span class="acw-icon">🟡</span>
                         <span class="acw-label">Nabewerkingstijd</span>
@@ -227,7 +225,7 @@
                     </div>
 
                     <!-- Search Summary (shows after search) -->
-                    <div id="searchSummary" class="search-summary" style="display: none;">
+                    <div id="searchSummary" class="search-summary is-hidden">
                         <div class="summary-content">
                             <div class="summary-badge">
                                 <span class="summary-icon">✓</span>
@@ -264,7 +262,7 @@
                 </div>
 
                 <!-- Search Results View (shows paginated results) -->
-                <div id="searchResultsView" class="search-results-view" style="display: none;">
+                <div id="searchResultsView" class="search-results-view is-hidden">
                     <div class="card">
                         <div class="results-header">
                             <div class="results-title-section">
@@ -303,7 +301,7 @@
                 </div>
 
                 <!-- Customer Detail View -->
-                <div id="customerDetail" class="customer-detail" style="display: none;">
+                <div id="customerDetail" class="customer-detail is-hidden">
                     <div class="card">
                         <div class="customer-header">
                             <div class="customer-info">
@@ -317,9 +315,8 @@
                             <div class="customer-actions">
                                 <!-- PHASE 4: Identify Caller Button (only visible during anonymous call) -->
                                 <button id="identifyCallerBtn" 
-                                        class="btn btn-small btn-primary" 
-                                        onclick="identifyCurrentCustomerAsCaller()"
-                                        style="display: none;">
+                                        class="btn btn-small btn-primary is-hidden" 
+                                        onclick="identifyCurrentCustomerAsCaller()">
                                     👤 Dit is de persoon die belt
                                 </button>
                                 <button class="btn btn-small" onclick="editCustomer()">✏️ Bewerken</button>
@@ -347,7 +344,7 @@
                 </div>
 
                 <!-- New Subscription Form -->
-                <div id="newSubscriptionForm" class="form-container" style="display: none;">
+                <div id="newSubscriptionForm" class="form-container is-hidden">
                     <div class="card onepager-container">
                         <div class="form-header">
                             <h2>➕ Nieuw Abonnement Aanmaken</h2>
@@ -421,7 +418,7 @@
                                     <div id="recipientSearchResults" class="party-search-results"></div>
                                     <div id="recipientSelectedPerson" class="party-selected-person empty">Geen ontvanger geselecteerd</div>
                                 </div>
-                                <div id="recipientCreateSection" style="display: none;">
+                                <div id="recipientCreateSection" class="is-hidden">
                                     <div id="recipientCreateForm"></div>
                                     <div id="recipientDuplicateCheck" class="subscription-duplicate-check hidden" aria-live="polite"></div>
                                 </div>
@@ -438,7 +435,7 @@
                                 <div id="requesterSameSummary" class="party-selected-person">
                                     Aanvrager/betaler volgt de geselecteerde ontvanger.
                                 </div>
-                                <div id="requesterRoleDetails" style="display: none;">
+                                <div id="requesterRoleDetails" class="is-hidden">
                                     <div class="party-mode-toggle">
                                         <label><input type="radio" name="requesterMode" value="existing" checked onchange="setSubscriptionRoleMode('requester', this.value)"> Bestaande persoon</label>
                                         <label><input type="radio" name="requesterMode" value="create" onchange="setSubscriptionRoleMode('requester', this.value)"> Nieuwe persoon</label>
@@ -451,7 +448,7 @@
                                         <div id="requesterSearchResults" class="party-search-results"></div>
                                         <div id="requesterSelectedPerson" class="party-selected-person empty">Geen aanvrager/betaler geselecteerd</div>
                                     </div>
-                                    <div id="requesterCreateSection" style="display: none;">
+                                    <div id="requesterCreateSection" class="is-hidden">
                                         <div id="requesterCreateForm"></div>
                                         <div id="requesterDuplicateCheck" class="subscription-duplicate-check hidden" aria-live="polite"></div>
                                     </div>
@@ -496,7 +493,7 @@
                 </div>
 
                 <!-- Article Sale Form -->
-                <div id="articleSaleForm" class="form-container" style="display: none;">
+                <div id="articleSaleForm" class="form-container is-hidden">
                     <div class="card onepager-container article-sale-container">
                         <div class="form-header">
                             <h2>🛒 Artikel Verkoop</h2>
@@ -557,7 +554,7 @@
                                         <div class="delivery-date-display" id="deliveryDateDisplay">
                                             Selecteer een datum...
                                         </div>
-                                        <div class="delivery-calendar" id="deliveryCalendar" style="display: none;">
+                                        <div class="delivery-calendar is-hidden" id="deliveryCalendar">
                                             <!-- Calendar generated by JavaScript -->
                                         </div>
                                     </div>
@@ -632,7 +629,7 @@
                            autocomplete="off"
                            oninput="filterArticles(this.value)">
                     <input type="hidden" id="articleName">
-                    <div class="article-dropdown" id="articleDropdown" style="display: none;">
+                    <div class="article-dropdown is-hidden" id="articleDropdown">
                         <!-- Dropdown populated by JavaScript -->
                     </div>
                 </div>
@@ -654,7 +651,7 @@
                             </div>
                             
                             <!-- Order Items List -->
-                            <div id="orderItemsSection" class="order-items-section" style="display: none;">
+                            <div id="orderItemsSection" class="order-items-section is-hidden">
                                 <h3 class="form-subtitle">📋 Bestelling Overzicht</h3>
                                 <div id="orderItemsList" class="order-items-list">
                                     <!-- Items will be added dynamically -->
@@ -683,7 +680,7 @@
                                         <span>Subtotaal:</span>
                                         <span id="orderSubtotal">€0,00</span>
                                     </div>
-                                    <div id="discountsBreakdown" class="discounts-breakdown" style="display: none;">
+                                    <div id="discountsBreakdown" class="discounts-breakdown is-hidden">
                                         <!-- Discount items will be added dynamically -->
                                     </div>
                                     <div class="order-summary-row total-row">
@@ -700,7 +697,7 @@
                 </div>
 
                 <!-- Edit Customer Form -->
-                <div id="editCustomerForm" class="form-container" style="display: none;">
+                <div id="editCustomerForm" class="form-container is-hidden">
                     <div class="card onepager-container">
                         <div class="form-header">
                             <h2>✏️ Klantgegevens Bewerken</h2>
@@ -785,7 +782,7 @@
                 </div>
 
                 <!-- Edit Subscription Form -->
-                <div id="editSubscriptionForm" class="form-container" style="display: none;">
+                <div id="editSubscriptionForm" class="form-container is-hidden">
                     <div class="card">
                         <div class="form-header">
                             <h2>✏️ Abonnement Bewerken</h2>
@@ -849,7 +846,7 @@
                 </div>
 
                 <!-- Resend Magazine Form -->
-                <div id="resendMagazineForm" class="form-container" style="display: none;">
+                <div id="resendMagazineForm" class="form-container is-hidden">
                     <div class="card">
                         <div class="form-header">
                             <h2>📮 Editie Opnieuw Verzenden</h2>
@@ -881,7 +878,7 @@
                 </div>
 
                 <!-- Editorial Complaint Form -->
-                <div id="editorialComplaintForm" class="form-container" style="display: none;">
+                <div id="editorialComplaintForm" class="form-container is-hidden">
                     <div class="card">
                         <div class="form-header">
                             <h2>✍️ Klacht/Opmerking voor Redactie</h2>
@@ -951,14 +948,14 @@
                 </div>
 
                 <!-- Restitution Transfer Form -->
-                <div id="restitutionTransferForm" class="form-container" style="display: none;">
+                <div id="restitutionTransferForm" class="form-container is-hidden">
                     <div class="card">
                         <div class="form-header">
                             <h2 id="restitutionTransferTitle">🔄 Abonnement Overzetten</h2>
                             <button class="btn-close" onclick="closeForm('restitutionTransferForm')">✕</button>
                         </div>
                         <form id="restitutionTransferFormElement" onsubmit="completeRestitutionTransfer(event)">
-                            <div class="info-box" style="background-color: rgba(239, 68, 68, 0.1); border-color: #ef4444;">
+                            <div class="info-box info-box--danger">
                                 <strong>Let op:</strong> Overleden personen kunnen geen actieve abonnementen hebben. Het abonnement moet worden overgezet naar een andere persoon.
                             </div>
                             
@@ -1033,7 +1030,7 @@
                 </div>
 
                 <!-- Winback Flow -->
-                <div id="winbackFlow" class="form-container" style="display: none;">
+                <div id="winbackFlow" class="form-container is-hidden">
                     <div class="card">
                         <div class="form-header">
                             <h2>🎯 Winback/Opzegging Flow</h2>
@@ -1091,7 +1088,7 @@
                             </div>
 
                             <!-- Step 1b: Deceased - Select Subscriptions -->
-                            <div id="winbackStep1b" class="winback-step" style="display: none;">
+                            <div id="winbackStep1b" class="winback-step is-hidden">
                                 <h3>Abonnementen bij Overlijden</h3>
                                 <div class="script-box">
                                     <p><strong>Script:</strong> "Wat vervelend om te horen. Ik zie dat er <span id="deceasedSubCount"></span> actieve abonnement(en) zijn. Voor elk abonnement kunt u aangeven wat u wilt doen."</p>
@@ -1106,7 +1103,7 @@
                             </div>
 
                             <!-- Step 1c: Cancel with Refund -->
-                            <div id="winbackStep1c" class="winback-step" style="display: none;">
+                            <div id="winbackStep1c" class="winback-step is-hidden">
                                 <h3>Opzeggen met Restitutie</h3>
                                 <div id="refundSubscriptionsList" class="info-box">
                                     <!-- Will show which subscriptions are being cancelled -->
@@ -1127,7 +1124,7 @@
                             </div>
 
                             <!-- Step 1d: Transfer Subscription -->
-                            <div id="winbackStep1d" class="winback-step" style="display: none;">
+                            <div id="winbackStep1d" class="winback-step is-hidden">
                                 <h3>Abonnement(en) Overzetten</h3>
                                 <div id="transferSubscriptionsList" class="info-box">
                                     <!-- Will show which subscriptions are being transferred -->
@@ -1143,7 +1140,7 @@
                             </div>
                             
                             <!-- Step 1e: Combined Form (Transfer + Refund) -->
-                            <div id="winbackStep1e" class="winback-step" style="display: none;">
+                            <div id="winbackStep1e" class="winback-step is-hidden">
                                 <h3>Alle Abonnementen Verwerken</h3>
                                 
                                 <div id="combinedTransferList" class="info-box">
@@ -1155,7 +1152,7 @@
                                 <!-- Unified Customer Form -->
                                 <div id="transfer2CustomerForm"></div>
                                 
-                                <div id="combinedRefundList" class="info-box" style="margin-top: 2rem;">
+                                <div id="combinedRefundList" class="info-box info-box--top-space">
                                     <!-- Refund subscriptions -->
                                 </div>
                                 
@@ -1177,7 +1174,7 @@
                             </div>
 
                             <!-- Step 2: Offer -->
-                            <div id="winbackStep2" class="winback-step" style="display: none;">
+                            <div id="winbackStep2" class="winback-step is-hidden">
                                 <h3>Beschikbare Winback Aanbiedingen</h3>
                                 <div id="winbackOffers" class="offers-container"></div>
                                 <div class="form-actions">
@@ -1187,7 +1184,7 @@
                             </div>
 
                             <!-- Step 3: Confirmation -->
-                            <div id="winbackStep3" class="winback-step" style="display: none;">
+                            <div id="winbackStep3" class="winback-step is-hidden">
                                 <h3>Resultaat</h3>
                                 <div class="script-box">
                                     <p id="winbackScript"></p>
@@ -1344,7 +1341,7 @@
                     </label>
                 </div>
                 
-                <div id="followUpSection" class="form-group" style="display: none;">
+                <div id="followUpSection" class="form-group is-hidden">
                     <label for="dispFollowUpDate">Follow-up datum</label>
                     <input type="date" id="dispFollowUpDate">
                     <textarea id="dispFollowUpNotes" 
@@ -1401,7 +1398,7 @@
                         </select>
                     </div>
                     
-                    <div id="debugKnownCallerSelect" class="debug-row" style="display: none;">
+                    <div id="debugKnownCallerSelect" class="debug-row is-hidden">
                         <label>Selecteer klant:</label>
                         <select id="debugKnownCustomer">
                             <!-- Populated by JavaScript -->
@@ -1413,9 +1410,8 @@
                             � Start Gesprek Simulatie
                         </button>
                         <button id="debugEndCallBtn" 
-                                class="btn btn-danger btn-block" 
-                                onclick="debugEndCall()"
-                                style="display: none;">
+                                class="btn btn-danger btn-block is-hidden" 
+                                onclick="debugEndCall()">
                             ❌ Beëindig Telefoongesprek
                         </button>
                     </div>
@@ -1459,8 +1455,7 @@
                     </div>
                     
                     <!-- Queue preview -->
-                    <div id="debugQueuePreview" class="debug-queue-preview" 
-                         style="display: none;">
+                    <div id="debugQueuePreview" class="debug-queue-preview is-hidden">
                         <h4>Huidige wachtrij:</h4>
                         <div id="debugQueueList" class="debug-queue-list">
                             <!-- Dynamisch gevuld met queue items -->
@@ -1477,6 +1472,8 @@
             </div>
         </div>
     </div>
+
+    {% include 'base/_client_templates.html' %}
 
     <script>
         window.kiwiBasePath = {{ request.script_root | tojson }};
