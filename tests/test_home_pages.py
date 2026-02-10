@@ -30,8 +30,39 @@ def register_oidc_routes(app):
 
 
 class HomePagesTests(unittest.TestCase):
+    EXPECTED_CLIENT_TEMPLATE_IDS = [
+        "tpl-empty-state",
+        "tpl-empty-state-small",
+        "tpl-werfsleutel-suggestion",
+        "tpl-werfsleutel-channel-chip",
+        "tpl-werfsleutel-summary",
+        "tpl-customer-form",
+        "tpl-party-search-result",
+        "tpl-subscription-duplicate-banner",
+        "tpl-subscription-duplicate-item",
+        "tpl-debug-queue-item",
+        "tpl-search-result-row",
+        "tpl-page-button",
+        "tpl-page-ellipsis",
+        "tpl-deceased-banner",
+        "tpl-subscription-group",
+        "tpl-subscription-item",
+        "tpl-timeline-item",
+        "tpl-timeline-pagination",
+        "tpl-offer-card",
+        "tpl-deceased-subscription-card",
+        "tpl-subscription-action-list",
+        "tpl-article-item",
+        "tpl-select-option",
+    ]
+
     def make_app(self, user_loggedin):
-        app = Flask(__name__)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        app = Flask(
+            __name__,
+            template_folder=os.path.join(project_root, "app", "templates"),
+            static_folder=os.path.join(project_root, "app", "static"),
+        )
         app.secret_key = "test-secret"
         app.config["OIDC_SERVER_METADATA_URL"] = "https://issuer.example/.well-known/openid-configuration"
         app.config["OIDC_CLIENT_ID"] = "kiwi-local-dev"
@@ -68,6 +99,26 @@ class HomePagesTests(unittest.TestCase):
         self.assertEqual(render_template_mock.call_args.args[0], "base/index.html")
         self.assertIn("logout_url", render_template_mock.call_args.kwargs)
         self.assertEqual(render_template_mock.call_args.kwargs["logout_url"], "/app-logout")
+
+    def test_index_renders_client_templates_for_app_js(self):
+        app = self.make_app(user_loggedin=True)
+
+        with app.test_client() as client:
+            with client.session_transaction() as session_data:
+                session_data["oidc_auth_profile"] = {
+                    "given_name": "Kiwi",
+                    "family_name": "User",
+                    "email": "kiwi-user@example.org",
+                    "roles": ["bink8s.app.kiwi.user"],
+                }
+
+            response = client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+
+        for template_id in self.EXPECTED_CLIENT_TEMPLATE_IDS:
+            self.assertIn(f'id="{template_id}"', body)
 
     def test_logout_redirects_to_provider_end_session_and_clears_session(self):
         app = self.make_app(user_loggedin=True)
