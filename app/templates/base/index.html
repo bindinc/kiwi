@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="nl"
+      data-kiwi-base-path="{{ request.script_root | e }}"
+      data-kiwi-agent-name="{{ user_full_name | e }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Klantenservice Portal - Magazine Abonnementen</title>
+    <title data-i18n="indexHtml.text.klantenservice_portal_magazine_abonnementen_21dfa5e2">Klantenservice Portal - Magazine Abonnementen</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/delivery-date-picker.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/article-search.css') }}">
@@ -14,7 +16,7 @@
         <header class="header">
             <div class="header-content">
                 <div class="header-top">
-                    <h1>KIWI <i>v1.0.6</i></h1>
+                    <h1>KIWI <i data-i18n="indexHtml.text.v1_0_6_eab610ea">v1.0.6</i></h1>
                     <div class="header-right">
                         <!-- Agent Profile Widget with Status -->
                         <div class="agent-profile-widget">
@@ -26,7 +28,7 @@
                                 aria-expanded="false"
                                 aria-haspopup="true"
                                 aria-controls="agentStatusMenu"
-                                title="Status: Beschikbaar">
+                                title="Status: Beschikbaar" data-i18n-title="indexHtml.title.status_beschikbaar_7cd46110">
                                 <div class="agent-avatar">
                                     {% if user_profile_image %}
                                         <img src="{{ user_profile_image }}" alt="{{ user_full_name }}">
@@ -46,26 +48,26 @@
                                             {{ user_full_name }}
                                         {% endif %}
                                     </div>
-                                    <div class="profile-menu-header">Status</div>
-                                    <button type="button" class="status-menu-item" data-status-option="ready" onclick="setAgentStatus('ready')">Beschikbaar</button>
-                                    <button type="button" class="status-menu-item" data-status-option="busy" onclick="setAgentStatus('busy')">Bezet</button>
-                                    <button type="button" class="status-menu-item" data-status-option="dnd" onclick="setAgentStatus('dnd')">Niet storen</button>
-                                    <button type="button" class="status-menu-item" data-status-option="brb" onclick="setAgentStatus('brb')">Ben zo terug</button>
-                                    <button type="button" class="status-menu-item" data-status-option="away" onclick="setAgentStatus('away')">Als afwezig weergeven</button>
-                                    <button type="button" class="status-menu-item" data-status-option="offline" onclick="setAgentStatus('offline')">Offline weergeven</button>
+                                    <div class="profile-menu-header" data-i18n="indexHtml.text.status_005ef20f">Status</div>
+                                    <button type="button" class="status-menu-item" data-status-option="ready" onclick="setAgentStatus('ready')" data-i18n="indexHtml.text.beschikbaar_f6f1ea58">Beschikbaar</button>
+                                    <button type="button" class="status-menu-item" data-status-option="busy" onclick="setAgentStatus('busy')" data-i18n="indexHtml.text.bezet_57d4daff">Bezet</button>
+                                    <button type="button" class="status-menu-item" data-status-option="dnd" onclick="setAgentStatus('dnd')" data-i18n="indexHtml.text.niet_storen_7f6c03ee">Niet storen</button>
+                                    <button type="button" class="status-menu-item" data-status-option="brb" onclick="setAgentStatus('brb')" data-i18n="indexHtml.text.ben_zo_terug_b3d0aab2">Ben zo terug</button>
+                                    <button type="button" class="status-menu-item" data-status-option="away" onclick="setAgentStatus('away')" data-i18n="indexHtml.text.als_afwezig_weergeven_b8021b1e">Als afwezig weergeven</button>
+                                    <button type="button" class="status-menu-item" data-status-option="offline" onclick="setAgentStatus('offline')" data-i18n="indexHtml.text.offline_weergeven_1ddcc844">Offline weergeven</button>
                                 </div>
                                 <div class="profile-menu-section">
-                                    <div class="profile-menu-header">Account</div>
-                                    <a class="status-menu-item status-menu-item-danger" href="{{ logout_url }}">Uitloggen</a>
+                                    <div class="profile-menu-header" data-i18n="indexHtml.text.account_59f8a2fc">Account</div>
+                                    <a class="status-menu-item status-menu-item-danger" href="{{ logout_url }}" data-i18n="indexHtml.text.uitloggen_69d43fb9">Uitloggen</a>
                                 </div>
                                 <div class="profile-menu-section profile-menu-info">
-                                    <div class="profile-menu-header">Werkdag</div>
+                                    <div class="profile-menu-header" data-i18n="indexHtml.text.werkdag_e1c5e04e">Werkdag</div>
                                     <div class="agent-work-stat">
-                                        <span class="agent-work-stat-label">Actieve sessie</span>
+                                        <span class="agent-work-stat-label" data-i18n="indexHtml.text.actieve_sessie_b95e0a14">Actieve sessie</span>
                                         <span class="agent-work-stat-value" id="agentWorkSessionTime">00:00:00</span>
                                     </div>
                                     <div class="agent-work-stat">
-                                        <span class="agent-work-stat-label">Gesprekken afgehandeld</span>
+                                        <span class="agent-work-stat-label" data-i18n="indexHtml.text.gesprekken_afgehandeld_46ffca9f">Gesprekken afgehandeld</span>
                                         <span class="agent-work-stat-value" id="agentCallsHandled">0</span>
                                     </div>
                                 </div>
@@ -84,27 +86,27 @@
                         <!-- Volgende beller informatie -->
                         <div class="queue-next-caller">
                             <span class="queue-icon">👤</span>
-                            <span class="queue-label">Volgende beller:</span>
-                            <span id="queueNextCallerName" class="queue-next-name">Jan Jansen</span>
+                            <span class="queue-label" data-i18n="indexHtml.text.volgende_beller_d50d542b">Volgende beller:</span>
+                            <span id="queueNextCallerName" class="queue-next-name" data-i18n="indexHtml.text.jan_jansen_b34aeb2f">Jan Jansen</span>
                         </div>
                         
                         <!-- Service nummer -->
                         <div class="queue-service">
                             <span class="service-icon">📞</span>
-                            <span id="queueNextService">AVROBODE SERVICE</span>
+                            <span id="queueNextService" data-i18n="indexHtml.text.avrobode_service_6d7c87d2">AVROBODE SERVICE</span>
                         </div>
                         
                         <!-- Wachttijd -->
                         <div class="queue-wait">
                             <span class="wait-icon">⏳</span>
-                            <span>Wacht: </span>
+                            <span data-i18n="indexHtml.text.wacht_75f4e76c">Wacht: </span>
                             <span id="queueNextWaitTime">2:45</span>
                         </div>
                         
                         <!-- Queue lengte indicator -->
                         <div class="queue-length">
                             <span class="queue-length-icon">📋</span>
-                            <span>In wachtrij: </span>
+                            <span data-i18n="indexHtml.text.in_wachtrij_9677218e">In wachtrij: </span>
                             <span id="queueLength" class="queue-count">8</span>
                         </div>
                         
@@ -112,7 +114,7 @@
                         <div class="queue-actions">
                             <button id="acceptCallBtn" 
                                     class="btn-accept-call" 
-                                    onclick="acceptNextCall()">
+                                    onclick="acceptNextCall()" data-i18n="indexHtml.text.gesprek_starten_79f484da">
                                 📞 Gesprek Starten
                             </button>
                         </div>
@@ -124,16 +126,16 @@
                     <div class="session-info-content">
                         <div class="session-service">
                             <span class="service-icon">📞</span>
-                            <span id="sessionServiceNumber" class="service-number">AVROBODE SERVICE</span>
+                            <span id="sessionServiceNumber" class="service-number" data-i18n="indexHtml.text.avrobode_service_6d7c87d2">AVROBODE SERVICE</span>
                         </div>
                         <div class="session-wait">
                             <span class="wait-icon">⏳</span>
-                            <span>Gewacht: </span>
+                            <span data-i18n="indexHtml.text.gewacht_1f486b30">Gewacht: </span>
                             <span id="sessionWaitTime">0:00</span>
                         </div>
                         <div class="session-caller">
-                            <span>Gesprek met: </span>
-                            <span id="sessionCallerName">Anonieme Beller</span>
+                            <span data-i18n="indexHtml.text.gesprek_met_36e04f58">Gesprek met: </span>
+                            <span id="sessionCallerName" data-i18n="indexHtml.text.anonieme_beller_0c3daeaf">Anonieme Beller</span>
                         </div>
                         <div class="session-duration">
                             <span class="duration-icon">⏱️</span>
@@ -143,7 +145,7 @@
                         <!-- Recording Indicator -->
                         <div class="recording-indicator" id="recordingIndicator" style="display: none;">
                             <span class="rec-icon">🔴</span>
-                            <span class="rec-text">REC</span>
+                            <span class="rec-text" data-i18n="indexHtml.text.rec_82ce9669">REC</span>
                         </div>
                         
                         <!-- Call Action Buttons -->
@@ -151,12 +153,12 @@
                             <button id="holdCallBtn" 
                                     class="btn-hold-call" 
                                     onclick="toggleCallHold()"
-                                    style="display: none;">
+                                    style="display: none;" data-i18n="indexHtml.text.in_wacht_52bc255e">
                                 ⏸️ In Wacht
                             </button>
                             <button id="endCallBtn" class="btn-end-call" 
                                     onclick="endCallSession()" 
-                                    style="display: none;">
+                                    style="display: none;" data-i18n="indexHtml.text.beeindig_gesprek_0ca90bd2">
                                 📞 Beëindig Gesprek
                             </button>
                         </div>
@@ -167,10 +169,10 @@
                 <div id="acwBar" class="acw-bar" style="display: none;">
                     <div class="acw-bar-content">
                         <span class="acw-icon">🟡</span>
-                        <span class="acw-label">Nabewerkingstijd</span>
+                        <span class="acw-label" data-i18n="indexHtml.text.nabewerkingstijd_a424f04e">Nabewerkingstijd</span>
                         <span class="acw-timer" id="acwTimer">0:00</span>
-                        <span class="acw-instruction">Vul het nabewerkingsscherm in om klaar te zijn voor het volgende gesprek</span>
-                        <button class="btn-finish-acw" onclick="manualFinishACW()">
+                        <span class="acw-instruction" data-i18n="indexHtml.text.vul_het_nabewerkingsscherm_in_om_klaar_te_zijn_voor_het_volgende_gesprek_230eaff9">Vul het nabewerkingsscherm in om klaar te zijn voor het volgende gesprek</span>
+                        <button class="btn-finish-acw" onclick="manualFinishACW()" data-i18n="indexHtml.text.klaar_91863a41">
                             ✅ Klaar
                         </button>
                     </div>
@@ -184,15 +186,15 @@
             <aside class="left-panel">
                 <!-- Quick Search -->
                 <section class="card search-card">
-                    <h2>🔍 Klant Zoeken</h2>
+                    <h2 data-i18n="indexHtml.text.klant_zoeken_8c2cfd01">🔍 Klant Zoeken</h2>
                     <div class="search-form">
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="searchPostalCode">Postcode</label>
-                                <input type="text" id="searchPostalCode" placeholder="1234AB" onkeypress="handleSearchKeyPress(event)">
+                                <label for="searchPostalCode" data-i18n="indexHtml.text.postcode_e7a57d06">Postcode</label>
+                                <input type="text" id="searchPostalCode" placeholder="1234AB" onkeypress="handleSearchKeyPress(event)" data-i18n-placeholder="indexHtml.placeholder.1234ab_7d777582">
                             </div>
                             <div class="form-group">
-                                <label for="searchHouseNumber">Huisnr.</label>
+                                <label for="searchHouseNumber" data-i18n="indexHtml.text.huisnr_0ed0c1dc">Huisnr.</label>
                                 <input type="text" id="searchHouseNumber" placeholder="12" onkeypress="handleSearchKeyPress(event)">
                             </div>
                         </div>
@@ -208,21 +210,21 @@
                             </button>
                             <div class="additional-filters-panel" id="additionalFiltersPanel">
                                 <div class="form-group">
-                                    <label for="searchName">Naam</label>
-                                    <input type="text" id="searchName" placeholder="Achternaam, Voornaam" onkeypress="handleSearchKeyPress(event)">
+                                    <label for="searchName" data-i18n="indexHtml.text.naam_17c26a8a">Naam</label>
+                                    <input type="text" id="searchName" placeholder="Achternaam, Voornaam" onkeypress="handleSearchKeyPress(event)" data-i18n-placeholder="indexHtml.placeholder.achternaam_voornaam_9d9db834">
                                 </div>
                                 <div class="form-group">
-                                    <label for="searchPhone">Telefoon</label>
-                                    <input type="text" id="searchPhone" placeholder="Bijv. 0612345678" onkeypress="handleSearchKeyPress(event)">
+                                    <label for="searchPhone" data-i18n="indexHtml.text.telefoon_1888b353">Telefoon</label>
+                                    <input type="text" id="searchPhone" placeholder="Bijv. 0612345678" onkeypress="handleSearchKeyPress(event)" data-i18n-placeholder="indexHtml.placeholder.bijv_0612345678_e5ee02a0">
                                 </div>
                                 <div class="form-group">
-                                    <label for="searchEmail">E-mail</label>
-                                    <input type="email" id="searchEmail" placeholder="naam@email.nl" onkeypress="handleSearchKeyPress(event)">
+                                    <label for="searchEmail" data-i18n="indexHtml.text.e_mail_31bb94b0">E-mail</label>
+                                    <input type="email" id="searchEmail" placeholder="naam@email.nl" onkeypress="handleSearchKeyPress(event)" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
                                 </div>
                             </div>
                         </div>
                         <button class="btn btn-primary" onclick="searchCustomer()">
-                            <span>Zoeken</span>
+                            <span data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</span>
                         </button>
                     </div>
 
@@ -233,7 +235,7 @@
                                 <span class="summary-icon">✓</span>
                                 <span id="resultCount">0</span> klanten gevonden
                             </div>
-                            <button class="btn btn-link" onclick="scrollToResults()">
+                            <button class="btn btn-link" onclick="scrollToResults()" data-i18n="indexHtml.text.bekijk_resultaten_031dfc60">
                                 Bekijk resultaten →
                             </button>
                         </div>
@@ -242,12 +244,12 @@
 
                 <!-- Quick Actions -->
                 <section class="card actions-card">
-                    <h2>⚡ Snelle Acties</h2>
+                    <h2 data-i18n="indexHtml.text.snelle_acties_b0debf12">⚡ Snelle Acties</h2>
                     <button class="btn btn-action" onclick="showNewSubscription()">
-                        <span>➕ Nieuw Abonnement</span>
+                        <span data-i18n="indexHtml.text.nieuw_abonnement_ed26c367">➕ Nieuw Abonnement</span>
                     </button>
                     <button class="btn btn-action" onclick="showArticleSale()">
-                        <span>🛒 Artikel verkoop</span>
+                        <span data-i18n="indexHtml.text.artikel_verkoop_89f9bcc6">🛒 Artikel verkoop</span>
                     </button>
                 </section>
             </aside>
@@ -258,8 +260,8 @@
                 <div id="welcomeMessage" class="welcome-message">
                     <div class="empty-state">
                         <span class="empty-icon">👤</span>
-                        <h2>Welkom bij KIWI!</h2>
-                        <p>Waar klanten zich gehoord voelen.</p>
+                        <h2 data-i18n="indexHtml.text.welkom_bij_kiwi_c2ee612a">Welkom bij KIWI!</h2>
+                        <p data-i18n="indexHtml.text.waar_klanten_zich_gehoord_voelen_3bc04244">Waar klanten zich gehoord voelen.</p>
                     </div>
                 </div>
 
@@ -268,17 +270,17 @@
                     <div class="card">
                         <div class="results-header">
                             <div class="results-title-section">
-                                <h2 id="resultsTitle">🔍 Zoekresultaten</h2>
-                                <span id="resultsRange" class="results-range">Toont 1-20 van 153</span>
+                                <h2 id="resultsTitle" data-i18n="indexHtml.text.zoekresultaten_b9b61881">🔍 Zoekresultaten</h2>
+                                <span id="resultsRange" class="results-range" data-i18n="indexHtml.text.toont_1_20_van_153_f98909cb">Toont 1-20 van 153</span>
                             </div>
                             <div class="results-controls">
-                                <label for="sortBy" class="sort-label">Sorteren:</label>
+                                <label for="sortBy" class="sort-label" data-i18n="indexHtml.text.sorteren_0388b769">Sorteren:</label>
                                 <select id="sortBy" class="sort-select" onchange="sortResults(this.value)">
-                                    <option value="name">Achternaam</option>
-                                    <option value="postal">Postcode</option>
-                                    <option value="subscriptions">Actieve abonnementen</option>
+                                    <option value="name" data-i18n="indexHtml.text.achternaam_1eb4de6d">Achternaam</option>
+                                    <option value="postal" data-i18n="indexHtml.text.postcode_e7a57d06">Postcode</option>
+                                    <option value="subscriptions" data-i18n="indexHtml.text.actieve_abonnementen_bd7c947c">Actieve abonnementen</option>
                                 </select>
-                                <button class="btn btn-small btn-close-results" onclick="clearSearchResults()" title="Sluiten">
+                                <button class="btn btn-small btn-close-results" onclick="clearSearchResults()" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">
                                     ✕
                                 </button>
                             </div>
@@ -287,12 +289,12 @@
                             <table class="results-table">
                                 <thead>
                                     <tr>
-                                        <th scope="col">Achternaam</th>
-                                        <th scope="col">Initialen</th>
-                                        <th scope="col">Adres</th>
-                                        <th scope="col">Abonnementen</th>
-                                        <th scope="col">Abon.nr</th>
-                                        <th scope="col">Acties</th>
+                                        <th scope="col" data-i18n="indexHtml.text.achternaam_1eb4de6d">Achternaam</th>
+                                        <th scope="col" data-i18n="indexHtml.text.initialen_25e69634">Initialen</th>
+                                        <th scope="col" data-i18n="indexHtml.text.adres_13857536">Adres</th>
+                                        <th scope="col" data-i18n="indexHtml.text.abonnementen_b91a0645">Abonnementen</th>
+                                        <th scope="col" data-i18n="indexHtml.text.abon_nr_93bb828b">Abon.nr</th>
+                                        <th scope="col" data-i18n="indexHtml.text.acties_1d68bc7e">Acties</th>
                                     </tr>
                                 </thead>
                                 <tbody id="paginatedResults"></tbody>
@@ -319,14 +321,14 @@
                                 <button id="identifyCallerBtn" 
                                         class="btn btn-small btn-primary" 
                                         onclick="identifyCurrentCustomerAsCaller()"
-                                        style="display: none;">
+                                        style="display: none;" data-i18n="indexHtml.text.dit_is_de_persoon_die_belt_8096cd3d">
                                     👤 Dit is de persoon die belt
                                 </button>
-                                <button class="btn btn-small" onclick="editCustomer()">✏️ Bewerken</button>
-                                <button id="resendMagazineBtn" class="btn btn-small btn-action-inline" onclick="showResendMagazine()">📮 Editie Verzenden</button>
+                                <button class="btn btn-small" onclick="editCustomer()" data-i18n="indexHtml.text.bewerken_69177f14">✏️ Bewerken</button>
+                                <button id="resendMagazineBtn" class="btn btn-small btn-action-inline" onclick="showResendMagazine()" data-i18n="indexHtml.text.editie_verzenden_f7f6196d">📮 Editie Verzenden</button>
                                 <!-- <button id="winbackFlowBtn" class="btn btn-small btn-action-inline" onclick="showWinbackFlow()">🎯 Winback/Opzegging</button> -->
-                                <button class="btn btn-small btn-action-inline" onclick="showEditorialComplaintForm()">✍️ Klacht Redactie</button>
-                                <button class="btn btn-small btn-close-customer" onclick="closeCustomerDetail()" title="Sluiten">
+                                <button class="btn btn-small btn-action-inline" onclick="showEditorialComplaintForm()" data-i18n="indexHtml.text.klacht_redactie_45bd08ef">✍️ Klacht Redactie</button>
+                                <button class="btn btn-small btn-close-customer" onclick="closeCustomerDetail()" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">
                                     ✕
                                 </button>
                             </div>
@@ -334,13 +336,13 @@
 
                         <!-- Subscription Overview -->
                         <div class="subscriptions-section">
-                            <h3>📰 Abonnementen</h3>
+                            <h3 data-i18n="indexHtml.text.abonnementen_ba5e4d7c">📰 Abonnementen</h3>
                             <div id="subscriptionsList" class="subscriptions-list"></div>
                         </div>
 
                         <!-- Articles Overview -->
                         <div class="articles-section">
-                            <h3>🛒 Artikelen</h3>
+                            <h3 data-i18n="indexHtml.text.artikelen_170a4739">🛒 Artikelen</h3>
                             <div id="articlesList" class="articles-list"></div>
                         </div>
                     </div>
@@ -350,14 +352,14 @@
                 <div id="newSubscriptionForm" class="form-container" style="display: none;">
                     <div class="card onepager-container">
                         <div class="form-header">
-                            <h2>➕ Nieuw Abonnement Aanmaken</h2>
+                            <h2 data-i18n="indexHtml.text.nieuw_abonnement_aanmaken_a7bddc25">➕ Nieuw Abonnement Aanmaken</h2>
                             <button class="btn-close" onclick="closeForm('newSubscriptionForm')">✕</button>
                         </div>
                         <form id="subscriptionForm" class="form-section" onsubmit="createSubscription(event)">
                             <div class="werfsleutel-fieldset">
                                 <div class="fieldset-heading">
-                                    <label for="werfsleutelInput">Werfsleutel *</label>
-                                    <p class="helper-text" id="werfsleutelInputHint">Zoek op salescode of titel en kies het kanaal</p>
+                                    <label for="werfsleutelInput" data-i18n="indexHtml.text.werfsleutel_c5732867">Werfsleutel *</label>
+                                    <p class="helper-text" id="werfsleutelInputHint" data-i18n="indexHtml.text.zoek_op_salescode_of_titel_en_kies_het_kanaal_83ec4db3">Zoek op salescode of titel en kies het kanaal</p>
                                 </div>
                                 <div class="werfsleutel-search-row">
                                     <input type="search"
@@ -370,21 +372,21 @@
                                            aria-expanded="false"
                                            aria-controls="werfsleutelSuggestions"
                                            aria-describedby="werfsleutelInputHint"
-                                           aria-haspopup="listbox">
-                                    <button type="button" class="btn btn-secondary ghost" id="werfsleutelClear">Wissen</button>
+                                           aria-haspopup="listbox" data-i18n-placeholder="indexHtml.placeholder.typ_werfsleutel_of_scan_barcode_bijv_avrv525_of_8712345_bf6fe478">
+                                    <button type="button" class="btn btn-secondary ghost" id="werfsleutelClear" data-i18n="indexHtml.text.wissen_82491d2c">Wissen</button>
                                 </div>
                                 <div class="werfsleutel-suggestions" id="werfsleutelSuggestions" role="listbox"></div>
                                 <div class="werfsleutel-summary" id="werfsleutelSummary"></div>
                                 <div class="channel-picker">
                                     <div class="fieldset-heading compact">
-                                        <label for="werfsleutelChannels">Kanaal *</label>
-                                        <p class="helper-text">Kanaal bepaalt vervolgcommunicatie</p>
+                                        <label for="werfsleutelChannels" data-i18n="indexHtml.text.kanaal_bb8f5e13">Kanaal *</label>
+                                        <p class="helper-text" data-i18n="indexHtml.text.kanaal_bepaalt_vervolgcommunicatie_6b21e3db">Kanaal bepaalt vervolgcommunicatie</p>
                                     </div>
                                     <div class="channel-options" id="werfsleutelChannels"></div>
                                 </div>
                             </div>
                             
-                            <h3 class="form-subtitle">Betaalmethode *</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.betaalmethode_5e503508">Betaalmethode *</h3>
                             <div class="form-row">
                                 <div class="payment-methods">
                                     <div class="payment-option">
@@ -396,30 +398,30 @@
                                                     <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
                                                 </svg>
                                             </span>
-                                            <span class="payment-text">Automatisch incasso</span>
+                                            <span class="payment-text" data-i18n="indexHtml.text.automatisch_incasso_fd971b7d">Automatisch incasso</span>
                                         </label>
                                         <div class="additional-input">
                                             <input type="text" id="subIBAN" placeholder="IBAN rekeningnummer" 
                                                 pattern="^(NL[0-9]{2}[A-Z]{4}[0-9]{10}|BE[0-9]{2}[0-9]{12})$" 
-                                                title="Vul hier een geldig IBAN nummer in. Alleen Nederlandse (NL) en Belgische (BE) rekeningen worden ondersteund.">
+                                                title="Vul hier een geldig IBAN nummer in. Alleen Nederlandse (NL) en Belgische (BE) rekeningen worden ondersteund." data-i18n-placeholder="indexHtml.placeholder.iban_rekeningnummer_f6244ddc" data-i18n-title="indexHtml.title.vul_hier_een_geldig_iban_nummer_in_alleen_nederlandse_nl_en_belgische_be_5e253df9">
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <h3 class="form-subtitle">Ontvanger abonnement</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.ontvanger_abonnement_2faa4a44">Ontvanger abonnement</h3>
                             <div class="party-role-panel" id="recipientRolePanel">
                                 <div class="party-mode-toggle">
-                                    <label><input type="radio" name="recipientMode" value="existing" checked onchange="setSubscriptionRoleMode('recipient', this.value)"> Bestaande persoon</label>
-                                    <label><input type="radio" name="recipientMode" value="create" onchange="setSubscriptionRoleMode('recipient', this.value)"> Nieuwe persoon</label>
+                                    <label><input type="radio" name="recipientMode" value="existing" checked onchange="setSubscriptionRoleMode('recipient', this.value)"> <span data-i18n="indexHtml.text.bestaande_persoon_4fee1022">Bestaande persoon</span></label>
+                                    <label><input type="radio" name="recipientMode" value="create" onchange="setSubscriptionRoleMode('recipient', this.value)"> <span data-i18n="indexHtml.text.nieuwe_persoon_c574b0f2">Nieuwe persoon</span></label>
                                 </div>
                                 <div id="recipientExistingSection">
                                     <div class="form-row">
-                                        <input type="search" id="recipientSearchQuery" class="form-control" placeholder="Zoek ontvanger op naam">
-                                        <button type="button" class="btn btn-secondary" onclick="searchSubscriptionRolePerson('recipient')">Zoeken</button>
+                                        <input type="search" id="recipientSearchQuery" class="form-control" placeholder="Zoek ontvanger op naam" data-i18n-placeholder="indexHtml.placeholder.zoek_ontvanger_op_naam_2046363e">
+                                        <button type="button" class="btn btn-secondary" onclick="searchSubscriptionRolePerson('recipient')" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
                                     </div>
                                     <div id="recipientSearchResults" class="party-search-results"></div>
-                                    <div id="recipientSelectedPerson" class="party-selected-person empty">Geen ontvanger geselecteerd</div>
+                                    <div id="recipientSelectedPerson" class="party-selected-person empty" data-i18n="indexHtml.text.geen_ontvanger_geselecteerd_25f421dc">Geen ontvanger geselecteerd</div>
                                 </div>
                                 <div id="recipientCreateSection" style="display: none;">
                                     <div id="recipientCreateForm"></div>
@@ -427,29 +429,29 @@
                                 </div>
                             </div>
 
-                            <h3 class="form-subtitle">Aanvrager / betaler</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.aanvrager_betaler_71728254">Aanvrager / betaler</h3>
                             <div class="party-role-panel" id="requesterRolePanel">
                                 <div class="form-group">
                                     <label>
                                         <input type="checkbox" id="requesterSameAsRecipient" checked onchange="toggleRequesterSameAsRecipient()">
-                                        Zelfde persoon als ontvanger
-                                    </label>
+                                        <span data-i18n="indexHtml.text.zelfde_persoon_als_ontvanger_52ac9149">Zelfde persoon als ontvanger
+                                    </span></label>
                                 </div>
-                                <div id="requesterSameSummary" class="party-selected-person">
+                                <div id="requesterSameSummary" class="party-selected-person" data-i18n="indexHtml.text.aanvrager_betaler_volgt_de_geselecteerde_ontvanger_6209e298">
                                     Aanvrager/betaler volgt de geselecteerde ontvanger.
                                 </div>
                                 <div id="requesterRoleDetails" style="display: none;">
                                     <div class="party-mode-toggle">
-                                        <label><input type="radio" name="requesterMode" value="existing" checked onchange="setSubscriptionRoleMode('requester', this.value)"> Bestaande persoon</label>
-                                        <label><input type="radio" name="requesterMode" value="create" onchange="setSubscriptionRoleMode('requester', this.value)"> Nieuwe persoon</label>
+                                        <label><input type="radio" name="requesterMode" value="existing" checked onchange="setSubscriptionRoleMode('requester', this.value)"> <span data-i18n="indexHtml.text.bestaande_persoon_4fee1022">Bestaande persoon</span></label>
+                                        <label><input type="radio" name="requesterMode" value="create" onchange="setSubscriptionRoleMode('requester', this.value)"> <span data-i18n="indexHtml.text.nieuwe_persoon_c574b0f2">Nieuwe persoon</span></label>
                                     </div>
                                     <div id="requesterExistingSection">
                                         <div class="form-row">
-                                            <input type="search" id="requesterSearchQuery" class="form-control" placeholder="Zoek aanvrager/betaler op naam">
-                                            <button type="button" class="btn btn-secondary" onclick="searchSubscriptionRolePerson('requester')">Zoeken</button>
+                                            <input type="search" id="requesterSearchQuery" class="form-control" placeholder="Zoek aanvrager/betaler op naam" data-i18n-placeholder="indexHtml.placeholder.zoek_aanvrager_betaler_op_naam_9636a951">
+                                            <button type="button" class="btn btn-secondary" onclick="searchSubscriptionRolePerson('requester')" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
                                         </div>
                                         <div id="requesterSearchResults" class="party-search-results"></div>
-                                        <div id="requesterSelectedPerson" class="party-selected-person empty">Geen aanvrager/betaler geselecteerd</div>
+                                        <div id="requesterSelectedPerson" class="party-selected-person empty" data-i18n="indexHtml.text.geen_aanvrager_betaler_geselecteerd_8415de35">Geen aanvrager/betaler geselecteerd</div>
                                     </div>
                                     <div id="requesterCreateSection" style="display: none;">
                                         <div id="requesterCreateForm"></div>
@@ -458,38 +460,38 @@
                                 </div>
                             </div>
                             
-                            <h3 class="form-subtitle">Abonnementsgegevens</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.abonnementsgegevens_dc22841d">Abonnementsgegevens</h3>
                                 <div class="form-row">
                                     <input type="date" id="subStartDate" required>
                                 </div>
                             
                            
-                            <h3 class="form-subtitle">Marketing voorkeuren</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.marketing_voorkeuren_e341a1e3">Marketing voorkeuren</h3>
                             <div class="optin-row">
-                                <label class="optin-label">E-mail contact:</label>
+                                <label class="optin-label" data-i18n="indexHtml.text.e_mail_contact_760c3822">E-mail contact:</label>
                                 <div class="optin-options">
-                                    <label><input type="radio" name="subOptinEmail" value="yes" checked> Ja</label>
-                                    <label><input type="radio" name="subOptinEmail" value="no"> Nee</label>
+                                    <label><input type="radio" name="subOptinEmail" value="yes" checked> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
+                                    <label><input type="radio" name="subOptinEmail" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
                                 </div>
                             </div>
                             <div class="optin-row">
-                                <label class="optin-label">Telefonisch contact:</label>
+                                <label class="optin-label" data-i18n="indexHtml.text.telefonisch_contact_ef863bbb">Telefonisch contact:</label>
                                 <div class="optin-options">
-                                    <label><input type="radio" name="subOptinPhone" value="yes" checked> Ja</label>
-                                    <label><input type="radio" name="subOptinPhone" value="no"> Nee</label>
+                                    <label><input type="radio" name="subOptinPhone" value="yes" checked> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
+                                    <label><input type="radio" name="subOptinPhone" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
                                 </div>
                             </div>
                             <div class="optin-row">
-                                <label class="optin-label">Direct marketing:</label>
+                                <label class="optin-label" data-i18n="indexHtml.text.direct_marketing_ce0294ea">Direct marketing:</label>
                                 <div class="optin-options">
-                                    <label><input type="radio" name="subOptinPost" value="yes" checked> Ja</label>
-                                    <label><input type="radio" name="subOptinPost" value="no"> Nee</label>
+                                    <label><input type="radio" name="subOptinPost" value="yes" checked> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
+                                    <label><input type="radio" name="subOptinPost" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
                                 </div>
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('newSubscriptionForm')">Annuleren</button>
-                                <button type="submit" class="btn btn-primary">Abonnement Aanmaken</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('newSubscriptionForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.abonnement_aanmaken_6f3d7e12">Abonnement Aanmaken</button>
                             </div>
                         </form>
                     </div>
@@ -499,62 +501,62 @@
                 <div id="articleSaleForm" class="form-container" style="display: none;">
                     <div class="card onepager-container article-sale-container">
                         <div class="form-header">
-                            <h2>🛒 Artikel Verkoop</h2>
+                            <h2 data-i18n="indexHtml.text.artikel_verkoop_baa29866">🛒 Artikel Verkoop</h2>
                             <button class="btn-close" onclick="closeForm('articleSaleForm')">✕</button>
                         </div>
                         <form id="articleForm" class="form-section" onsubmit="createArticleSale(event)">
                             <div class="article-sale-columns">
                                 <div class="article-sale-left">
-                            <h3 class="form-subtitle">Klantgegevens *</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.klantgegevens_ed3d8cb3">Klantgegevens *</h3>
                             <div class="aanhef-row">
-                                <label><input type="radio" name="articleSalutation" value="Dhr." required checked> Dhr.</label>
-                                <label><input type="radio" name="articleSalutation" value="Mevr."> Mevr.</label>
-                                <label><input type="radio" name="articleSalutation" value="Anders"> Anders</label>
+                                <label><input type="radio" name="articleSalutation" value="Dhr." required checked> <span data-i18n="indexHtml.text.dhr_d809be05">Dhr.</span></label>
+                                <label><input type="radio" name="articleSalutation" value="Mevr."> <span data-i18n="indexHtml.text.mevr_744870d7">Mevr.</span></label>
+                                <label><input type="radio" name="articleSalutation" value="Anders"> <span data-i18n="indexHtml.text.anders_ca587926">Anders</span></label>
                             </div>
                             
                             <div class="form-row">
-                                <input type="text" id="articleInitials" placeholder="Voorletters*" required>
-                                <input type="text" id="articleMiddleName" placeholder="Tussenvoegsel">
-                                <input type="text" id="articleLastName" placeholder="Achternaam*" required>
+                                <input type="text" id="articleInitials" placeholder="Voorletters*" required data-i18n-placeholder="indexHtml.placeholder.voorletters_e69bf1c6">
+                                <input type="text" id="articleMiddleName" placeholder="Tussenvoegsel" data-i18n-placeholder="indexHtml.placeholder.tussenvoegsel_621ce8f0">
+                                <input type="text" id="articleLastName" placeholder="Achternaam*" required data-i18n-placeholder="indexHtml.placeholder.achternaam_9db9e9c5">
                             </div>
 
                             <div class="form-row">
-                                <input type="text" id="articlePostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
-                                <input type="text" id="articleHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required>
-                                <input type="text" id="articleHouseExt" placeholder="Toevoeging" maxlength="10">
+                                <input type="text" id="articlePostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44" data-i18n-title="indexHtml.title.voer_een_geldige_postcode_in_bijv_1234ab_5781c72b">
+                                <input type="text" id="articleHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required data-i18n-placeholder="indexHtml.placeholder.huisnr_en_letter_2865c592" data-i18n-title="indexHtml.title.voer_een_geldig_huisnummer_in_bijv_123_of_123a_fc80f369">
+                                <input type="text" id="articleHouseExt" placeholder="Toevoeging" maxlength="10" data-i18n-placeholder="indexHtml.placeholder.toevoeging_26fd8370">
                             </div>
                             
                             <div class="form-row">
-                                <input type="text" id="articleAddress" placeholder="Straat*" required>
-                                <input type="text" id="articleCity" placeholder="Plaats*" required>
+                                <input type="text" id="articleAddress" placeholder="Straat*" required data-i18n-placeholder="indexHtml.placeholder.straat_e57ebd14">
+                                <input type="text" id="articleCity" placeholder="Plaats*" required data-i18n-placeholder="indexHtml.placeholder.plaats_abe00810">
                             </div>
 
                             <div class="form-row">
-                                <input type="tel" id="articlePhone" placeholder="Telefoonnummer*" required>
-                                <input type="email" id="articleEmail" placeholder="E-mailadres*" required>
+                                <input type="tel" id="articlePhone" placeholder="Telefoonnummer*" required data-i18n-placeholder="indexHtml.placeholder.telefoonnummer_069b377b">
+                                <input type="email" id="articleEmail" placeholder="E-mailadres*" required data-i18n-placeholder="indexHtml.placeholder.e_mailadres_9e94dd29">
                             </div>
 
                             <div class="form-group">
-                                <label>Geboortedatum</label>
+                                <label data-i18n="indexHtml.text.geboortedatum_58b9b177">Geboortedatum</label>
                                 <div class="form-row">
                                     <select id="articleBirthdayDay">
-                                        <option value="">Dag</option>
+                                        <option value="" data-i18n="indexHtml.text.dag_4b5425c3">Dag</option>
                                     </select>
                                     <select id="articleBirthdayMonth">
-                                        <option value="">Maand</option>
+                                        <option value="" data-i18n="indexHtml.text.maand_d67eb0ec">Maand</option>
                                     </select>
                                     <select id="articleBirthdayYear">
-                                        <option value="">Jaar</option>
+                                        <option value="" data-i18n="indexHtml.text.jaar_8e2edb87">Jaar</option>
                                     </select>
                                 </div>
                             </div>
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="articleDesiredDelivery">Gewenste leverdatum *</label>
+                                    <label for="articleDesiredDelivery" data-i18n="indexHtml.text.gewenste_leverdatum_5bace022">Gewenste leverdatum *</label>
                                     <div id="deliveryDatePickerContainer" class="delivery-date-picker-container">
                                         <input type="hidden" id="articleDesiredDelivery" required>
-                                        <div class="delivery-date-display" id="deliveryDateDisplay">
+                                        <div class="delivery-date-display" id="deliveryDateDisplay" data-i18n="indexHtml.text.selecteer_een_datum_1e065486">
                                             Selecteer een datum...
                                         </div>
                                         <div class="delivery-calendar" id="deliveryCalendar" style="display: none;">
@@ -566,71 +568,71 @@
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="articleNotes">Bezorginstructies</label>
+                                    <label for="articleNotes" data-i18n="indexHtml.text.bezorginstructies_c9f6d875">Bezorginstructies</label>
                                     <div class="delivery-remarks-shortcuts">
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemark('Bezorgen bij de buren indien niet thuis')">
+                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.deliverToNeighbors')" data-i18n="indexHtml.text.bij_buren_06561e94">
                                             👥 Bij buren
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemark('Achterdeur of zijdeur gebruiken')">
+                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.useBackOrSideDoor')" data-i18n="indexHtml.text.achterdeur_a788c6f5">
                                             🚪 Achterdeur
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemark('Niet vóór 12:00 uur bezorgen')">
+                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.deliverAfterNoon')" data-i18n="indexHtml.text.na_12_00_c38dd76a">
                                             🕐 Na 12:00
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemark('Bellen voor levering')">
+                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.callBeforeDelivery')" data-i18n="indexHtml.text.bel_eerst_0178f6be">
                                             📞 Bel eerst
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemark('Pakketbrievenbus aanwezig')">
+                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.packageMailboxAvailable')" data-i18n="indexHtml.text.brievenbus_2528e649">
                                             📮 Brievenbus
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemark('Voorzichtig behandelen - breekbaar')">
+                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.handleWithCareFragile')" data-i18n="indexHtml.text.breekbaar_ccaf32b5">
                                             ⚠️ Breekbaar
                                         </button>
                                     </div>
-                                    <textarea id="articleNotes" placeholder="Bezorginstructies of opmerkingen (optioneel)" rows="3"></textarea>
+                                    <textarea id="articleNotes" placeholder="Bezorginstructies of opmerkingen (optioneel)" rows="3" data-i18n-placeholder="indexHtml.placeholder.bezorginstructies_of_opmerkingen_optioneel_f8b242bb"></textarea>
                                 </div>
                             </div>
                             
-                            <h3 class="form-subtitle">Betaalmethode *</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.betaalmethode_5e503508">Betaalmethode *</h3>
                             <div class="form-row">
                                 <div class="payment-methods">
                                     <div class="payment-option">
                                         <input type="radio" id="articlePaymentIdeal" name="articlePayment" value="iDEAL" checked>
                                         <label for="articlePaymentIdeal">
                                             <span class="payment-icon">💳</span>
-                                            <span class="payment-text">iDEAL (Klant ontvangt buckaroo checkout link per e-mail)</span>
+                                            <span class="payment-text" data-i18n="indexHtml.text.ideal_klant_ontvangt_buckaroo_checkout_link_per_e_mail_20e08246">iDEAL (Klant ontvangt buckaroo checkout link per e-mail)</span>
                                         </label>
                                     </div>
                                     <div class="payment-option">
                                         <input type="radio" id="articlePaymentTransfer" name="articlePayment" value="Bankoverschrijving">
                                         <label for="articlePaymentTransfer">
                                             <span class="payment-icon">🏦</span>
-                                            <span class="payment-text">Bankoverschrijving (klant ontvangt factuur per post)</span>
+                                            <span class="payment-text" data-i18n="indexHtml.text.bankoverschrijving_klant_ontvangt_factuur_per_post_533945d7">Bankoverschrijving (klant ontvangt factuur per post)</span>
                                         </label>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('articleSaleForm')">Annuleren</button>
-                                <button type="submit" class="btn btn-primary">Bestelling Plaatsen</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('articleSaleForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.bestelling_plaatsen_07d072ea">Bestelling Plaatsen</button>
                             </div>                            
                                 </div>
                                 <div class="article-sale-right">
-            <h3 class="form-subtitle">Artikelgegevens</h3>
+            <h3 class="form-subtitle" data-i18n="indexHtml.text.artikelgegevens_7dec9fbd">Artikelgegevens</h3>
             <div class="form-group">
-                <label for="articleSearch">Artikel *</label>
+                <label for="articleSearch" data-i18n="indexHtml.text.artikel_286630a5">Artikel *</label>
                 <div class="article-selector">
                     <input type="text" 
                            id="articleSearch" 
                            placeholder="Type artikel naam of code..." 
                            autocomplete="off"
-                           oninput="filterArticles(this.value)">
+                           oninput="filterArticles(this.value)" data-i18n-placeholder="indexHtml.placeholder.type_artikel_naam_of_code_47ce6be0">
                     <input type="hidden" id="articleName">
                     <div class="article-dropdown" id="articleDropdown" style="display: none;">
                         <!-- Dropdown populated by JavaScript -->
@@ -638,40 +640,40 @@
                 </div>
             </div>                            <div class="form-row">
                                 <div class="form-group">
-                                    <label for="articleQuantity">Aantal</label>
+                                    <label for="articleQuantity" data-i18n="indexHtml.text.aantal_21e62648">Aantal</label>
                                     <input type="number" id="articleQuantity" min="1" value="1" required onchange="updateArticlePrice()">
                                 </div>
                                 <div class="form-group">
-                                    <label for="articlePrice">Prijs per stuk</label>
+                                    <label for="articlePrice" data-i18n="indexHtml.text.prijs_per_stuk_d609a24d">Prijs per stuk</label>
                                     <input type="text" id="articlePrice" readonly placeholder="€0,00">
                                 </div>
                             </div>
                             
                             <div class="form-row">
-                                <button type="button" class="btn btn-success btn-block" onclick="addArticleToOrder()">
+                                <button type="button" class="btn btn-success btn-block" onclick="addArticleToOrder()" data-i18n="indexHtml.text.artikel_toevoegen_aan_bestelling_d23832ab">
                                     ➕ Artikel Toevoegen aan Bestelling
                                 </button>
                             </div>
                             
                             <!-- Order Items List -->
                             <div id="orderItemsSection" class="order-items-section" style="display: none;">
-                                <h3 class="form-subtitle">📋 Bestelling Overzicht</h3>
+                                <h3 class="form-subtitle" data-i18n="indexHtml.text.bestelling_overzicht_7d5a38f4">📋 Bestelling Overzicht</h3>
                                 <div id="orderItemsList" class="order-items-list">
                                     <!-- Items will be added dynamically -->
                                 </div>
                                 
                                 <!-- Coupon Code Section -->
                                 <div class="coupon-section">
-                                    <label for="couponCode">Kortingscode</label>
+                                    <label for="couponCode" data-i18n="indexHtml.text.kortingscode_fb890f19">Kortingscode</label>
                                     <div class="coupon-input-group">
                                         <input type="text" 
                                                id="couponCode" 
                                                placeholder="Voer kortingscode in..." 
                                                maxlength="20"
-                                               onkeydown="if(event.key==='Enter') { event.preventDefault(); applyCoupon(); }">
+                                               onkeydown="if(event.key==='Enter') { event.preventDefault(); applyCoupon(); }" data-i18n-placeholder="indexHtml.placeholder.voer_kortingscode_in_96982fd8">
                                         <button type="button" 
                                                 class="btn btn-secondary btn-apply-coupon" 
-                                                onclick="applyCoupon()">
+                                                onclick="applyCoupon()" data-i18n="indexHtml.text.toepassen_de47f425">
                                             Toepassen
                                         </button>
                                     </div>
@@ -680,14 +682,14 @@
                                 
                                 <div class="order-summary">
                                     <div class="order-summary-row">
-                                        <span>Subtotaal:</span>
+                                        <span data-i18n="indexHtml.text.subtotaal_5bd4e5dc">Subtotaal:</span>
                                         <span id="orderSubtotal">€0,00</span>
                                     </div>
                                     <div id="discountsBreakdown" class="discounts-breakdown" style="display: none;">
                                         <!-- Discount items will be added dynamically -->
                                     </div>
                                     <div class="order-summary-row total-row">
-                                        <span><strong>Totaal:</strong></span>
+                                        <span><strong data-i18n="indexHtml.text.totaal_1dbb880c">Totaal:</strong></span>
                                         <span id="orderTotal"><strong>€0,00</strong></span>
                                     </div>
                                 </div>
@@ -703,82 +705,82 @@
                 <div id="editCustomerForm" class="form-container" style="display: none;">
                     <div class="card onepager-container">
                         <div class="form-header">
-                            <h2>✏️ Klantgegevens Bewerken</h2>
+                            <h2 data-i18n="indexHtml.text.klantgegevens_bewerken_de8f3786">✏️ Klantgegevens Bewerken</h2>
                             <button class="btn-close" onclick="closeForm('editCustomerForm')">✕</button>
                         </div>
                         <form id="customerEditForm" class="form-section" onsubmit="saveCustomerEdit(event)">
                             <input type="hidden" id="editCustomerId">
                             
-                            <h3 class="form-subtitle">Aanhef *</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.aanhef_1833dec8">Aanhef *</h3>
                             <div class="aanhef-row">
-                                <label><input type="radio" name="editSalutation" value="Dhr." required> Dhr.</label>
-                                <label><input type="radio" name="editSalutation" value="Mevr."> Mevr.</label>
-                                <label><input type="radio" name="editSalutation" value="Anders"> Anders</label>
+                                <label><input type="radio" name="editSalutation" value="Dhr." required> <span data-i18n="indexHtml.text.dhr_d809be05">Dhr.</span></label>
+                                <label><input type="radio" name="editSalutation" value="Mevr."> <span data-i18n="indexHtml.text.mevr_744870d7">Mevr.</span></label>
+                                <label><input type="radio" name="editSalutation" value="Anders"> <span data-i18n="indexHtml.text.anders_ca587926">Anders</span></label>
                             </div>
                             
                             <div class="form-row">
-                                <input type="text" id="editInitials" placeholder="Voorletters*" required>
-                                <input type="text" id="editMiddleName" placeholder="Tussenvoegsel">
-                                <input type="text" id="editLastName" placeholder="Achternaam*" required>
+                                <input type="text" id="editInitials" placeholder="Voorletters*" required data-i18n-placeholder="indexHtml.placeholder.voorletters_e69bf1c6">
+                                <input type="text" id="editMiddleName" placeholder="Tussenvoegsel" data-i18n-placeholder="indexHtml.placeholder.tussenvoegsel_621ce8f0">
+                                <input type="text" id="editLastName" placeholder="Achternaam*" required data-i18n-placeholder="indexHtml.placeholder.achternaam_9db9e9c5">
                             </div>
 
                             <div class="form-row">
-                                <input type="text" id="editPostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
-                                <input type="text" id="editHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in" required>
-                                <input type="text" id="editHouseExt" placeholder="Toevoeging" maxlength="10">
+                                <input type="text" id="editPostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44" data-i18n-title="indexHtml.title.voer_een_geldige_postcode_in_bijv_1234ab_5781c72b">
+                                <input type="text" id="editHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in" required data-i18n-placeholder="indexHtml.placeholder.huisnr_en_letter_2865c592" data-i18n-title="indexHtml.title.voer_een_geldig_huisnummer_in_98a34b45">
+                                <input type="text" id="editHouseExt" placeholder="Toevoeging" maxlength="10" data-i18n-placeholder="indexHtml.placeholder.toevoeging_26fd8370">
                             </div>
                             
                             <div class="form-row">
-                                <input type="text" id="editAddress" placeholder="Straat*" required>
-                                <input type="text" id="editCity" placeholder="Plaats*" required>
+                                <input type="text" id="editAddress" placeholder="Straat*" required data-i18n-placeholder="indexHtml.placeholder.straat_e57ebd14">
+                                <input type="text" id="editCity" placeholder="Plaats*" required data-i18n-placeholder="indexHtml.placeholder.plaats_abe00810">
                             </div>
 
                             <div class="form-row">
-                                <input type="tel" id="editPhone" placeholder="Telefoonnummer">
-                                <input type="email" id="editEmail" placeholder="E-mailadres*" required>
+                                <input type="tel" id="editPhone" placeholder="Telefoonnummer" data-i18n-placeholder="indexHtml.placeholder.telefoonnummer_80ab4353">
+                                <input type="email" id="editEmail" placeholder="E-mailadres*" required data-i18n-placeholder="indexHtml.placeholder.e_mailadres_9e94dd29">
                             </div>
 
                             <div class="form-group">
-                                <label>Geboortedatum</label>
+                                <label data-i18n="indexHtml.text.geboortedatum_58b9b177">Geboortedatum</label>
                                 <div class="form-row">
                                     <select id="editBirthdayDay">
-                                        <option value="">Dag</option>
+                                        <option value="" data-i18n="indexHtml.text.dag_4b5425c3">Dag</option>
                                     </select>
                                     <select id="editBirthdayMonth">
-                                        <option value="">Maand</option>
+                                        <option value="" data-i18n="indexHtml.text.maand_d67eb0ec">Maand</option>
                                     </select>
                                     <select id="editBirthdayYear">
-                                        <option value="">Jaar</option>
+                                        <option value="" data-i18n="indexHtml.text.jaar_8e2edb87">Jaar</option>
                                     </select>
                                 </div>
                             </div>
                             
-                            <h3 class="form-subtitle">Marketing voorkeuren</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.marketing_voorkeuren_e341a1e3">Marketing voorkeuren</h3>
                             <div class="optin-row">
-                                <label class="optin-label">E-mail contact:</label>
+                                <label class="optin-label" data-i18n="indexHtml.text.e_mail_contact_760c3822">E-mail contact:</label>
                                 <div class="optin-options">
-                                    <label><input type="radio" name="editOptinEmail" value="yes"> Ja</label>
-                                    <label><input type="radio" name="editOptinEmail" value="no"> Nee</label>
+                                    <label><input type="radio" name="editOptinEmail" value="yes"> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
+                                    <label><input type="radio" name="editOptinEmail" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
                                 </div>
                             </div>
                             <div class="optin-row">
-                                <label class="optin-label">Telefonisch contact:</label>
+                                <label class="optin-label" data-i18n="indexHtml.text.telefonisch_contact_ef863bbb">Telefonisch contact:</label>
                                 <div class="optin-options">
-                                    <label><input type="radio" name="editOptinPhone" value="yes"> Ja</label>
-                                    <label><input type="radio" name="editOptinPhone" value="no"> Nee</label>
+                                    <label><input type="radio" name="editOptinPhone" value="yes"> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
+                                    <label><input type="radio" name="editOptinPhone" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
                                 </div>
                             </div>
                             <div class="optin-row">
-                                <label class="optin-label">Direct marketing:</label>
+                                <label class="optin-label" data-i18n="indexHtml.text.direct_marketing_ce0294ea">Direct marketing:</label>
                                 <div class="optin-options">
-                                    <label><input type="radio" name="editOptinPost" value="yes"> Ja</label>
-                                    <label><input type="radio" name="editOptinPost" value="no"> Nee</label>
+                                    <label><input type="radio" name="editOptinPost" value="yes"> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
+                                    <label><input type="radio" name="editOptinPost" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
                                 </div>
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('editCustomerForm')">Annuleren</button>
-                                <button type="submit" class="btn btn-primary">Opslaan</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('editCustomerForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.opslaan_414388eb">Opslaan</button>
                             </div>
                         </form>
                     </div>
@@ -788,61 +790,61 @@
                 <div id="editSubscriptionForm" class="form-container" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2>✏️ Abonnement Bewerken</h2>
+                            <h2 data-i18n="indexHtml.text.abonnement_bewerken_b16c21e3">✏️ Abonnement Bewerken</h2>
                             <button class="btn-close" onclick="closeForm('editSubscriptionForm')">✕</button>
                         </div>
                         <form id="subscriptionEditForm" onsubmit="saveSubscriptionEdit(event)">
                             <input type="hidden" id="editSubId">
                             
                             <div class="info-box">
-                                <strong>Let op:</strong> Wijzigingen aan het abonnement worden direct doorgevoerd.
+                                <strong data-i18n="indexHtml.text.let_op_51f6b639">Let op:</strong> Wijzigingen aan het abonnement worden direct doorgevoerd.
                             </div>
                             
                             <div class="form-group">
-                                <label for="editSubMagazine">Magazine *</label>
+                                <label for="editSubMagazine" data-i18n="indexHtml.text.magazine_b8fd4d09">Magazine *</label>
                                 <select id="editSubMagazine" required>
-                                    <option value="">Selecteer magazine...</option>
-                                    <option value="Avrobode">Avrobode</option>
-                                    <option value="Mikrogids">Mikrogids</option>
-                                    <option value="Ncrvgids">Ncrvgids</option>
+                                    <option value="" data-i18n="indexHtml.text.selecteer_magazine_ff42b187">Selecteer magazine...</option>
+                                    <option value="Avrobode" data-i18n="indexHtml.text.avrobode_3f526f55">Avrobode</option>
+                                    <option value="Mikrogids" data-i18n="indexHtml.text.mikrogids_eb24b4f6">Mikrogids</option>
+                                    <option value="Ncrvgids" data-i18n="indexHtml.text.ncrvgids_4abb9def">Ncrvgids</option>
                                 </select>
                             </div>
                             
                             <div class="form-group">
-                                <label for="editSubDuration">Duur & Betaling *</label>
+                                <label for="editSubDuration" data-i18n="indexHtml.text.duur_betaling_714f7c89">Duur & Betaling *</label>
                                 <select id="editSubDuration" required>
-                                    <option value="">Selecteer optie...</option>
+                                    <option value="" data-i18n="indexHtml.text.selecteer_optie_b048f2e2">Selecteer optie...</option>
                                     <optgroup label="Jaarlijks Betaald">
-                                        <option value="1-jaar">1 jaar - €52,00 per jaar</option>
-                                        <option value="2-jaar">2 jaar - €98,00 totaal (5% korting)</option>
-                                        <option value="3-jaar">3 jaar - €140,00 totaal (10% korting)</option>
+                                        <option value="1-jaar" data-i18n="indexHtml.text.1_jaar_52_00_per_jaar_49f513d9">1 jaar - €52,00 per jaar</option>
+                                        <option value="2-jaar" data-i18n="indexHtml.text.2_jaar_98_00_totaal_5_korting_e09788fd">2 jaar - €98,00 totaal (5% korting)</option>
+                                        <option value="3-jaar" data-i18n="indexHtml.text.3_jaar_140_00_totaal_10_korting_fbc30d32">3 jaar - €140,00 totaal (10% korting)</option>
                                     </optgroup>
                                     <optgroup label="Maandelijks Betaald">
-                                        <option value="1-jaar-maandelijks">1 jaar - €4,50 per maand (€54,00 totaal)</option>
-                                        <option value="2-jaar-maandelijks">2 jaar - €4,35 per maand (€104,40 totaal)</option>
-                                        <option value="3-jaar-maandelijks">3 jaar - €4,20 per maand (€151,20 totaal)</option>
+                                        <option value="1-jaar-maandelijks" data-i18n="indexHtml.text.1_jaar_4_50_per_maand_54_00_totaal_de4286b1">1 jaar - €4,50 per maand (€54,00 totaal)</option>
+                                        <option value="2-jaar-maandelijks" data-i18n="indexHtml.text.2_jaar_4_35_per_maand_104_40_totaal_e7e20fed">2 jaar - €4,35 per maand (€104,40 totaal)</option>
+                                        <option value="3-jaar-maandelijks" data-i18n="indexHtml.text.3_jaar_4_20_per_maand_151_20_totaal_bece99a8">3 jaar - €4,20 per maand (€151,20 totaal)</option>
                                     </optgroup>
                                 </select>
                             </div>
                             
                             <div class="form-group">
-                                <label for="editSubStartDate">Startdatum *</label>
+                                <label for="editSubStartDate" data-i18n="indexHtml.text.startdatum_3b8aa074">Startdatum *</label>
                                 <input type="date" id="editSubStartDate" required>
                             </div>
                             
                             <div class="form-group">
-                                <label for="editSubStatus">Status *</label>
+                                <label for="editSubStatus" data-i18n="indexHtml.text.status_1eb97f75">Status *</label>
                                 <select id="editSubStatus" required>
-                                    <option value="active">Actief</option>
-                                    <option value="paused">Gepauzeerd</option>
-                                    <option value="ended">Beëindigd</option>
-                                    <option value="cancelled">Opgezegd</option>
+                                    <option value="active" data-i18n="indexHtml.text.actief_3268dd8d">Actief</option>
+                                    <option value="paused" data-i18n="indexHtml.text.gepauzeerd_0d3c48fd">Gepauzeerd</option>
+                                    <option value="ended" data-i18n="indexHtml.text.beeindigd_2b1f3152">Beëindigd</option>
+                                    <option value="cancelled" data-i18n="indexHtml.text.opgezegd_d57e8da8">Opgezegd</option>
                                 </select>
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('editSubscriptionForm')">Annuleren</button>
-                                <button type="submit" class="btn btn-primary">Wijzigingen Opslaan</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('editSubscriptionForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.wijzigingen_opslaan_22f167f8">Wijzigingen Opslaan</button>
                             </div>
                         </form>
                     </div>
@@ -852,29 +854,29 @@
                 <div id="resendMagazineForm" class="form-container" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2>📮 Editie Opnieuw Verzenden</h2>
+                            <h2 data-i18n="indexHtml.text.editie_opnieuw_verzenden_3bd3bf34">📮 Editie Opnieuw Verzenden</h2>
                             <button class="btn-close" onclick="closeForm('resendMagazineForm')">✕</button>
                         </div>
                         <div class="resend-form">
-                            <p class="info-text">Selecteer het abonnement waarvoor de laatste editie opnieuw moet worden verzonden.</p>
+                            <p class="info-text" data-i18n="indexHtml.text.selecteer_het_abonnement_waarvoor_de_laatste_editie_opnieuw_moet_worden__616e90bb">Selecteer het abonnement waarvoor de laatste editie opnieuw moet worden verzonden.</p>
                             <div class="form-group">
-                                <label for="resendSubscription">Abonnement</label>
+                                <label for="resendSubscription" data-i18n="indexHtml.text.abonnement_66200f36">Abonnement</label>
                                 <select id="resendSubscription">
-                                    <option value="">Selecteer abonnement...</option>
+                                    <option value="" data-i18n="indexHtml.text.selecteer_abonnement_d521939c">Selecteer abonnement...</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="resendReason">Reden</label>
+                                <label for="resendReason" data-i18n="indexHtml.text.reden_60ce906f">Reden</label>
                                 <select id="resendReason">
-                                    <option value="not_received">Niet ontvangen</option>
-                                    <option value="damaged">Beschadigd</option>
-                                    <option value="lost">Kwijt</option>
-                                    <option value="other">Anders</option>
+                                    <option value="not_received" data-i18n="indexHtml.text.niet_ontvangen_1d136f53">Niet ontvangen</option>
+                                    <option value="damaged" data-i18n="indexHtml.text.beschadigd_e9491849">Beschadigd</option>
+                                    <option value="lost" data-i18n="indexHtml.text.kwijt_7a733e9c">Kwijt</option>
+                                    <option value="other" data-i18n="indexHtml.text.anders_ca587926">Anders</option>
                                 </select>
                             </div>
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('resendMagazineForm')">Annuleren</button>
-                                <button type="button" class="btn btn-primary" onclick="resendMagazine()">Editie Verzenden</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('resendMagazineForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="button" class="btn btn-primary" onclick="resendMagazine()" data-i18n="indexHtml.text.editie_verzenden_ffa19d32">Editie Verzenden</button>
                             </div>
                         </div>
                     </div>
@@ -884,67 +886,67 @@
                 <div id="editorialComplaintForm" class="form-container" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2>✍️ Klacht/Opmerking voor Redactie</h2>
+                            <h2 data-i18n="indexHtml.text.klacht_opmerking_voor_redactie_40e9bc48">✍️ Klacht/Opmerking voor Redactie</h2>
                             <button class="btn-close" onclick="closeForm('editorialComplaintForm')">✕</button>
                         </div>
                         <div class="editorial-complaint-form">
-                            <p class="info-text">Registreer klachten of opmerkingen die bestemd zijn voor de redactie van het magazine.</p>
+                            <p class="info-text" data-i18n="indexHtml.text.registreer_klachten_of_opmerkingen_die_bestemd_zijn_voor_de_redactie_van_8e5ea830">Registreer klachten of opmerkingen die bestemd zijn voor de redactie van het magazine.</p>
                             
                             <div class="form-group">
-                                <label for="editorialComplaintMagazine">Magazine *</label>
+                                <label for="editorialComplaintMagazine" data-i18n="indexHtml.text.magazine_b8fd4d09">Magazine *</label>
                                 <select id="editorialComplaintMagazine" required>
-                                    <option value="">Selecteer magazine...</option>
+                                    <option value="" data-i18n="indexHtml.text.selecteer_magazine_ff42b187">Selecteer magazine...</option>
                                 </select>
                             </div>
 
                             <div class="form-group">
-                                <label for="editorialComplaintType">Type *</label>
+                                <label for="editorialComplaintType" data-i18n="indexHtml.text.type_b610f8a7">Type *</label>
                                 <select id="editorialComplaintType" required>
-                                    <option value="klacht">Klacht</option>
-                                    <option value="opmerking">Opmerking</option>
-                                    <option value="suggestie">Suggestie</option>
-                                    <option value="compliment">Compliment</option>
+                                    <option value="klacht" data-i18n="indexHtml.text.klacht_66e87642">Klacht</option>
+                                    <option value="opmerking" data-i18n="indexHtml.text.opmerking_e483ce11">Opmerking</option>
+                                    <option value="suggestie" data-i18n="indexHtml.text.suggestie_3e358193">Suggestie</option>
+                                    <option value="compliment" data-i18n="indexHtml.text.compliment_b18f9c89">Compliment</option>
                                 </select>
                             </div>
 
                             <div class="form-group">
-                                <label for="editorialComplaintCategory">Categorie</label>
+                                <label for="editorialComplaintCategory" data-i18n="indexHtml.text.categorie_6c59dc2c">Categorie</label>
                                 <select id="editorialComplaintCategory">
-                                    <option value="inhoud">Inhoud artikel</option>
-                                    <option value="foto">Foto/afbeelding</option>
-                                    <option value="fout">Fout in tekst</option>
-                                    <option value="programma">TV/Radio programma</option>
-                                    <option value="puzzel">Puzzel</option>
-                                    <option value="advertentie">Advertentie</option>
-                                    <option value="overig">Overig</option>
+                                    <option value="inhoud" data-i18n="indexHtml.text.inhoud_artikel_69c582c2">Inhoud artikel</option>
+                                    <option value="foto" data-i18n="indexHtml.text.foto_afbeelding_6a2bc957">Foto/afbeelding</option>
+                                    <option value="fout" data-i18n="indexHtml.text.fout_in_tekst_a3652b39">Fout in tekst</option>
+                                    <option value="programma" data-i18n="indexHtml.text.tv_radio_programma_6999cf45">TV/Radio programma</option>
+                                    <option value="puzzel" data-i18n="indexHtml.text.puzzel_ba8f1b3b">Puzzel</option>
+                                    <option value="advertentie" data-i18n="indexHtml.text.advertentie_3268a5c2">Advertentie</option>
+                                    <option value="overig" data-i18n="indexHtml.text.overig_39dfc8cf">Overig</option>
                                 </select>
                             </div>
 
                             <div class="form-group">
-                                <label for="editorialComplaintDescription">Beschrijving *</label>
+                                <label for="editorialComplaintDescription" data-i18n="indexHtml.text.beschrijving_45b30553">Beschrijving *</label>
                                 <textarea id="editorialComplaintDescription" 
                                           rows="6" 
                                           placeholder="Beschrijf de klacht of opmerking in detail..." 
-                                          required></textarea>
+                                          required data-i18n-placeholder="indexHtml.placeholder.beschrijf_de_klacht_of_opmerking_in_detail_90aacd3a"></textarea>
                             </div>
 
                             <div class="form-group">
-                                <label for="editorialComplaintEdition">Editie nummer (optioneel)</label>
+                                <label for="editorialComplaintEdition" data-i18n="indexHtml.text.editie_nummer_optioneel_eddac001">Editie nummer (optioneel)</label>
                                 <input type="text" 
                                        id="editorialComplaintEdition" 
-                                       placeholder="Bijv. 23/2024">
+                                       placeholder="Bijv. 23/2024" data-i18n-placeholder="indexHtml.placeholder.bijv_23_2024_780c1f8e">
                             </div>
 
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="editorialComplaintFollowup">
-                                    Klant verwacht terugkoppeling van redactie
-                                </label>
+                                    <span data-i18n="indexHtml.text.klant_verwacht_terugkoppeling_van_redactie_9b1357a7">Klant verwacht terugkoppeling van redactie
+                                </span></label>
                             </div>
 
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('editorialComplaintForm')">Annuleren</button>
-                                <button type="button" class="btn btn-primary" onclick="submitEditorialComplaint()">Registreren</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('editorialComplaintForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="button" class="btn btn-primary" onclick="submitEditorialComplaint()" data-i18n="indexHtml.text.registreren_ad91cc03">Registreren</button>
                             </div>
                         </div>
                     </div>
@@ -954,79 +956,79 @@
                 <div id="restitutionTransferForm" class="form-container" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2 id="restitutionTransferTitle">🔄 Abonnement Overzetten</h2>
+                            <h2 id="restitutionTransferTitle" data-i18n="indexHtml.text.abonnement_overzetten_04a00045">🔄 Abonnement Overzetten</h2>
                             <button class="btn-close" onclick="closeForm('restitutionTransferForm')">✕</button>
                         </div>
                         <form id="restitutionTransferFormElement" onsubmit="completeRestitutionTransfer(event)">
                             <div class="info-box" style="background-color: rgba(239, 68, 68, 0.1); border-color: #ef4444;">
-                                <strong>Let op:</strong> Overleden personen kunnen geen actieve abonnementen hebben. Het abonnement moet worden overgezet naar een andere persoon.
+                                <strong data-i18n="indexHtml.text.let_op_51f6b639">Let op:</strong> Overleden personen kunnen geen actieve abonnementen hebben. Het abonnement moet worden overgezet naar een andere persoon.
                             </div>
                             
-                            <h3 class="form-subtitle">Nieuwe abonnee gegevens</h3>
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.nieuwe_abonnee_gegevens_39e1f2ce">Nieuwe abonnee gegevens</h3>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="restitutionTransferSalutation">Aanhef *</label>
+                                    <label for="restitutionTransferSalutation" data-i18n="indexHtml.text.aanhef_1833dec8">Aanhef *</label>
                                     <select id="restitutionTransferSalutation" class="form-control" required>
-                                        <option value="Dhr.">Dhr.</option>
-                                        <option value="Mevr.">Mevr.</option>
-                                        <option value="Anders">Anders</option>
+                                        <option value="Dhr." data-i18n="indexHtml.text.dhr_d809be05">Dhr.</option>
+                                        <option value="Mevr." data-i18n="indexHtml.text.mevr_744870d7">Mevr.</option>
+                                        <option value="Anders" data-i18n="indexHtml.text.anders_ca587926">Anders</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="restitutionTransferFirstName">Voornaam *</label>
+                                    <label for="restitutionTransferFirstName" data-i18n="indexHtml.text.voornaam_575fbdf6">Voornaam *</label>
                                     <input type="text" id="restitutionTransferFirstName" class="form-control" required>
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="restitutionTransferMiddleName">Tussenvoegsel</label>
+                                    <label for="restitutionTransferMiddleName" data-i18n="indexHtml.text.tussenvoegsel_621ce8f0">Tussenvoegsel</label>
                                     <input type="text" id="restitutionTransferMiddleName" class="form-control">
                                 </div>
                                 <div class="form-group">
-                                    <label for="restitutionTransferLastName">Achternaam *</label>
+                                    <label for="restitutionTransferLastName" data-i18n="indexHtml.text.achternaam_dab9b6a7">Achternaam *</label>
                                     <input type="text" id="restitutionTransferLastName" class="form-control" required>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="restitutionTransferEmail">E-mail *</label>
+                                <label for="restitutionTransferEmail" data-i18n="indexHtml.text.e_mail_3ddc6c6e">E-mail *</label>
                                 <input type="email" id="restitutionTransferEmail" class="form-control" required>
                             </div>
                             <div class="form-group">
-                                <label for="restitutionTransferPhone">Telefoonnummer *</label>
+                                <label for="restitutionTransferPhone" data-i18n="indexHtml.text.telefoonnummer_1749a119">Telefoonnummer *</label>
                                 <input type="tel" id="restitutionTransferPhone" class="form-control" required>
                             </div>
                             
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="restitutionTransferSameAddress" onchange="toggleRestitutionTransferAddress()">
-                                    Zelfde adres als originele abonnee
-                                </label>
+                                    <span data-i18n="indexHtml.text.zelfde_adres_als_originele_abonnee_2ccc5d4a">Zelfde adres als originele abonnee
+                                </span></label>
                             </div>
                             
                             <div id="restitutionTransferAddressFields">
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="restitutionTransferPostalCode">Postcode *</label>
+                                        <label for="restitutionTransferPostalCode" data-i18n="indexHtml.text.postcode_a4d0ac68">Postcode *</label>
                                         <input type="text" id="restitutionTransferPostalCode" class="form-control" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="restitutionTransferHouseNumber">Huisnummer *</label>
+                                        <label for="restitutionTransferHouseNumber" data-i18n="indexHtml.text.huisnummer_86db3120">Huisnummer *</label>
                                         <input type="text" id="restitutionTransferHouseNumber" class="form-control" required>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="restitutionTransferAddress">Straat en nummer *</label>
+                                    <label for="restitutionTransferAddress" data-i18n="indexHtml.text.straat_en_nummer_dda17a89">Straat en nummer *</label>
                                     <input type="text" id="restitutionTransferAddress" class="form-control" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="restitutionTransferCity">Plaats *</label>
+                                    <label for="restitutionTransferCity" data-i18n="indexHtml.text.plaats_33c59bec">Plaats *</label>
                                     <input type="text" id="restitutionTransferCity" class="form-control" required>
                                 </div>
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('restitutionTransferForm')">Annuleren</button>
-                                <button type="submit" class="btn btn-success">Abonnement Overzetten</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeForm('restitutionTransferForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="submit" class="btn btn-success" data-i18n="indexHtml.text.abonnement_overzetten_51f8b366">Abonnement Overzetten</button>
                             </div>
                         </form>
                     </div>
@@ -1036,7 +1038,7 @@
                 <div id="winbackFlow" class="form-container" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2>🎯 Winback/Opzegging Flow</h2>
+                            <h2 data-i18n="indexHtml.text.winback_opzegging_flow_41075f12">🎯 Winback/Opzegging Flow</h2>
                             <button class="btn-close" onclick="closeForm('winbackFlow')">✕</button>
                         </div>
                         <div class="winback-container">
@@ -1044,91 +1046,91 @@
                             <div class="steps-indicator">
                                 <div class="step active" data-step="1">
                                     <span class="step-number">1</span>
-                                    <span class="step-label">Reden</span>
+                                    <span class="step-label" data-i18n="indexHtml.text.reden_60ce906f">Reden</span>
                                 </div>
                                 <div class="step" data-step="2">
                                     <span class="step-number">2</span>
-                                    <span class="step-label">Aanbod</span>
+                                    <span class="step-label" data-i18n="indexHtml.text.aanbod_6c189ee8">Aanbod</span>
                                 </div>
                                 <div class="step" data-step="3">
                                     <span class="step-number">3</span>
-                                    <span class="step-label">Bevestiging</span>
+                                    <span class="step-label" data-i18n="indexHtml.text.bevestiging_d6c110be">Bevestiging</span>
                                 </div>
                             </div>
 
                             <!-- Step 1: Cancellation Reason -->
                             <div id="winbackStep1" class="winback-step">
-                                <h3>Waarom wilt u het abonnement opzeggen?</h3>
+                                <h3 data-i18n="indexHtml.text.waarom_wilt_u_het_abonnement_opzeggen_65e30783">Waarom wilt u het abonnement opzeggen?</h3>
                                 <div class="script-box">
-                                    <p><strong>Script:</strong> "Het spijt me te horen dat u het abonnement wilt opzeggen. Mag ik vragen wat de belangrijkste reden is?"</p>
+                                    <p><strong data-i18n="indexHtml.text.script_02f344d0">Script:</strong> "Het spijt me te horen dat u het abonnement wilt opzeggen. Mag ik vragen wat de belangrijkste reden is?"</p>
                                 </div>
                                 <div class="form-group">
-                                    <label>Selecteer reden:</label>
+                                    <label data-i18n="indexHtml.text.selecteer_reden_24d8f787">Selecteer reden:</label>
                                     <div class="radio-group">
                                         <label class="radio-option">
                                             <input type="radio" name="cancelReason" value="price">
-                                            <span>Te duur</span>
+                                            <span data-i18n="indexHtml.text.te_duur_cf8f8342">Te duur</span>
                                         </label>
                                         <label class="radio-option">
                                             <input type="radio" name="cancelReason" value="content">
-                                            <span>Inhoud niet interessant</span>
+                                            <span data-i18n="indexHtml.text.inhoud_niet_interessant_c56b1dae">Inhoud niet interessant</span>
                                         </label>
                                         <label class="radio-option">
                                             <input type="radio" name="cancelReason" value="delivery">
-                                            <span>Leveringsproblemen</span>
+                                            <span data-i18n="indexHtml.text.leveringsproblemen_4f284dd6">Leveringsproblemen</span>
                                         </label>
                                         <label class="radio-option">
                                             <input type="radio" name="cancelReason" value="deceased">
-                                            <span>Overleden</span>
+                                            <span data-i18n="indexHtml.text.overleden_3a820a93">Overleden</span>
                                         </label>
                                         <label class="radio-option">
                                             <input type="radio" name="cancelReason" value="other">
-                                            <span>Anders</span>
+                                            <span data-i18n="indexHtml.text.anders_ca587926">Anders</span>
                                         </label>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary" onclick="winbackNextStep(2)">Volgende →</button>
+                                <button class="btn btn-primary" onclick="winbackNextStep(2)" data-i18n="indexHtml.text.volgende_88b8d391">Volgende →</button>
                             </div>
 
                             <!-- Step 1b: Deceased - Select Subscriptions -->
                             <div id="winbackStep1b" class="winback-step" style="display: none;">
-                                <h3>Abonnementen bij Overlijden</h3>
+                                <h3 data-i18n="indexHtml.text.abonnementen_bij_overlijden_3e1b91b0">Abonnementen bij Overlijden</h3>
                                 <div class="script-box">
-                                    <p><strong>Script:</strong> "Wat vervelend om te horen. Ik zie dat er <span id="deceasedSubCount"></span> actieve abonnement(en) zijn. Voor elk abonnement kunt u aangeven wat u wilt doen."</p>
+                                    <p><strong data-i18n="indexHtml.text.script_02f344d0">Script:</strong> "Wat vervelend om te horen. Ik zie dat er <span id="deceasedSubCount"></span> actieve abonnement(en) zijn. Voor elk abonnement kunt u aangeven wat u wilt doen."</p>
                                 </div>
                                 <div id="deceasedSubscriptionsList" class="deceased-subscriptions-list">
                                     <!-- Subscriptions will be dynamically inserted here -->
                                 </div>
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep(1)">← Terug</button>
-                                    <button class="btn btn-primary" onclick="processDeceasedSubscriptions()">Verwerken →</button>
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep(1)" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-primary" onclick="processDeceasedSubscriptions()" data-i18n="indexHtml.text.verwerken_781562ac">Verwerken →</button>
                                 </div>
                             </div>
 
                             <!-- Step 1c: Cancel with Refund -->
                             <div id="winbackStep1c" class="winback-step" style="display: none;">
-                                <h3>Opzeggen met Restitutie</h3>
+                                <h3 data-i18n="indexHtml.text.opzeggen_met_restitutie_8e3c4ca4">Opzeggen met Restitutie</h3>
                                 <div id="refundSubscriptionsList" class="info-box">
                                     <!-- Will show which subscriptions are being cancelled -->
                                 </div>
                                 <div class="form-group">
-                                    <label for="refundEmail">E-mailadres voor bevestiging:</label>
-                                    <input type="email" id="refundEmail" class="form-control" placeholder="naam@email.nl">
-                                    <small class="form-text">De opzegbevestiging en restitutie-informatie wordt naar dit adres gestuurd</small>
+                                    <label for="refundEmail" data-i18n="indexHtml.text.e_mailadres_voor_bevestiging_8c34275a">E-mailadres voor bevestiging:</label>
+                                    <input type="email" id="refundEmail" class="form-control" placeholder="naam@email.nl" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
+                                    <small class="form-text" data-i18n="indexHtml.text.de_opzegbevestiging_en_restitutie_informatie_wordt_naar_dit_adres_gestuu_3a20ffcd">De opzegbevestiging en restitutie-informatie wordt naar dit adres gestuurd</small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="refundNotes">Notities (optioneel):</label>
-                                    <textarea id="refundNotes" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc."></textarea>
+                                    <label for="refundNotes" data-i18n="indexHtml.text.notities_optioneel_aff41798">Notities (optioneel):</label>
+                                    <textarea id="refundNotes" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc." data-i18n-placeholder="indexHtml.placeholder.bijv_rekeningnummer_voor_restitutie_contactpersoon_etc_6544b433"></textarea>
                                 </div>
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')">← Terug</button>
-                                    <button class="btn btn-danger" onclick="completeAllDeceasedActions()">Verwerken</button>
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-danger" onclick="completeAllDeceasedActions()" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
                                 </div>
                             </div>
 
                             <!-- Step 1d: Transfer Subscription -->
                             <div id="winbackStep1d" class="winback-step" style="display: none;">
-                                <h3>Abonnement(en) Overzetten</h3>
+                                <h3 data-i18n="indexHtml.text.abonnement_en_overzetten_251285e0">Abonnement(en) Overzetten</h3>
                                 <div id="transferSubscriptionsList" class="info-box">
                                     <!-- Will show which subscriptions are being transferred -->
                                 </div>
@@ -1137,20 +1139,20 @@
                                 <div id="transferCustomerForm"></div>
                                 
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')">← Terug</button>
-                                    <button class="btn btn-success" onclick="completeAllDeceasedActions()">Verwerken</button>
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-success" onclick="completeAllDeceasedActions()" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
                                 </div>
                             </div>
                             
                             <!-- Step 1e: Combined Form (Transfer + Refund) -->
                             <div id="winbackStep1e" class="winback-step" style="display: none;">
-                                <h3>Alle Abonnementen Verwerken</h3>
+                                <h3 data-i18n="indexHtml.text.alle_abonnementen_verwerken_0a1a8294">Alle Abonnementen Verwerken</h3>
                                 
                                 <div id="combinedTransferList" class="info-box">
                                     <!-- Transfer subscriptions -->
                                 </div>
                                 
-                                <h4>Nieuwe abonnee gegevens</h4>
+                                <h4 data-i18n="indexHtml.text.nieuwe_abonnee_gegevens_39e1f2ce">Nieuwe abonnee gegevens</h4>
                                 
                                 <!-- Unified Customer Form -->
                                 <div id="transfer2CustomerForm"></div>
@@ -1159,55 +1161,55 @@
                                     <!-- Refund subscriptions -->
                                 </div>
                                 
-                                <h4>Restitutie gegevens</h4>
+                                <h4 data-i18n="indexHtml.text.restitutie_gegevens_dfe16101">Restitutie gegevens</h4>
                                 <div class="form-group">
-                                    <label for="refundEmail2">E-mailadres voor bevestiging:</label>
-                                    <input type="email" id="refundEmail2" class="form-control" placeholder="naam@email.nl">
-                                    <small class="form-text">De opzegbevestiging en restitutie-informatie wordt naar dit adres gestuurd</small>
+                                    <label for="refundEmail2" data-i18n="indexHtml.text.e_mailadres_voor_bevestiging_8c34275a">E-mailadres voor bevestiging:</label>
+                                    <input type="email" id="refundEmail2" class="form-control" placeholder="naam@email.nl" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
+                                    <small class="form-text" data-i18n="indexHtml.text.de_opzegbevestiging_en_restitutie_informatie_wordt_naar_dit_adres_gestuu_3a20ffcd">De opzegbevestiging en restitutie-informatie wordt naar dit adres gestuurd</small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="refundNotes2">Notities (optioneel):</label>
-                                    <textarea id="refundNotes2" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc."></textarea>
+                                    <label for="refundNotes2" data-i18n="indexHtml.text.notities_optioneel_aff41798">Notities (optioneel):</label>
+                                    <textarea id="refundNotes2" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc." data-i18n-placeholder="indexHtml.placeholder.bijv_rekeningnummer_voor_restitutie_contactpersoon_etc_6544b433"></textarea>
                                 </div>
                                 
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')">← Terug</button>
-                                    <button class="btn btn-success" onclick="completeAllDeceasedActions()">Alles Verwerken</button>
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-success" onclick="completeAllDeceasedActions()" data-i18n="indexHtml.text.alles_verwerken_db8bc36d">Alles Verwerken</button>
                                 </div>
                             </div>
 
                             <!-- Step 2: Offer -->
                             <div id="winbackStep2" class="winback-step" style="display: none;">
-                                <h3>Beschikbare Winback Aanbiedingen</h3>
+                                <h3 data-i18n="indexHtml.text.beschikbare_winback_aanbiedingen_28c6a25e">Beschikbare Winback Aanbiedingen</h3>
                                 <div id="winbackOffers" class="offers-container"></div>
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep(1)">← Terug</button>
-                                    <button class="btn btn-primary" onclick="winbackNextStep(3)">Aanbod Presenteren →</button>
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep(1)" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-primary" onclick="winbackNextStep(3)" data-i18n="indexHtml.text.aanbod_presenteren_bf69df31">Aanbod Presenteren →</button>
                                 </div>
                             </div>
 
                             <!-- Step 3: Confirmation -->
                             <div id="winbackStep3" class="winback-step" style="display: none;">
-                                <h3>Resultaat</h3>
+                                <h3 data-i18n="indexHtml.text.resultaat_d168628a">Resultaat</h3>
                                 <div class="script-box">
                                     <p id="winbackScript"></p>
                                 </div>
                                 <div class="form-group">
-                                    <label>Resultaat:</label>
+                                    <label data-i18n="indexHtml.text.resultaat_57535b10">Resultaat:</label>
                                     <div class="radio-group">
                                         <label class="radio-option">
                                             <input type="radio" name="winbackResult" value="accepted">
-                                            <span>✅ Klant accepteert aanbod</span>
+                                            <span data-i18n="indexHtml.text.klant_accepteert_aanbod_8a706bed">✅ Klant accepteert aanbod</span>
                                         </label>
                                         <label class="radio-option">
                                             <input type="radio" name="winbackResult" value="declined">
-                                            <span>❌ Klant wijst af, opzeggen</span>
+                                            <span data-i18n="indexHtml.text.klant_wijst_af_opzeggen_e84bae32">❌ Klant wijst af, opzeggen</span>
                                         </label>
                                     </div>
                                 </div>
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep(2)">← Terug</button>
-                                    <button class="btn btn-success" onclick="completeWinback()">Afronden</button>
+                                    <button class="btn btn-secondary" onclick="winbackPrevStep(2)" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-success" onclick="completeWinback()" data-i18n="indexHtml.text.afronden_88a9738c">Afronden</button>
                                 </div>
                             </div>
                         </div>
@@ -1218,10 +1220,10 @@
             <!-- Right Panel: Contact History -->
             <aside class="right-panel">
                 <section class="card history-card">
-                    <h2>📋 Contact Geschiedenis</h2>
+                    <h2 data-i18n="indexHtml.text.contact_geschiedenis_7d71e784">📋 Contact Geschiedenis</h2>
                     <div id="contactHistory" class="contact-history">
                         <div class="empty-state-small">
-                            <p>Selecteer een klant om geschiedenis te zien</p>
+                            <p data-i18n="indexHtml.text.selecteer_een_klant_om_geschiedenis_te_zien_85c985bb">Selecteer een klant om geschiedenis te zien</p>
                         </div>
                     </div>
                 </section>
@@ -1236,8 +1238,8 @@
     <div id="editDeliveryRemarksModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📦 Bezorgvoorkeuren bewerken</h2>
-                <button class="modal-close" onclick="closeEditRemarksModal()">&times;</button>
+                <h2 data-i18n="indexHtml.text.bezorgvoorkeuren_bewerken_2cc5cb32">📦 Bezorgvoorkeuren bewerken</h2>
+                <button class="modal-close" onclick="closeEditRemarksModal()" data-i18n="indexHtml.text.times_87977e46">&times;</button>
             </div>
             <div class="modal-body">
                 <p>Klant: <strong id="editRemarksCustomerName"></strong></p>
@@ -1245,39 +1247,39 @@
                 <!-- Quick selection buttons -->
                 <div class="delivery-remarks-shortcuts">
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModal('Bezorgen bij de buren indien niet thuis')">
+                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.deliverToNeighbors')" data-i18n="indexHtml.text.bij_buren_06561e94">
                         👥 Bij buren
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModal('Achterdeur of zijdeur gebruiken')">
+                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.useBackOrSideDoor')" data-i18n="indexHtml.text.achterdeur_a788c6f5">
                         🚪 Achterdeur
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModal('Niet vóór 12:00 uur bezorgen')">
+                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.deliverAfterNoon')" data-i18n="indexHtml.text.na_12_00_c38dd76a">
                         🕐 Na 12:00
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModal('Bellen voor levering')">
+                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.callBeforeDelivery')" data-i18n="indexHtml.text.bel_eerst_0178f6be">
                         📞 Bel eerst
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModal('Pakketbrievenbus aanwezig')">
+                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.packageMailboxAvailable')" data-i18n="indexHtml.text.brievenbus_2528e649">
                         📮 Brievenbus
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModal('Voorzichtig behandelen - breekbaar')">
+                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.handleWithCareFragile')" data-i18n="indexHtml.text.breekbaar_ccaf32b5">
                         ⚠️ Breekbaar
                     </button>
                 </div>
                 
-                <label for="editCustomerDeliveryRemarks">Standaard bezorginstructies</label>
+                <label for="editCustomerDeliveryRemarks" data-i18n="indexHtml.text.standaard_bezorginstructies_f4fae7a1">Standaard bezorginstructies</label>
                 <textarea id="editCustomerDeliveryRemarks" 
                           rows="4" 
-                          placeholder="Voer bezorginstructies in..."></textarea>
+                          placeholder="Voer bezorginstructies in..." data-i18n-placeholder="indexHtml.placeholder.voer_bezorginstructies_in_444e08a0"></textarea>
                 
                 <div class="modal-actions">
-                    <button class="btn btn-secondary" onclick="closeEditRemarksModal()">Annuleren</button>
-                    <button class="btn btn-primary" onclick="saveDeliveryRemarks()">
+                    <button class="btn btn-secondary" onclick="closeEditRemarksModal()" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                    <button class="btn btn-primary" onclick="saveDeliveryRemarks()" data-i18n="indexHtml.text.opslaan_414388eb">
                         Opslaan
                     </button>
                 </div>
@@ -1289,72 +1291,72 @@
     <div id="dispositionModal" class="modal">
         <div class="modal-content disposition-modal">
             <div class="modal-header">
-                <h2>📋 Gesprek Afronden</h2>
-                <p class="modal-subtitle">De gegevens hieronder zijn automatisch ingevuld op basis van de acties tijdens het gesprek</p>
+                <h2 data-i18n="indexHtml.text.gesprek_afronden_273bd847">📋 Gesprek Afronden</h2>
+                <p class="modal-subtitle" data-i18n="indexHtml.text.de_gegevens_hieronder_zijn_automatisch_ingevuld_op_basis_van_de_acties_t_d0fef57c">De gegevens hieronder zijn automatisch ingevuld op basis van de acties tijdens het gesprek</p>
             </div>
             <div class="modal-body">
                 <!-- Call Information (Prominent at top) -->
                 <div class="disposition-info">
                     <div class="info-row">
-                        <span>📞 Service nummer:</span>
+                        <span data-i18n="indexHtml.text.service_nummer_ad4a39bf">📞 Service nummer:</span>
                         <span id="dispServiceNumber">-</span>
                     </div>
                     <div class="info-row">
-                        <span>⏱️ Gespreksduur:</span>
+                        <span data-i18n="indexHtml.text.gespreksduur_0059cf73">⏱️ Gespreksduur:</span>
                         <span id="dispCallDuration">-</span>
                     </div>
                     <div class="info-row">
-                        <span>👤 Klant:</span>
+                        <span data-i18n="indexHtml.text.klant_347973e2">👤 Klant:</span>
                         <span id="dispCustomerName">-</span>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="dispCategory">Categorie *</label>
+                    <label for="dispCategory" data-i18n="indexHtml.text.categorie_add0d64a">Categorie *</label>
                     <select id="dispCategory" required onchange="updateDispositionOutcomes()">
-                        <option value="">Selecteer categorie...</option>
-                        <option value="subscription">Abonnement</option>
-                        <option value="delivery">Bezorging</option>
-                        <option value="payment">Betaling</option>
-                        <option value="article_sale">Artikel Verkoop</option>
-                        <option value="complaint">Klacht</option>
-                        <option value="general">Algemeen</option>
+                        <option value="" data-i18n="indexHtml.text.selecteer_categorie_1855094a">Selecteer categorie...</option>
+                        <option value="subscription" data-i18n="indexHtml.text.abonnement_66200f36">Abonnement</option>
+                        <option value="delivery" data-i18n="indexHtml.text.bezorging_f27deb3c">Bezorging</option>
+                        <option value="payment" data-i18n="indexHtml.text.betaling_9887764f">Betaling</option>
+                        <option value="article_sale" data-i18n="indexHtml.text.artikel_verkoop_d7a4b513">Artikel Verkoop</option>
+                        <option value="complaint" data-i18n="indexHtml.text.klacht_66e87642">Klacht</option>
+                        <option value="general" data-i18n="indexHtml.text.algemeen_3212a6a5">Algemeen</option>
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="dispOutcome">Uitkomst *</label>
+                    <label for="dispOutcome" data-i18n="indexHtml.text.uitkomst_15284a13">Uitkomst *</label>
                     <select id="dispOutcome" required disabled>
-                        <option value="">Selecteer eerst een categorie</option>
+                        <option value="" data-i18n="indexHtml.text.selecteer_eerst_een_categorie_a93df407">Selecteer eerst een categorie</option>
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="dispNotes">Notities</label>
+                    <label for="dispNotes" data-i18n="indexHtml.text.notities_8284cfda">Notities</label>
                     <textarea id="dispNotes" 
                               rows="4" 
-                              placeholder="Vat het gesprek samen en noteer belangrijke details..."></textarea>
-                    <small class="form-text">Beschrijf kort wat er besproken is en welke acties zijn ondernomen</small>
+                              placeholder="Vat het gesprek samen en noteer belangrijke details..." data-i18n-placeholder="indexHtml.placeholder.vat_het_gesprek_samen_en_noteer_belangrijke_details_8a445a72"></textarea>
+                    <small class="form-text" data-i18n="indexHtml.text.beschrijf_kort_wat_er_besproken_is_en_welke_acties_zijn_ondernomen_9755308f">Beschrijf kort wat er besproken is en welke acties zijn ondernomen</small>
                 </div>
                 
                 <div class="form-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="dispFollowUpRequired" onchange="toggleFollowUpSection()">
-                        <span>Follow-up vereist</span>
+                        <span data-i18n="indexHtml.text.follow_up_vereist_532ea8aa">Follow-up vereist</span>
                     </label>
                 </div>
                 
                 <div id="followUpSection" class="form-group" style="display: none;">
-                    <label for="dispFollowUpDate">Follow-up datum</label>
+                    <label for="dispFollowUpDate" data-i18n="indexHtml.text.follow_up_datum_e7d2582d">Follow-up datum</label>
                     <input type="date" id="dispFollowUpDate">
                     <textarea id="dispFollowUpNotes" 
                               rows="2" 
-                              placeholder="Wat moet er bij follow-up gebeuren?"></textarea>
+                              placeholder="Wat moet er bij follow-up gebeuren?" data-i18n-placeholder="indexHtml.placeholder.wat_moet_er_bij_follow_up_gebeuren_bfdb7ba1"></textarea>
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="cancelDisposition()">Annuleren</button>
-                <button class="btn btn-primary" onclick="saveDisposition()">Opslaan & Afronden</button>
+                <button class="btn btn-secondary" onclick="cancelDisposition()" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                <button class="btn btn-primary" onclick="saveDisposition()" data-i18n="indexHtml.text.opslaan_afronden_8c8cc7c2">Opslaan & Afronden</button>
             </div>
         </div>
     </div>
@@ -1363,59 +1365,59 @@
     <div id="debugModal" class="modal">
         <div class="modal-content debug-modal-content">
             <div class="modal-header">
-                <h2>🔧 Debug Mode</h2>
-                <button class="modal-close" onclick="closeDebugModal()">&times;</button>
+                <h2 data-i18n="indexHtml.text.debug_mode_e4f999e9">🔧 Debug Mode</h2>
+                <button class="modal-close" onclick="closeDebugModal()" data-i18n="indexHtml.text.times_87977e46">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- PHASE 3: Call Simulation Section -->
                 <div class="debug-section">
-                    <h3>📞 Call Simulation</h3>
+                    <h3 data-i18n="indexHtml.text.call_simulation_811cb3d1">📞 Call Simulation</h3>
                     
                     <div class="debug-row">
-                        <label>Service Nummer:</label>
+                        <label data-i18n="indexHtml.text.service_nummer_2a497cde">Service Nummer:</label>
                         <select id="debugServiceNumber">
-                            <option value="AVROBODE">Avrobode Service</option>
-                            <option value="MIKROGIDS">Mikrogids Service</option>
-                            <option value="NCRVGIDS">NcrvGids Service</option>
-                            <option value="ALGEMEEN">Algemeen Service</option>
+                            <option value="AVROBODE" data-i18n="indexHtml.text.avrobode_service_dd733f72">Avrobode Service</option>
+                            <option value="MIKROGIDS" data-i18n="indexHtml.text.mikrogids_service_f7763049">Mikrogids Service</option>
+                            <option value="NCRVGIDS" data-i18n="indexHtml.text.ncrvgids_service_94a0b6dc">NcrvGids Service</option>
+                            <option value="ALGEMEEN" data-i18n="indexHtml.text.algemeen_service_83d4a8a2">Algemeen Service</option>
                         </select>
                     </div>
                     
                     <div class="debug-row">
-                        <label>Wachttijd simulatie:</label>
+                        <label data-i18n="indexHtml.text.wachttijd_simulatie_ba4bbac4">Wachttijd simulatie:</label>
                         <select id="debugWaitTime">
-                            <option value="random">Willekeurig (15-90 sec)</option>
-                            <option value="15">15 seconden</option>
-                            <option value="30">30 seconden</option>
-                            <option value="60">1 minuut</option>
-                            <option value="120">2 minuten</option>
-                            <option value="300">5 minuten</option>
+                            <option value="random" data-i18n="indexHtml.text.willekeurig_15_90_sec_4e78066b">Willekeurig (15-90 sec)</option>
+                            <option value="15" data-i18n="indexHtml.text.15_seconden_71533fee">15 seconden</option>
+                            <option value="30" data-i18n="indexHtml.text.30_seconden_1c067a2d">30 seconden</option>
+                            <option value="60" data-i18n="indexHtml.text.1_minuut_9b303de6">1 minuut</option>
+                            <option value="120" data-i18n="indexHtml.text.2_minuten_d905c183">2 minuten</option>
+                            <option value="300" data-i18n="indexHtml.text.5_minuten_97ec16f2">5 minuten</option>
                         </select>
                     </div>
                     
                     <div class="debug-row">
-                        <label>Beller type:</label>
+                        <label data-i18n="indexHtml.text.beller_type_1176bbdd">Beller type:</label>
                         <select id="debugCallerType" onchange="toggleKnownCallerSelect()">
-                            <option value="anonymous">Anonieme Beller</option>
-                            <option value="known">Bekende Klant</option>
+                            <option value="anonymous" data-i18n="indexHtml.text.anonieme_beller_0c3daeaf">Anonieme Beller</option>
+                            <option value="known" data-i18n="indexHtml.text.bekende_klant_5db14695">Bekende Klant</option>
                         </select>
                     </div>
                     
                     <div id="debugKnownCallerSelect" class="debug-row" style="display: none;">
-                        <label>Selecteer klant:</label>
+                        <label data-i18n="indexHtml.text.selecteer_klant_c3042093">Selecteer klant:</label>
                         <select id="debugKnownCustomer">
                             <!-- Populated by JavaScript -->
                         </select>
                     </div>
                     
                     <div class="debug-actions">
-                        <button class="btn btn-success btn-block" onclick="debugStartCall()">
+                        <button class="btn btn-success btn-block" onclick="debugStartCall()" data-i18n="indexHtml.text.start_gesprek_simulatie_b219f5d2">
                             � Start Gesprek Simulatie
                         </button>
                         <button id="debugEndCallBtn" 
                                 class="btn btn-danger btn-block" 
                                 onclick="debugEndCall()"
-                                style="display: none;">
+                                style="display: none;" data-i18n="indexHtml.text.beeindig_telefoongesprek_96bdb1c7">
                             ❌ Beëindig Telefoongesprek
                         </button>
                     </div>
@@ -1423,37 +1425,37 @@
                 
                 <!-- PHASE 6: Queue Simulation Section -->
                 <div class="debug-section">
-                    <h3>📋 Wachtrij Simulatie</h3>
+                    <h3 data-i18n="indexHtml.text.wachtrij_simulatie_227ad37c">📋 Wachtrij Simulatie</h3>
                     
                     <div class="debug-row">
-                        <label>Queue status:</label>
-                        <span id="debugQueueStatus">Uitgeschakeld</span>
+                        <label data-i18n="indexHtml.text.queue_status_26750750">Queue status:</label>
+                        <span id="debugQueueStatus" data-i18n="indexHtml.text.uitgeschakeld_668228d0">Uitgeschakeld</span>
                     </div>
                     
                     <div class="debug-row">
-                        <label>Aantal wachtenden:</label>
+                        <label data-i18n="indexHtml.text.aantal_wachtenden_2ce69ef5">Aantal wachtenden:</label>
                         <input type="number" id="debugQueueSize" 
                                value="5" min="1" max="50" />
                     </div>
                     
                     <div class="debug-row">
-                        <label>Mix van bellers:</label>
+                        <label data-i18n="indexHtml.text.mix_van_bellers_8984cf3f">Mix van bellers:</label>
                         <select id="debugQueueMix">
-                            <option value="balanced">Gebalanceerd (50/50)</option>
-                            <option value="mostly_known">Vooral bekende klanten (80/20)</option>
-                            <option value="mostly_anonymous">Vooral anoniem (20/80)</option>
-                            <option value="all_known">Alleen bekende klanten</option>
-                            <option value="all_anonymous">Alleen anoniem</option>
+                            <option value="balanced" data-i18n="indexHtml.text.gebalanceerd_50_50_9e94963e">Gebalanceerd (50/50)</option>
+                            <option value="mostly_known" data-i18n="indexHtml.text.vooral_bekende_klanten_80_20_d72f4bfd">Vooral bekende klanten (80/20)</option>
+                            <option value="mostly_anonymous" data-i18n="indexHtml.text.vooral_anoniem_20_80_e3713e5f">Vooral anoniem (20/80)</option>
+                            <option value="all_known" data-i18n="indexHtml.text.alleen_bekende_klanten_cdc2f32d">Alleen bekende klanten</option>
+                            <option value="all_anonymous" data-i18n="indexHtml.text.alleen_anoniem_e92222cf">Alleen anoniem</option>
                         </select>
                     </div>
                     
                     <div class="debug-actions">
                         <button class="btn btn-primary btn-block" 
-                                onclick="debugGenerateQueue()">
+                                onclick="debugGenerateQueue()" data-i18n="indexHtml.text.genereer_wachtrij_822024eb">
                             🎯 Genereer Wachtrij
                         </button>
                         <button class="btn btn-secondary btn-block" 
-                                onclick="debugClearQueue()">
+                                onclick="debugClearQueue()" data-i18n="indexHtml.text.wis_wachtrij_08792565">
                             🗑️ Wis Wachtrij
                         </button>
                     </div>
@@ -1461,7 +1463,7 @@
                     <!-- Queue preview -->
                     <div id="debugQueuePreview" class="debug-queue-preview" 
                          style="display: none;">
-                        <h4>Huidige wachtrij:</h4>
+                        <h4 data-i18n="indexHtml.text.huidige_wachtrij_84284c92">Huidige wachtrij:</h4>
                         <div id="debugQueueList" class="debug-queue-list">
                             <!-- Dynamisch gevuld met queue items -->
                         </div>
@@ -1469,8 +1471,8 @@
                 </div>
                 
                 <div class="debug-section">
-                    <h3>System Reset</h3>
-                    <button class="btn btn-danger btn-block" onclick="fullReset()">
+                    <h3 data-i18n="indexHtml.text.system_reset_4c107353">System Reset</h3>
+                    <button class="btn btn-danger btn-block" onclick="fullReset()" data-i18n="indexHtml.text.purge_localstorage_full_reset_eedef037">
                         🗑️ Purge Localstorage & Full Reset
                     </button>
                 </div>
@@ -1479,16 +1481,15 @@
     </div>
 
     <script>
-        window.kiwiBasePath = {{ request.script_root | tojson }};
+        const pageDataset = document.documentElement ? document.documentElement.dataset : {};
+        window.kiwiBasePath = pageDataset.kiwiBasePath || '';
+        window.kiwiAgentName = pageDataset.kiwiAgentName || '';
     </script>
     <script type="module" src="{{ url_for('static', filename='assets/js/i18n/index.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/feature-flags.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/api-client.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/delivery-date-picker.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/article-search.js') }}"></script>
-    <script>
-        window.kiwiAgentName = {{ user_full_name | tojson }};
-    </script>
     <script src="{{ url_for('static', filename='assets/js/app.js') }}"></script>
 </body>
 </html>

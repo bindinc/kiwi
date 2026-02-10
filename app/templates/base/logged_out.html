@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uitgelogd - Klantenservice Portal</title>
+    <title data-i18n="loggedOutPage.title">Uitgelogd - Klantenservice Portal</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/styles.css') }}">
 </head>
 <body class="access-denied-page">
     <div class="access-denied-card">
         <div class="access-denied-icon">👋</div>
-        <h1>Je bent uitgelogd</h1>
-        <p>Je sessie is afgesloten. Klik hieronder als je opnieuw wilt inloggen.</p>
+        <h1 data-i18n="loggedOutPage.heading">Je bent uitgelogd</h1>
+        <p data-i18n="loggedOutPage.description">Je sessie is afgesloten. Klik hieronder als je opnieuw wilt inloggen.</p>
 
         <div class="access-denied-actions">
-            <a class="btn btn-primary" href="{{ login_url }}">Opnieuw inloggen</a>
+            <a class="btn btn-primary" href="{{ login_url }}" data-i18n="loggedOutPage.loginCta">Opnieuw inloggen</a>
         </div>
     </div>
+    <script type="module" src="{{ url_for('static', filename='assets/js/static-page-i18n.js') }}"></script>
 </body>
 </html>

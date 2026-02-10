@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geen toegang - Klantenservice Portal</title>
+    <title data-i18n="accessDeniedPage.title">Geen toegang - Klantenservice Portal</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/styles.css') }}">
 </head>
 <body class="access-denied-page">
     <div class="access-denied-card">
         <div class="access-denied-icon">🚫</div>
-        <h1>Geen toegang tot Kiwi</h1>
+        <h1 data-i18n="accessDeniedPage.heading">Geen toegang tot Kiwi</h1>
         <p>
-            Hallo {{ user_full_name }}, je account heeft geen toegang tot deze applicatie.
-            Vraag toegang aan bij IT zodat je de juiste rol kunt krijgen.
+            <span data-i18n="accessDeniedPage.greeting">Hallo</span> {{ user_full_name }},
+            <span data-i18n="accessDeniedPage.description">je account heeft geen toegang tot deze applicatie. Vraag toegang aan bij IT zodat je de juiste rol kunt krijgen.</span>
         </p>
 
         <div class="access-denied-actions">
-            <a class="btn btn-primary" href="{{ logout_url }}">Uitloggen</a>
+            <a class="btn btn-primary" href="{{ logout_url }}" data-i18n="accessDeniedPage.logoutCta">Uitloggen</a>
         </div>
 
         <div class="access-denied-roles">
             <div>
-                <h2>Toegestane rollen</h2>
+                <h2 data-i18n="accessDeniedPage.allowedRolesHeading">Toegestane rollen</h2>
                 <ul>
                     {% for role in allowed_roles %}
                         <li><code>{{ role }}</code></li>
@@ -29,7 +29,7 @@
                 </ul>
             </div>
             <div>
-                <h2>Jouw rollen</h2>
+                <h2 data-i18n="accessDeniedPage.userRolesHeading">Jouw rollen</h2>
                 {% if user_roles %}
                     <ul>
                         {% for role in user_roles %}
@@ -37,10 +37,11 @@
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p>Geen rollen gevonden in het token.</p>
+                    <p data-i18n="accessDeniedPage.noRolesFound">Geen rollen gevonden in het token.</p>
                 {% endif %}
             </div>
         </div>
     </div>
+    <script type="module" src="{{ url_for('static', filename='assets/js/static-page-i18n.js') }}"></script>
 </body>
 </html>
