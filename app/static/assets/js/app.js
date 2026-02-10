@@ -7815,7 +7815,7 @@ function closeDebugModal() {
 
 // Full Reset - Clear session-backed POC data and reload
 function fullReset() {
-    if (confirm('⚠️ Dit zal alle sessiedata wissen en de pagina herladen. Weet je het zeker?')) {
+    if (confirm('Waarschuwing: Dit zal alle sessiedata wissen en de pagina herladen. Weet je het zeker?')) {
         if (window.kiwiApi) {
             window.kiwiApi.post(debugResetApiUrl, {}).then(() => {
                 showToast(translate('storage.cleared', {}, 'Sessiestaat gewist. Pagina wordt herladen...'), 'info');
