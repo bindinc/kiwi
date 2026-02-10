@@ -6965,6 +6965,11 @@ function addDeliveryRemark(remark) {
     notesField.scrollTop = notesField.scrollHeight;
 }
 
+function addDeliveryRemarkByKey(key) {
+    const resolvedRemark = translate(key, {}, key);
+    addDeliveryRemark(resolvedRemark);
+}
+
 // Update Article Price - handled by article-search.js
 
 // Create Article Sale
@@ -7256,6 +7261,11 @@ function addDeliveryRemarkToModal(remark) {
     // Visual feedback
     notesField.focus();
     notesField.scrollTop = notesField.scrollHeight;
+}
+
+function addDeliveryRemarkToModalByKey(key) {
+    const resolvedRemark = translate(key, {}, key);
+    addDeliveryRemarkToModal(resolvedRemark);
 }
 
 // Save Delivery Remarks

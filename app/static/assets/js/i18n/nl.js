@@ -494,6 +494,14 @@ const nl = {
     },
     delivery: {
         remarksSaved: 'Bezorgvoorkeuren opgeslagen!',
+        remarkPresets: {
+            deliverToNeighbors: 'Bezorgen bij de buren indien niet thuis',
+            useBackOrSideDoor: 'Achterdeur of zijdeur gebruiken',
+            deliverAfterNoon: 'Niet vóór 12:00 uur bezorgen',
+            callBeforeDelivery: 'Bellen voor levering',
+            packageMailboxAvailable: 'Pakketbrievenbus aanwezig',
+            handleWithCareFragile: 'Voorzichtig behandelen - breekbaar'
+        },
         holidays: [
             { name: 'Nieuwjaarsdag', date: '01-01' },
             { name: 'Koningsdag', date: '04-27' },
