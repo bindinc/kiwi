@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Make `app/templates/base/index.html` fully i18n-backed by translating static text/placeholder/title literals through `window.i18n`, and add matching `indexHtml` keys in `app/static/assets/js/i18n/nl.js`.
 - Add explicit `data-i18n`, `data-i18n-placeholder`, and `data-i18n-title` bindings across `app/templates/base/index.html`, with `app.js` using these attributes as the primary static-page i18n source and literal scanning only as fallback.
 - Move delivery remark preset phrases out of inline `onclick` string literals in `app/templates/base/index.html` and resolve them via `delivery.remarkPresets` keys in `app/static/assets/js/i18n/nl.js`.
+- Add i18n translation coverage for `app/templates/base/logged_out.html` and `app/templates/base/access_denied.html` using explicit `data-i18n` bindings and a shared `static-page-i18n.js` translator loader.
 - Refactor the Flask blueprint layout with a registry and versioned API base blueprint.
 - Make `make compose-up` fail fast with actionable guidance when local OIDC prerequisites are not met.
 - Make missing `client_secrets.json` automatically activate local fallback OIDC instead of failing startup.

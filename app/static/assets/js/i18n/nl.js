@@ -3,6 +3,22 @@ const nl = {
         locale: 'nl',
         name: 'Nederlands'
     },
+    loggedOutPage: {
+        title: 'Uitgelogd - Klantenservice Portal',
+        heading: 'Je bent uitgelogd',
+        description: 'Je sessie is afgesloten. Klik hieronder als je opnieuw wilt inloggen.',
+        loginCta: 'Opnieuw inloggen'
+    },
+    accessDeniedPage: {
+        title: 'Geen toegang - Klantenservice Portal',
+        heading: 'Geen toegang tot Kiwi',
+        greeting: 'Hallo',
+        description: 'je account heeft geen toegang tot deze applicatie. Vraag toegang aan bij IT zodat je de juiste rol kunt krijgen.',
+        logoutCta: 'Uitloggen',
+        allowedRolesHeading: 'Toegestane rollen',
+        userRolesHeading: 'Jouw rollen',
+        noRolesFound: 'Geen rollen gevonden in het token.'
+    },
     indexHtml: {
         text: {
             '1_jaar_4_50_per_maand_54_00_totaal_de4286b1': '1 jaar - €4,50 per maand (€54,00 totaal)',
