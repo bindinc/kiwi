@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
+- Migrate customer/subscription/winback UI events from inline HTML handlers to delegated `data-action` contracts, including generated `app.js` markup (search results, pagination, subscription actions, duplicate checks, contact history paging, and winback offer selection) with new router registrations in `assets/js/app/legacy-actions-customer-subscription.js`.
 - Start `app.js` modularization with a new ES-module entrypoint (`assets/js/app/index.js`), shared router/state/service foundation files, and a legacy bootstrap bridge that preserves current runtime behavior while future slices migrate off global handlers.
 - Refactor call session, hold/resume, queue, ACW/disposition, debug, and agent-status UI triggers into dedicated app action slices, and migrate those scoped `index.html`/generated `app.js` handlers from inline events to delegated `data-action` routing.
 - Add full English i18n coverage via `app/static/assets/js/i18n/en.js` (matching the current `nl` keyset), register `en` in the i18n runtime, and add profile-menu language switching (`NL`/`EN`) with immediate UI re-translation and locale-aware date/time/currency formatting.
