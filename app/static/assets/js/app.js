@@ -1,25 +1,41 @@
+const kiwiBootstrapSlice = (typeof window !== 'undefined' && window.kiwiBootstrapSlice)
+    ? window.kiwiBootstrapSlice
+    : null;
+
+const initialAppDataState = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.createInitialAppDataState === 'function'
+    ? kiwiBootstrapSlice.createInitialAppDataState()
+    : {
+        customers: [],
+        currentCustomer: null,
+        selectedOffer: null,
+        searchState: {
+            results: [],
+            currentPage: 1,
+            itemsPerPage: 20,
+            sortBy: 'name',
+            sortOrder: 'asc'
+        },
+        contactHistoryState: {
+            currentPage: 1,
+            itemsPerPage: 6,
+            highlightId: null,
+            lastEntry: null
+        },
+        contactHistoryHighlightTimer: null,
+        bootstrapState: null
+    };
+
 // Sample Data Storage
-let customers = [];
-let currentCustomer = null;
-let selectedOffer = null;
+let customers = initialAppDataState.customers;
+let currentCustomer = initialAppDataState.currentCustomer;
+let selectedOffer = initialAppDataState.selectedOffer;
 
 // Search State Management (for pagination)
-let searchState = {
-    results: [],
-    currentPage: 1,
-    itemsPerPage: 20,
-    sortBy: 'name',
-    sortOrder: 'asc'
-};
+let searchState = initialAppDataState.searchState;
 
-const contactHistoryState = {
-    currentPage: 1,
-    itemsPerPage: 6,
-    highlightId: null,
-    lastEntry: null
-};
+const contactHistoryState = initialAppDataState.contactHistoryState;
 
-let contactHistoryHighlightTimer = null;
+let contactHistoryHighlightTimer = initialAppDataState.contactHistoryHighlightTimer;
 
 const translate = (key, params, fallback) => {
     if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
@@ -298,35 +314,50 @@ function setAppLocale(locale) {
     return normalizeAppLocale(nextLocale);
 }
 
-const bootstrapApiUrl = '/api/v1/bootstrap';
-const offersApiUrl = '/api/v1/catalog/offers';
-const personsStateApiUrl = '/api/v1/persons/state';
-const personsApiUrl = '/api/v1/persons';
-const subscriptionsApiUrl = '/api/v1/subscriptions';
-const workflowsApiUrl = '/api/v1/workflows';
-const callQueueApiUrl = '/api/v1/call-queue';
-const callSessionApiUrl = '/api/v1/call-session';
-const debugResetApiUrl = '/api/v1/debug/reset-poc-state';
-const agentStatusApiUrl = '/api/v1/agent-status';
+const apiEndpoints = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.getApiEndpoints === 'function'
+    ? kiwiBootstrapSlice.getApiEndpoints()
+    : {
+        bootstrapApiUrl: '/api/v1/bootstrap',
+        offersApiUrl: '/api/v1/catalog/offers',
+        personsStateApiUrl: '/api/v1/persons/state',
+        personsApiUrl: '/api/v1/persons',
+        subscriptionsApiUrl: '/api/v1/subscriptions',
+        workflowsApiUrl: '/api/v1/workflows',
+        callQueueApiUrl: '/api/v1/call-queue',
+        callSessionApiUrl: '/api/v1/call-session',
+        debugResetApiUrl: '/api/v1/debug/reset-poc-state',
+        agentStatusApiUrl: '/api/v1/agent-status'
+    };
 
-let bootstrapState = null;
+const bootstrapApiUrl = apiEndpoints.bootstrapApiUrl;
+const offersApiUrl = apiEndpoints.offersApiUrl;
+const personsStateApiUrl = apiEndpoints.personsStateApiUrl;
+const personsApiUrl = apiEndpoints.personsApiUrl;
+const subscriptionsApiUrl = apiEndpoints.subscriptionsApiUrl;
+const workflowsApiUrl = apiEndpoints.workflowsApiUrl;
+const callQueueApiUrl = apiEndpoints.callQueueApiUrl;
+const callSessionApiUrl = apiEndpoints.callSessionApiUrl;
+const debugResetApiUrl = apiEndpoints.debugResetApiUrl;
+const agentStatusApiUrl = apiEndpoints.agentStatusApiUrl;
+
+let bootstrapState = initialAppDataState.bootstrapState;
 
 function upsertCustomerInCache(customer) {
-    if (!customer || typeof customer !== 'object' || customer.id === undefined || customer.id === null) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.upsertCustomerInCache === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
 
-    const customerId = Number(customer.id);
-    const existingIndex = customers.findIndex((entry) => Number(entry.id) === customerId);
-    if (existingIndex >= 0) {
-        customers[existingIndex] = customer;
-    } else {
-        customers.push(customer);
-    }
-
-    if (currentCustomer && Number(currentCustomer.id) === customerId) {
-        currentCustomer = customer;
-    }
+    kiwiBootstrapSlice.upsertCustomerInCache(customer, {
+        customers,
+        currentCustomer,
+        setCustomers(nextCustomers) {
+            customers = nextCustomers;
+        },
+        setCurrentCustomer(nextCustomer) {
+            currentCustomer = nextCustomer;
+        }
+    });
 }
 
 // Phase 1A: Call Session State Management
@@ -3061,44 +3092,40 @@ function updateCallDuration() {
 }
 
 
-let hasInitializedKiwiApplication = false;
-
 async function initializeKiwiApplication() {
-    if (hasInitializedKiwiApplication) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.initializeKiwiApplication === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
-    hasInitializedKiwiApplication = true;
 
-    applyLocaleToUi();
-    await loadBootstrapState();
-    initializeData();
-    initializeQueue();
-    updateTime();
-    setInterval(updateTime, 1000);
-    updateCustomerActionButtons();
-    populateBirthdayFields('article');
-    populateBirthdayFields('edit');
-    // Initialize Phase 3 components
-    initDeliveryDatePicker();
-    initArticleSearch();
-    initWerfsleutelPicker().catch((error) => {
-        console.error('Kon werfsleutels niet initialiseren', error);
+    await kiwiBootstrapSlice.initializeKiwiApplication({
+        applyLocaleToUi,
+        loadBootstrapState,
+        initializeData,
+        initializeQueue,
+        updateTime,
+        setInterval,
+        updateCustomerActionButtons,
+        populateBirthdayFields,
+        initDeliveryDatePicker,
+        initArticleSearch,
+        initWerfsleutelPicker,
+        startAgentWorkSessionTimer,
+        updateAgentStatusDisplay,
+        initializeAgentStatusFromBackend,
+        setAdditionalFiltersOpen,
+        documentRef: document
     });
-    // Initialize agent status display (agent starts as ready)
-    startAgentWorkSessionTimer();
-    updateAgentStatusDisplay();
-    initializeAgentStatusFromBackend();
-
-    const advancedFilterIds = ['searchName', 'searchPhone', 'searchEmail'];
-    const hasAdvancedValues = advancedFilterIds.some(id => {
-        const input = document.getElementById(id);
-        return input && input.value.trim().length > 0;
-    });
-    setAdditionalFiltersOpen(hasAdvancedValues);
 }
 
 // Initialize App
-if (document.readyState === 'loading') {
+const canInstallBootstrapInitialization = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.installInitializationHook === 'function';
+if (canInstallBootstrapInitialization) {
+    kiwiBootstrapSlice.installInitializationHook({
+        documentRef: document,
+        initializeKiwiApplication
+    });
+} else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         void initializeKiwiApplication();
     }, { once: true });
@@ -3107,102 +3134,83 @@ if (document.readyState === 'loading') {
 }
 
 async function loadBootstrapState() {
-    if (!window.kiwiApi) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.loadBootstrapState === 'function';
+    if (!canUseBootstrapSlice) {
         bootstrapState = null;
         return;
     }
 
-    try {
-        bootstrapState = await window.kiwiApi.get(bootstrapApiUrl);
-    } catch (error) {
-        console.warn('Kon bootstrap state niet laden.', error);
-        bootstrapState = null;
-    }
+    bootstrapState = await kiwiBootstrapSlice.loadBootstrapState({
+        kiwiApi: window.kiwiApi,
+        bootstrapApiUrl
+    });
 }
 
 // Initialize API-backed state
 function initializeData() {
-    const hasBootstrapCustomers = bootstrapState && Array.isArray(bootstrapState.customers);
-    if (!hasBootstrapCustomers) {
-        console.warn('Bootstrap state ontbreekt; frontend start met lege API-afhankelijke dataset.');
-        customers = [];
-        lastCallSession = null;
-        serviceNumbers = {};
-        werfsleutelChannels = {};
-        werfsleutelCatalog = [];
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.initializeData === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
 
-    customers = bootstrapState.customers;
-
-    if (bootstrapState.call_queue && typeof bootstrapState.call_queue === 'object') {
-        callQueue = {
-            ...callQueue,
-            ...bootstrapState.call_queue
-        };
+    const initializedState = kiwiBootstrapSlice.initializeData({
+        bootstrapState,
+        callQueue,
+        callSession,
+        werfsleutelCatalog
+    });
+    const hasInitializedState = initializedState && typeof initializedState === 'object';
+    if (!hasInitializedState) {
+        return;
     }
 
-    if (bootstrapState.call_session && typeof bootstrapState.call_session === 'object') {
-        callSession = {
-            ...callSession,
-            ...bootstrapState.call_session
-        };
-    }
-
-    lastCallSession = bootstrapState.last_call_session || null;
-
-    const catalogPayload = bootstrapState.catalog && typeof bootstrapState.catalog === 'object'
-        ? bootstrapState.catalog
-        : {};
-    serviceNumbers = catalogPayload.serviceNumbers && typeof catalogPayload.serviceNumbers === 'object'
-        ? catalogPayload.serviceNumbers
-        : {};
-    werfsleutelChannels = catalogPayload.werfsleutelChannels && typeof catalogPayload.werfsleutelChannels === 'object'
-        ? catalogPayload.werfsleutelChannels
-        : {};
+    customers = initializedState.customers;
+    lastCallSession = initializedState.lastCallSession;
+    serviceNumbers = initializedState.serviceNumbers;
+    werfsleutelChannels = initializedState.werfsleutelChannels;
+    werfsleutelCatalog = initializedState.werfsleutelCatalog;
+    callQueue = initializedState.callQueue;
+    callSession = initializedState.callSession;
 }
 
 // Persist Customers to authenticated API state
 function saveCustomers() {
-    if (!window.kiwiApi) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.saveCustomers === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
 
-    window.kiwiApi.put(personsStateApiUrl, { customers }).catch((error) => {
-        console.error('Kon klantstaat niet opslaan via API', error);
+    kiwiBootstrapSlice.saveCustomers({
+        kiwiApi: window.kiwiApi,
+        personsStateApiUrl,
+        customers
     });
 }
 
 // Update Customer Action Buttons visibility
 function updateCustomerActionButtons() {
-    const hasCustomer = currentCustomer !== null;
-    const resendBtn = document.getElementById('resendMagazineBtn');
-    const winbackBtn = document.getElementById('winbackFlowBtn');
-    
-    if (resendBtn) {
-        resendBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.updateCustomerActionButtons === 'function';
+    if (!canUseBootstrapSlice) {
+        return;
     }
-    if (winbackBtn) {
-        winbackBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
-    }
+
+    kiwiBootstrapSlice.updateCustomerActionButtons({
+        documentRef: document,
+        currentCustomer
+    });
 }
 
 // Update Time Display
 function updateTime() {
-    const now = new Date();
-    const locale = getDateLocaleForApp();
-    const timeString = now.toLocaleTimeString(locale, {
-        hour: '2-digit', 
-        minute: '2-digit',
-        second: '2-digit'
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.updateTime === 'function';
+    if (!canUseBootstrapSlice) {
+        return;
+    }
+
+    kiwiBootstrapSlice.updateTime({
+        documentRef: document,
+        getDateLocaleForApp
     });
-    const dateString = now.toLocaleDateString(locale, {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-    document.getElementById('currentTime').textContent = `${dateString} - ${timeString}`;
 }
 
 // Search Customer
