@@ -4466,8 +4466,14 @@ function startCallFromQueue(queueEntry) {
     );
 }
 
-// Initialize App
-document.addEventListener('DOMContentLoaded', async () => {
+let hasInitializedKiwiApplication = false;
+
+async function initializeKiwiApplication() {
+    if (hasInitializedKiwiApplication) {
+        return;
+    }
+    hasInitializedKiwiApplication = true;
+
     applyLocaleToUi();
     await loadBootstrapState();
     initializeData();
@@ -4494,7 +4500,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return input && input.value.trim().length > 0;
     });
     setAdditionalFiltersOpen(hasAdvancedValues);
-});
+}
+
+// Initialize App
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        void initializeKiwiApplication();
+    }, { once: true });
+} else {
+    void initializeKiwiApplication();
+}
 
 async function loadBootstrapState() {
     if (!window.kiwiApi) {
