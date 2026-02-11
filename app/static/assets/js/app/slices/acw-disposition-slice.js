@@ -1,23 +1,23 @@
-export function registerAcwDispositionSlice(actionRouter, bridge) {
-    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !bridge) {
+export function registerAcwDispositionSlice(actionRouter, runtime) {
+    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !runtime) {
         return;
     }
 
     actionRouter.registerMany({
         'acw.manual-finish'() {
-            bridge.invoke('manualFinishACW');
+            runtime.manualFinishACW();
         },
         'disposition.update-outcomes'() {
-            bridge.invoke('updateDispositionOutcomes');
+            runtime.updateDispositionOutcomes();
         },
         'disposition.toggle-follow-up'() {
-            bridge.invoke('toggleFollowUpSection');
+            runtime.toggleFollowUpSection();
         },
         'disposition.cancel'() {
-            bridge.invoke('cancelDisposition');
+            runtime.cancelDisposition();
         },
         'disposition.save'() {
-            bridge.invoke('saveDisposition');
+            runtime.saveDisposition();
         }
     });
 }
