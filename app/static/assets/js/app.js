@@ -1,332 +1,86 @@
+const kiwiBootstrapSlice = (typeof window !== 'undefined' && window.kiwiBootstrapSlice)
+    ? window.kiwiBootstrapSlice
+    : null;
+
+const initialAppDataState = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.createInitialAppDataState === 'function'
+    ? kiwiBootstrapSlice.createInitialAppDataState()
+    : {
+        customers: [],
+        currentCustomer: null,
+        selectedOffer: null,
+        searchState: {
+            results: [],
+            currentPage: 1,
+            itemsPerPage: 20,
+            sortBy: 'name',
+            sortOrder: 'asc'
+        },
+        contactHistoryState: {
+            currentPage: 1,
+            itemsPerPage: 6,
+            highlightId: null,
+            lastEntry: null
+        },
+        contactHistoryHighlightTimer: null,
+        bootstrapState: null
+    };
+
 // Sample Data Storage
-let customers = [];
-let currentCustomer = null;
-let selectedOffer = null;
+let customers = initialAppDataState.customers;
+let currentCustomer = initialAppDataState.currentCustomer;
+let selectedOffer = initialAppDataState.selectedOffer;
 
 // Search State Management (for pagination)
-let searchState = {
-    results: [],
-    currentPage: 1,
-    itemsPerPage: 20,
-    sortBy: 'name',
-    sortOrder: 'asc'
-};
+let searchState = initialAppDataState.searchState;
 
-const contactHistoryState = {
-    currentPage: 1,
-    itemsPerPage: 6,
-    highlightId: null,
-    lastEntry: null
-};
+const contactHistoryState = initialAppDataState.contactHistoryState;
 
-let contactHistoryHighlightTimer = null;
+let contactHistoryHighlightTimer = initialAppDataState.contactHistoryHighlightTimer;
 
-const translate = (key, params, fallback) => {
-    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
-        const value = window.i18n.t(key, params);
-        if (value !== undefined && value !== null && value !== key) {
-            return value;
-        }
-    }
-    return fallback !== undefined ? fallback : key;
-};
+const apiEndpoints = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.getApiEndpoints === 'function'
+    ? kiwiBootstrapSlice.getApiEndpoints()
+    : {
+        bootstrapApiUrl: '/api/v1/bootstrap',
+        offersApiUrl: '/api/v1/catalog/offers',
+        personsStateApiUrl: '/api/v1/persons/state',
+        personsApiUrl: '/api/v1/persons',
+        subscriptionsApiUrl: '/api/v1/subscriptions',
+        workflowsApiUrl: '/api/v1/workflows',
+        callQueueApiUrl: '/api/v1/call-queue',
+        callSessionApiUrl: '/api/v1/call-session',
+        debugResetApiUrl: '/api/v1/debug/reset-poc-state',
+        agentStatusApiUrl: '/api/v1/agent-status'
+    };
 
-const STATIC_PAGE_TRANSLATABLE_ATTRIBUTES = ['placeholder', 'title', 'aria-label'];
-const STATIC_PAGE_I18N_ATTRIBUTE_BY_TARGET = {
-    placeholder: 'data-i18n-placeholder',
-    title: 'data-i18n-title',
-    'aria-label': 'data-i18n-aria-label'
-};
-const STATIC_PAGE_NON_TRANSLATABLE_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME', 'CODE', 'PRE', 'TEXTAREA']);
+const bootstrapApiUrl = apiEndpoints.bootstrapApiUrl;
+const offersApiUrl = apiEndpoints.offersApiUrl;
+const personsStateApiUrl = apiEndpoints.personsStateApiUrl;
+const personsApiUrl = apiEndpoints.personsApiUrl;
+const subscriptionsApiUrl = apiEndpoints.subscriptionsApiUrl;
+const workflowsApiUrl = apiEndpoints.workflowsApiUrl;
+const callQueueApiUrl = apiEndpoints.callQueueApiUrl;
+const callSessionApiUrl = apiEndpoints.callSessionApiUrl;
+const debugResetApiUrl = apiEndpoints.debugResetApiUrl;
+const agentStatusApiUrl = apiEndpoints.agentStatusApiUrl;
 
-function normalizeStaticLiteral(value) {
-    return String(value || '').replace(/\s+/g, ' ').trim();
-}
-
-function shouldTranslateStaticLiteral(value) {
-    if (!value) {
-        return false;
-    }
-
-    if (/\{\{|\}\}|\{%|%\}/.test(value)) {
-        return false;
-    }
-
-    return /[A-Za-zÀ-ÿ]/.test(value);
-}
-
-function hashStaticLiteral(input) {
-    let hash = 0x811c9dc5;
-    for (let index = 0; index < input.length; index += 1) {
-        hash ^= input.charCodeAt(index);
-        hash = Math.imul(hash, 0x01000193);
-    }
-    return (hash >>> 0).toString(16).padStart(8, '0');
-}
-
-function buildStaticLiteralSlug(value) {
-    const normalized = value
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, '');
-
-    const safeNormalized = normalized || 'value';
-    return `${safeNormalized.slice(0, 72)}_${hashStaticLiteral(value)}`;
-}
-
-function buildIndexHtmlI18nKey(literal, section = 'text') {
-    return `indexHtml.${section}.${buildStaticLiteralSlug(literal)}`;
-}
-
-function applyIndexHtmlTranslations() {
-    if (typeof document === 'undefined') {
-        return;
-    }
-
-    // Prefer explicit data-i18n annotations from index.html so key-to-template
-    // relations remain readable and maintainable.
-    const textTranslationElements = document.querySelectorAll('[data-i18n]');
-    for (const element of textTranslationElements) {
-        const i18nKey = element.getAttribute('data-i18n');
-        if (!i18nKey) {
-            continue;
-        }
-
-        const fallback = normalizeStaticLiteral(element.textContent || '');
-        element.textContent = translate(i18nKey, {}, fallback || i18nKey);
-    }
-
-    for (const attributeName of STATIC_PAGE_TRANSLATABLE_ATTRIBUTES) {
-        const i18nAttributeName = STATIC_PAGE_I18N_ATTRIBUTE_BY_TARGET[attributeName];
-        if (!i18nAttributeName) {
-            continue;
-        }
-
-        const elements = document.querySelectorAll(`[${i18nAttributeName}]`);
-        for (const element of elements) {
-            const i18nKey = element.getAttribute(i18nAttributeName);
-            if (!i18nKey) {
-                continue;
-            }
-
-            const fallback = normalizeStaticLiteral(element.getAttribute(attributeName) || '');
-            element.setAttribute(attributeName, translate(i18nKey, {}, fallback || i18nKey));
-        }
-    }
-
-    if (!document.body) {
-        return;
-    }
-
-    // Legacy fallback for static literals that are not yet annotated with data-i18n.
-    const textNodes = [];
-    const textWalker = document.createTreeWalker(
-        document.body,
-        NodeFilter.SHOW_TEXT,
-        {
-            acceptNode(node) {
-                const parent = node.parentElement;
-                if (!parent) {
-                    return NodeFilter.FILTER_REJECT;
-                }
-
-                if (STATIC_PAGE_NON_TRANSLATABLE_TAGS.has(parent.tagName)) {
-                    return NodeFilter.FILTER_REJECT;
-                }
-
-                if (parent.closest('script, style, noscript, iframe, code, pre, textarea')) {
-                    return NodeFilter.FILTER_REJECT;
-                }
-
-                if (parent.closest('[data-i18n]')) {
-                    return NodeFilter.FILTER_REJECT;
-                }
-
-                if (!/\S/.test(node.nodeValue || '')) {
-                    return NodeFilter.FILTER_REJECT;
-                }
-
-                return NodeFilter.FILTER_ACCEPT;
-            }
-        }
-    );
-
-    while (textWalker.nextNode()) {
-        textNodes.push(textWalker.currentNode);
-    }
-
-    for (const textNode of textNodes) {
-        const originalValue = textNode.nodeValue || '';
-        const normalizedLiteral = normalizeStaticLiteral(originalValue);
-        if (!shouldTranslateStaticLiteral(normalizedLiteral)) {
-            continue;
-        }
-
-        const translatedLiteral = translate(
-            buildIndexHtmlI18nKey(normalizedLiteral, 'text'),
-            {},
-            normalizedLiteral
-        );
-
-        if (translatedLiteral === normalizedLiteral) {
-            continue;
-        }
-
-        const leadingWhitespace = originalValue.match(/^\s*/)?.[0] || '';
-        const trailingWhitespace = originalValue.match(/\s*$/)?.[0] || '';
-        textNode.nodeValue = `${leadingWhitespace}${translatedLiteral}${trailingWhitespace}`;
-    }
-
-    const elements = document.body.querySelectorAll('*');
-    for (const element of elements) {
-        for (const attributeName of STATIC_PAGE_TRANSLATABLE_ATTRIBUTES) {
-            const explicitI18nAttribute = STATIC_PAGE_I18N_ATTRIBUTE_BY_TARGET[attributeName];
-            if (explicitI18nAttribute && element.hasAttribute(explicitI18nAttribute)) {
-                continue;
-            }
-
-            const originalValue = element.getAttribute(attributeName);
-            if (!originalValue) {
-                continue;
-            }
-
-            const normalizedLiteral = normalizeStaticLiteral(originalValue);
-            if (!shouldTranslateStaticLiteral(normalizedLiteral)) {
-                continue;
-            }
-
-            const section = attributeName === 'aria-label' ? 'ariaLabel' : attributeName;
-            const translatedLiteral = translate(
-                buildIndexHtmlI18nKey(normalizedLiteral, section),
-                {},
-                normalizedLiteral
-            );
-
-            if (translatedLiteral !== normalizedLiteral) {
-                element.setAttribute(attributeName, translatedLiteral);
-            }
-        }
-    }
-}
-
-const FALLBACK_APP_LOCALE = 'nl';
-const DATE_LOCALE_BY_APP_LOCALE = {
-    nl: 'nl-NL',
-    en: 'en-US'
-};
-
-function normalizeAppLocale(locale) {
-    if (!locale) {
-        return FALLBACK_APP_LOCALE;
-    }
-
-    return String(locale).split('-')[0].toLowerCase();
-}
-
-function getAppLocale() {
-    const i18nLocale = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLocale === 'function')
-        ? window.i18n.getLocale()
-        : null;
-    const availableLocales = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.availableLocales === 'function')
-        ? window.i18n.availableLocales().map((locale) => normalizeAppLocale(locale))
-        : [];
-    const documentLocale = (typeof document !== 'undefined' && document.documentElement)
-        ? document.documentElement.lang
-        : null;
-    const candidate = normalizeAppLocale(i18nLocale || documentLocale || FALLBACK_APP_LOCALE);
-
-    if (availableLocales.length > 0 && !availableLocales.includes(candidate)) {
-        return FALLBACK_APP_LOCALE;
-    }
-
-    if (!DATE_LOCALE_BY_APP_LOCALE[candidate]) {
-        return FALLBACK_APP_LOCALE;
-    }
-
-    return candidate;
-}
-
-function getDateLocaleForApp() {
-    const appLocale = getAppLocale();
-    return DATE_LOCALE_BY_APP_LOCALE[appLocale] || DATE_LOCALE_BY_APP_LOCALE[FALLBACK_APP_LOCALE];
-}
-
-function setDocumentLocale(locale) {
-    if (typeof document === 'undefined' || !document.documentElement) {
-        return;
-    }
-
-    document.documentElement.lang = normalizeAppLocale(locale);
-}
-
-function updateLocaleMenuSelection() {
-    if (typeof document === 'undefined') {
-        return;
-    }
-
-    const selectedLocale = getAppLocale();
-    const localeButtons = document.querySelectorAll('[data-locale-option]');
-    localeButtons.forEach((button) => {
-        const isCurrentLocale = normalizeAppLocale(button.dataset.localeOption) === selectedLocale;
-        button.classList.toggle('is-active', isCurrentLocale);
-    });
-}
-
-function applyLocaleToUi(options = {}) {
-    const shouldCloseMenu = options.closeMenu === true;
-    setDocumentLocale(getAppLocale());
-    applyIndexHtmlTranslations();
-    refreshAgentStatusLabels();
-    updateAgentStatusDisplay();
-    updateLocaleMenuSelection();
-    updateTime();
-
-    if (shouldCloseMenu) {
-        closeStatusMenu();
-    }
-}
-
-function setAppLocale(locale) {
-    if (!(typeof window !== 'undefined' && window.i18n && typeof window.i18n.setLocale === 'function')) {
-        return getAppLocale();
-    }
-
-    const nextLocale = window.i18n.setLocale(locale);
-    applyLocaleToUi({ closeMenu: true });
-    return normalizeAppLocale(nextLocale);
-}
-
-const bootstrapApiUrl = '/api/v1/bootstrap';
-const offersApiUrl = '/api/v1/catalog/offers';
-const personsStateApiUrl = '/api/v1/persons/state';
-const personsApiUrl = '/api/v1/persons';
-const subscriptionsApiUrl = '/api/v1/subscriptions';
-const workflowsApiUrl = '/api/v1/workflows';
-const callQueueApiUrl = '/api/v1/call-queue';
-const callSessionApiUrl = '/api/v1/call-session';
-const debugResetApiUrl = '/api/v1/debug/reset-poc-state';
-const agentStatusApiUrl = '/api/v1/agent-status';
-
-let bootstrapState = null;
+let bootstrapState = initialAppDataState.bootstrapState;
 
 function upsertCustomerInCache(customer) {
-    if (!customer || typeof customer !== 'object' || customer.id === undefined || customer.id === null) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.upsertCustomerInCache === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
 
-    const customerId = Number(customer.id);
-    const existingIndex = customers.findIndex((entry) => Number(entry.id) === customerId);
-    if (existingIndex >= 0) {
-        customers[existingIndex] = customer;
-    } else {
-        customers.push(customer);
-    }
-
-    if (currentCustomer && Number(currentCustomer.id) === customerId) {
-        currentCustomer = customer;
-    }
+    kiwiBootstrapSlice.upsertCustomerInCache(customer, {
+        customers,
+        currentCustomer,
+        setCustomers(nextCustomers) {
+            customers = nextCustomers;
+        },
+        setCurrentCustomer(nextCustomer) {
+            currentCustomer = nextCustomer;
+        }
+    });
 }
 
 // Phase 1A: Call Session State Management
@@ -452,6 +206,67 @@ let werfsleutelCatalogSyncPromise = null;
 let werfsleutelCatalogSyncedAt = 0;
 
 let werfsleutelChannels = {};
+
+function getWerfsleutelSliceApi() {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const sliceApi = window.kiwiWerfsleutelSlice;
+    if (!sliceApi || typeof sliceApi !== 'object') {
+        return null;
+    }
+
+    return sliceApi;
+}
+
+function syncWerfsleutelCatalogMetadataIntoSlice(options = {}) {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canSyncCatalogMetadata = werfsleutelSliceApi && typeof werfsleutelSliceApi.setCatalogMetadata === 'function';
+    if (!canSyncCatalogMetadata) {
+        return;
+    }
+
+    const channels = options.channels && typeof options.channels === 'object'
+        ? options.channels
+        : {};
+    const catalog = Array.isArray(options.catalog) ? options.catalog : undefined;
+
+    werfsleutelSliceApi.setCatalogMetadata({
+        channels,
+        catalog
+    });
+}
+
+function getSelectedWerfsleutelState() {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canReadSelection = werfsleutelSliceApi && typeof werfsleutelSliceApi.getSelection === 'function';
+    if (canReadSelection) {
+        const sliceSelection = werfsleutelSliceApi.getSelection();
+        return {
+            selectedKey: sliceSelection?.selectedKey || null,
+            selectedChannel: sliceSelection?.selectedChannel || null,
+            selectedChannelMeta: sliceSelection?.selectedChannelMeta || null
+        };
+    }
+
+    const selectedChannel = werfsleutelState.selectedChannel;
+    return {
+        selectedKey: werfsleutelState.selectedKey,
+        selectedChannel,
+        selectedChannelMeta: selectedChannel ? (werfsleutelChannels[selectedChannel] || null) : null
+    };
+}
+
+function getWerfsleutelOfferDetailsFromActiveSlice(selectedWerfsleutelKey) {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canComputeOfferDetails = werfsleutelSliceApi && typeof werfsleutelSliceApi.getOfferDetails === 'function';
+    if (canComputeOfferDetails) {
+        return werfsleutelSliceApi.getOfferDetails(selectedWerfsleutelKey);
+    }
+
+    return getWerfsleutelOfferDetails(selectedWerfsleutelKey);
+}
 
 const werfsleutelState = {
     selectedKey: null,
@@ -1564,44 +1379,49 @@ function updateCallDuration() {
 }
 
 
-let hasInitializedKiwiApplication = false;
-
 async function initializeKiwiApplication() {
-    if (hasInitializedKiwiApplication) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.initializeKiwiApplication === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
-    hasInitializedKiwiApplication = true;
 
-    applyLocaleToUi();
-    await loadBootstrapState();
-    initializeData();
-    initializeQueue();
-    updateTime();
-    setInterval(updateTime, 1000);
-    updateCustomerActionButtons();
-    populateBirthdayFields('article');
-    populateBirthdayFields('edit');
-    // Initialize Phase 3 components
-    initDeliveryDatePicker();
-    initArticleSearch();
-    initWerfsleutelPicker().catch((error) => {
-        console.error('Kon werfsleutels niet initialiseren', error);
-    });
-    // Initialize agent status display (agent starts as ready)
-    startAgentWorkSessionTimer();
-    updateAgentStatusDisplay();
-    initializeAgentStatusFromBackend();
+    const initializeWerfsleutelPickerFromSlices = () => {
+        const werfsleutelSliceApi = getWerfsleutelSliceApi();
+        const canInitializeFromWerfsleutelSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.initializePicker === 'function';
+        if (canInitializeFromWerfsleutelSlice) {
+            return werfsleutelSliceApi.initializePicker();
+        }
+        return initWerfsleutelPicker();
+    };
 
-    const advancedFilterIds = ['searchName', 'searchPhone', 'searchEmail'];
-    const hasAdvancedValues = advancedFilterIds.some(id => {
-        const input = document.getElementById(id);
-        return input && input.value.trim().length > 0;
+    await kiwiBootstrapSlice.initializeKiwiApplication({
+        applyLocaleToUi,
+        loadBootstrapState,
+        initializeData,
+        initializeQueue,
+        updateTime,
+        setInterval,
+        updateCustomerActionButtons,
+        populateBirthdayFields,
+        initDeliveryDatePicker,
+        initArticleSearch,
+        initWerfsleutelPicker: initializeWerfsleutelPickerFromSlices,
+        startAgentWorkSessionTimer,
+        updateAgentStatusDisplay,
+        initializeAgentStatusFromBackend,
+        setAdditionalFiltersOpen,
+        documentRef: document
     });
-    setAdditionalFiltersOpen(hasAdvancedValues);
 }
 
 // Initialize App
-if (document.readyState === 'loading') {
+const canInstallBootstrapInitialization = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.installInitializationHook === 'function';
+if (canInstallBootstrapInitialization) {
+    kiwiBootstrapSlice.installInitializationHook({
+        documentRef: document,
+        initializeKiwiApplication
+    });
+} else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         void initializeKiwiApplication();
     }, { once: true });
@@ -1610,102 +1430,88 @@ if (document.readyState === 'loading') {
 }
 
 async function loadBootstrapState() {
-    if (!window.kiwiApi) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.loadBootstrapState === 'function';
+    if (!canUseBootstrapSlice) {
         bootstrapState = null;
         return;
     }
 
-    try {
-        bootstrapState = await window.kiwiApi.get(bootstrapApiUrl);
-    } catch (error) {
-        console.warn('Kon bootstrap state niet laden.', error);
-        bootstrapState = null;
-    }
+    bootstrapState = await kiwiBootstrapSlice.loadBootstrapState({
+        kiwiApi: window.kiwiApi,
+        bootstrapApiUrl
+    });
 }
 
 // Initialize API-backed state
 function initializeData() {
-    const hasBootstrapCustomers = bootstrapState && Array.isArray(bootstrapState.customers);
-    if (!hasBootstrapCustomers) {
-        console.warn('Bootstrap state ontbreekt; frontend start met lege API-afhankelijke dataset.');
-        customers = [];
-        lastCallSession = null;
-        serviceNumbers = {};
-        werfsleutelChannels = {};
-        werfsleutelCatalog = [];
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.initializeData === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
 
-    customers = bootstrapState.customers;
-
-    if (bootstrapState.call_queue && typeof bootstrapState.call_queue === 'object') {
-        callQueue = {
-            ...callQueue,
-            ...bootstrapState.call_queue
-        };
+    const initializedState = kiwiBootstrapSlice.initializeData({
+        bootstrapState,
+        callQueue,
+        callSession,
+        werfsleutelCatalog
+    });
+    const hasInitializedState = initializedState && typeof initializedState === 'object';
+    if (!hasInitializedState) {
+        return;
     }
 
-    if (bootstrapState.call_session && typeof bootstrapState.call_session === 'object') {
-        callSession = {
-            ...callSession,
-            ...bootstrapState.call_session
-        };
-    }
+    customers = initializedState.customers;
+    lastCallSession = initializedState.lastCallSession;
+    serviceNumbers = initializedState.serviceNumbers;
+    werfsleutelChannels = initializedState.werfsleutelChannels;
+    werfsleutelCatalog = initializedState.werfsleutelCatalog;
+    callQueue = initializedState.callQueue;
+    callSession = initializedState.callSession;
 
-    lastCallSession = bootstrapState.last_call_session || null;
-
-    const catalogPayload = bootstrapState.catalog && typeof bootstrapState.catalog === 'object'
-        ? bootstrapState.catalog
-        : {};
-    serviceNumbers = catalogPayload.serviceNumbers && typeof catalogPayload.serviceNumbers === 'object'
-        ? catalogPayload.serviceNumbers
-        : {};
-    werfsleutelChannels = catalogPayload.werfsleutelChannels && typeof catalogPayload.werfsleutelChannels === 'object'
-        ? catalogPayload.werfsleutelChannels
-        : {};
+    syncWerfsleutelCatalogMetadataIntoSlice({
+        channels: werfsleutelChannels,
+        catalog: werfsleutelCatalog
+    });
 }
 
 // Persist Customers to authenticated API state
 function saveCustomers() {
-    if (!window.kiwiApi) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.saveCustomers === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
 
-    window.kiwiApi.put(personsStateApiUrl, { customers }).catch((error) => {
-        console.error('Kon klantstaat niet opslaan via API', error);
+    kiwiBootstrapSlice.saveCustomers({
+        kiwiApi: window.kiwiApi,
+        personsStateApiUrl,
+        customers
     });
 }
 
 // Update Customer Action Buttons visibility
 function updateCustomerActionButtons() {
-    const hasCustomer = currentCustomer !== null;
-    const resendBtn = document.getElementById('resendMagazineBtn');
-    const winbackBtn = document.getElementById('winbackFlowBtn');
-    
-    if (resendBtn) {
-        resendBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.updateCustomerActionButtons === 'function';
+    if (!canUseBootstrapSlice) {
+        return;
     }
-    if (winbackBtn) {
-        winbackBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
-    }
+
+    kiwiBootstrapSlice.updateCustomerActionButtons({
+        documentRef: document,
+        currentCustomer
+    });
 }
 
 // Update Time Display
 function updateTime() {
-    const now = new Date();
-    const locale = getDateLocaleForApp();
-    const timeString = now.toLocaleTimeString(locale, {
-        hour: '2-digit', 
-        minute: '2-digit',
-        second: '2-digit'
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.updateTime === 'function';
+    if (!canUseBootstrapSlice) {
+        return;
+    }
+
+    kiwiBootstrapSlice.updateTime({
+        documentRef: document,
+        getDateLocaleForApp
     });
-    const dateString = now.toLocaleDateString(locale, {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-    document.getElementById('currentTime').textContent = `${dateString} - ${timeString}`;
 }
 
 // Search Customer
@@ -2726,8 +2532,22 @@ function showNewSubscription() {
     }
     document.getElementById('subStartDate').value = today;
 
-    resetWerfsleutelPicker();
-    triggerWerfsleutelBackgroundRefreshIfStale();
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canResetPickerFromSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.resetPicker === 'function';
+    const canRefreshCatalogFromSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.refreshCatalogIfStale === 'function';
+
+    if (canResetPickerFromSlice) {
+        werfsleutelSliceApi.resetPicker();
+    } else {
+        resetWerfsleutelPicker();
+    }
+
+    if (canRefreshCatalogFromSlice) {
+        werfsleutelSliceApi.refreshCatalogIfStale();
+    } else {
+        triggerWerfsleutelBackgroundRefreshIfStale();
+    }
+
     initializeSubscriptionRolesForForm();
     renderRequesterSameSummary();
     document.getElementById('newSubscriptionForm').style.display = 'flex';
@@ -2737,17 +2557,22 @@ function showNewSubscription() {
 async function createSubscription(event) {
     event.preventDefault();
 
-    if (!werfsleutelState.selectedKey) {
+    const werfsleutelSelection = getSelectedWerfsleutelState();
+    const selectedWerfsleutelKey = werfsleutelSelection.selectedKey;
+    const selectedWerfsleutelChannel = werfsleutelSelection.selectedChannel;
+    const selectedWerfsleutelChannelMeta = werfsleutelSelection.selectedChannelMeta;
+
+    if (!selectedWerfsleutelKey) {
         showToast(translate('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
         return;
     }
 
-    if (!werfsleutelState.selectedChannel) {
+    if (!selectedWerfsleutelChannel) {
         showToast(translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'error');
         return;
     }
 
-    const offerDetails = getWerfsleutelOfferDetails(werfsleutelState.selectedKey);
+    const offerDetails = getWerfsleutelOfferDetailsFromActiveSlice(selectedWerfsleutelKey);
     const formData = {
         magazine: offerDetails.magazine,
         duration: offerDetails.durationKey || '',
@@ -2758,11 +2583,11 @@ async function createSubscription(event) {
         optinEmail: document.querySelector('input[name="subOptinEmail"]:checked').value,
         optinPhone: document.querySelector('input[name="subOptinPhone"]:checked').value,
         optinPost: document.querySelector('input[name="subOptinPost"]:checked').value,
-        werfsleutel: werfsleutelState.selectedKey.salesCode,
-        werfsleutelTitle: werfsleutelState.selectedKey.title,
-        werfsleutelPrice: werfsleutelState.selectedKey.price,
-        werfsleutelChannel: werfsleutelState.selectedChannel,
-        werfsleutelChannelLabel: werfsleutelChannels[werfsleutelState.selectedChannel]?.label || ''
+        werfsleutel: selectedWerfsleutelKey.salesCode,
+        werfsleutelTitle: selectedWerfsleutelKey.title,
+        werfsleutelPrice: selectedWerfsleutelKey.price,
+        werfsleutelChannel: selectedWerfsleutelChannel,
+        werfsleutelChannelLabel: selectedWerfsleutelChannelMeta?.label || ''
     };
 
     const optinData = {
