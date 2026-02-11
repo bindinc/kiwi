@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
+- Implement checklist item 17 by moving call-session start/duration UI bridge ownership from legacy `app.js` into `assets/js/app/slices/call-session-slice.js`, rewiring `call-agent-runtime.js` to call the slice bridge (`window.kiwiCallSessionSlice.startCallSession`), and adding focused runtime/slice tests for timer/UI ownership.
 - Expand `plan/app-js-to-slices-checklist.md` with post-migration cleanup scope: add checklist/PR-tracking items 14-21 for remaining `app.js` slice-bridge removal work, and refresh inventory counts for the current frontend snapshot.
 - Reorganize frontend script locations by moving legacy article/delivery scripts (`assets/js/article-search.js`, `assets/js/delivery-date-picker.js`, and `assets/js/delivery-date-picker.test.js`) into `assets/js/legacy/`, moving `assets/js/static-page-i18n.js` into `assets/js/i18n/`, moving `assets/js/feature-flags.js` into `assets/js/app/`, and updating template/script references accordingly.
 - Remove obsolete legacy script leftovers `assets/js/legacy/article-search.js`, `assets/js/legacy/delivery-date-picker.js`, and `assets/js/legacy/delivery-date-picker.test.js` after confirming the slice implementations are the active runtime path.
