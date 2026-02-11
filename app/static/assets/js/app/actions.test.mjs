@@ -545,9 +545,6 @@ async function testCustomerDetailSlice() {
         updateIdentifyCallerButtons() {
             updateIdentifyCallerButtonsCalls += 1;
         },
-        getSubscriptionDurationDisplay() {
-            return '';
-        },
         getSubscriptionRequesterMetaLine() {
             return '';
         },

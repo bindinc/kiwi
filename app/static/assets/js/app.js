@@ -177,28 +177,106 @@ const transientAgentStatuses = new Set(['in_call']);
 // Phase 1A: Service Number Configuration
 let serviceNumbers = {};
 
-// Currency formatter reused for werfsleutels and notes
-const euroFormattersByLocale = {};
+const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
 
-function getEuroFormatter() {
-    const locale = getDateLocaleForApp();
-    if (!euroFormattersByLocale[locale]) {
-        euroFormattersByLocale[locale] = new Intl.NumberFormat(locale, {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: 2
-        });
+const fallbackSubscriptionHelpers = (() => {
+    const pricingTable = {
+        '1-jaar': { price: 52.00, perMonth: 4.33, description: '1 jaar - Jaarlijks betaald' },
+        '2-jaar': { price: 98.00, perMonth: 4.08, description: '2 jaar - Jaarlijks betaald (5% korting)' },
+        '3-jaar': { price: 140.00, perMonth: 3.89, description: '3 jaar - Jaarlijks betaald (10% korting)' },
+        '1-jaar-maandelijks': { price: 54.00, perMonth: 4.50, description: '1 jaar - Maandelijks betaald' },
+        '2-jaar-maandelijks': { price: 104.40, perMonth: 4.35, description: '2 jaar - Maandelijks betaald' },
+        '3-jaar-maandelijks': { price: 151.20, perMonth: 4.20, description: '3 jaar - Maandelijks betaald' }
+    };
+    const euroFormattersByLocale = {};
+
+    function resolveLocale(locale) {
+        if (typeof locale === 'string' && locale.trim()) {
+            return locale;
+        }
+        return 'nl-NL';
     }
 
-    return euroFormattersByLocale[locale];
+    function getEuroFormatter(locale) {
+        const resolvedLocale = resolveLocale(locale);
+        if (!euroFormattersByLocale[resolvedLocale]) {
+            euroFormattersByLocale[resolvedLocale] = new Intl.NumberFormat(resolvedLocale, {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 2
+            });
+        }
+
+        return euroFormattersByLocale[resolvedLocale];
+    }
+
+    function formatEuro(amount, options = {}) {
+        const numericValue = Number(amount);
+        const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
+        return getEuroFormatter(options.locale).format(safeValue);
+    }
+
+    function getPricingDisplay(duration) {
+        const pricing = pricingTable[duration];
+        if (!pricing) {
+            return '';
+        }
+
+        return `€${pricing.perMonth.toFixed(2)}/maand (${pricing.description})`;
+    }
+
+    function getSubscriptionDurationDisplay(subscription) {
+        if (!subscription) {
+            return 'Oude prijsstructuur';
+        }
+
+        if (subscription.duration && pricingTable[subscription.duration]) {
+            return getPricingDisplay(subscription.duration);
+        }
+
+        if (subscription.durationLabel) {
+            return subscription.durationLabel;
+        }
+
+        if (subscription.duration) {
+            return subscription.duration;
+        }
+
+        return 'Oude prijsstructuur';
+    }
+
+    return {
+        subscriptionPricing: pricingTable,
+        formatEuro,
+        getSubscriptionDurationDisplay
+    };
+})();
+
+function getSubscriptionHelpers() {
+    if (typeof window === 'undefined') {
+        return fallbackSubscriptionHelpers;
+    }
+
+    const helperNamespace = window[LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE];
+    if (!helperNamespace || typeof helperNamespace !== 'object') {
+        return fallbackSubscriptionHelpers;
+    }
+
+    const hasPricingTable = helperNamespace.subscriptionPricing && typeof helperNamespace.subscriptionPricing === 'object';
+    const hasFormatHelper = typeof helperNamespace.formatEuro === 'function';
+    const hasDurationHelper = typeof helperNamespace.getSubscriptionDurationDisplay === 'function';
+    if (!hasPricingTable || !hasFormatHelper || !hasDurationHelper) {
+        return fallbackSubscriptionHelpers;
+    }
+
+    return helperNamespace;
 }
 
-let werfsleutelCatalog = [];
-let werfsleutelLoadAttempted = false;
-const WERFSLEUTEL_SEARCH_LIMIT = 5;
-const WERFSLEUTEL_FULL_SYNC_LIMIT = 250;
-const WERFSLEUTEL_SEARCH_DEBOUNCE_MS = 180;
-const WERFSLEUTEL_CACHE_TTL_MS = 15 * 60 * 1000;
+const subscriptionHelpers = getSubscriptionHelpers();
+const subscriptionPricing = subscriptionHelpers.subscriptionPricing;
+const formatEuro = (amount) => subscriptionHelpers.formatEuro(amount, { locale: getDateLocaleForApp() });
+const getSubscriptionDurationDisplay = (subscription) => subscriptionHelpers.getSubscriptionDurationDisplay(subscription);
+
 const DUPLICATE_CHECK_DEBOUNCE_MS = 750;
 const DUPLICATE_CHECK_MIN_API_INTERVAL_MS = 1500;
 const DUPLICATE_CHECK_CACHE_TTL_MS = 90 * 1000;
@@ -216,11 +294,6 @@ const SUBSCRIPTION_DUPLICATE_INPUT_FIELDS = [
     'Email',
     'Phone'
 ];
-let werfsleutelSearchDebounceTimer = null;
-let werfsleutelCatalogSyncPromise = null;
-let werfsleutelCatalogSyncedAt = 0;
-
-let werfsleutelChannels = {};
 
 function getWerfsleutelSliceApi() {
     if (typeof window === 'undefined') {
@@ -256,43 +329,40 @@ function syncWerfsleutelCatalogMetadataIntoSlice(options = {}) {
 function getSelectedWerfsleutelState() {
     const werfsleutelSliceApi = getWerfsleutelSliceApi();
     const canReadSelection = werfsleutelSliceApi && typeof werfsleutelSliceApi.getSelection === 'function';
-    if (canReadSelection) {
-        const sliceSelection = werfsleutelSliceApi.getSelection();
+    if (!canReadSelection) {
         return {
-            selectedKey: sliceSelection?.selectedKey || null,
-            selectedChannel: sliceSelection?.selectedChannel || null,
-            selectedChannelMeta: sliceSelection?.selectedChannelMeta || null
+            selectedKey: null,
+            selectedChannel: null,
+            selectedChannelMeta: null
         };
     }
 
-    const selectedChannel = werfsleutelState.selectedChannel;
+    const sliceSelection = werfsleutelSliceApi.getSelection();
     return {
-        selectedKey: werfsleutelState.selectedKey,
-        selectedChannel,
-        selectedChannelMeta: selectedChannel ? (werfsleutelChannels[selectedChannel] || null) : null
+        selectedKey: sliceSelection?.selectedKey || null,
+        selectedChannel: sliceSelection?.selectedChannel || null,
+        selectedChannelMeta: sliceSelection?.selectedChannelMeta || null
     };
 }
 
 function getWerfsleutelOfferDetailsFromActiveSlice(selectedWerfsleutelKey) {
     const werfsleutelSliceApi = getWerfsleutelSliceApi();
     const canComputeOfferDetails = werfsleutelSliceApi && typeof werfsleutelSliceApi.getOfferDetails === 'function';
-    if (canComputeOfferDetails) {
-        return werfsleutelSliceApi.getOfferDetails(selectedWerfsleutelKey);
+    if (!canComputeOfferDetails) {
+        return {
+            magazine: '',
+            durationKey: '',
+            durationLabel: ''
+        };
     }
 
-    return getWerfsleutelOfferDetails(selectedWerfsleutelKey);
+    const offerDetails = werfsleutelSliceApi.getOfferDetails(selectedWerfsleutelKey);
+    return {
+        magazine: offerDetails?.magazine || '',
+        durationKey: offerDetails?.durationKey || '',
+        durationLabel: offerDetails?.durationLabel || ''
+    };
 }
-
-const werfsleutelState = {
-    selectedKey: null,
-    selectedChannel: null
-};
-
-const werfsleutelPickerState = {
-    visibleMatches: [],
-    activeIndex: -1,
-    latestQuery: ''
-};
 
 const subscriptionRoleState = {
     recipient: {
@@ -331,709 +401,33 @@ const subscriptionDuplicateState = {
     requester: createSubscriptionDuplicateRoleState()
 };
 
-async function ensureWerfsleutelsLoaded() {
-    if (!werfsleutelLoadAttempted || werfsleutelCatalog.length === 0) {
-        werfsleutelLoadAttempted = true;
-        await syncWerfsleutelsCatalog({ force: true });
-        return;
-    }
-
-    if (isWerfsleutelCatalogStale()) {
-        void syncWerfsleutelsCatalog({ force: true, background: true });
-    }
-}
-
-function isWerfsleutelCatalogStale() {
-    if (!werfsleutelCatalogSyncedAt) {
-        return true;
-    }
-    return Date.now() - werfsleutelCatalogSyncedAt > WERFSLEUTEL_CACHE_TTL_MS;
-}
-
-async function syncWerfsleutelsCatalog(options = {}) {
-    const { force = false, background = false } = options;
-
-    if (!window.kiwiApi) {
-        if (!background) {
-            console.warn(translate('werfsleutel.catalogUnavailable', {}, 'kiwiApi niet beschikbaar; werfsleutels konden niet geladen worden.'));
-        }
-        return werfsleutelCatalog;
-    }
-
-    const shouldRefresh = force || werfsleutelCatalog.length === 0 || isWerfsleutelCatalogStale();
-    if (!shouldRefresh) {
-        return werfsleutelCatalog;
-    }
-
-    if (werfsleutelCatalogSyncPromise) {
-        return werfsleutelCatalogSyncPromise;
-    }
-
-    if (background) {
-        console.info(translate('werfsleutel.catalogRefreshing', {}, 'Werfsleutels worden op de achtergrond ververst.'));
-    }
-
-    const query = new URLSearchParams({
-        type: 'werfsleutels',
-        limit: String(WERFSLEUTEL_FULL_SYNC_LIMIT)
-    }).toString();
-
-    werfsleutelCatalogSyncPromise = window.kiwiApi.get(`${offersApiUrl}?${query}`)
-        .then((payload) => {
-            const items = Array.isArray(payload && payload.items) ? payload.items : [];
-            if (items.length > 0) {
-                rememberWerfsleutels(items);
-            }
-            werfsleutelCatalogSyncedAt = Date.now();
-            return werfsleutelCatalog;
-        })
-        .catch((error) => {
-            console.warn(translate('werfsleutel.catalogRefreshFailed', {}, 'Werfsleutel verversen mislukt, bestaande lijst blijft actief.'), error);
-            return werfsleutelCatalog;
-        })
-        .finally(() => {
-            werfsleutelCatalogSyncPromise = null;
-        });
-
-    return werfsleutelCatalogSyncPromise;
-}
-
-function isWerfsleutelBarcodeQuery(value) {
-    return /^\d{6,}$/.test(value);
-}
-
-function rememberWerfsleutels(items) {
-    if (!Array.isArray(items) || items.length === 0) {
-        return;
-    }
-
-    const catalogByCode = new Map(
-        werfsleutelCatalog
-            .filter((item) => item && item.salesCode)
-            .map((item) => [item.salesCode, item])
-    );
-
-    for (const item of items) {
-        if (!item || !item.salesCode) {
-            continue;
-        }
-        catalogByCode.set(item.salesCode, item);
-    }
-
-    werfsleutelCatalog = Array.from(catalogByCode.values());
-}
-
-async function searchWerfsleutelsViaApi(query) {
-    const normalizedQuery = query.trim();
-    if (!normalizedQuery || !window.kiwiApi) {
-        return [];
-    }
-
-    const params = new URLSearchParams({
-        type: 'werfsleutels',
-        limit: String(WERFSLEUTEL_SEARCH_LIMIT)
-    });
-
-    if (isWerfsleutelBarcodeQuery(normalizedQuery)) {
-        params.set('barcode', normalizedQuery.replace(/[^0-9]/g, ''));
-    } else {
-        params.set('query', normalizedQuery);
-    }
-
-    const payload = await window.kiwiApi.get(`${offersApiUrl}?${params.toString()}`);
-    const items = Array.isArray(payload && payload.items) ? payload.items : [];
-    rememberWerfsleutels(items);
-    return items;
-}
-
-async function findWerfsleutelCandidate(query) {
-    const normalizedQuery = query.trim();
-    if (!normalizedQuery) {
-        return null;
-    }
-
-    const isBarcodeLookup = isWerfsleutelBarcodeQuery(normalizedQuery);
-    if (isBarcodeLookup) {
-        const barcodeMatch = findWerfsleutelByBarcode(normalizedQuery);
-        if (barcodeMatch) {
-            return barcodeMatch;
-        }
-    }
-
-    const normalizedSalesCode = normalizedQuery.toLowerCase();
-    const exactLocalMatch = werfsleutelCatalog.find(
-        (item) => item.salesCode.toLowerCase() === normalizedSalesCode
-    );
-    if (exactLocalMatch) {
-        return exactLocalMatch;
-    }
-
-    if (!isBarcodeLookup) {
-        const localMatches = filterWerfsleutelCatalog(normalizedQuery);
-        if (localMatches.length > 0) {
-            return localMatches[0];
-        }
-    }
-
-    try {
-        const apiMatches = await searchWerfsleutelsViaApi(normalizedQuery);
-        if (!Array.isArray(apiMatches) || apiMatches.length === 0) {
-            return null;
-        }
-
-        if (isBarcodeLookup) {
-            const normalizedBarcode = normalizedQuery.replace(/[^0-9]/g, '');
-            const barcodeMatch = apiMatches.find((item) => String(item.barcode || '') === normalizedBarcode);
-            return barcodeMatch || apiMatches[0];
-        }
-
-        const exactApiMatch = apiMatches.find(
-            (item) => item.salesCode.toLowerCase() === normalizedSalesCode
-        );
-        return exactApiMatch || apiMatches[0];
-    } catch (error) {
-        console.warn('Werfsleutel zoeken via API mislukt.', error);
-        return null;
-    }
-}
-
-function findWerfsleutelByBarcode(rawValue) {
-    const normalizedBarcode = rawValue.replace(/[^0-9]/g, '');
-    return werfsleutelCatalog.find((item) => String(item.barcode || '') === normalizedBarcode) || null;
-}
-
-function clearWerfsleutelSelection() {
-    werfsleutelState.selectedKey = null;
-    werfsleutelState.selectedChannel = null;
-    renderWerfsleutelChannelOptions();
-    updateWerfsleutelSummary();
-}
-
-function inferMagazineFromTitle(title = '') {
-    const normalized = title.toLowerCase();
-    if (normalized.includes('avrobode')) return 'Avrobode';
-    if (normalized.includes('mikrogids')) return 'Mikrogids';
-    if (normalized.includes('ncrv')) return 'Ncrvgids';
-    return translate('common.unknown', {}, 'Onbekend');
-}
-
-function deriveMagazineFromKey(key) {
-    const unknownMagazine = translate('common.unknown', {}, 'Onbekend');
-    if (!key) return unknownMagazine;
-    if (key.magazine && key.magazine !== unknownMagazine) {
-        return key.magazine;
-    }
-    return inferMagazineFromTitle(key.title || '');
-}
-
-function detectDurationKeyFromTitle(title = '') {
-    const normalized = title.toLowerCase();
-    const mentionsMonthly = normalized.includes('maandelijks') || normalized.includes('per maand') || normalized.includes('maand');
-
-    if (normalized.includes('3 jaar') || normalized.includes('36 nummers')) {
-        return mentionsMonthly ? '3-jaar-maandelijks' : '3-jaar';
-    }
-    if (normalized.includes('2 jaar') || normalized.includes('24 nummers')) {
-        return mentionsMonthly ? '2-jaar-maandelijks' : '2-jaar';
-    }
-    if (normalized.includes('1 jaar') || normalized.includes('12 nummers') || normalized.includes('proef 12')) {
-        return mentionsMonthly ? '1-jaar-maandelijks' : '1-jaar';
-    }
-    if (mentionsMonthly) {
-        return '1-jaar-maandelijks';
-    }
-    return null;
-}
-
-function extractDurationLabelFromTitle(title = '') {
-    if (!title) {
-        return 'Looptijd onbekend';
-    }
-    const match = title.match(/(\d+)\s*(jaar|maand|maanden|nummers?)/i);
-    if (match) {
-        const unit = match[2].toLowerCase();
-        const normalizedUnit = unit.startsWith('maand') ? 'maanden' : unit;
-        return `${match[1]} ${normalizedUnit}`;
-    }
-    return translate('common.unknownDuration', {}, 'Looptijd onbekend');
-}
-
-function getWerfsleutelOfferDetails(key) {
-    const magazine = deriveMagazineFromKey(key);
-    const durationKey = detectDurationKeyFromTitle(key?.title);
-    const durationLabel = durationKey
-        ? subscriptionPricing[durationKey]?.description || extractDurationLabelFromTitle(key?.title)
-        : extractDurationLabelFromTitle(key?.title);
-
-    return {
-        magazine,
-        durationKey,
-        durationLabel
-    };
-}
-
 // Phase 5A: ACW Configuration
 const ACW_DEFAULT_DURATION = 120; // 120 seconds
 
-const MIN_SUB_NUMBER = 8099098;
-const MAX_SUB_NUMBER = 12199098;
-const NAME_INSERTION_PREFIXES = [
-    'van der',
-    'van den',
-    'van de',
-    'von der',
-    'ten',
-    'ter',
-    'op de',
-    'op den',
-    'op',
-    'aan de',
-    'aan den',
-    'aan',
-    'bij',
-    'uit de',
-    'uit den',
-    'uit',
-    'de',
-    'den',
-    'der',
-    'van',
-    'von',
-    'te'
-];
-
-function normalizeNameFragment(value) {
-    return (value || '').replace(/[\s.]/g, '').toLowerCase();
-}
-
-function generateSubscriptionNumber(customerId, subscriptionId) {
-    const range = MAX_SUB_NUMBER - MIN_SUB_NUMBER + 1;
-    const seed = Math.abs((customerId * 73856093) ^ (subscriptionId * 193939));
-    const offset = seed % range;
-    return String(MIN_SUB_NUMBER + offset);
-}
-
-function formatEuro(amount) {
-    const euroFormatter = getEuroFormatter();
-    if (typeof amount !== 'number') {
-        const numericValue = Number(amount);
-        return euroFormatter.format(Number.isFinite(numericValue) ? numericValue : 0);
-    }
-    return euroFormatter.format(amount);
-}
-
 async function initWerfsleutelPicker() {
-    await ensureWerfsleutelsLoaded();
-
-    const input = document.getElementById('werfsleutelInput');
-    if (!input) {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canInitializePicker = werfsleutelSliceApi && typeof werfsleutelSliceApi.initializePicker === 'function';
+    if (!canInitializePicker) {
         return;
     }
 
-    resetWerfsleutelPicker();
-}
-
-async function handleWerfsleutelInputKeyDown(event) {
-    if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        moveWerfsleutelActiveSelection(1);
-        return;
-    }
-
-    if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        moveWerfsleutelActiveSelection(-1);
-        return;
-    }
-
-    if (event.key === 'Escape') {
-        renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
-        return;
-    }
-
-    if (event.key !== 'Enter') {
-        return;
-    }
-
-    event.preventDefault();
-
-    if (werfsleutelSearchDebounceTimer) {
-        window.clearTimeout(werfsleutelSearchDebounceTimer);
-        werfsleutelSearchDebounceTimer = null;
-    }
-
-    const activeMatch = getActiveWerfsleutelMatch();
-    if (activeMatch) {
-        if (!activeMatch.isActive) {
-            showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning');
-            return;
-        }
-        selectWerfsleutel(activeMatch.salesCode);
-        return;
-    }
-
-    const input = document.getElementById('werfsleutelInput');
-    const trimmed = input ? input.value.trim() : '';
-    if (!trimmed) {
-        return;
-    }
-
-    const candidate = await findWerfsleutelCandidate(trimmed);
-    if (!candidate) {
-        showToast(translate('werfsleutel.unknown', {}, 'Onbekende werfsleutel.'), 'error');
-        return;
-    }
-
-    selectWerfsleutel(candidate.salesCode);
-}
-
-function handleWerfsleutelQuery(rawValue) {
-    const query = rawValue.trim();
-    werfsleutelPickerState.latestQuery = query;
-
-    const selectedSalesCode = werfsleutelState.selectedKey?.salesCode || '';
-    const queryMatchesSelection = selectedSalesCode.toLowerCase() === query.toLowerCase();
-    if (selectedSalesCode && !queryMatchesSelection) {
-        clearWerfsleutelSelection();
-    }
-
-    if (werfsleutelSearchDebounceTimer) {
-        window.clearTimeout(werfsleutelSearchDebounceTimer);
-        werfsleutelSearchDebounceTimer = null;
-    }
-
-    if (!query) {
-        renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
-        return;
-    }
-
-    const localMatches = filterWerfsleutelCatalog(query);
-    renderWerfsleutelSuggestions(localMatches);
-
-    if (!isWerfsleutelBarcodeQuery(query) || findWerfsleutelByBarcode(query)) {
-        return;
-    }
-
-    werfsleutelSearchDebounceTimer = window.setTimeout(async () => {
-        const lookupQuery = query;
-        try {
-            await searchWerfsleutelsViaApi(lookupQuery);
-        } catch (error) {
-            console.warn('Werfsleutel barcode lookup via API mislukt.', error);
-            return;
-        }
-
-        if (werfsleutelPickerState.latestQuery !== lookupQuery) {
-            return;
-        }
-
-        const refreshedMatches = filterWerfsleutelCatalog(lookupQuery);
-        renderWerfsleutelSuggestions(refreshedMatches);
-        validateWerfsleutelBarcode(lookupQuery);
-    }, WERFSLEUTEL_SEARCH_DEBOUNCE_MS);
-}
-
-function filterWerfsleutelCatalog(query) {
-    if (!query) {
-        return werfsleutelCatalog.slice(0, WERFSLEUTEL_SEARCH_LIMIT);
-    }
-
-    const normalized = query.toLowerCase();
-    return werfsleutelCatalog.filter((item) => {
-        return item.salesCode.toLowerCase().includes(normalized) ||
-            item.title.toLowerCase().includes(normalized) ||
-            String(item.price).includes(normalized) ||
-            String(item.barcode || '').includes(normalized) ||
-            String(item.magazine || '').toLowerCase().includes(normalized);
-    }).slice(0, WERFSLEUTEL_SEARCH_LIMIT);
-}
-
-function renderWerfsleutelSuggestions(matches, options = {}) {
-    const container = document.getElementById('werfsleutelSuggestions');
-    const input = document.getElementById('werfsleutelInput');
-    if (!container || !input) return;
-
-    const { hideWhenEmpty = false, preserveActiveIndex = false } = options;
-
-    if (!matches || matches.length === 0) {
-        werfsleutelPickerState.visibleMatches = [];
-        werfsleutelPickerState.activeIndex = -1;
-
-        if (hideWhenEmpty) {
-            container.innerHTML = '';
-            container.classList.add('hidden');
-        } else {
-            container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.noMatches', {}, 'Geen werfsleutels gevonden')}</div>`;
-            container.classList.remove('hidden');
-        }
-        input.setAttribute('aria-expanded', 'false');
-        input.removeAttribute('aria-activedescendant');
-        return;
-    }
-
-    werfsleutelPickerState.visibleMatches = matches.slice();
-    if (!preserveActiveIndex) {
-        werfsleutelPickerState.activeIndex = 0;
-    } else if (werfsleutelPickerState.activeIndex >= werfsleutelPickerState.visibleMatches.length) {
-        werfsleutelPickerState.activeIndex = werfsleutelPickerState.visibleMatches.length - 1;
-    }
-
-    container.classList.remove('hidden');
-    container.innerHTML = werfsleutelPickerState.visibleMatches.map((item, index) => `
-        <button type="button"
-                role="option"
-                id="werfsleutelOption-${index}"
-                aria-selected="${index === werfsleutelPickerState.activeIndex ? 'true' : 'false'}"
-                class="werfsleutel-suggestion${item.isActive ? '' : ' inactive'}${index === werfsleutelPickerState.activeIndex ? ' active' : ''}"
-                data-action="select-werfsleutel"
-                data-arg-sales-code="${item.salesCode}"
-                data-code="${item.salesCode}">
-            <span class="code">${item.salesCode}</span>
-            <span class="title">${item.title}</span>
-            <span class="price">${formatEuro(item.price)}</span>
-            <span class="status-pill ${item.isActive ? 'status-pill--success' : 'status-pill--warning'}">
-                ${item.isActive ? 'Actief' : 'Inactief'}
-            </span>
-        </button>
-    `).join('');
-
-    container.querySelectorAll('.werfsleutel-suggestion').forEach((button, index) => {
-        button.addEventListener('mouseenter', () => {
-            if (werfsleutelPickerState.activeIndex === index) {
-                return;
-            }
-            werfsleutelPickerState.activeIndex = index;
-            renderWerfsleutelSuggestions(werfsleutelPickerState.visibleMatches, { preserveActiveIndex: true });
-        });
-    });
-
-    const activeOption = container.querySelector(`#werfsleutelOption-${werfsleutelPickerState.activeIndex}`);
-    input.setAttribute('aria-expanded', 'true');
-    if (activeOption) {
-        input.setAttribute('aria-activedescendant', activeOption.id);
-        activeOption.scrollIntoView({ block: 'nearest' });
-    } else {
-        input.removeAttribute('aria-activedescendant');
-    }
-}
-
-function getActiveWerfsleutelMatch() {
-    if (werfsleutelPickerState.activeIndex < 0) {
-        return null;
-    }
-    return werfsleutelPickerState.visibleMatches[werfsleutelPickerState.activeIndex] || null;
-}
-
-function moveWerfsleutelActiveSelection(delta) {
-    if (werfsleutelPickerState.visibleMatches.length === 0) {
-        const query = werfsleutelPickerState.latestQuery;
-        if (!query) {
-            return;
-        }
-        const matches = filterWerfsleutelCatalog(query);
-        if (matches.length === 0) {
-            return;
-        }
-        renderWerfsleutelSuggestions(matches);
-    }
-
-    const total = werfsleutelPickerState.visibleMatches.length;
-    if (total === 0) {
-        return;
-    }
-
-    const currentIndex = werfsleutelPickerState.activeIndex;
-    if (currentIndex < 0) {
-        werfsleutelPickerState.activeIndex = delta > 0 ? 0 : total - 1;
-    } else {
-        werfsleutelPickerState.activeIndex = (currentIndex + delta + total) % total;
-    }
-
-    renderWerfsleutelSuggestions(werfsleutelPickerState.visibleMatches, { preserveActiveIndex: true });
-}
-
-function selectWerfsleutel(salesCode) {
-    const match = werfsleutelCatalog.find((item) => item.salesCode === salesCode);
-    if (!match) {
-        showToast(translate('werfsleutel.unknown', {}, 'Onbekende werfsleutel.'), 'error');
-        return;
-    }
-
-    if (!match.isActive) {
-        showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning');
-        return;
-    }
-
-    werfsleutelState.selectedKey = match;
-    const input = document.getElementById('werfsleutelInput');
-
-    if (input) {
-        input.value = match.salesCode;
-        werfsleutelPickerState.latestQuery = match.salesCode;
-        input.setAttribute('aria-expanded', 'false');
-        input.removeAttribute('aria-activedescendant');
-    }
-
-    if (!match.allowedChannels.includes(werfsleutelState.selectedChannel)) {
-        werfsleutelState.selectedChannel = null;
-    }
-
-    renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
-    renderWerfsleutelChannelOptions();
-    updateWerfsleutelSummary();
-}
-
-function validateWerfsleutelBarcode(rawValue) {
-    const barcode = rawValue.replace(/[^0-9]/g, '');
-
-    if (!barcode) {
-        return;
-    }
-
-    const match = findWerfsleutelByBarcode(barcode);
-    if (!match) {
-        clearWerfsleutelSelection();
-        return false;
-    }
-
-    if (!match.isActive) {
-        clearWerfsleutelSelection();
-        showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning');
-        return false;
-    }
-
-    selectWerfsleutel(match.salesCode);
-    return true;
-}
-
-function renderWerfsleutelChannelOptions() {
-    const container = document.getElementById('werfsleutelChannels');
-    if (!container) return;
-
-    const selectedKey = werfsleutelState.selectedKey;
-    if (!selectedKey) {
-        container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.selectKeyFirst', {}, 'Selecteer eerst een werfsleutel')}</div>`;
-        return;
-    }
-
-    const allowedChannels = Array.isArray(selectedKey.allowedChannels) ? selectedKey.allowedChannels : [];
-    const channelEntries = allowedChannels
-        .filter((code) => werfsleutelChannels[code])
-        .map((code) => [code, werfsleutelChannels[code]]);
-
-    if (channelEntries.length === 0) {
-        werfsleutelState.selectedChannel = null;
-        container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.noChannels', {}, 'Geen kanalen beschikbaar voor deze werfsleutel')}</div>`;
-        return;
-    }
-
-    const allowedCodes = channelEntries.map(([code]) => code);
-    if (!allowedCodes.includes(werfsleutelState.selectedChannel)) {
-        werfsleutelState.selectedChannel = null;
-    }
-    if (!werfsleutelState.selectedChannel && allowedCodes.length === 1) {
-        werfsleutelState.selectedChannel = allowedCodes[0];
-    }
-
-    container.innerHTML = channelEntries.map(([code, meta]) => {
-        const isSelected = werfsleutelState.selectedChannel === code;
-        return `
-            <button type="button"
-                    class="channel-chip${isSelected ? ' selected' : ''}"
-                    data-action="select-werfsleutel-channel"
-                    data-arg-channel-code="${code}"
-                    data-channel="${code}"
-                    title="${meta.label}">
-                <span class="channel-icon">${meta.icon}</span>
-                <span class="channel-code">${code}</span>
-                <span class="channel-label">${meta.label}</span>
-            </button>
-        `;
-    }).join('');
-}
-
-function selectWerfsleutelChannel(channelCode) {
-    if (!werfsleutelChannels[channelCode]) {
-        showToast(translate('werfsleutel.unknownChannel', {}, 'Onbekend kanaal'), 'error');
-        return;
-    }
-
-    const allowed = werfsleutelState.selectedKey?.allowedChannels ?? [];
-    if (allowed.length > 0 && !allowed.includes(channelCode)) {
-        showToast(translate('werfsleutel.channelMismatch', {}, 'Dit kanaal hoort niet bij de gekozen werfsleutel.'), 'warning');
-        return;
-    }
-
-    werfsleutelState.selectedChannel = channelCode;
-    renderWerfsleutelChannelOptions();
-    updateWerfsleutelSummary();
-}
-
-function updateWerfsleutelSummary() {
-    const summary = document.getElementById('werfsleutelSummary');
-    if (!summary) return;
-
-    if (!werfsleutelState.selectedKey) {
-        summary.classList.remove('visible');
-        summary.textContent = '';
-        return;
-    }
-
-    const channelCode = werfsleutelState.selectedChannel;
-    const channelLabel = channelCode
-        ? `${channelCode} · ${werfsleutelChannels[channelCode].label}`
-        : translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.');
-    const key = werfsleutelState.selectedKey;
-    const hasChannel = Boolean(channelCode);
-    const statusClass = hasChannel ? 'status-pill--success' : 'status-pill--warning';
-    const statusLabel = hasChannel
-        ? translate('werfsleutel.channelSelected', {}, 'Kanaal gekozen')
-        : translate('werfsleutel.channelRequiredHint', {}, 'Kanaal nog kiezen');
-
-    summary.innerHTML = `
-        <div>
-            <strong>${key.salesCode}</strong> - ${key.title} (${formatEuro(key.price)})
-        </div>
-        <div class="werfsleutel-summary-status">
-            <span class="status-pill ${statusClass}">${statusLabel}</span>
-            <span>${channelLabel}</span>
-        </div>
-    `;
-    summary.classList.add('visible');
+    await werfsleutelSliceApi.initializePicker();
 }
 
 function resetWerfsleutelPicker() {
-    werfsleutelState.selectedKey = null;
-    werfsleutelState.selectedChannel = null;
-    werfsleutelPickerState.visibleMatches = [];
-    werfsleutelPickerState.activeIndex = -1;
-    werfsleutelPickerState.latestQuery = '';
-
-    const input = document.getElementById('werfsleutelInput');
-    if (input) {
-        input.value = '';
-        input.setAttribute('aria-expanded', 'false');
-        input.removeAttribute('aria-activedescendant');
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canResetPicker = werfsleutelSliceApi && typeof werfsleutelSliceApi.resetPicker === 'function';
+    if (canResetPicker) {
+        werfsleutelSliceApi.resetPicker();
     }
-
-    renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
-    renderWerfsleutelChannelOptions();
-    updateWerfsleutelSummary();
 }
 
 function triggerWerfsleutelBackgroundRefreshIfStale() {
-    if (!isWerfsleutelCatalogStale()) {
-        return;
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canRefreshCatalog = werfsleutelSliceApi && typeof werfsleutelSliceApi.refreshCatalogIfStale === 'function';
+    if (canRefreshCatalog) {
+        werfsleutelSliceApi.refreshCatalogIfStale();
     }
-
-    void syncWerfsleutelsCatalog({ force: true, background: true }).then(() => {
-        const input = document.getElementById('werfsleutelInput');
-        const query = input ? input.value.trim() : '';
-        if (!query) {
-            return;
-        }
-        renderWerfsleutelSuggestions(filterWerfsleutelCatalog(query));
-    });
 }
 
 // Phase 6: Call Queue State Management
@@ -1190,45 +584,6 @@ function endSession() {
 }
 
 // Subscription role helpers moved to app/subscription-role-runtime.js.
-
-
-// Subscription Pricing Information
-const subscriptionPricing = {
-    '1-jaar': { price: 52.00, perMonth: 4.33, description: '1 jaar - Jaarlijks betaald' },
-    '2-jaar': { price: 98.00, perMonth: 4.08, description: '2 jaar - Jaarlijks betaald (5% korting)' },
-    '3-jaar': { price: 140.00, perMonth: 3.89, description: '3 jaar - Jaarlijks betaald (10% korting)' },
-    '1-jaar-maandelijks': { price: 54.00, perMonth: 4.50, description: '1 jaar - Maandelijks betaald' },
-    '2-jaar-maandelijks': { price: 104.40, perMonth: 4.35, description: '2 jaar - Maandelijks betaald' },
-    '3-jaar-maandelijks': { price: 151.20, perMonth: 4.20, description: '3 jaar - Maandelijks betaald' }
-};
-
-// Helper function to get pricing display
-function getPricingDisplay(duration) {
-    const pricing = subscriptionPricing[duration];
-    if (!pricing) return '';
-    return `€${pricing.perMonth.toFixed(2)}/maand (${pricing.description})`;
-}
-
-function getSubscriptionDurationDisplay(subscription) {
-    if (!subscription) {
-        return 'Oude prijsstructuur';
-    }
-
-    if (subscription.duration && subscriptionPricing[subscription.duration]) {
-        return getPricingDisplay(subscription.duration);
-    }
-
-    if (subscription.durationLabel) {
-        return subscription.durationLabel;
-    }
-
-    if (subscription.duration) {
-        return subscription.duration;
-    }
-
-    return 'Oude prijsstructuur';
-}
-
 // ============================================================================
 // PHASE 1: CALL SESSION MANAGEMENT
 // ============================================================================
@@ -1309,15 +664,6 @@ async function initializeKiwiApplication() {
         return;
     }
 
-    const initializeWerfsleutelPickerFromSlices = () => {
-        const werfsleutelSliceApi = getWerfsleutelSliceApi();
-        const canInitializeFromWerfsleutelSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.initializePicker === 'function';
-        if (canInitializeFromWerfsleutelSlice) {
-            return werfsleutelSliceApi.initializePicker();
-        }
-        return initWerfsleutelPicker();
-    };
-
     await kiwiBootstrapSlice.initializeKiwiApplication({
         applyLocaleToUi,
         loadBootstrapState,
@@ -1329,7 +675,7 @@ async function initializeKiwiApplication() {
         populateBirthdayFields,
         initDeliveryDatePicker,
         initArticleSearch,
-        initWerfsleutelPicker: initializeWerfsleutelPickerFromSlices,
+        initWerfsleutelPicker,
         startAgentWorkSessionTimer,
         updateAgentStatusDisplay,
         initializeAgentStatusFromBackend,
@@ -1377,7 +723,7 @@ function initializeData() {
         bootstrapState,
         callQueue,
         callSession,
-        werfsleutelCatalog
+        werfsleutelCatalog: []
     });
     const hasInitializedState = initializedState && typeof initializedState === 'object';
     if (!hasInitializedState) {
@@ -1387,10 +733,10 @@ function initializeData() {
     customers = initializedState.customers;
     lastCallSession = initializedState.lastCallSession;
     serviceNumbers = initializedState.serviceNumbers;
-    werfsleutelChannels = initializedState.werfsleutelChannels;
-    werfsleutelCatalog = initializedState.werfsleutelCatalog;
     callQueue = initializedState.callQueue;
     callSession = initializedState.callSession;
+    const werfsleutelChannels = initializedState.werfsleutelChannels;
+    const werfsleutelCatalog = initializedState.werfsleutelCatalog;
 
     syncWerfsleutelCatalogMetadataIntoSlice({
         channels: werfsleutelChannels,
@@ -1531,7 +877,6 @@ function getCustomerDetailSliceDependencies() {
         displayArticles,
         updateCustomerActionButtons,
         updateIdentifyCallerButtons,
-        getSubscriptionDurationDisplay,
         getSubscriptionRequesterMetaLine,
         getDateLocaleForApp,
         personsApiUrl

@@ -1,31 +1,5 @@
 import { getGlobalScope } from '../services.js';
-
-const MIN_SUB_NUMBER = 8099098;
-const MAX_SUB_NUMBER = 12199098;
-const NAME_INSERTION_PREFIXES = [
-    'van der',
-    'van den',
-    'van de',
-    'von der',
-    'ten',
-    'ter',
-    'op de',
-    'op den',
-    'op',
-    'aan de',
-    'aan den',
-    'aan',
-    'bij',
-    'uit de',
-    'uit den',
-    'uit',
-    'de',
-    'den',
-    'der',
-    'van',
-    'von',
-    'te'
-];
+import { NAME_INSERTION_PREFIXES, generateSubscriptionNumber } from '../subscription-shared-helpers.js';
 
 const searchState = {
     results: [],
@@ -114,24 +88,6 @@ function showToast(message, type = 'success') {
 
 function normalizePhone(value = '') {
     return String(value || '').replace(/\D/g, '');
-}
-
-function generateSubscriptionNumber(customerId, subscriptionId) {
-    const globalScope = getGlobalScope();
-    if (globalScope && typeof globalScope.generateSubscriptionNumber === 'function') {
-        return globalScope.generateSubscriptionNumber(customerId, subscriptionId);
-    }
-
-    const numericCustomerId = Number(customerId);
-    const numericSubscriptionId = Number(subscriptionId);
-    if (!Number.isFinite(numericCustomerId) || !Number.isFinite(numericSubscriptionId)) {
-        return '-';
-    }
-
-    const range = MAX_SUB_NUMBER - MIN_SUB_NUMBER + 1;
-    const seed = Math.abs((numericCustomerId * 73856093) ^ (numericSubscriptionId * 193939));
-    const offset = seed % range;
-    return String(MIN_SUB_NUMBER + offset);
 }
 
 function getElementValueById(elementId) {
