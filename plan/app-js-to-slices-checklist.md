@@ -46,7 +46,7 @@
 | 10 | Article catalog search/order engine | `codex/extract-article-catalog-search-and-order-engine-into-slice` | [#47](https://github.com/bindinc/kiwi/pull/47) | `merged` | `yes` |  |
 | 11 | Delivery date picker/calendar engine | `codex/migrate-delivery-date-picker-calendar-engine-to-slice` | [#50](https://github.com/bindinc/kiwi/pull/50) | `merged` | `yes` |  |
 | 12 | App shell events + form closing + toast + keyboard/click/change globals | `codex/extract-app-shell-events-and-global-listeners-into-app-shell-slice` | [#51](https://github.com/bindinc/kiwi/pull/51) | `merged` | `yes` |  |
-| 13 | Runtime compatibility bridge while migrating | `codex/implement-runtime-compatibility-bridge-while-migrating` | [#52](https://github.com/bindinc/kiwi/pull/52) | `in progress` | `no` |  |
+| 13 | Runtime compatibility bridge while migrating | `codex/implement-runtime-compatibility-bridge-while-migrating` | [#52](https://github.com/bindinc/kiwi/pull/52) | `merged` | `yes` |  |
 
 ## 4) Full migration checklist by domain
 
