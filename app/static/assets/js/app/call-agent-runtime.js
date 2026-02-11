@@ -1,6 +1,92 @@
 // Runtime extracted from app.js for call/queue/agent/disposition/debug domains.
 // This file is loaded as a classic script before app.js.
 
+const RUNTIME_COMPATIBILITY_BRIDGE_NAMESPACE = 'kiwiRuntimeCompatibilityBridge';
+const RUNTIME_COMPATIBILITY_METHOD_NAMES = new Set([
+    'addContactMoment',
+    'getDispositionCategories',
+    'selectCustomer',
+    'showToast',
+    'startCallSession'
+]);
+const runtimeCompatibilityWarningByMethod = {};
+
+function getRuntimeCompatibilityGlobalScope() {
+    if (typeof window !== 'undefined') {
+        return window;
+    }
+
+    if (typeof globalThis !== 'undefined') {
+        return globalThis;
+    }
+
+    return null;
+}
+
+function resolveRuntimeCompatibilityMethod(methodName) {
+    const isKnownMethod = RUNTIME_COMPATIBILITY_METHOD_NAMES.has(methodName);
+    if (!isKnownMethod) {
+        return null;
+    }
+
+    const globalScope = getRuntimeCompatibilityGlobalScope();
+    if (!globalScope) {
+        return null;
+    }
+
+    const bridgeNamespace = globalScope[RUNTIME_COMPATIBILITY_BRIDGE_NAMESPACE];
+    const bridgeMethod = bridgeNamespace && typeof bridgeNamespace[methodName] === 'function'
+        ? bridgeNamespace[methodName]
+        : null;
+    if (bridgeMethod) {
+        return bridgeMethod.bind(bridgeNamespace);
+    }
+
+    const fallbackMethod = globalScope[methodName];
+    if (typeof fallbackMethod === 'function') {
+        return fallbackMethod.bind(globalScope);
+    }
+
+    return null;
+}
+
+function invokeRuntimeCompatibilityMethod(methodName, args = []) {
+    const runtimeMethod = resolveRuntimeCompatibilityMethod(methodName);
+    if (runtimeMethod) {
+        return runtimeMethod(...args);
+    }
+
+    const alreadyWarned = runtimeCompatibilityWarningByMethod[methodName] === true;
+    if (!alreadyWarned && typeof console !== 'undefined' && typeof console.warn === 'function') {
+        console.warn(`[kiwi-call-agent-runtime] Missing runtime compatibility dependency "${methodName}"`);
+        runtimeCompatibilityWarningByMethod[methodName] = true;
+    }
+
+    return undefined;
+}
+
+function runtimeAddContactMoment(customerId, type, description) {
+    return invokeRuntimeCompatibilityMethod('addContactMoment', [customerId, type, description]);
+}
+
+function runtimeGetDispositionCategories() {
+    const categories = invokeRuntimeCompatibilityMethod('getDispositionCategories');
+    const hasCategoryMap = categories && typeof categories === 'object';
+    return hasCategoryMap ? categories : {};
+}
+
+function runtimeSelectCustomer(customerId) {
+    return invokeRuntimeCompatibilityMethod('selectCustomer', [customerId]);
+}
+
+function runtimeShowToast(message, type = 'success') {
+    return invokeRuntimeCompatibilityMethod('showToast', [message, type]);
+}
+
+function runtimeStartCallSession() {
+    return invokeRuntimeCompatibilityMethod('startCallSession');
+}
+
 // End Call Session
 async function endCallSession(forcedByCustomer = false) {
     if (!callSession.active) return;
@@ -13,7 +99,7 @@ async function endCallSession(forcedByCustomer = false) {
     // Bij API-mode doet de backend dit.
     if (callSession.customerId && !window.kiwiApi) {
         const endReason = forcedByCustomer ? 'call_ended_by_customer' : 'call_ended_by_agent';
-        addContactMoment(
+        runtimeAddContactMoment(
             callSession.customerId,
             endReason,
             `${callSession.serviceNumber} call beëindigd (duur: ${formatTime(callDuration)}, wacht: ${formatTime(callSession.waitTime)})`
@@ -92,7 +178,7 @@ async function endCallSession(forcedByCustomer = false) {
     }
 
     if (!forcedByCustomer) {
-        showToast(translate('calls.ended', {}, 'Gesprek beëindigd'), 'success');
+        runtimeShowToast(translate('calls.ended', {}, 'Gesprek beëindigd'), 'success');
     }
 }
 
@@ -104,7 +190,7 @@ async function identifyCallerAsCustomer(customerId) {
     
     const customer = customers.find(c => c.id === customerId);
     if (!customer) {
-        showToast(translate('customer.notFound', {}, 'Klant niet gevonden'), 'error');
+        runtimeShowToast(translate('customer.notFound', {}, 'Klant niet gevonden'), 'error');
         return;
     }
     
@@ -118,7 +204,7 @@ async function identifyCallerAsCustomer(customerId) {
                 };
             }
         } catch (error) {
-            showToast(error.message || translate('calls.identifyFailed', {}, 'Identificatie via backend mislukt'), 'error');
+            runtimeShowToast(error.message || translate('calls.identifyFailed', {}, 'Identificatie via backend mislukt'), 'error');
             return;
         }
     } else {
@@ -139,12 +225,12 @@ async function identifyCallerAsCustomer(customerId) {
     
     // Voeg contact moment toe (backend regelt dit in API-mode)
     if (!window.kiwiApi) {
-        addContactMoment(customerId, 'call_identified',
+        runtimeAddContactMoment(customerId, 'call_identified',
             `Beller geïdentificeerd tijdens ${callSession.serviceNumber} call`);
         saveCallSession();
     }
     
-    showToast(translate('calls.identifiedAs', { name: callSession.customerName }, `Beller geïdentificeerd als ${callSession.customerName}`), 'success');
+    runtimeShowToast(translate('calls.identifiedAs', { name: callSession.customerName }, `Beller geïdentificeerd als ${callSession.customerName}`), 'success');
 }
 
 // Update "Dit is de Beller" Button Visibility
@@ -185,7 +271,7 @@ async function toggleCallHold() {
                 };
             }
         } catch (error) {
-            showToast(error.message || translate('calls.holdResumeFailed', {}, 'Call hold/resume via backend mislukt'), 'error');
+            runtimeShowToast(error.message || translate('calls.holdResumeFailed', {}, 'Call hold/resume via backend mislukt'), 'error');
             return;
         }
     } else {
@@ -214,11 +300,11 @@ async function toggleCallHold() {
             callSession.holdStartTime = Date.now();
         }
         
-        showToast(translate('calls.onHold', {}, 'Gesprek in wacht gezet'), 'info');
+        runtimeShowToast(translate('calls.onHold', {}, 'Gesprek in wacht gezet'), 'info');
         
         // Log hold
         if (callSession.customerId) {
-            addContactMoment(
+            runtimeAddContactMoment(
                 callSession.customerId,
                 'call_hold',
                 'Gesprek in wacht gezet'
@@ -242,14 +328,14 @@ async function toggleCallHold() {
             callSession.totalHoldTime = (callSession.totalHoldTime || 0) + holdDuration;
         }
         
-        showToast(
+        runtimeShowToast(
             translate('calls.resumed', { duration: formatTime(holdDuration) }, `Gesprek hervat (wacht: ${formatTime(holdDuration)})`),
             'success'
         );
         
         // Log resume
         if (callSession.customerId) {
-            addContactMoment(
+            runtimeAddContactMoment(
                 callSession.customerId,
                 'call_resumed',
                 `Gesprek hervat na ${formatTime(holdDuration)} wachttijd`
@@ -427,7 +513,7 @@ function maybeNotifyTeamsSyncIssue(syncResult) {
     }
 
     const message = resolveTeamsSyncLabel(syncResult);
-    showToast(message, 'warning');
+    runtimeShowToast(message, 'warning');
     teamsSyncNoticeShown = true;
 }
 
@@ -470,7 +556,7 @@ function applyAgentStatusLocally(newStatus, options = {}) {
     }
 
     if (shouldShowToast) {
-        showToast(
+        runtimeShowToast(
             translate('agent.statusChanged', { status: statusConfig.label }, `Status gewijzigd naar: ${statusConfig.label}`),
             'success'
         );
@@ -545,7 +631,7 @@ function setAgentStatus(newStatus) {
 
     // Validatie
     if (callSession.active && normalizedStatus !== 'in_call') {
-        showToast(
+        runtimeShowToast(
             translate('agent.cannotSetStatusDuringCall', {}, 'Kan status niet wijzigen tijdens actief gesprek'),
             'error'
         );
@@ -688,9 +774,9 @@ function endACW(manual = false) {
     }
     
     if (manual) {
-        showToast(translate('acw.readyForNext', {}, 'Klaar voor volgende gesprek'), 'success');
+        runtimeShowToast(translate('acw.readyForNext', {}, 'Klaar voor volgende gesprek'), 'success');
     } else {
-        showToast(translate('acw.expired', {}, 'ACW tijd verlopen'), 'info');
+        runtimeShowToast(translate('acw.expired', {}, 'ACW tijd verlopen'), 'info');
     }
 }
 
@@ -701,7 +787,7 @@ function manualFinishACW() {
     const isModalOpen = dispositionModal && dispositionModal.style.display === 'flex';
     
     if (isModalOpen) {
-        showToast(
+        runtimeShowToast(
             translate('acw.completeForm', {}, 'Vul eerst het nabewerkingsscherm in voordat je ACW afrondt'),
             'warning'
         );
@@ -865,7 +951,7 @@ function determineAutoDisposition() {
 function updateDispositionOutcomes() {
     const category = document.getElementById('dispCategory').value;
     const outcomeSelect = document.getElementById('dispOutcome');
-    const dispositionCategories = getDispositionCategories();
+    const dispositionCategories = runtimeGetDispositionCategories();
     
     if (!category) {
         outcomeSelect.disabled = true;
@@ -894,7 +980,7 @@ function toggleFollowUpSection() {
 
 // Get Outcome Label
 function getOutcomeLabel(category, outcomeCode) {
-    const dispositionCategories = getDispositionCategories();
+    const dispositionCategories = runtimeGetDispositionCategories();
     const categoryData = dispositionCategories[category];
     if (!categoryData) return outcomeCode;
     
@@ -910,7 +996,7 @@ function saveDisposition() {
     const followUpRequired = document.getElementById('dispFollowUpRequired').checked;
     
     if (!category || !outcome) {
-        showToast(translate('disposition.selectCategory', {}, 'Selecteer categorie en uitkomst'), 'error');
+        runtimeShowToast(translate('disposition.selectCategory', {}, 'Selecteer categorie en uitkomst'), 'error');
         return;
     }
     
@@ -928,10 +1014,10 @@ function saveDisposition() {
     
     // Save to customer history if identified
     if (sessionData.customerId) {
-        const dispositionCategories = getDispositionCategories();
+        const dispositionCategories = runtimeGetDispositionCategories();
         const outcomeLabel = getOutcomeLabel(category, outcome);
         const categoryLabel = dispositionCategories[category]?.label || category;
-        addContactMoment(
+        runtimeAddContactMoment(
             sessionData.customerId,
             'call_disposition',
             `${categoryLabel}: ${outcomeLabel}${notes ? ' - ' + notes : ''}`
@@ -943,7 +1029,7 @@ function saveDisposition() {
             const followUpNotes = document.getElementById('dispFollowUpNotes').value;
             
             if (followUpDate) {
-                addContactMoment(
+                runtimeAddContactMoment(
                     sessionData.customerId,
                     'follow_up_scheduled',
                     `Follow-up gepland voor ${followUpDate}: ${followUpNotes || 'Geen notities'}`
@@ -955,7 +1041,7 @@ function saveDisposition() {
     // Close modal
     document.getElementById('dispositionModal').style.display = 'none';
     
-    showToast(translate('calls.completed', {}, 'Gesprek succesvol afgerond'), 'success');
+    runtimeShowToast(translate('calls.completed', {}, 'Gesprek succesvol afgerond'), 'success');
     
     // Manual end ACW (since disposition is complete)
     endACW(true);
@@ -965,7 +1051,7 @@ function saveDisposition() {
 function cancelDisposition() {
     // Just close modal, ACW timer continues
     document.getElementById('dispositionModal').style.display = 'none';
-    showToast(translate('disposition.cancelled', {}, 'Disposition geannuleerd - ACW loopt door'), 'warning');
+    runtimeShowToast(translate('disposition.cancelled', {}, 'Disposition geannuleerd - ACW loopt door'), 'warning');
 }
 
 // ============================================================================
@@ -1042,7 +1128,7 @@ async function debugGenerateQueue() {
     const queueMix = document.getElementById('debugQueueMix')?.value || 'balanced';
 
     if (!window.kiwiApi) {
-        showToast(translate('queue.generateUnavailable', {}, 'Queue genereren via backend is niet beschikbaar'), 'error');
+        runtimeShowToast(translate('queue.generateUnavailable', {}, 'Queue genereren via backend is niet beschikbaar'), 'error');
         return;
     }
 
@@ -1056,7 +1142,7 @@ async function debugGenerateQueue() {
             ...(payload || {})
         };
     } catch (error) {
-        showToast(error.message || translate('queue.generateFailed', {}, 'Queue genereren via backend mislukt'), 'error');
+        runtimeShowToast(error.message || translate('queue.generateFailed', {}, 'Queue genereren via backend mislukt'), 'error');
         return;
     }
 
@@ -1064,7 +1150,7 @@ async function debugGenerateQueue() {
     updateQueueDisplay();
     updateDebugQueuePreview();
     
-    showToast(
+    runtimeShowToast(
         translate('queue.generated', { count: queueSize }, `✅ Wachtrij gegenereerd met ${queueSize} bellers`),
         'success'
     );
@@ -1200,7 +1286,7 @@ async function debugClearQueue() {
                     waitTimeInterval: null
                 };
             } catch (error) {
-                showToast(error.message || translate('queue.clearFailed', {}, 'Queue wissen via backend mislukt'), 'error');
+                runtimeShowToast(error.message || translate('queue.clearFailed', {}, 'Queue wissen via backend mislukt'), 'error');
                 return;
             }
         } else {
@@ -1221,7 +1307,7 @@ async function debugClearQueue() {
         if (debugStatus) {
             debugStatus.textContent = translate('queue.debugStatusDisabled', {}, 'Uitgeschakeld');
         }
-        showToast(translate('queue.cleared', {}, '✅ Wachtrij gewist'), 'info');
+        runtimeShowToast(translate('queue.cleared', {}, '✅ Wachtrij gewist'), 'info');
     }
 }
 
@@ -1287,18 +1373,18 @@ function formatTime(seconds) {
  */
 async function acceptNextCall() {
     if (!callQueue.enabled || callQueue.queue.length === 0) {
-        showToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
+        runtimeShowToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
         return;
     }
     
     if (callSession.active) {
-        showToast(translate('queue.activeCallExists', {}, '⚠️ Er is al een actief gesprek'), 'error');
+        runtimeShowToast(translate('queue.activeCallExists', {}, '⚠️ Er is al een actief gesprek'), 'error');
         return;
     }
     
     // Check agent status
     if (agentStatus.current !== 'ready') {
-        showToast(
+        runtimeShowToast(
             translate('queue.mustBeReady', {}, '⚠️ Agent status moet "Beschikbaar" zijn om gesprek te accepteren'),
             'error'
         );
@@ -1306,7 +1392,7 @@ async function acceptNextCall() {
     }
     
     if (!window.kiwiApi) {
-        showToast(translate('queue.acceptNextUnavailable', {}, 'Volgende call ophalen via backend is niet beschikbaar'), 'error');
+        runtimeShowToast(translate('queue.acceptNextUnavailable', {}, 'Volgende call ophalen via backend is niet beschikbaar'), 'error');
         return;
     }
 
@@ -1321,11 +1407,11 @@ async function acceptNextCall() {
             };
         }
     } catch (error) {
-        showToast(error.message || translate('queue.acceptNextFailed', {}, 'Volgende call ophalen via backend mislukt'), 'error');
+        runtimeShowToast(error.message || translate('queue.acceptNextFailed', {}, 'Volgende call ophalen via backend mislukt'), 'error');
         return;
     }
     if (!nextEntry) {
-        showToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
+        runtimeShowToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
         return;
     }
     
@@ -1363,14 +1449,14 @@ function startCallFromQueue(queueEntry) {
     // Als het een bekende klant is, open automatisch het klantrecord
     if (queueEntry.callerType === 'known' && queueEntry.customerId) {
         setTimeout(() => {
-            selectCustomer(queueEntry.customerId);
+            runtimeSelectCustomer(queueEntry.customerId);
         }, 500);
     }
     
     // Start normale call session flow
-    startCallSession();
+    runtimeStartCallSession();
     
-    showToast(
+    runtimeShowToast(
         translate('calls.startedFromQueue', { name: queueEntry.customerName }, `📞 Gesprek gestart met ${queueEntry.customerName}`),
         'success'
     );
@@ -1460,7 +1546,7 @@ async function debugStartCall() {
                 };
             }
         } catch (error) {
-            showToast(error.message || translate('calls.debugStartFailed', {}, 'Debug call starten via backend mislukt'), 'error');
+            runtimeShowToast(error.message || translate('calls.debugStartFailed', {}, 'Debug call starten via backend mislukt'), 'error');
             return;
         }
     } else {
@@ -1492,18 +1578,18 @@ async function debugStartCall() {
                 
                 // Automatically open customer record
                 setTimeout(() => {
-                    selectCustomer(knownCustomerId);
+                    runtimeSelectCustomer(knownCustomerId);
                 }, 500);
             }
         }
     }
     
     // Start UI updates
-    startCallSession();
+    runtimeStartCallSession();
     
     closeDebugModal();
     
-    showToast(
+    runtimeShowToast(
         translate(
             'calls.simulationStarted',
             { serviceNumber, wait: formatTime(waitTime) },
@@ -1557,17 +1643,17 @@ function fullReset() {
     if (confirm(translate('storage.resetConfirm', {}, '⚠️ Dit zal alle sessiedata wissen en de pagina herladen. Weet je het zeker?'))) {
         if (window.kiwiApi) {
             window.kiwiApi.post(debugResetApiUrl, {}).then(() => {
-                showToast(translate('storage.cleared', {}, 'Sessiestaat gewist. Pagina wordt herladen...'), 'info');
+                runtimeShowToast(translate('storage.cleared', {}, 'Sessiestaat gewist. Pagina wordt herladen...'), 'info');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
             }).catch((error) => {
-                showToast(error.message || translate('storage.resetFailed', {}, 'Reset via backend mislukt'), 'error');
+                runtimeShowToast(error.message || translate('storage.resetFailed', {}, 'Reset via backend mislukt'), 'error');
             });
             return;
         }
 
-        showToast(translate('storage.cleared', {}, 'Pagina wordt herladen...'), 'info');
+        runtimeShowToast(translate('storage.cleared', {}, 'Pagina wordt herladen...'), 'info');
         setTimeout(() => {
             window.location.reload();
         }, 1000);
