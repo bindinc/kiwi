@@ -2,17 +2,21 @@ import { getGlobalScope } from '../services.js';
 import { getSubscriptionDurationDisplay } from '../subscription-shared-helpers.js';
 import { displayContactHistory, formatDate } from './contact-history-slice.js';
 
-const CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER = 'kiwiGetCustomerDetailSliceDependencies';
 const CUSTOMER_DETAIL_SLICE_NAMESPACE = 'kiwiCustomerDetailSlice';
+let customerDetailDependenciesResolver = null;
+
+export function configureCustomerDetailSliceDependencies(dependenciesResolver) {
+    customerDetailDependenciesResolver = typeof dependenciesResolver === 'function'
+        ? dependenciesResolver
+        : null;
+}
 
 function resolveDependencies() {
-    const globalScope = getGlobalScope();
-    const provider = globalScope ? globalScope[CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER] : null;
-    if (typeof provider !== 'function') {
+    if (typeof customerDetailDependenciesResolver !== 'function') {
         return null;
     }
 
-    const dependencies = provider();
+    const dependencies = customerDetailDependenciesResolver();
     if (!dependencies || typeof dependencies !== 'object') {
         return null;
     }

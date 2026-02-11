@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createActionRouter } from '../actions.js';
-import { registerOrderActions } from './order.js';
+import { configureOrderSliceDependencies, registerOrderActions } from './order.js';
 
 function createRouter() {
     const root = {
@@ -55,7 +55,6 @@ function testInstallsOrderSliceNamespace() {
 
 function testAddDeliveryRemarkByKeyAppendsToTextarea() {
     const previousNamespaceValue = globalThis.kiwiOrderSlice;
-    const previousProviderValue = globalThis.kiwiGetOrderSliceDependencies;
     const previousDocumentValue = globalThis.document;
 
     const notesField = {
@@ -77,14 +76,14 @@ function testAddDeliveryRemarkByKeyAppendsToTextarea() {
                 return null;
             }
         };
-        globalThis.kiwiGetOrderSliceDependencies = () => ({
+        configureOrderSliceDependencies(() => ({
             translate(key, _params, fallback) {
                 if (key === 'delivery.remarkPresets.deliverToNeighbors') {
                     return 'Bij buren';
                 }
                 return fallback;
             }
-        });
+        }));
 
         registerOrderActions(createRouter());
         globalThis.kiwiOrderSlice.addDeliveryRemarkByKey('delivery.remarkPresets.deliverToNeighbors');
@@ -99,11 +98,7 @@ function testAddDeliveryRemarkByKeyAppendsToTextarea() {
             globalThis.kiwiOrderSlice = previousNamespaceValue;
         }
 
-        if (previousProviderValue === undefined) {
-            delete globalThis.kiwiGetOrderSliceDependencies;
-        } else {
-            globalThis.kiwiGetOrderSliceDependencies = previousProviderValue;
-        }
+        configureOrderSliceDependencies(null);
 
         if (previousDocumentValue === undefined) {
             delete globalThis.document;

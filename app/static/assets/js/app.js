@@ -828,13 +828,9 @@ function normalizePhone(value = '') {
 const CUSTOMER_DETAIL_SLICE_NAMESPACE = 'kiwiCustomerDetailSlice';
 const CONTACT_HISTORY_SLICE_NAMESPACE = 'kiwiContactHistorySlice';
 const WINBACK_SLICE_NAMESPACE = 'kiwiWinbackSlice';
-const CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER = 'kiwiGetCustomerDetailSliceDependencies';
 const ORDER_SLICE_NAMESPACE = 'kiwiOrderSlice';
-const ORDER_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetOrderSliceDependencies';
 const DELIVERY_REMARKS_SLICE_NAMESPACE = 'kiwiDeliveryRemarksSlice';
-const DELIVERY_REMARKS_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetDeliveryRemarksSliceDependencies';
 const APP_SHELL_SLICE_NAMESPACE = 'kiwiAppShellSlice';
-const APP_SHELL_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetAppShellSliceDependencies';
 
 function getSliceApi(namespace) {
     if (typeof window === 'undefined') {
@@ -1021,10 +1017,17 @@ function getAppShellSliceDependencies() {
 }
 
 if (typeof window !== 'undefined') {
-    window[CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER] = getCustomerDetailSliceDependencies;
-    window[ORDER_SLICE_DEPENDENCIES_PROVIDER] = getOrderSliceDependencies;
-    window[DELIVERY_REMARKS_SLICE_DEPENDENCIES_PROVIDER] = getDeliveryRemarksSliceDependencies;
-    window[APP_SHELL_SLICE_DEPENDENCIES_PROVIDER] = getAppShellSliceDependencies;
+    const previousLegacySliceDependencies = window.kiwiLegacySliceDependencies
+        && typeof window.kiwiLegacySliceDependencies === 'object'
+        ? window.kiwiLegacySliceDependencies
+        : {};
+    window.kiwiLegacySliceDependencies = {
+        ...previousLegacySliceDependencies,
+        getCustomerDetailSliceDependencies,
+        getOrderSliceDependencies,
+        getDeliveryRemarksSliceDependencies,
+        getAppShellSliceDependencies
+    };
 }
 
 // Select Customer

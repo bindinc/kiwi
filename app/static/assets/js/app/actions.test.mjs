@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { coerceActionValue, createActionRouter, extractActionPayload } from './actions.js';
 import { registerCallQueueAgentStatusSlices } from './slices/index.js';
-import { registerContactHistorySlice } from './slices/contact-history-slice.js';
-import { registerCustomerDetailSlice } from './slices/customer-detail-slice.js';
+import { configureContactHistorySliceDependencies, registerContactHistorySlice } from './slices/contact-history-slice.js';
+import { configureCustomerDetailSliceDependencies, registerCustomerDetailSlice } from './slices/customer-detail-slice.js';
 import { registerLocalizationSlice } from './slices/localization-slice.js';
 
 function testCoerceActionValue() {
@@ -340,7 +340,6 @@ function testContactHistorySlice() {
         }
     };
 
-    const previousDependenciesProvider = globalThis.kiwiGetCustomerDetailSliceDependencies;
     const previousDocument = globalThis.document;
     const previousContactHistoryNamespace = globalThis.kiwiContactHistorySlice;
 
@@ -366,7 +365,7 @@ function testContactHistorySlice() {
         classList: createToggleClassList(['expanded'])
     };
 
-    globalThis.kiwiGetCustomerDetailSliceDependencies = () => ({
+    const customerDetailDependencies = {
         getCurrentCustomer() {
             return currentCustomer;
         },
@@ -379,7 +378,8 @@ function testContactHistorySlice() {
         getDateLocaleForApp() {
             return 'nl-NL';
         }
-    });
+    };
+    configureContactHistorySliceDependencies(() => customerDetailDependencies);
     globalThis.document = {
         getElementById(id) {
             if (id === 'contactHistory') {
@@ -429,12 +429,6 @@ function testContactHistorySlice() {
         assert.equal(contentNode.classList.contains('expanded'), false);
         assert.equal(expandNode.classList.contains('expanded'), false);
     } finally {
-        if (previousDependenciesProvider === undefined) {
-            delete globalThis.kiwiGetCustomerDetailSliceDependencies;
-        } else {
-            globalThis.kiwiGetCustomerDetailSliceDependencies = previousDependenciesProvider;
-        }
-
         if (previousDocument === undefined) {
             delete globalThis.document;
         } else {
@@ -446,6 +440,8 @@ function testContactHistorySlice() {
         } else {
             globalThis.kiwiContactHistorySlice = previousContactHistoryNamespace;
         }
+
+        configureContactHistorySliceDependencies(null);
     }
 }
 
@@ -460,7 +456,6 @@ async function testCustomerDetailSlice() {
         }
     };
 
-    const previousDependenciesProvider = globalThis.kiwiGetCustomerDetailSliceDependencies;
     const previousDocument = globalThis.document;
     const previousScrollTo = globalThis.scrollTo;
     const previousCustomerDetailNamespace = globalThis.kiwiCustomerDetailSlice;
@@ -512,7 +507,7 @@ async function testCustomerDetailSlice() {
         contactHistory: { innerHTML: '' }
     };
 
-    globalThis.kiwiGetCustomerDetailSliceDependencies = () => ({
+    const customerDetailDependencies = {
         findCustomerById(customerId) {
             return Number(customerId) === cachedCustomer.id ? cachedCustomer : null;
         },
@@ -552,7 +547,9 @@ async function testCustomerDetailSlice() {
             return 'nl-NL';
         },
         personsApiUrl: '/api/v1/persons'
-    });
+    };
+    configureContactHistorySliceDependencies(() => customerDetailDependencies);
+    configureCustomerDetailSliceDependencies(() => customerDetailDependencies);
     globalThis.document = {
         getElementById(id) {
             return elements[id] || null;
@@ -602,12 +599,6 @@ async function testCustomerDetailSlice() {
         assert.equal(elements.subscriptionsList.innerHTML.includes('Geen abonnementen'), true);
         assert.equal(elements.contactHistory.innerHTML.includes('Geen contactgeschiedenis beschikbaar'), true);
     } finally {
-        if (previousDependenciesProvider === undefined) {
-            delete globalThis.kiwiGetCustomerDetailSliceDependencies;
-        } else {
-            globalThis.kiwiGetCustomerDetailSliceDependencies = previousDependenciesProvider;
-        }
-
         if (previousDocument === undefined) {
             delete globalThis.document;
         } else {
@@ -637,6 +628,9 @@ async function testCustomerDetailSlice() {
         } else {
             globalThis.kiwiApi = previousKiwiApi;
         }
+
+        configureContactHistorySliceDependencies(null);
+        configureCustomerDetailSliceDependencies(null);
     }
 }
 
