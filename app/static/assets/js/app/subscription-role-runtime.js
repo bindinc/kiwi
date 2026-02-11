@@ -984,6 +984,10 @@ function selectSubscriptionDuplicatePerson(role, personId) {
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
     }
+
+    if (!subscriptionRoleState.requesterSameAsRecipient) {
+        normalizeRequesterSameAsRecipientSelection();
+    }
 }
 
 function waitForTimeout(milliseconds) {
