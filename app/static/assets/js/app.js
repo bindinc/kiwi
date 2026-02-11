@@ -211,6 +211,93 @@ function applyIndexHtmlTranslations() {
     }
 }
 
+const FALLBACK_APP_LOCALE = 'nl';
+const DATE_LOCALE_BY_APP_LOCALE = {
+    nl: 'nl-NL',
+    en: 'en-US'
+};
+
+function normalizeAppLocale(locale) {
+    if (!locale) {
+        return FALLBACK_APP_LOCALE;
+    }
+
+    return String(locale).split('-')[0].toLowerCase();
+}
+
+function getAppLocale() {
+    const i18nLocale = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.getLocale === 'function')
+        ? window.i18n.getLocale()
+        : null;
+    const availableLocales = (typeof window !== 'undefined' && window.i18n && typeof window.i18n.availableLocales === 'function')
+        ? window.i18n.availableLocales().map((locale) => normalizeAppLocale(locale))
+        : [];
+    const documentLocale = (typeof document !== 'undefined' && document.documentElement)
+        ? document.documentElement.lang
+        : null;
+    const candidate = normalizeAppLocale(i18nLocale || documentLocale || FALLBACK_APP_LOCALE);
+
+    if (availableLocales.length > 0 && !availableLocales.includes(candidate)) {
+        return FALLBACK_APP_LOCALE;
+    }
+
+    if (!DATE_LOCALE_BY_APP_LOCALE[candidate]) {
+        return FALLBACK_APP_LOCALE;
+    }
+
+    return candidate;
+}
+
+function getDateLocaleForApp() {
+    const appLocale = getAppLocale();
+    return DATE_LOCALE_BY_APP_LOCALE[appLocale] || DATE_LOCALE_BY_APP_LOCALE[FALLBACK_APP_LOCALE];
+}
+
+function setDocumentLocale(locale) {
+    if (typeof document === 'undefined' || !document.documentElement) {
+        return;
+    }
+
+    document.documentElement.lang = normalizeAppLocale(locale);
+}
+
+function updateLocaleMenuSelection() {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const selectedLocale = getAppLocale();
+    const localeButtons = document.querySelectorAll('[data-locale-option]');
+    localeButtons.forEach((button) => {
+        const isCurrentLocale = normalizeAppLocale(button.dataset.localeOption) === selectedLocale;
+        button.classList.toggle('is-active', isCurrentLocale);
+    });
+}
+
+function applyLocaleToUi(options = {}) {
+    const shouldCloseMenu = options.closeMenu === true;
+    setDocumentLocale(getAppLocale());
+    applyIndexHtmlTranslations();
+    refreshAgentStatusLabels();
+    updateAgentStatusDisplay();
+    updateLocaleMenuSelection();
+    updateTime();
+
+    if (shouldCloseMenu) {
+        closeStatusMenu();
+    }
+}
+
+function setAppLocale(locale) {
+    if (!(typeof window !== 'undefined' && window.i18n && typeof window.i18n.setLocale === 'function')) {
+        return getAppLocale();
+    }
+
+    const nextLocale = window.i18n.setLocale(locale);
+    applyLocaleToUi({ closeMenu: true });
+    return normalizeAppLocale(nextLocale);
+}
+
 const bootstrapApiUrl = '/api/v1/bootstrap';
 const offersApiUrl = '/api/v1/catalog/offers';
 const personsStateApiUrl = '/api/v1/persons/state';
@@ -276,17 +363,40 @@ let agentStatus = {
     acwInterval: null
 };
 
+const agentStatusLabelConfig = {
+    ready: { key: 'agentStatus.ready', fallback: 'Beschikbaar' },
+    in_call: { key: 'agentStatus.in_call', fallback: 'In gesprek' },
+    busy: { key: 'agentStatus.busy', fallback: 'Bezet' },
+    dnd: { key: 'agentStatus.dnd', fallback: 'Niet storen' },
+    brb: { key: 'agentStatus.brb', fallback: 'Ben zo terug' },
+    away: { key: 'agentStatus.away', fallback: 'Als afwezig weergeven' },
+    offline: { key: 'agentStatus.offline', fallback: 'Offline' },
+    acw: { key: 'agentStatus.acw', fallback: 'Nabewerkingstijd' }
+};
+
 // Agent Status Definitions
 const agentStatuses = {
-    ready: { label: translate('agentStatus.ready', {}, 'Beschikbaar'), color: '#4ade80', badge: '✓', textColor: '#052e16' },
-    in_call: { label: translate('agentStatus.in_call', {}, 'In gesprek'), color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
-    busy: { label: translate('agentStatus.busy', {}, 'Bezet'), color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
-    dnd: { label: translate('agentStatus.dnd', {}, 'Niet storen'), color: '#dc2626', badge: '⛔', textColor: '#7f1d1d' },
-    brb: { label: translate('agentStatus.brb', {}, 'Ben zo terug'), color: '#f59e0b', badge: '↺', textColor: '#78350f' },
-    away: { label: translate('agentStatus.away', {}, 'Als afwezig weergeven'), color: '#fbbf24', badge: '◔', textColor: '#713f12' },
-    offline: { label: translate('agentStatus.offline', {}, 'Offline'), color: '#9ca3af', badge: '−', textColor: '#111827' },
-    acw: { label: translate('agentStatus.acw', {}, 'Nabewerkingstijd'), color: '#facc15', badge: '~', textColor: '#422006' },
+    ready: { label: '', color: '#4ade80', badge: '✓', textColor: '#052e16' },
+    in_call: { label: '', color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
+    busy: { label: '', color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
+    dnd: { label: '', color: '#dc2626', badge: '⛔', textColor: '#7f1d1d' },
+    brb: { label: '', color: '#f59e0b', badge: '↺', textColor: '#78350f' },
+    away: { label: '', color: '#fbbf24', badge: '◔', textColor: '#713f12' },
+    offline: { label: '', color: '#9ca3af', badge: '−', textColor: '#111827' },
+    acw: { label: '', color: '#facc15', badge: '~', textColor: '#422006' }
 };
+
+function refreshAgentStatusLabels() {
+    for (const [status, statusConfig] of Object.entries(agentStatuses)) {
+        const labelConfig = agentStatusLabelConfig[status];
+        if (!labelConfig) {
+            continue;
+        }
+        statusConfig.label = translate(labelConfig.key, {}, labelConfig.fallback);
+    }
+}
+
+refreshAgentStatusLabels();
 
 const agentStatusAliases = {
     break: 'away'
@@ -299,11 +409,20 @@ const transientAgentStatuses = new Set(['in_call']);
 let serviceNumbers = {};
 
 // Currency formatter reused for werfsleutels and notes
-const euroFormatter = new Intl.NumberFormat('nl-NL', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2
-});
+const euroFormattersByLocale = {};
+
+function getEuroFormatter() {
+    const locale = getDateLocaleForApp();
+    if (!euroFormattersByLocale[locale]) {
+        euroFormattersByLocale[locale] = new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: 2
+        });
+    }
+
+    return euroFormattersByLocale[locale];
+}
 
 let werfsleutelCatalog = [];
 let werfsleutelLoadAttempted = false;
@@ -665,6 +784,7 @@ function generateSubscriptionNumber(customerId, subscriptionId) {
 }
 
 function formatEuro(amount) {
+    const euroFormatter = getEuroFormatter();
     if (typeof amount !== 'number') {
         const numericValue = Number(amount);
         return euroFormatter.format(Number.isFinite(numericValue) ? numericValue : 0);
@@ -1115,62 +1235,82 @@ let callQueue = {
 };
 
 // Phase 5A: Disposition Codes Configuration
-const dispositionCategories = {
-    'subscription': {
-        label: 'Abonnement',
+const dispositionCategoryConfig = {
+    subscription: {
+        labelKey: 'disposition.category.subscription',
+        labelFallback: 'Abonnement',
         outcomes: [
-            { code: 'new_subscription', label: 'Nieuw abonnement afgesloten' },
-            { code: 'subscription_changed', label: 'Abonnement gewijzigd' },
-            { code: 'subscription_cancelled', label: 'Abonnement opgezegd' },
-            { code: 'subscription_paused', label: 'Abonnement gepauzeerd' },
-            { code: 'info_provided', label: 'Informatie verstrekt' }
+            { code: 'new_subscription', key: 'disposition.outcome.newSubscription', fallback: 'Nieuw abonnement afgesloten' },
+            { code: 'subscription_changed', key: 'disposition.outcome.subscriptionChanged', fallback: 'Abonnement gewijzigd' },
+            { code: 'subscription_cancelled', key: 'disposition.outcome.subscriptionCancelled', fallback: 'Abonnement opgezegd' },
+            { code: 'subscription_paused', key: 'disposition.outcome.subscriptionPaused', fallback: 'Abonnement gepauzeerd' },
+            { code: 'info_provided', key: 'disposition.outcome.infoProvided', fallback: 'Informatie verstrekt' }
         ]
     },
-    'delivery': {
-        label: 'Bezorging',
+    delivery: {
+        labelKey: 'disposition.category.delivery',
+        labelFallback: 'Bezorging',
         outcomes: [
-            { code: 'delivery_issue_resolved', label: 'Bezorgprobleem opgelost' },
-            { code: 'magazine_resent', label: 'Editie opnieuw verzonden' },
-            { code: 'delivery_prefs_updated', label: 'Bezorgvoorkeuren aangepast' },
-            { code: 'escalated_delivery', label: 'Geëscaleerd naar bezorging' }
+            { code: 'delivery_issue_resolved', key: 'disposition.outcome.deliveryIssueResolved', fallback: 'Bezorgprobleem opgelost' },
+            { code: 'magazine_resent', key: 'disposition.outcome.magazineResent', fallback: 'Editie opnieuw verzonden' },
+            { code: 'delivery_prefs_updated', key: 'disposition.outcome.deliveryPreferencesUpdated', fallback: 'Bezorgvoorkeuren aangepast' },
+            { code: 'escalated_delivery', key: 'disposition.outcome.deliveryEscalated', fallback: 'Geëscaleerd naar bezorging' }
         ]
     },
-    'payment': {
-        label: 'Betaling',
+    payment: {
+        labelKey: 'disposition.category.payment',
+        labelFallback: 'Betaling',
         outcomes: [
-            { code: 'payment_resolved', label: 'Betaling afgehandeld' },
-            { code: 'payment_plan_arranged', label: 'Betalingsregeling getroffen' },
-            { code: 'iban_updated', label: 'IBAN gegevens bijgewerkt' },
-            { code: 'escalated_finance', label: 'Geëscaleerd naar financiën' }
+            { code: 'payment_resolved', key: 'disposition.outcome.paymentResolved', fallback: 'Betaling afgehandeld' },
+            { code: 'payment_plan_arranged', key: 'disposition.outcome.paymentPlanArranged', fallback: 'Betalingsregeling getroffen' },
+            { code: 'iban_updated', key: 'disposition.outcome.ibanUpdated', fallback: 'IBAN gegevens bijgewerkt' },
+            { code: 'escalated_finance', key: 'disposition.outcome.financeEscalated', fallback: 'Geëscaleerd naar financiën' }
         ]
     },
-    'article_sale': {
-        label: 'Artikel Verkoop',
+    article_sale: {
+        labelKey: 'disposition.category.articleSale',
+        labelFallback: 'Artikel Verkoop',
         outcomes: [
-            { code: 'article_sold', label: 'Artikel verkocht' },
-            { code: 'quote_provided', label: 'Offerte verstrekt' },
-            { code: 'no_sale', label: 'Geen verkoop' }
+            { code: 'article_sold', key: 'disposition.outcome.articleSold', fallback: 'Artikel verkocht' },
+            { code: 'quote_provided', key: 'disposition.outcome.quoteProvided', fallback: 'Offerte verstrekt' },
+            { code: 'no_sale', key: 'disposition.outcome.noSale', fallback: 'Geen verkoop' }
         ]
     },
-    'complaint': {
-        label: 'Klacht',
+    complaint: {
+        labelKey: 'disposition.category.complaint',
+        labelFallback: 'Klacht',
         outcomes: [
-            { code: 'complaint_resolved', label: 'Klacht opgelost' },
-            { code: 'complaint_escalated', label: 'Klacht geëscaleerd' },
-            { code: 'callback_scheduled', label: 'Terugbelafspraak gemaakt' }
+            { code: 'complaint_resolved', key: 'disposition.outcome.complaintResolved', fallback: 'Klacht opgelost' },
+            { code: 'complaint_escalated', key: 'disposition.outcome.complaintEscalated', fallback: 'Klacht geëscaleerd' },
+            { code: 'callback_scheduled', key: 'disposition.outcome.callbackScheduled', fallback: 'Terugbelafspraak gemaakt' }
         ]
     },
-    'general': {
-        label: 'Algemeen',
+    general: {
+        labelKey: 'disposition.category.general',
+        labelFallback: 'Algemeen',
         outcomes: [
-            { code: 'info_provided', label: 'Informatie verstrekt' },
-            { code: 'transferred', label: 'Doorverbonden' },
-            { code: 'customer_hung_up', label: 'Klant opgehangen' },
-            { code: 'wrong_number', label: 'Verkeerd verbonden' },
-            { code: 'no_answer_needed', label: 'Geen actie vereist' }
+            { code: 'info_provided', key: 'disposition.outcome.infoProvided', fallback: 'Informatie verstrekt' },
+            { code: 'transferred', key: 'disposition.outcome.transferred', fallback: 'Doorverbonden' },
+            { code: 'customer_hung_up', key: 'disposition.outcome.customerHungUp', fallback: 'Klant opgehangen' },
+            { code: 'wrong_number', key: 'disposition.outcome.wrongNumber', fallback: 'Verkeerd verbonden' },
+            { code: 'no_answer_needed', key: 'disposition.outcome.noAnswerNeeded', fallback: 'Geen actie vereist' }
         ]
     }
 };
+
+function getDispositionCategories() {
+    const resolvedCategories = {};
+    for (const [categoryCode, categoryConfig] of Object.entries(dispositionCategoryConfig)) {
+        resolvedCategories[categoryCode] = {
+            label: translate(categoryConfig.labelKey, {}, categoryConfig.labelFallback),
+            outcomes: categoryConfig.outcomes.map((outcomeConfig) => ({
+                code: outcomeConfig.code,
+                label: translate(outcomeConfig.key, {}, outcomeConfig.fallback)
+            }))
+        };
+    }
+    return resolvedCategories;
+}
 
 // Phase 2B: Recording Configuration
 const recordingConfig = {
@@ -1375,51 +1515,55 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         showSameAddressCheckbox: false
     };
     const cfg = { ...defaults, ...config };
+    const phonePlaceholderBase = translate('forms.phonePlaceholder', {}, 'Telefoonnummer');
+    const emailPlaceholderBase = translate('forms.emailPlaceholder', {}, 'E-mailadres');
+    const phonePlaceholder = `${phonePlaceholderBase}${cfg.phoneRequired ? '*' : ''}`;
+    const emailPlaceholder = `${emailPlaceholderBase}${cfg.emailRequired ? '*' : ''}`;
 
     const html = `
-        <h3 class="form-subtitle">Aanhef *</h3>
+        <h3 class="form-subtitle">${translate('forms.salutationLabel', {}, 'Aanhef *')}</h3>
         <div class="aanhef-row">
-            <label><input type="radio" name="${prefix}Salutation" value="Dhr." required checked> Dhr.</label>
-            <label><input type="radio" name="${prefix}Salutation" value="Mevr."> Mevr.</label>
-            <label><input type="radio" name="${prefix}Salutation" value="Anders"> Anders</label>
+            <label><input type="radio" name="${prefix}Salutation" value="Dhr." required checked> ${translate('forms.salutationMr', {}, 'Dhr.')}</label>
+            <label><input type="radio" name="${prefix}Salutation" value="Mevr."> ${translate('forms.salutationMrs', {}, 'Mevr.')}</label>
+            <label><input type="radio" name="${prefix}Salutation" value="Anders"> ${translate('forms.salutationOther', {}, 'Anders')}</label>
         </div>
         
         <div class="form-row">
-            <input type="text" id="${prefix}Initials" placeholder="Voorletters*" required>
-            <input type="text" id="${prefix}MiddleName" placeholder="Tussenvoegsel">
-            <input type="text" id="${prefix}LastName" placeholder="Achternaam*" required>
+            <input type="text" id="${prefix}Initials" placeholder="${translate('forms.initialsPlaceholder', {}, 'Voorletters*')}" required>
+            <input type="text" id="${prefix}MiddleName" placeholder="${translate('forms.middleNamePlaceholder', {}, 'Tussenvoegsel')}">
+            <input type="text" id="${prefix}LastName" placeholder="${translate('forms.lastNamePlaceholder', {}, 'Achternaam*')}" required>
         </div>
 
         <div class="form-group">
-            <label>Geboortedatum</label>
+            <label>${translate('forms.birthdayLabel', {}, 'Geboortedatum*')}</label>
             <div class="form-row">
                 <select id="${prefix}BirthdayDay">
-                    <option value="">Dag</option>
+                    <option value="">${translate('forms.birthdayDayPlaceholder', {}, 'Dag')}</option>
                 </select>
                 <select id="${prefix}BirthdayMonth">
-                    <option value="">Maand</option>
+                    <option value="">${translate('forms.birthdayMonthPlaceholder', {}, 'Maand')}</option>
                 </select>
                 <select id="${prefix}BirthdayYear">
-                    <option value="">Jaar</option>
+                    <option value="">${translate('forms.birthdayYearPlaceholder', {}, 'Jaar')}</option>
                 </select>
             </div>
         </div>
 
         <div class="form-row">
-            <input type="text" id="${prefix}PostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required>
-            <input type="text" id="${prefix}HouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required>
-            <input type="text" id="${prefix}HouseExt" placeholder="Toevoeging" maxlength="10">
+            <input type="text" id="${prefix}PostalCode" placeholder="${translate('forms.postalCodePlaceholder', {}, 'Postcode*')}" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="${translate('forms.postalCodeTitle', {}, 'Voer een geldige postcode in (bijv. 1234AB)')}" required>
+            <input type="text" id="${prefix}HouseNumber" placeholder="${translate('forms.houseNumberPlaceholder', {}, 'Huisnr. (en letter)*')}" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="${translate('forms.houseNumberTitle', {}, 'Voer een geldig huisnummer in (bijv. 123 of 123A)')}" required>
+            <input type="text" id="${prefix}HouseExt" placeholder="${translate('forms.houseExtensionPlaceholder', {}, 'Toevoeging')}" maxlength="10">
         </div>
         
         <div class="form-row">
-            <input type="text" id="${prefix}Address" placeholder="Straat*" required>
-            <input type="text" id="${prefix}City" placeholder="Plaats*" required>
+            <input type="text" id="${prefix}Address" placeholder="${translate('forms.streetPlaceholder', {}, 'Straat*')}" required>
+            <input type="text" id="${prefix}City" placeholder="${translate('forms.cityPlaceholder', {}, 'Plaats*')}" required>
         </div>
         
         ${cfg.includePhone || cfg.includeEmail ? `
         <div class="form-row">
-            ${cfg.includePhone ? `<input type="tel" id="${prefix}Phone" placeholder="Telefoonnummer${cfg.phoneRequired ? '*' : ''}" ${cfg.phoneRequired ? 'required' : ''}>` : ''}
-            ${cfg.includeEmail ? `<input type="email" id="${prefix}Email" placeholder="E-mailadres${cfg.emailRequired ? '*' : ''}" ${cfg.emailRequired ? 'required' : ''}>` : ''}
+            ${cfg.includePhone ? `<input type="tel" id="${prefix}Phone" placeholder="${phonePlaceholder}" ${cfg.phoneRequired ? 'required' : ''}>` : ''}
+            ${cfg.includeEmail ? `<input type="email" id="${prefix}Email" placeholder="${emailPlaceholder}" ${cfg.emailRequired ? 'required' : ''}>` : ''}
         </div>
         ` : ''}
         
@@ -1427,7 +1571,7 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         <div class="form-group">
             <label>
                 <input type="checkbox" id="${prefix}SameAddress" onchange="toggleCustomerFormAddress('${prefix}')">
-                Zelfde adres als originele abonnee
+                ${translate('forms.sameAddressAsOriginalSubscriber', {}, 'Zelfde adres als originele abonnee')}
             </label>
         </div>
         ` : ''}
@@ -1571,6 +1715,10 @@ function buildPersonDisplayAddress(person) {
     return `${postalCode} ${city}`.trim();
 }
 
+function formatPersonReference(personId) {
+    return translate('common.personWithId', { id: personId }, `persoon #${personId}`);
+}
+
 function renderSubscriptionRoleSelectedPerson(role) {
     const cfg = getSubscriptionRoleConfig(role);
     if (!cfg) return;
@@ -1582,17 +1730,17 @@ function renderSubscriptionRoleSelectedPerson(role) {
     if (!selectedPerson || selectedPerson.id === undefined || selectedPerson.id === null) {
         selectedNode.classList.add('empty');
         selectedNode.textContent = role === 'recipient'
-            ? 'Geen ontvanger geselecteerd'
-            : 'Geen aanvrager/betaler geselecteerd';
+            ? translate('subscription.recipientNotSelected', {}, 'Geen ontvanger geselecteerd')
+            : translate('subscription.requesterNotSelected', {}, 'Geen aanvrager/betaler geselecteerd');
         return;
     }
 
-    const name = escapeHtml(buildPersonDisplayName(selectedPerson) || `Persoon #${selectedPerson.id}`);
+    const name = escapeHtml(buildPersonDisplayName(selectedPerson) || formatPersonReference(selectedPerson.id));
     const address = escapeHtml(buildPersonDisplayAddress(selectedPerson));
-    const personId = escapeHtml(selectedPerson.id);
+    const personId = escapeHtml(formatPersonReference(selectedPerson.id));
     const addressLine = address ? ` · ${address}` : '';
     selectedNode.classList.remove('empty');
-    selectedNode.innerHTML = `<strong>${name}</strong> · persoon #${personId}${addressLine}`;
+    selectedNode.innerHTML = `<strong>${name}</strong> · ${personId}${addressLine}`;
 }
 
 function renderRequesterSameSummary() {
@@ -1606,8 +1754,12 @@ function renderRequesterSameSummary() {
 
     const recipient = subscriptionRoleState.recipient.selectedPerson;
     if (recipient && recipient.id !== undefined && recipient.id !== null) {
-        const name = escapeHtml(buildPersonDisplayName(recipient) || `Persoon #${recipient.id}`);
-        summaryNode.innerHTML = `Aanvrager/betaler volgt de ontvanger: <strong>${name}</strong> · persoon #${escapeHtml(recipient.id)}.`;
+        const name = escapeHtml(buildPersonDisplayName(recipient) || formatPersonReference(recipient.id));
+        summaryNode.innerHTML = translate(
+            'subscription.requesterFollowsRecipient',
+            { name, person: formatPersonReference(recipient.id) },
+            `Aanvrager/betaler volgt de ontvanger: <strong>${name}</strong> · ${formatPersonReference(recipient.id)}.`
+        );
         return;
     }
 
@@ -1617,12 +1769,21 @@ function renderRequesterSameSummary() {
         const lastName = document.getElementById('subRecipientLastName')?.value?.trim() || '';
         const composedName = [initials, middleName, lastName].filter(Boolean).join(' ');
         if (composedName) {
-            summaryNode.innerHTML = `Aanvrager/betaler volgt de nieuwe ontvanger: <strong>${escapeHtml(composedName)}</strong>.`;
+            const safeComposedName = escapeHtml(composedName);
+            summaryNode.innerHTML = translate(
+                'subscription.requesterFollowsNewRecipient',
+                { name: safeComposedName },
+                `Aanvrager/betaler volgt de nieuwe ontvanger: <strong>${safeComposedName}</strong>.`
+            );
             return;
         }
     }
 
-    summaryNode.textContent = 'Aanvrager/betaler volgt de geselecteerde ontvanger.';
+    summaryNode.textContent = translate(
+        'subscription.requesterFollowsSelectedRecipient',
+        {},
+        'Aanvrager/betaler volgt de geselecteerde ontvanger.'
+    );
 }
 
 function clearSubscriptionRoleCreateForm(role) {
@@ -2181,7 +2342,7 @@ function selectSubscriptionDuplicatePerson(role, personId) {
     const selectedPerson = (roleDuplicateState.strongMatches || [])
         .find((entry) => Number(entry.id) === Number(personId));
     if (!selectedPerson) {
-        showToast('Geselecteerde persoon niet gevonden in controlelijst', 'error');
+        showToast(translate('subscription.duplicateCheck.personNotFoundControlList', {}, 'Geselecteerde persoon niet gevonden in controlelijst'), 'error');
         return;
     }
 
@@ -2506,17 +2667,18 @@ function renderSubscriptionRoleSearchResults(role) {
     }
 
     resultsNode.innerHTML = results.map((person) => {
-        const safeName = escapeHtml(buildPersonDisplayName(person) || `Persoon #${person.id}`);
+        const safeName = escapeHtml(buildPersonDisplayName(person) || formatPersonReference(person.id));
         const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
-        const safeId = escapeHtml(person.id);
+        const safeId = escapeHtml(formatPersonReference(person.id));
         const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
+        const selectLabel = escapeHtml(translate('subscription.search.selectButton', {}, 'Selecteer'));
         return `
             <div class="party-search-result">
                 <div>
                     <strong>${safeName}</strong>
-                    <div class="party-search-result-meta">persoon #${safeId}${safeAddressLine}</div>
+                    <div class="party-search-result-meta">${safeId}${safeAddressLine}</div>
                 </div>
-                <button type="button" class="btn btn-small" onclick="selectSubscriptionRolePerson('${role}', ${Number(person.id)})">Selecteer</button>
+                <button type="button" class="btn btn-small" onclick="selectSubscriptionRolePerson('${role}', ${Number(person.id)})">${selectLabel}</button>
             </div>
         `;
     }).join('');
@@ -2528,7 +2690,7 @@ async function searchSubscriptionRolePerson(role) {
 
     const query = normalizeRoleSearchQuery(document.getElementById(cfg.searchQueryId)?.value);
     if (!query) {
-        showToast('Voer eerst een zoekterm in', 'warning');
+        showToast(translate('subscription.search.enterQuery', {}, 'Voer eerst een zoekterm in'), 'warning');
         return;
     }
 
@@ -2555,7 +2717,7 @@ async function searchSubscriptionRolePerson(role) {
             const payload = await window.kiwiApi.get(`${personsApiUrl}?${params.toString()}`);
             results = Array.isArray(payload && payload.items) ? payload.items : [];
         } catch (error) {
-            showToast(error.message || 'Zoeken van personen mislukt', 'error');
+            showToast(error.message || translate('subscription.search.failed', {}, 'Zoeken van personen mislukt'), 'error');
             return;
         }
     } else {
@@ -2570,7 +2732,7 @@ function selectSubscriptionRolePerson(role, personId) {
     const selected = (subscriptionRoleState[role].searchResults || [])
         .find((entry) => Number(entry.id) === Number(personId));
     if (!selected) {
-        showToast('Geselecteerde persoon niet gevonden in zoekresultaat', 'error');
+        showToast(translate('subscription.search.personNotFound', {}, 'Geselecteerde persoon niet gevonden in zoekresultaat'), 'error');
         return;
     }
 
@@ -2655,15 +2817,15 @@ function buildSubscriptionRolePayload(role, options = {}) {
     const roleState = subscriptionRoleState[role];
     const cfg = getSubscriptionRoleConfig(role);
     if (!roleState || !cfg) {
-        showToast('Onbekende persoonsrol in abonnement flow', 'error');
+        showToast(translate('subscription.roleUnknown', {}, 'Onbekende persoonsrol in abonnement flow'), 'error');
         return null;
     }
 
     if (roleState.mode === 'existing') {
         if (!roleState.selectedPerson || roleState.selectedPerson.id === undefined || roleState.selectedPerson.id === null) {
             const message = role === 'recipient'
-                ? 'Selecteer een ontvanger of kies "Nieuwe persoon".'
-                : 'Selecteer een aanvrager/betaler of kies "Nieuwe persoon".';
+                ? translate('subscription.selectRecipientOrCreate', {}, 'Selecteer een ontvanger of kies "Nieuwe persoon".')
+                : translate('subscription.selectRequesterOrCreate', {}, 'Selecteer een aanvrager/betaler of kies "Nieuwe persoon".');
             showToast(message, 'error');
             return null;
         }
@@ -2678,7 +2840,7 @@ function buildSubscriptionRolePayload(role, options = {}) {
         return { person: personPayload };
     }
 
-    showToast('Persoonsrol onjuist ingesteld', 'error');
+    showToast(translate('subscription.roleInvalid', {}, 'Persoonsrol onjuist ingesteld'), 'error');
     return null;
 }
 
@@ -2867,10 +3029,10 @@ function startCallSession() {
     
     // Update service nummer
     const serviceLabels = {
-        'AVROBODE': 'AVROBODE SERVICE',
-        'MIKROGIDS': 'MIKROGIDS SERVICE',
-        'NCRVGIDS': 'NCRVGIDS SERVICE',
-        'ALGEMEEN': 'ALGEMEEN SERVICE'
+        'AVROBODE': translate('serviceNumbers.avrobode', {}, 'AVROBODE SERVICE'),
+        'MIKROGIDS': translate('serviceNumbers.mikrogids', {}, 'MIKROGIDS SERVICE'),
+        'NCRVGIDS': translate('serviceNumbers.ncrvgids', {}, 'NCRVGIDS SERVICE'),
+        'ALGEMEEN': translate('serviceNumbers.algemeen', {}, 'ALGEMEEN SERVICE')
     };
     document.getElementById('sessionServiceNumber').textContent = 
         serviceLabels[callSession.serviceNumber] || callSession.serviceNumber;
@@ -2881,7 +3043,7 @@ function startCallSession() {
     
     // Update beller naam
     document.getElementById('sessionCallerName').textContent = 
-        callSession.customerName || 'Anonieme Beller';
+        callSession.customerName || translate('calls.anonymousCaller', {}, 'Anonieme Beller');
     
     // Toon gesprek beëindigen knop
     document.getElementById('endCallBtn').style.display = 'inline-block';
@@ -2893,7 +3055,7 @@ function startCallSession() {
     const holdBtn = document.getElementById('holdCallBtn');
     if (holdBtn) {
         holdBtn.style.display = 'inline-block';
-        holdBtn.innerHTML = '⏸️ In Wacht Zetten';
+        holdBtn.innerHTML = translate('calls.holdButtonLabel', {}, '⏸️ In Wacht Zetten');
         holdBtn.classList.remove('on-hold');
     }
     
@@ -3046,7 +3208,7 @@ async function identifyCallerAsCustomer(customerId) {
                 };
             }
         } catch (error) {
-            showToast(error.message || 'Identificatie via backend mislukt', 'error');
+            showToast(error.message || translate('calls.identifyFailed', {}, 'Identificatie via backend mislukt'), 'error');
             return;
         }
     } else {
@@ -3113,7 +3275,7 @@ async function toggleCallHold() {
                 };
             }
         } catch (error) {
-            showToast(error.message || 'Call hold/resume via backend mislukt', 'error');
+            showToast(error.message || translate('calls.holdResumeFailed', {}, 'Call hold/resume via backend mislukt'), 'error');
             return;
         }
     } else {
@@ -3125,7 +3287,7 @@ async function toggleCallHold() {
     
     if (callSession.onHold) {
         // Put call on hold
-        holdBtn.innerHTML = '▶️ Hervatten';
+        holdBtn.innerHTML = translate('calls.resumeButtonLabel', {}, '▶️ Hervatten');
         holdBtn.classList.add('on-hold');
         
         // Show hold indicator
@@ -3135,7 +3297,7 @@ async function toggleCallHold() {
         const holdIndicator = document.createElement('div');
         holdIndicator.id = 'holdIndicator';
         holdIndicator.className = 'hold-indicator';
-        holdIndicator.innerHTML = '🎵 Klant in wacht';
+        holdIndicator.innerHTML = translate('calls.holdIndicator', {}, '🎵 Klant in wacht');
         sessionInfo.appendChild(holdIndicator);
         
         if (!window.kiwiApi) {
@@ -3154,7 +3316,7 @@ async function toggleCallHold() {
         }
     } else {
         // Resume call
-        holdBtn.innerHTML = '⏸️ In Wacht Zetten';
+        holdBtn.innerHTML = translate('calls.holdButtonLabel', {}, '⏸️ In Wacht Zetten');
         holdBtn.classList.remove('on-hold');
         
         sessionInfo.classList.remove('call-on-hold');
@@ -3202,7 +3364,12 @@ function showSuccessIdentificationPrompt(customerId, customerName) {
     if (callSession.active && callSession.callerType === 'anonymous') {
         // Use a timeout to show the prompt after the success toast
         setTimeout(() => {
-            if (confirm(`✅ ${customerName} is succesvol aangemaakt.\n\nIs dit de persoon die belt?`)) {
+            const confirmationMessage = translate(
+                'calls.identificationPromptAfterCreate',
+                { customerName },
+                `✅ ${customerName} is succesvol aangemaakt.\n\nIs dit de persoon die belt?`
+            );
+            if (confirm(confirmationMessage)) {
                 identifyCallerAsCustomer(customerId);
             }
         }, 800);
@@ -3645,7 +3812,7 @@ function showDispositionModal() {
     // Pre-fill information
     const customerNameEl = document.getElementById('dispCustomerName');
     if (customerNameEl) {
-        customerNameEl.textContent = sessionData.customerName || 'Anonieme Beller';
+        customerNameEl.textContent = sessionData.customerName || translate('calls.anonymousCaller', {}, 'Anonieme Beller');
     }
     
     const durationEl = document.getElementById('dispCallDuration');
@@ -3788,16 +3955,17 @@ function determineAutoDisposition() {
 function updateDispositionOutcomes() {
     const category = document.getElementById('dispCategory').value;
     const outcomeSelect = document.getElementById('dispOutcome');
+    const dispositionCategories = getDispositionCategories();
     
     if (!category) {
         outcomeSelect.disabled = true;
-        outcomeSelect.innerHTML = '<option value="">Selecteer eerst een categorie</option>';
+        outcomeSelect.innerHTML = `<option value="">${translate('disposition.selectCategoryFirst', {}, 'Selecteer eerst een categorie')}</option>`;
         return;
     }
     
-    const outcomes = dispositionCategories[category].outcomes;
+    const outcomes = dispositionCategories[category]?.outcomes || [];
     outcomeSelect.disabled = false;
-    outcomeSelect.innerHTML = '<option value="">Selecteer uitkomst...</option>';
+    outcomeSelect.innerHTML = `<option value="">${translate('disposition.selectOutcomePlaceholder', {}, 'Selecteer uitkomst...')}</option>`;
     
     outcomes.forEach(outcome => {
         const option = document.createElement('option');
@@ -3816,6 +3984,7 @@ function toggleFollowUpSection() {
 
 // Get Outcome Label
 function getOutcomeLabel(category, outcomeCode) {
+    const dispositionCategories = getDispositionCategories();
     const categoryData = dispositionCategories[category];
     if (!categoryData) return outcomeCode;
     
@@ -3849,11 +4018,13 @@ function saveDisposition() {
     
     // Save to customer history if identified
     if (sessionData.customerId) {
+        const dispositionCategories = getDispositionCategories();
         const outcomeLabel = getOutcomeLabel(category, outcome);
+        const categoryLabel = dispositionCategories[category]?.label || category;
         addContactMoment(
             sessionData.customerId,
             'call_disposition',
-            `${dispositionCategories[category].label}: ${outcomeLabel}${notes ? ' - ' + notes : ''}`
+            `${categoryLabel}: ${outcomeLabel}${notes ? ' - ' + notes : ''}`
         );
         
         // Save follow-up if needed
@@ -3961,7 +4132,7 @@ async function debugGenerateQueue() {
     const queueMix = document.getElementById('debugQueueMix')?.value || 'balanced';
 
     if (!window.kiwiApi) {
-        showToast('Queue genereren via backend is niet beschikbaar', 'error');
+        showToast(translate('queue.generateUnavailable', {}, 'Queue genereren via backend is niet beschikbaar'), 'error');
         return;
     }
 
@@ -3975,7 +4146,7 @@ async function debugGenerateQueue() {
             ...(payload || {})
         };
     } catch (error) {
-        showToast(error.message || 'Queue genereren via backend mislukt', 'error');
+        showToast(error.message || translate('queue.generateFailed', {}, 'Queue genereren via backend mislukt'), 'error');
         return;
     }
 
@@ -3991,7 +4162,11 @@ async function debugGenerateQueue() {
     // Update debug status
     const debugStatus = document.getElementById('debugQueueStatus');
     if (debugStatus) {
-        debugStatus.textContent = `Actief - ${callQueue.queue.length} wachtenden`;
+        debugStatus.textContent = translate(
+            'queue.debugStatusActive',
+            { count: callQueue.queue.length },
+            `Actief - ${callQueue.queue.length} wachtenden`
+        );
     }
 }
 
@@ -4102,7 +4277,7 @@ function stopQueueWaitTimeUpdate() {
  * Clear queue (debug function)
  */
 async function debugClearQueue() {
-    if (confirm('🗑️ Wachtrij volledig wissen?')) {
+    if (confirm(translate('queue.clearConfirm', {}, '🗑️ Wachtrij volledig wissen?'))) {
         // Stop wait time updates
         stopQueueWaitTimeUpdate();
 
@@ -4115,7 +4290,7 @@ async function debugClearQueue() {
                     waitTimeInterval: null
                 };
             } catch (error) {
-                showToast(error.message || 'Queue wissen via backend mislukt', 'error');
+                showToast(error.message || translate('queue.clearFailed', {}, 'Queue wissen via backend mislukt'), 'error');
                 return;
             }
         } else {
@@ -4134,7 +4309,7 @@ async function debugClearQueue() {
         
         const debugStatus = document.getElementById('debugQueueStatus');
         if (debugStatus) {
-            debugStatus.textContent = 'Uitgeschakeld';
+            debugStatus.textContent = translate('queue.debugStatusDisabled', {}, 'Uitgeschakeld');
         }
         showToast(translate('queue.cleared', {}, '✅ Wachtrij gewist'), 'info');
     }
@@ -4163,6 +4338,9 @@ function updateDebugQueuePreview() {
         const item = document.createElement('div');
         item.className = 'debug-queue-item';
         if (index === 0) item.classList.add('current');
+        const callerTypeLabel = entry.callerType === 'known'
+            ? translate('queue.callerTypeKnown', {}, '👤 Bekend')
+            : translate('queue.callerTypeAnonymous', {}, '❓ Anoniem');
         
         item.innerHTML = `
             <div class="debug-queue-item-info">
@@ -4171,7 +4349,7 @@ function updateDebugQueuePreview() {
                 </div>
                 <div class="debug-queue-item-details">
                     ${entry.serviceNumber} • 
-                    ${entry.callerType === 'known' ? '👤 Bekend' : '❓ Anoniem'}
+                    ${callerTypeLabel}
                 </div>
             </div>
             <div class="debug-queue-item-wait">
@@ -4218,7 +4396,7 @@ async function acceptNextCall() {
     }
     
     if (!window.kiwiApi) {
-        showToast('Volgende call ophalen via backend is niet beschikbaar', 'error');
+        showToast(translate('queue.acceptNextUnavailable', {}, 'Volgende call ophalen via backend is niet beschikbaar'), 'error');
         return;
     }
 
@@ -4233,7 +4411,7 @@ async function acceptNextCall() {
             };
         }
     } catch (error) {
-        showToast(error.message || 'Volgende call ophalen via backend mislukt', 'error');
+        showToast(error.message || translate('queue.acceptNextFailed', {}, 'Volgende call ophalen via backend mislukt'), 'error');
         return;
     }
     if (!nextEntry) {
@@ -4290,7 +4468,7 @@ function startCallFromQueue(queueEntry) {
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
-    applyIndexHtmlTranslations();
+    applyLocaleToUi();
     await loadBootstrapState();
     initializeData();
     initializeQueue();
@@ -4402,12 +4580,13 @@ function updateCustomerActionButtons() {
 // Update Time Display
 function updateTime() {
     const now = new Date();
-    const timeString = now.toLocaleTimeString('nl-NL', { 
+    const locale = getDateLocaleForApp();
+    const timeString = now.toLocaleTimeString(locale, {
         hour: '2-digit', 
         minute: '2-digit',
         second: '2-digit'
     });
-    const dateString = now.toLocaleDateString('nl-NL', {
+    const dateString = now.toLocaleDateString(locale, {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -4476,9 +4655,15 @@ function buildSearchQueryLabel() {
         const addressLabel = [postalCode, houseNumber].filter(Boolean).join(' ');
         labelParts.push(addressLabel);
     }
-    if (name) labelParts.push(`Naam: ${name}`);
+    if (name) {
+        labelParts.push(
+            translate('search.nameFilterLabel', { name }, `Naam: ${name}`)
+        );
+    }
 
-    return labelParts.length ? labelParts.join(' • ') : 'alle klanten';
+    return labelParts.length
+        ? labelParts.join(' • ')
+        : translate('search.allCustomers', {}, 'alle klanten');
 }
 
 function setAdditionalFiltersOpen(isOpen) {
@@ -4525,7 +4710,7 @@ async function searchCustomer() {
             results = Array.isArray(payload && payload.items) ? payload.items : [];
         } catch (error) {
             console.error('Kon klanten niet zoeken via API', error);
-            showToast('Zoeken via backend mislukt', 'error');
+            showToast(translate('search.backendFailed', {}, 'Zoeken via backend mislukt'), 'error');
             return;
         }
     } else {
@@ -4583,8 +4768,8 @@ function displayPaginatedResults() {
         welcomeMessage.innerHTML = `
             <div class="empty-state">
                 <span class="empty-icon">🔍</span>
-                <h2>Geen klanten gevonden</h2>
-                <p>Pas je zoekcriteria aan en probeer opnieuw</p>
+                <h2>${translate('search.noneFoundTitle', {}, 'Geen klanten gevonden')}</h2>
+                <p>${translate('search.noneFoundDescription', {}, 'Pas je zoekcriteria aan en probeer opnieuw')}</p>
             </div>
         `;
         return;
@@ -4602,9 +4787,16 @@ function displayPaginatedResults() {
     
     // Update results title and range
     const searchQuery = buildSearchQueryLabel();
-    document.getElementById('resultsTitle').textContent = `🔍 Zoekresultaten: "${searchQuery}"`;
-    document.getElementById('resultsRange').textContent = 
-        `Toont ${startIdx + 1}-${Math.min(endIdx, results.length)} van ${results.length}`;
+    document.getElementById('resultsTitle').textContent = translate(
+        'search.resultsTitle',
+        { query: searchQuery },
+        `🔍 Zoekresultaten: "${searchQuery}"`
+    );
+    document.getElementById('resultsRange').textContent = translate(
+        'search.resultsRange',
+        { start: startIdx + 1, end: Math.min(endIdx, results.length), total: results.length },
+        `Toont ${startIdx + 1}-${Math.min(endIdx, results.length)} van ${results.length}`
+    );
     
     // Render results
     const container = document.getElementById('paginatedResults');
@@ -4687,6 +4879,7 @@ function formatLastNameSection(customer) {
 function renderCustomerRow(customer) {
     const lastNameSection = formatLastNameSection(customer) || '-';
     const { initials, rest } = getInitialsDisplay(customer);
+    const viewActionLabel = translate('search.viewAction', {}, 'Bekijken');
     
     const activeSubscriptions = customer.subscriptions.filter(s => s.status === 'active');
     const inactiveSubscriptions = customer.subscriptions.filter(s => s.status !== 'active');
@@ -4732,7 +4925,7 @@ function renderCustomerRow(customer) {
             <td class="result-row-subscriber-number">${subscriberNumber}</td>
             <td class="result-row-actions">
                 <button class="btn btn-small" onclick="event.stopPropagation(); selectCustomer(${customer.id})">
-                    Bekijken
+                    ${viewActionLabel}
                 </button>
                 ${showIdentifyBtn ? `
                     <button class="btn btn-small btn-primary btn-identify-caller" 
@@ -4879,8 +5072,8 @@ function clearSearchResults() {
     welcomeMessage.innerHTML = `
         <div class="empty-state">
             <span class="empty-icon">👤</span>
-            <h2>Welkom bij Klantenservice</h2>
-            <p>Zoek een klant of start een nieuwe actie</p>
+            <h2>${translate('welcome.title', {}, 'Welkom bij Klantenservice')}</h2>
+            <p>${translate('welcome.description', {}, 'Zoek een klant of start een nieuwe actie')}</p>
         </div>
     `;
     
@@ -4912,8 +5105,8 @@ function closeCustomerDetail() {
     welcomeMessage.innerHTML = `
         <div class="empty-state">
             <span class="empty-icon">👤</span>
-            <h2>Welkom bij Klantenservice</h2>
-            <p>Zoek een klant of start een nieuwe actie</p>
+            <h2>${translate('welcome.title', {}, 'Welkom bij Klantenservice')}</h2>
+            <p>${translate('welcome.description', {}, 'Zoek een klant of start een nieuwe actie')}</p>
         </div>
     `;
     welcomeMessage.style.display = 'flex';
@@ -4985,7 +5178,7 @@ async function selectCustomer(customerId) {
             }
         } catch (error) {
             console.error('Kon klantdetail niet laden via API', error);
-            showToast('Kon klantdetail niet laden', 'error');
+            showToast(translate('customer.detailLoadFailed', {}, 'Kon klantdetail niet laden'), 'error');
             return;
         }
     }
@@ -5065,8 +5258,8 @@ function displayDeceasedStatusBanner() {
         banner.innerHTML = `
             <div class="deceased-banner-icon">⚠️</div>
             <div class="deceased-banner-content">
-                <strong>Deze klant is overleden</strong>
-                <p>Let op bij het verwerken van abonnementen en bestellingen</p>
+                <strong>${translate('customer.deceasedBannerTitle', {}, 'Deze klant is overleden')}</strong>
+                <p>${translate('customer.deceasedBannerDescription', {}, 'Let op bij het verwerken van abonnementen en bestellingen')}</p>
             </div>
         `;
         
@@ -5085,7 +5278,7 @@ function displaySubscriptions() {
     const subscriptionsList = document.getElementById('subscriptionsList');
     
     if (currentCustomer.subscriptions.length === 0) {
-        subscriptionsList.innerHTML = '<p class="empty-state-small">Geen abonnementen</p>';
+        subscriptionsList.innerHTML = `<p class="empty-state-small">${translate('subscription.none', {}, 'Geen abonnementen')}</p>`;
         return;
     }
 
@@ -5099,7 +5292,7 @@ function displaySubscriptions() {
 
     // Display active subscriptions
     if (activeSubscriptions.length > 0) {
-        html += '<div class="subscription-group"><h4 class="subscription-group-title">Actieve Abonnementen</h4>';
+        html += `<div class="subscription-group"><h4 class="subscription-group-title">${translate('subscription.groupActive', {}, 'Actieve Abonnementen')}</h4>`;
         html += activeSubscriptions.map(sub => {
             const pricingInfo = getSubscriptionDurationDisplay(sub);
             const requesterMeta = getSubscriptionRequesterMetaLine(sub);
@@ -5109,15 +5302,15 @@ function displaySubscriptions() {
                     <div class="subscription-info">
                         <div class="subscription-name">📰 ${sub.magazine}</div>
                         <div class="subscription-details">
-                            Start: ${formatDate(sub.startDate)} • 
-                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
+                            ${translate('subscription.startLabel', {}, 'Start')}: ${formatDate(sub.startDate)} • 
+                            ${translate('subscription.lastEditionLabel', {}, 'Laatste editie')}: ${formatDate(sub.lastEdition)}<br>
                             ${pricingInfo}${requesterMeta}
                         </div>
                     </div>
                     <div class="subscription-actions">
-                        <span class="subscription-status status-active">Actief</span>
-                        <button class="icon-btn" onclick="editSubscription(${sub.id})" title="Bewerken">✏️</button>
-                        <button class="icon-btn" onclick="cancelSubscription(${sub.id})" title="Opzeggen">🚫</button>
+                        <span class="subscription-status status-active">${translate('subscription.statusActive', {}, 'Actief')}</span>
+                        <button class="icon-btn" onclick="editSubscription(${sub.id})" title="${translate('subscription.editTitle', {}, 'Bewerken')}">✏️</button>
+                        <button class="icon-btn" onclick="cancelSubscription(${sub.id})" title="${translate('subscription.cancelTitle', {}, 'Opzeggen')}">🚫</button>
                     </div>
                 </div>
             `;
@@ -5127,28 +5320,30 @@ function displaySubscriptions() {
 
     // Display ended subscriptions
     if (endedSubscriptions.length > 0) {
-        html += '<div class="subscription-group"><h4 class="subscription-group-title">Beëindigde Abonnementen</h4>';
+        html += `<div class="subscription-group"><h4 class="subscription-group-title">${translate('subscription.groupEnded', {}, 'Beëindigde Abonnementen')}</h4>`;
         html += endedSubscriptions.map(sub => {
             const pricingInfo = getSubscriptionDurationDisplay(sub);
             const requesterMeta = getSubscriptionRequesterMetaLine(sub);
             const statusClass = sub.status === 'cancelled' ? 'status-cancelled' : 'status-ended';
-            const statusText = sub.status === 'cancelled' ? 'Opgezegd' : 'Beëindigd';
+            const statusText = sub.status === 'cancelled'
+                ? translate('subscription.statusCancelled', {}, 'Opgezegd')
+                : translate('subscription.statusEnded', {}, 'Beëindigd');
             
             return `
                 <div class="subscription-item subscription-ended">
                     <div class="subscription-info">
                         <div class="subscription-name">📰 ${sub.magazine}</div>
                         <div class="subscription-details">
-                            Start: ${formatDate(sub.startDate)} • 
-                            ${sub.endDate ? `Einde: ${formatDate(sub.endDate)} • ` : ''}
-                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
+                            ${translate('subscription.startLabel', {}, 'Start')}: ${formatDate(sub.startDate)} • 
+                            ${sub.endDate ? `${translate('subscription.endLabel', {}, 'Einde')}: ${formatDate(sub.endDate)} • ` : ''}
+                            ${translate('subscription.lastEditionLabel', {}, 'Laatste editie')}: ${formatDate(sub.lastEdition)}<br>
                             ${pricingInfo}${requesterMeta}
                         </div>
                     </div>
                     <div class="subscription-actions">
                         <span class="subscription-status ${statusClass}">${statusText}</span>
-                        <button class="btn btn-small btn-winback" onclick="startWinbackForSubscription(${sub.id})" title="Winback/Opzegging">
-                            🎯 Winback/Opzegging
+                        <button class="btn btn-small btn-winback" onclick="startWinbackForSubscription(${sub.id})" title="${translate('subscription.winbackTitle', {}, 'Winback/Opzegging')}">
+                            ${translate('subscription.winbackAction', {}, '🎯 Winback/Opzegging')}
                         </button>
                     </div>
                 </div>
@@ -5159,27 +5354,29 @@ function displaySubscriptions() {
 
     // Display restituted subscriptions (cancelled with refund due to deceased)
     if (restitutedSubscriptions.length > 0) {
-        html += '<div class="subscription-group"><h4 class="subscription-group-title">Gerestitueerde Abonnementen</h4>';
+        html += `<div class="subscription-group"><h4 class="subscription-group-title">${translate('subscription.groupRestituted', {}, 'Gerestitueerde Abonnementen')}</h4>`;
         html += restitutedSubscriptions.map(sub => {
             const pricingInfo = getSubscriptionDurationDisplay(sub);
             const requesterMeta = getSubscriptionRequesterMetaLine(sub);
-            const refundInfo = sub.refundInfo ? `<br>Restitutie naar: ${sub.refundInfo.email}` : '';
+            const refundInfo = sub.refundInfo
+                ? `<br>${translate('subscription.refundToLabel', {}, 'Restitutie naar')}: ${sub.refundInfo.email}`
+                : '';
             
             return `
                 <div class="subscription-item subscription-restituted">
                     <div class="subscription-info">
                         <div class="subscription-name">📰 ${sub.magazine}</div>
                         <div class="subscription-details">
-                            Start: ${formatDate(sub.startDate)} • 
-                            ${sub.endDate ? `Einde: ${formatDate(sub.endDate)} • ` : ''}
-                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
+                            ${translate('subscription.startLabel', {}, 'Start')}: ${formatDate(sub.startDate)} • 
+                            ${sub.endDate ? `${translate('subscription.endLabel', {}, 'Einde')}: ${formatDate(sub.endDate)} • ` : ''}
+                            ${translate('subscription.lastEditionLabel', {}, 'Laatste editie')}: ${formatDate(sub.lastEdition)}<br>
                             ${pricingInfo}${requesterMeta}${refundInfo}
                         </div>
                     </div>
                     <div class="subscription-actions">
-                        <span class="subscription-status status-restituted">Gerestitueerd</span>
-                        <button class="btn btn-small btn-secondary" onclick="revertRestitution(${sub.id})" title="Overzetten naar andere persoon">
-                            🔄 Overzetten
+                        <span class="subscription-status status-restituted">${translate('subscription.statusRestituted', {}, 'Gerestitueerd')}</span>
+                        <button class="btn btn-small btn-secondary" onclick="revertRestitution(${sub.id})" title="${translate('subscription.transferToOtherTitle', {}, 'Overzetten naar andere persoon')}">
+                            ${translate('subscription.transferAction', {}, '🔄 Overzetten')}
                         </button>
                     </div>
                 </div>
@@ -5190,7 +5387,7 @@ function displaySubscriptions() {
 
     // Display transferred subscriptions (transferred to another person due to deceased)
     if (transferredSubscriptions.length > 0) {
-        html += '<div class="subscription-group"><h4 class="subscription-group-title">Overgezette Abonnementen</h4>';
+        html += `<div class="subscription-group"><h4 class="subscription-group-title">${translate('subscription.groupTransferred', {}, 'Overgezette Abonnementen')}</h4>`;
         html += transferredSubscriptions.map(sub => {
             const pricingInfo = getSubscriptionDurationDisplay(sub);
             const requesterMeta = getSubscriptionRequesterMetaLine(sub);
@@ -5199,7 +5396,7 @@ function displaySubscriptions() {
                 const transferName = sub.transferredTo.middleName 
                     ? `${sub.transferredTo.firstName} ${sub.transferredTo.middleName} ${sub.transferredTo.lastName}`
                     : `${sub.transferredTo.firstName} ${sub.transferredTo.lastName}`;
-                transferInfo = `<br>Overgezet naar: ${transferName} (${sub.transferredTo.email})`;
+                transferInfo = `<br>${translate('subscription.transferredToLabel', {}, 'Overgezet naar')}: ${transferName} (${sub.transferredTo.email})`;
             }
             
             return `
@@ -5225,47 +5422,52 @@ function displaySubscriptions() {
 }
 
 // Phase 5B: Extended Contact Types for Better Display
-const contactTypeLabels = {
+const contactTypeLabelConfig = {
     // Call-related
-    'call_started_anonymous': { label: 'Anonieme call gestart', icon: '📞', color: '#fbbf24' },
-    'call_started_identified': { label: 'Call gestart', icon: '📞', color: '#3b82f6' },
-    'call_identified': { label: 'Beller geïdentificeerd', icon: '👤', color: '#10b981' },
-    'call_ended_by_agent': { label: 'Call beëindigd (agent)', icon: '📞', color: '#6b7280' },
-    'call_ended_by_customer': { label: 'Call beëindigd (klant)', icon: '📞', color: '#ef4444' },
-    'call_disposition': { label: 'Gesprek afgerond', icon: '📋', color: '#3b82f6' },
-    'call_hold': { label: 'Gesprek in wacht', icon: '⏸️', color: '#f59e0b' },
-    'call_resumed': { label: 'Gesprek hervat', icon: '▶️', color: '#10b981' },
-    'recording_started': { label: 'Opname gestart', icon: '🔴', color: '#dc2626' },
-    
+    'call_started_anonymous': { key: 'contactHistory.type.callStartedAnonymous', fallback: 'Anonieme call gestart', icon: '📞', color: '#fbbf24' },
+    'call_started_identified': { key: 'contactHistory.type.callStartedIdentified', fallback: 'Call gestart', icon: '📞', color: '#3b82f6' },
+    'call_identified': { key: 'contactHistory.type.callIdentified', fallback: 'Beller geïdentificeerd', icon: '👤', color: '#10b981' },
+    'call_ended_by_agent': { key: 'contactHistory.type.callEndedByAgent', fallback: 'Call beëindigd (agent)', icon: '📞', color: '#6b7280' },
+    'call_ended_by_customer': { key: 'contactHistory.type.callEndedByCustomer', fallback: 'Call beëindigd (klant)', icon: '📞', color: '#ef4444' },
+    'call_disposition': { key: 'contactHistory.type.callDisposition', fallback: 'Gesprek afgerond', icon: '📋', color: '#3b82f6' },
+    'call_hold': { key: 'contactHistory.type.callHold', fallback: 'Gesprek in wacht', icon: '⏸️', color: '#f59e0b' },
+    'call_resumed': { key: 'contactHistory.type.callResumed', fallback: 'Gesprek hervat', icon: '▶️', color: '#10b981' },
+    'recording_started': { key: 'contactHistory.type.recordingStarted', fallback: 'Opname gestart', icon: '🔴', color: '#dc2626' },
+
     // ACW and follow-up
-    'acw_completed': { label: 'Nabewerking voltooid', icon: '✅', color: '#10b981' },
-    'follow_up_scheduled': { label: 'Follow-up gepland', icon: '📅', color: '#8b5cf6' },
-    
+    'acw_completed': { key: 'contactHistory.type.acwCompleted', fallback: 'Nabewerking voltooid', icon: '✅', color: '#10b981' },
+    'follow_up_scheduled': { key: 'contactHistory.type.followUpScheduled', fallback: 'Follow-up gepland', icon: '📅', color: '#8b5cf6' },
+
     // Agent status
-    'agent_status_change': { label: 'Agent status gewijzigd', icon: '🔄', color: '#6b7280' },
-    
+    'agent_status_change': { key: 'contactHistory.type.agentStatusChange', fallback: 'Agent status gewijzigd', icon: '🔄', color: '#6b7280' },
+
     // Subscription-related
-    'subscription_created': { label: 'Abonnement aangemaakt', icon: '➕', color: '#10b981' },
-    'subscription_changed': { label: 'Abonnement gewijzigd', icon: '✏️', color: '#3b82f6' },
-    'subscription_cancelled': { label: 'Abonnement opgezegd', icon: '❌', color: '#ef4444' },
-    
+    'subscription_created': { key: 'contactHistory.type.subscriptionCreated', fallback: 'Abonnement aangemaakt', icon: '➕', color: '#10b981' },
+    'subscription_changed': { key: 'contactHistory.type.subscriptionChanged', fallback: 'Abonnement gewijzigd', icon: '✏️', color: '#3b82f6' },
+    'subscription_cancelled': { key: 'contactHistory.type.subscriptionCancelled', fallback: 'Abonnement opgezegd', icon: '❌', color: '#ef4444' },
+
     // Article sales
-    'article_sold': { label: 'Artikel verkocht', icon: '🛒', color: '#10b981' },
-    
+    'article_sold': { key: 'contactHistory.type.articleSold', fallback: 'Artikel verkocht', icon: '🛒', color: '#10b981' },
+
     // Delivery
-    'magazine_resent': { label: 'Editie opnieuw verzonden', icon: '📬', color: '#3b82f6' },
-    
+    'magazine_resent': { key: 'contactHistory.type.magazineResent', fallback: 'Editie opnieuw verzonden', icon: '📬', color: '#3b82f6' },
+
     // Default
-    'notification_success': { label: 'Melding', icon: '✅', color: '#10b981' },
-    'notification_info': { label: 'Melding', icon: 'ℹ️', color: '#3b82f6' },
-    'notification_warning': { label: 'Melding', icon: '⚠️', color: '#f59e0b' },
-    'notification_error': { label: 'Melding', icon: '❗', color: '#ef4444' },
-    'default': { label: 'Contact', icon: '📝', color: '#6b7280' }
+    'notification_success': { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '✅', color: '#10b981' },
+    'notification_info': { key: 'contactHistory.type.notification', fallback: 'Melding', icon: 'ℹ️', color: '#3b82f6' },
+    'notification_warning': { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '⚠️', color: '#f59e0b' },
+    'notification_error': { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '❗', color: '#ef4444' },
+    'default': { key: 'contactHistory.type.default', fallback: 'Contact', icon: '📝', color: '#6b7280' }
 };
 
 // Get Contact Type Display Info
 function getContactTypeInfo(type) {
-    return contactTypeLabels[type] || contactTypeLabels['default'];
+    const config = contactTypeLabelConfig[type] || contactTypeLabelConfig.default;
+    return {
+        label: translate(config.key, {}, config.fallback),
+        icon: config.icon,
+        color: config.color
+    };
 }
 
 // Display Contact History
@@ -5277,7 +5479,7 @@ function displayContactHistory() {
     }
 
     if (!currentCustomer || !Array.isArray(currentCustomer.contactHistory) || currentCustomer.contactHistory.length === 0) {
-        historyContainer.innerHTML = '<div class="empty-state-small"><p>Geen contactgeschiedenis beschikbaar</p></div>';
+        historyContainer.innerHTML = `<div class="empty-state-small"><p>${translate('contactHistory.none', {}, 'Geen contactgeschiedenis beschikbaar')}</p></div>`;
         return;
     }
 
@@ -5379,7 +5581,7 @@ function changeContactHistoryPage(newPage) {
 // Format Date
 function formatDate(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('nl-NL', {
+    return date.toLocaleDateString(getDateLocaleForApp(), {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
@@ -5389,7 +5591,7 @@ function formatDate(dateString) {
 // Format DateTime
 function formatDateTime(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('nl-NL', {
+    return date.toLocaleDateString(getDateLocaleForApp(), {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -5494,7 +5696,7 @@ async function createSubscription(event) {
         : formData.durationLabel;
 
     if (!window.kiwiApi) {
-        showToast('Abonnement aanmaken vereist backend API', 'error');
+        showToast(translate('subscription.createRequiresBackend', {}, 'Abonnement aanmaken vereist backend API'), 'error');
         return;
     }
 
@@ -5550,7 +5752,7 @@ async function createSubscription(event) {
             }
         }
     } catch (error) {
-        showToast(error.message || 'Abonnement aanmaken via backend mislukt', 'error');
+        showToast(error.message || translate('subscription.createFailed', {}, 'Abonnement aanmaken via backend mislukt'), 'error');
         return;
     }
 
@@ -5569,7 +5771,11 @@ function getSubscriptionRequesterMetaLine(subscription) {
     if (currentCustomer && Number(subscription.requesterPersonId) === Number(currentCustomer.id)) {
         return '';
     }
-    return `<br>Aangevraagd/betaald door persoon #${subscription.requesterPersonId}`;
+    return `<br>${translate(
+        'subscription.requestedPaidByPerson',
+        { personId: subscription.requesterPersonId },
+        `Aangevraagd/betaald door persoon #${subscription.requesterPersonId}`
+    )}`;
 }
 
 // Edit Customer
@@ -5655,7 +5861,7 @@ async function saveCustomerEdit(event) {
             showToast(translate('customer.updated', {}, 'Klantgegevens succesvol bijgewerkt!'), 'success');
             await selectCustomer(customerId);
         } catch (error) {
-            showToast(error.message || 'Klantgegevens bijwerken via backend mislukt', 'error');
+            showToast(error.message || translate('customer.updateFailed', {}, 'Klantgegevens bijwerken via backend mislukt'), 'error');
         }
         return;
     }
@@ -5702,9 +5908,9 @@ function showResendMagazine() {
     }
 
     const select = document.getElementById('resendSubscription');
-    select.innerHTML = '<option value="">Selecteer abonnement...</option>' +
+    select.innerHTML = `<option value="">${translate('resend.selectSubscription', {}, 'Selecteer abonnement...')}</option>` +
         currentCustomer.subscriptions.map(sub => 
-            `<option value="${sub.id}">${sub.magazine} - Laatste editie: ${formatDate(sub.lastEdition)}</option>`
+            `<option value="${sub.id}">${sub.magazine} - ${translate('subscription.lastEditionLabel', {}, 'Laatste editie')}: ${formatDate(sub.lastEdition)}</option>`
         ).join('');
 
     document.getElementById('resendMagazineForm').style.display = 'flex';
@@ -5733,7 +5939,7 @@ async function resendMagazine() {
             );
             await selectCustomer(currentCustomer.id);
         } catch (error) {
-            showToast(error.message || 'Opnieuw verzenden via backend mislukt', 'error');
+            showToast(error.message || translate('resend.failed', {}, 'Opnieuw verzenden via backend mislukt'), 'error');
         }
         return;
     }
@@ -5778,9 +5984,9 @@ function showEditorialComplaintForm() {
     const uniqueMagazines = [...new Set(currentCustomer.subscriptions.map(sub => sub.magazine))];
     
     if (uniqueMagazines.length === 0) {
-        select.innerHTML = '<option value="">Geen abonnementen beschikbaar</option>';
+        select.innerHTML = `<option value="">${translate('subscription.noneAvailable', {}, 'Geen abonnementen beschikbaar')}</option>`;
     } else {
-        select.innerHTML = '<option value="">Selecteer magazine...</option>' +
+        select.innerHTML = `<option value="">${translate('forms.selectMagazinePlaceholder', {}, 'Selecteer magazine...')}</option>` +
             uniqueMagazines.map(mag => `<option value="${mag}">${mag}</option>`).join('');
     }
 
@@ -5848,7 +6054,7 @@ async function submitEditorialComplaint() {
             );
             await selectCustomer(currentCustomer.id);
         } catch (error) {
-            showToast(error.message || 'Redactie-item registreren via backend mislukt', 'error');
+            showToast(error.message || translate('editorial.registerFailed', {}, 'Redactie-item registreren via backend mislukt'), 'error');
         }
         return;
     }
@@ -5964,7 +6170,7 @@ async function saveSubscriptionEdit(event) {
             showToast(translate('subscription.updated', {}, 'Abonnement succesvol bijgewerkt!'), 'success');
             await selectCustomer(currentCustomer.id);
         } catch (error) {
-            showToast(error.message || 'Abonnement bijwerken via backend mislukt', 'error');
+            showToast(error.message || translate('subscription.updateFailed', {}, 'Abonnement bijwerken via backend mislukt'), 'error');
         }
         return;
     }
@@ -6119,7 +6325,7 @@ function winbackPrevStep(stepNumber) {
 // Generate Winback Offers
 async function generateWinbackOffers(reason) {
     if (!window.kiwiApi) {
-        showToast('Winback-aanbiedingen via backend zijn niet beschikbaar', 'error');
+        showToast(translate('winback.offersUnavailable', {}, 'Winback-aanbiedingen via backend zijn niet beschikbaar'), 'error');
         return;
     }
 
@@ -6130,12 +6336,12 @@ async function generateWinbackOffers(reason) {
         relevantOffers = payload && Array.isArray(payload.items) ? payload.items : [];
     } catch (error) {
         console.warn('Winback-aanbiedingen laden via backend mislukt.', error);
-        showToast(error.message || 'Winback-aanbiedingen laden mislukt', 'error');
+        showToast(error.message || translate('winback.offersLoadFailed', {}, 'Winback-aanbiedingen laden mislukt'), 'error');
         return;
     }
 
     if (!relevantOffers.length) {
-        showToast('Geen winback-aanbiedingen beschikbaar voor deze reden', 'warning');
+        showToast(translate('winback.offersNoneForReason', {}, 'Geen winback-aanbiedingen beschikbaar voor deze reden'), 'warning');
     }
 
     const offersContainer = document.getElementById('winbackOffers');
@@ -6172,12 +6378,11 @@ function generateWinbackScript() {
     
     const scriptElement = document.getElementById('winbackScript');
     scriptElement.innerHTML = `
-        <strong>Script voor aanbod presentatie:</strong><br><br>
-        "Ik begrijp dat u het abonnement wilt opzeggen. We waarderen u als klant enorm en willen graag dat u blijft. 
-        Daarom wil ik u een speciaal aanbod doen:<br><br>
+        <strong>${translate('winback.offerScriptTitle', {}, 'Script voor aanbod presentatie:')}</strong><br><br>
+        "${translate('winback.offerScriptIntro', {}, 'Ik begrijp dat u het abonnement wilt opzeggen. We waarderen u als klant enorm en willen graag dat u blijft. Daarom wil ik u een speciaal aanbod doen:')}<br><br>
         <strong>${selectedOffer.title}</strong><br>
         ${selectedOffer.description}<br><br>
-        Zou dit u helpen om het abonnement aan te houden?"
+        ${translate('winback.offerScriptQuestion', {}, 'Zou dit u helpen om het abonnement aan te houden?')}"
     `;
 }
 
@@ -6206,11 +6411,11 @@ function winbackHandleDeceased() {
                 <div class="radio-group">
                     <label class="radio-option">
                         <input type="radio" name="action_${sub.id}" value="cancel_refund" required>
-                        <span>Opzeggen met restitutie</span>
+                        <span>${translate('subscription.actionCancelWithRefund', {}, 'Opzeggen met restitutie')}</span>
                     </label>
                     <label class="radio-option">
                         <input type="radio" name="action_${sub.id}" value="transfer" required>
-                        <span>Overzetten op andere persoon</span>
+                        <span>${translate('subscription.actionTransferToOther', {}, 'Overzetten op andere persoon')}</span>
                     </label>
                 </div>
             </div>
@@ -6387,7 +6592,11 @@ function showRestitutionTransferForm(subscription) {
     document.getElementById('restitutionTransferForm').style.display = 'flex';
     
     // Update form title
-    document.getElementById('restitutionTransferTitle').textContent = `${subscription.magazine} Overzetten`;
+    document.getElementById('restitutionTransferTitle').textContent = translate(
+        'subscription.transferTitleWithMagazine',
+        { magazine: subscription.magazine },
+        `${subscription.magazine} Overzetten`
+    );
     
     // Pre-fill same address checkbox as checked by default
     document.getElementById('restitutionTransferSameAddress').checked = true;
@@ -6467,7 +6676,7 @@ async function completeRestitutionTransfer(event) {
                 { transferData }
             );
         } catch (error) {
-            showToast(error.message || 'Overzetten via backend mislukt', 'error');
+            showToast(error.message || translate('subscription.transferFailed', {}, 'Overzetten via backend mislukt'), 'error');
             return;
         }
     } else {
@@ -6594,7 +6803,7 @@ async function completeAllDeceasedActions() {
                 actions: actionsPayload
             });
         } catch (error) {
-            showToast(error.message || 'Verwerken overlijden via backend mislukt', 'error');
+            showToast(error.message || translate('subscription.deceasedProcessFailed', {}, 'Verwerken overlijden via backend mislukt'), 'error');
             return;
         }
     } else {
@@ -6750,7 +6959,7 @@ async function completeWinback() {
                 offer: selectedOffer
             });
         } catch (error) {
-            showToast(error.message || 'Winback opslaan via backend mislukt', 'error');
+            showToast(error.message || translate('winback.saveFailed', {}, 'Winback opslaan via backend mislukt'), 'error');
             return;
         }
     } else if (result.value === 'accepted') {
@@ -6803,7 +7012,7 @@ function displayArticles() {
     const articlesList = document.getElementById('articlesList');
     
     if (!currentCustomer || !currentCustomer.articles || currentCustomer.articles.length === 0) {
-        articlesList.innerHTML = '<p class="empty-state-small">Geen artikelen</p>';
+        articlesList.innerHTML = `<p class="empty-state-small">${translate('articleOrders.none', {}, 'Geen artikelen')}</p>`;
         return;
     }
 
@@ -6822,11 +7031,11 @@ function displayArticles() {
         }[order.deliveryStatus] || 'status-ordered';
         
         const deliveryStatusText = {
-            'ordered': 'Besteld',
-            'in_transit': 'Onderweg',
-            'delivered': 'Afgeleverd',
-            'returned': 'Geretourneerd'
-        }[order.deliveryStatus] || 'Besteld';
+            'ordered': translate('articleOrders.deliveryStatusOrdered', {}, 'Besteld'),
+            'in_transit': translate('articleOrders.deliveryStatusInTransit', {}, 'Onderweg'),
+            'delivered': translate('articleOrders.deliveryStatusDelivered', {}, 'Afgeleverd'),
+            'returned': translate('articleOrders.deliveryStatusReturned', {}, 'Geretourneerd')
+        }[order.deliveryStatus] || translate('articleOrders.deliveryStatusOrdered', {}, 'Besteld');
         
         const paymentStatusClass = {
             'pending': 'status-pending',
@@ -6835,10 +7044,10 @@ function displayArticles() {
         }[order.paymentStatus] || 'status-pending';
         
         const paymentStatusText = {
-            'pending': 'In behandeling',
-            'paid': 'Betaald',
-            'refunded': 'Terugbetaald'
-        }[order.paymentStatus] || 'In behandeling';
+            'pending': translate('articleOrders.paymentStatusPending', {}, 'In behandeling'),
+            'paid': translate('articleOrders.paymentStatusPaid', {}, 'Betaald'),
+            'refunded': translate('articleOrders.paymentStatusRefunded', {}, 'Terugbetaald')
+        }[order.paymentStatus] || translate('articleOrders.paymentStatusPending', {}, 'In behandeling');
         
         // Calculate if return is still possible
         const returnPossible = order.returnDeadline && new Date(order.returnDeadline) > new Date();
@@ -6856,30 +7065,30 @@ function displayArticles() {
             ).join('<br>');
             
             priceDisplay = `
-                <strong>Subtotaal:</strong> €${order.subtotal.toFixed(2)}<br>
-                ${order.totalDiscount > 0 ? `<strong>Korting:</strong> <span style="color: #059669;">-€${order.totalDiscount.toFixed(2)}</span> 
+                <strong>${translate('articleOrders.subtotalLabel', {}, 'Subtotaal')}:</strong> €${order.subtotal.toFixed(2)}<br>
+                ${order.totalDiscount > 0 ? `<strong>${translate('articleOrders.discountLabel', {}, 'Korting')}:</strong> <span style="color: #059669;">-€${order.totalDiscount.toFixed(2)}</span> 
                 (${order.discounts.map(d => d.type).join(', ')})<br>` : ''}
-                <strong>Totaal:</strong> €${order.total.toFixed(2)}
+                <strong>${translate('articleOrders.totalLabel', {}, 'Totaal')}:</strong> €${order.total.toFixed(2)}
             `;
         } else {
             // Old format: single item (backward compatibility)
-            itemsDisplay = `${order.articleName || 'Artikel'} (${order.quantity}x)`;
-            priceDisplay = `<strong>Prijs:</strong> €${order.price.toFixed(2)}`;
+            itemsDisplay = `${order.articleName || translate('articleOrders.itemFallback', {}, 'Artikel')} (${order.quantity}x)`;
+            priceDisplay = `<strong>${translate('articleOrders.priceLabel', {}, 'Prijs')}:</strong> €${order.price.toFixed(2)}`;
         }
         
         return `
             <div class="article-item">
                 <div class="article-info">
-                    <div class="article-name">🛒 Bestelling #${order.id}</div>
+                    <div class="article-name">${translate('articleOrders.orderNumber', { id: order.id }, `🛒 Bestelling #${order.id}`)}</div>
                     <div class="article-details">
-                        <strong>Artikelen:</strong><br>${itemsDisplay}<br>
+                        <strong>${translate('articleOrders.itemsLabel', {}, 'Artikelen')}:</strong><br>${itemsDisplay}<br>
                         ${priceDisplay}<br>
-                        <strong>Besteld:</strong> ${formatDate(order.orderDate)} • 
-                        <strong>Gewenste levering:</strong> ${formatDate(order.desiredDeliveryDate)}
-                        ${order.actualDeliveryDate ? `<br><strong>Geleverd:</strong> ${formatDate(order.actualDeliveryDate)}` : ''}
-                        ${order.trackingNumber ? `<br><strong>Track & Trace:</strong> ${order.trackingNumber}` : ''}
-                        ${order.notes ? `<br><strong>Opmerking:</strong> ${order.notes}` : ''}
-                        ${returnPossible ? `<br><strong>Retour mogelijk tot:</strong> ${formatDate(order.returnDeadline)}` : ''}
+                        <strong>${translate('articleOrders.orderedLabel', {}, 'Besteld')}:</strong> ${formatDate(order.orderDate)} • 
+                        <strong>${translate('articleOrders.desiredDeliveryLabel', {}, 'Gewenste levering')}:</strong> ${formatDate(order.desiredDeliveryDate)}
+                        ${order.actualDeliveryDate ? `<br><strong>${translate('articleOrders.deliveredLabel', {}, 'Geleverd')}:</strong> ${formatDate(order.actualDeliveryDate)}` : ''}
+                        ${order.trackingNumber ? `<br><strong>${translate('articleOrders.trackingLabel', {}, 'Track & Trace')}:</strong> ${order.trackingNumber}` : ''}
+                        ${order.notes ? `<br><strong>${translate('articleOrders.remarkLabel', {}, 'Opmerking')}:</strong> ${order.notes}` : ''}
+                        ${returnPossible ? `<br><strong>${translate('articleOrders.returnPossibleUntilLabel', {}, 'Retour mogelijk tot')}:</strong> ${formatDate(order.returnDeadline)}` : ''}
                     </div>
                 </div>
                 <div class="article-actions">
@@ -6999,7 +7208,7 @@ async function createArticleSale(event) {
     try {
         orderData = await getOrderData();
     } catch (error) {
-        showToast(error.message || 'Bestelberekening via backend mislukt', 'error');
+        showToast(error.message || translate('articleOrders.calculationFailed', {}, 'Bestelberekening via backend mislukt'), 'error');
         return;
     }
     
@@ -7139,7 +7348,7 @@ async function createArticleSale(event) {
                 }
             }
         } catch (error) {
-            showToast(error.message || 'Artikel bestelling aanmaken via backend mislukt', 'error');
+            showToast(error.message || translate('articleOrders.createFailed', {}, 'Artikel bestelling aanmaken via backend mislukt'), 'error');
             return;
         }
 
@@ -7287,7 +7496,7 @@ async function saveDeliveryRemarks() {
             showToast(translate('delivery.remarksSaved', {}, 'Bezorgvoorkeuren opgeslagen!'), 'success');
             await selectCustomer(currentCustomer.id);
         } catch (error) {
-            showToast(error.message || 'Bezorgvoorkeuren opslaan via backend mislukt', 'error');
+            showToast(error.message || translate('delivery.saveFailed', {}, 'Bezorgvoorkeuren opslaan via backend mislukt'), 'error');
         }
         return;
     }
@@ -7488,7 +7697,7 @@ function populateDebugKnownCustomers() {
     const select = document.getElementById('debugKnownCustomer');
     
     if (customers.length === 0) {
-        select.innerHTML = '<option value="">Geen klanten beschikbaar</option>';
+        select.innerHTML = `<option value="">${translate('customer.noneAvailable', {}, 'Geen klanten beschikbaar')}</option>`;
         return;
     }
     
@@ -7504,7 +7713,7 @@ function populateDebugKnownCustomers() {
 async function debugStartCall() {
     // Check if there's already an active call
     if (callSession.active) {
-        if (confirm('⚠️ Er is al een actieve call. Wil je deze beëindigen en een nieuwe starten?')) {
+        if (confirm(translate('calls.activeCallReplaceConfirm', {}, '⚠️ Er is al een actieve call. Wil je deze beëindigen en een nieuwe starten?'))) {
             await endCallSession(true);
         } else {
             return;
@@ -7550,7 +7759,7 @@ async function debugStartCall() {
                 };
             }
         } catch (error) {
-            showToast(error.message || 'Debug call starten via backend mislukt', 'error');
+            showToast(error.message || translate('calls.debugStartFailed', {}, 'Debug call starten via backend mislukt'), 'error');
             return;
         }
     } else {
@@ -7609,7 +7818,7 @@ function debugEndCall() {
     
     const callDuration = Math.floor((Date.now() - callSession.startTime) / 1000);
     
-    if (confirm(`📞 Het telefoongesprek beëindigen?\n\nGespreksduur: ${formatTime(callDuration)}`)) {
+    if (confirm(translate('calls.endConversationConfirm', { duration: formatTime(callDuration) }, `📞 Het telefoongesprek beëindigen?\n\nGespreksduur: ${formatTime(callDuration)}`))) {
         endCallSession(true);
         document.getElementById('debugEndCallBtn').style.display = 'none';
     }
@@ -7644,7 +7853,7 @@ function closeDebugModal() {
 
 // Full Reset - Clear session-backed POC data and reload
 function fullReset() {
-    if (confirm('⚠️ Dit zal alle sessiedata wissen en de pagina herladen. Weet je het zeker?')) {
+    if (confirm(translate('storage.resetConfirm', {}, '⚠️ Dit zal alle sessiedata wissen en de pagina herladen. Weet je het zeker?'))) {
         if (window.kiwiApi) {
             window.kiwiApi.post(debugResetApiUrl, {}).then(() => {
                 showToast(translate('storage.cleared', {}, 'Sessiestaat gewist. Pagina wordt herladen...'), 'info');
@@ -7652,7 +7861,7 @@ function fullReset() {
                     window.location.reload();
                 }, 1000);
             }).catch((error) => {
-                showToast(error.message || 'Reset via backend mislukt', 'error');
+                showToast(error.message || translate('storage.resetFailed', {}, 'Reset via backend mislukt'), 'error');
             });
             return;
         }
