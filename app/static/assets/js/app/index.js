@@ -4,7 +4,7 @@ import { registerOrderActions } from './slices/order.js';
 import { registerCallQueueAgentStatusSlices } from './slices/index.js';
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { registerCustomerSubscriptionActions } from './legacy-actions-customer-subscription.js';
-import { getSharedState, markRouterInitialized, setRegisteredActions } from './state.js';
+import { getSharedState } from './state.js';
 
 const sharedState = getSharedState();
 const actionRouter = createActionRouter({
@@ -25,15 +25,6 @@ registerWerfsleutelActions(actionRouter);
 registerCallQueueAgentStatusSlices(actionRouter);
 registerCustomerSubscriptionActions(actionRouter);
 actionRouter.install();
-markRouterInitialized();
-setRegisteredActions(actionRouter.getRegisteredActions());
-
-if (typeof window !== 'undefined') {
-    window.kiwiApp = {
-        actionRouter,
-        state: sharedState
-    };
-}
 
 async function bootstrapLegacyApp() {
     try {

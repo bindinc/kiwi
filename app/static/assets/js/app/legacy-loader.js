@@ -1,21 +1,8 @@
 import { markLegacyScriptLoaded, setLegacyLoadPromise, getSharedState } from './state.js';
-import { getGlobalScope, loadScriptOnce, resolveScriptUrl } from './services.js';
+import { loadScriptOnce, resolveScriptUrl } from './services.js';
 
 const LEGACY_SCRIPT_ID = 'kiwi-legacy-app-script';
 const LEGACY_SCRIPT_RELATIVE_URL = '../app.js';
-
-function notifyLegacyReady() {
-    const globalScope = getGlobalScope();
-    if (!globalScope || typeof globalScope.dispatchEvent !== 'function') {
-        return;
-    }
-
-    try {
-        globalScope.dispatchEvent(new CustomEvent('kiwi:legacy-ready'));
-    } catch (_error) {
-        // Keep bootstrap resilient even where CustomEvent is unavailable.
-    }
-}
 
 export function ensureLegacyAppLoaded() {
     const sharedState = getSharedState();
@@ -33,7 +20,6 @@ export function ensureLegacyAppLoaded() {
         url: legacyScriptUrl
     }).then(() => {
         markLegacyScriptLoaded();
-        notifyLegacyReady();
     });
 
     setLegacyLoadPromise(loadPromise);
