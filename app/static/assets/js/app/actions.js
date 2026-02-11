@@ -132,6 +132,9 @@ export function createActionRouter(options = {}) {
         if (actionElement.dataset.actionPreventDefault === 'true' && typeof event.preventDefault === 'function') {
             event.preventDefault();
         }
+        if (actionElement.dataset.actionStopPropagation === 'true' && typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
 
         const payload = extractActionPayload(actionElement.dataset);
         handler(payload, {

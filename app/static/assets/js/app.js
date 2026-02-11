@@ -1551,7 +1551,7 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         ${cfg.showSameAddressCheckbox ? `
         <div class="form-group">
             <label>
-                <input type="checkbox" id="${prefix}SameAddress" onchange="toggleCustomerFormAddress('${prefix}')">
+                <input type="checkbox" id="${prefix}SameAddress" data-action="toggle-customer-form-address" data-action-event="change" data-arg-prefix="${prefix}">
                 ${translate('forms.sameAddressAsOriginalSubscriber', {}, 'Zelfde adres als originele abonnee')}
             </label>
         </div>
@@ -2259,7 +2259,7 @@ function renderSubscriptionDuplicateCheck(role) {
                     <strong>${safeName}</strong>
                     <div class="subscription-duplicate-item-meta">persoon #${safeId}${safeAddressLine}</div>
                 </div>
-                <button type="button" class="subscription-duplicate-action" onclick="selectSubscriptionDuplicatePerson('${role}', ${Number(person.id)})">${escapeHtml(useExistingLabel)}</button>
+                <button type="button" class="subscription-duplicate-action" data-action="select-subscription-duplicate-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}">${escapeHtml(useExistingLabel)}</button>
             </div>
         `;
     }).join('');
@@ -2279,8 +2279,8 @@ function renderSubscriptionDuplicateCheck(role) {
             <div class="subscription-duplicate-header">
                 <div class="subscription-duplicate-title">${escapeHtml(duplicateTitle)}</div>
                 <div class="subscription-duplicate-actions">
-                    <button type="button" class="subscription-duplicate-action" onclick="toggleSubscriptionDuplicateMatches('${role}')">${escapeHtml(toggleLabel)}</button>
-                    <button type="button" class="subscription-duplicate-action warning" onclick="acknowledgeSubscriptionDuplicateWarning('${role}')">${escapeHtml(createAnywayLabel)}</button>
+                    <button type="button" class="subscription-duplicate-action" data-action="toggle-subscription-duplicate-matches" data-arg-role="${role}">${escapeHtml(toggleLabel)}</button>
+                    <button type="button" class="subscription-duplicate-action warning" data-action="acknowledge-subscription-duplicate-warning" data-arg-role="${role}">${escapeHtml(createAnywayLabel)}</button>
                 </div>
             </div>
             ${checkingLine}
@@ -2659,7 +2659,7 @@ function renderSubscriptionRoleSearchResults(role) {
                     <strong>${safeName}</strong>
                     <div class="party-search-result-meta">${safeId}${safeAddressLine}</div>
                 </div>
-                <button type="button" class="btn btn-small" onclick="selectSubscriptionRolePerson('${role}', ${Number(person.id)})">${selectLabel}</button>
+                <button type="button" class="btn btn-small" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}">${selectLabel}</button>
             </div>
         `;
     }).join('');
@@ -4908,7 +4908,7 @@ function renderCustomerRow(customer) {
     const showIdentifyBtn = callSession.active && callSession.callerType === 'anonymous';
     
     return `
-        <tr class="result-row" onclick="selectCustomer(${customer.id})">
+        <tr class="result-row" data-action="select-customer" data-arg-customer-id="${customer.id}">
             <td class="result-row-lastname">${lastNameSection}</td>
             <td class="result-row-initials">
                 <span class="initials-value">${initials}</span>
@@ -4920,12 +4920,15 @@ function renderCustomerRow(customer) {
             <td class="result-row-subscriptions">${subscriptionBadges}</td>
             <td class="result-row-subscriber-number">${subscriberNumber}</td>
             <td class="result-row-actions">
-                <button class="btn btn-small" onclick="event.stopPropagation(); selectCustomer(${customer.id})">
+                <button class="btn btn-small" type="button" data-action="select-customer" data-arg-customer-id="${customer.id}" data-action-stop-propagation="true">
                     ${viewActionLabel}
                 </button>
                 ${showIdentifyBtn ? `
-                    <button class="btn btn-small btn-primary btn-identify-caller" 
-                            onclick="event.stopPropagation(); identifyCallerAsCustomer(${customer.id})">
+                    <button class="btn btn-small btn-primary btn-identify-caller"
+                            type="button"
+                            data-action="call-session.identify-caller"
+                            data-arg-customer-id="${customer.id}"
+                            data-action-stop-propagation="true">
                         👤 Identificeer
                     </button>
                 ` : ''}
@@ -4948,7 +4951,7 @@ function renderPagination() {
     let html = '';
     
     // Previous button
-    html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+    html += `<button class="page-btn" type="button" data-action="go-to-page" data-arg-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>
         ← Vorige
     </button>`;
     
@@ -4959,12 +4962,12 @@ function renderPagination() {
             html += `<span class="page-ellipsis">...</span>`;
         } else {
             const activeClass = page === currentPage ? 'active' : '';
-            html += `<button class="page-btn ${activeClass}" onclick="goToPage(${page})">${page}</button>`;
+            html += `<button class="page-btn ${activeClass}" type="button" data-action="go-to-page" data-arg-page="${page}">${page}</button>`;
         }
     });
     
     // Next button
-    html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+    html += `<button class="page-btn" type="button" data-action="go-to-page" data-arg-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>
         Volgende →
     </button>`;
     
@@ -5305,8 +5308,8 @@ function displaySubscriptions() {
                     </div>
                     <div class="subscription-actions">
                         <span class="subscription-status status-active">${translate('subscription.statusActive', {}, 'Actief')}</span>
-                        <button class="icon-btn" onclick="editSubscription(${sub.id})" title="${translate('subscription.editTitle', {}, 'Bewerken')}">✏️</button>
-                        <button class="icon-btn" onclick="cancelSubscription(${sub.id})" title="${translate('subscription.cancelTitle', {}, 'Opzeggen')}">🚫</button>
+                        <button class="icon-btn" type="button" data-action="edit-subscription" data-arg-sub-id="${sub.id}" title="${translate('subscription.editTitle', {}, 'Bewerken')}">✏️</button>
+                        <button class="icon-btn" type="button" data-action="cancel-subscription" data-arg-sub-id="${sub.id}" title="${translate('subscription.cancelTitle', {}, 'Opzeggen')}">🚫</button>
                     </div>
                 </div>
             `;
@@ -5338,7 +5341,7 @@ function displaySubscriptions() {
                     </div>
                     <div class="subscription-actions">
                         <span class="subscription-status ${statusClass}">${statusText}</span>
-                        <button class="btn btn-small btn-winback" onclick="startWinbackForSubscription(${sub.id})" title="${translate('subscription.winbackTitle', {}, 'Winback/Opzegging')}">
+                        <button class="btn btn-small btn-winback" type="button" data-action="start-winback-for-subscription" data-arg-sub-id="${sub.id}" title="${translate('subscription.winbackTitle', {}, 'Winback/Opzegging')}">
                             ${translate('subscription.winbackAction', {}, '🎯 Winback/Opzegging')}
                         </button>
                     </div>
@@ -5371,7 +5374,7 @@ function displaySubscriptions() {
                     </div>
                     <div class="subscription-actions">
                         <span class="subscription-status status-restituted">${translate('subscription.statusRestituted', {}, 'Gerestitueerd')}</span>
-                        <button class="btn btn-small btn-secondary" onclick="revertRestitution(${sub.id})" title="${translate('subscription.transferToOtherTitle', {}, 'Overzetten naar andere persoon')}">
+                        <button class="btn btn-small btn-secondary" type="button" data-action="revert-restitution" data-arg-sub-id="${sub.id}" title="${translate('subscription.transferToOtherTitle', {}, 'Overzetten naar andere persoon')}">
                             ${translate('subscription.transferAction', {}, '🔄 Overzetten')}
                         </button>
                     </div>
@@ -5501,9 +5504,9 @@ function displayContactHistory() {
     const paginationMarkup = totalPages > 1
         ? `
         <div class="timeline-pagination">
-            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage === 1 ? 'disabled' : ''} onclick="changeContactHistoryPage(${contactHistoryState.currentPage - 1})">← Vorige</button>
+            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage === 1 ? 'disabled' : ''} data-action="change-contact-history-page" data-arg-new-page="${contactHistoryState.currentPage - 1}">← Vorige</button>
             <span class="timeline-page-indicator">Pagina ${contactHistoryState.currentPage} van ${totalPages}</span>
-            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage >= totalPages ? 'disabled' : ''} onclick="changeContactHistoryPage(${contactHistoryState.currentPage + 1})">Volgende →</button>
+            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage >= totalPages ? 'disabled' : ''} data-action="change-contact-history-page" data-arg-new-page="${contactHistoryState.currentPage + 1}">Volgende →</button>
         </div>
         `
         : '';
@@ -5521,7 +5524,7 @@ function displayContactHistory() {
         return `
         <div class="timeline-item${highlightClass}" data-contact-id="${rawId}">
             <div class="timeline-dot" style="background-color: ${typeInfo.color}"></div>
-            <div class="timeline-header" onclick="toggleTimelineItem('${entryDomId}')">
+            <div class="timeline-header" data-action="toggle-timeline-item" data-arg-entry-dom-id="${entryDomId}">
                 <span class="timeline-type" style="color: ${typeInfo.color}">
                     ${typeInfo.icon} ${typeInfo.label}
                 </span>
@@ -6343,10 +6346,10 @@ async function generateWinbackOffers(reason) {
     const offersContainer = document.getElementById('winbackOffers');
     
     offersContainer.innerHTML = relevantOffers.map(offer => {
-        const escapedTitle = String(offer.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        const escapedDescription = String(offer.description || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const safeTitle = escapeHtml(String(offer.title || ''));
+        const safeDescription = escapeHtml(String(offer.description || ''));
         return `
-        <div class="offer-card" onclick="selectOffer(${offer.id}, '${escapedTitle}', '${escapedDescription}', event)">
+        <div class="offer-card" data-action="select-offer" data-arg-offer-id="${offer.id}" data-arg-title="${safeTitle}" data-arg-description="${safeDescription}">
             <div class="offer-title">${offer.title}</div>
             <div class="offer-description">${offer.description}</div>
             <div class="offer-discount">${offer.discount}</div>

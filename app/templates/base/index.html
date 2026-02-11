@@ -24,7 +24,8 @@
                                 type="button"
                                 id="agentProfileTrigger"
                                 class="agent-profile-trigger"
-                                onclick="toggleStatusMenu(event)"
+                                data-action="agent-status.toggle-menu"
+                                data-action-event="click"
                                 aria-expanded="false"
                                 aria-haspopup="true"
                                 aria-controls="agentStatusMenu"
@@ -49,12 +50,12 @@
                                         {% endif %}
                                     </div>
                                     <div class="profile-menu-header" data-i18n="indexHtml.text.status_005ef20f">Status</div>
-                                    <button type="button" class="status-menu-item" data-status-option="ready" onclick="setAgentStatus('ready')" data-i18n="indexHtml.text.beschikbaar_f6f1ea58">Beschikbaar</button>
-                                    <button type="button" class="status-menu-item" data-status-option="busy" onclick="setAgentStatus('busy')" data-i18n="indexHtml.text.bezet_57d4daff">Bezet</button>
-                                    <button type="button" class="status-menu-item" data-status-option="dnd" onclick="setAgentStatus('dnd')" data-i18n="indexHtml.text.niet_storen_7f6c03ee">Niet storen</button>
-                                    <button type="button" class="status-menu-item" data-status-option="brb" onclick="setAgentStatus('brb')" data-i18n="indexHtml.text.ben_zo_terug_b3d0aab2">Ben zo terug</button>
-                                    <button type="button" class="status-menu-item" data-status-option="away" onclick="setAgentStatus('away')" data-i18n="indexHtml.text.als_afwezig_weergeven_b8021b1e">Als afwezig weergeven</button>
-                                    <button type="button" class="status-menu-item" data-status-option="offline" onclick="setAgentStatus('offline')" data-i18n="indexHtml.text.offline_weergeven_1ddcc844">Offline weergeven</button>
+                                    <button type="button" class="status-menu-item" data-status-option="ready" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.beschikbaar_f6f1ea58">Beschikbaar</button>
+                                    <button type="button" class="status-menu-item" data-status-option="busy" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.bezet_57d4daff">Bezet</button>
+                                    <button type="button" class="status-menu-item" data-status-option="dnd" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.niet_storen_7f6c03ee">Niet storen</button>
+                                    <button type="button" class="status-menu-item" data-status-option="brb" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.ben_zo_terug_b3d0aab2">Ben zo terug</button>
+                                    <button type="button" class="status-menu-item" data-status-option="away" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.als_afwezig_weergeven_b8021b1e">Als afwezig weergeven</button>
+                                    <button type="button" class="status-menu-item" data-status-option="offline" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.offline_weergeven_1ddcc844">Offline weergeven</button>
                                 </div>
                                 <div class="profile-menu-section">
                                     <div class="profile-menu-header" data-i18n="indexHtml.text.taal_38ec1f9f">Taal</div>
@@ -119,7 +120,9 @@
                         <div class="queue-actions">
                             <button id="acceptCallBtn" 
                                     class="btn-accept-call" 
-                                    onclick="acceptNextCall()" data-i18n="indexHtml.text.gesprek_starten_79f484da">
+                                    data-action="queue.accept-next"
+                                    data-action-event="click"
+                                    data-i18n="indexHtml.text.gesprek_starten_79f484da">
                                 📞 Gesprek Starten
                             </button>
                         </div>
@@ -157,12 +160,14 @@
                         <div class="session-actions">
                             <button id="holdCallBtn" 
                                     class="btn-hold-call" 
-                                    onclick="toggleCallHold()"
+                                    data-action="call-session.toggle-hold"
+                                    data-action-event="click"
                                     style="display: none;" data-i18n="indexHtml.text.in_wacht_52bc255e">
                                 ⏸️ In Wacht
                             </button>
                             <button id="endCallBtn" class="btn-end-call" 
-                                    onclick="endCallSession()" 
+                                    data-action="call-session.end"
+                                    data-action-event="click"
                                     style="display: none;" data-i18n="indexHtml.text.beeindig_gesprek_0ca90bd2">
                                 📞 Beëindig Gesprek
                             </button>
@@ -177,7 +182,7 @@
                         <span class="acw-label" data-i18n="indexHtml.text.nabewerkingstijd_a424f04e">Nabewerkingstijd</span>
                         <span class="acw-timer" id="acwTimer">0:00</span>
                         <span class="acw-instruction" data-i18n="indexHtml.text.vul_het_nabewerkingsscherm_in_om_klaar_te_zijn_voor_het_volgende_gesprek_230eaff9">Vul het nabewerkingsscherm in om klaar te zijn voor het volgende gesprek</span>
-                        <button class="btn-finish-acw" onclick="manualFinishACW()" data-i18n="indexHtml.text.klaar_91863a41">
+                        <button class="btn-finish-acw" data-action="acw.manual-finish" data-action-event="click" data-i18n="indexHtml.text.klaar_91863a41">
                             ✅ Klaar
                         </button>
                     </div>
@@ -196,11 +201,11 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="searchPostalCode" data-i18n="indexHtml.text.postcode_e7a57d06">Postcode</label>
-                                <input type="text" id="searchPostalCode" placeholder="1234AB" onkeypress="handleSearchKeyPress(event)" data-i18n-placeholder="indexHtml.placeholder.1234ab_7d777582">
+                                <input type="text" id="searchPostalCode" placeholder="1234AB" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.1234ab_7d777582">
                             </div>
                             <div class="form-group">
                                 <label for="searchHouseNumber" data-i18n="indexHtml.text.huisnr_0ed0c1dc">Huisnr.</label>
-                                <input type="text" id="searchHouseNumber" placeholder="12" onkeypress="handleSearchKeyPress(event)">
+                                <input type="text" id="searchHouseNumber" placeholder="12" data-action="search-handle-keypress" data-action-event="keydown">
                             </div>
                         </div>
                         <div class="additional-filters">
@@ -208,7 +213,7 @@
                                 type="button" 
                                 class="additional-filters-toggle" 
                                 id="additionalFiltersToggle" 
-                                onclick="toggleAdditionalFilters()" 
+                                data-action="toggle-additional-filters"
                                 aria-expanded="false">
                                 Additionele filters
                                 <span class="chevron" id="additionalFiltersChevron">▼</span>
@@ -216,19 +221,19 @@
                             <div class="additional-filters-panel" id="additionalFiltersPanel">
                                 <div class="form-group">
                                     <label for="searchName" data-i18n="indexHtml.text.naam_17c26a8a">Naam</label>
-                                    <input type="text" id="searchName" placeholder="Achternaam, Voornaam" onkeypress="handleSearchKeyPress(event)" data-i18n-placeholder="indexHtml.placeholder.achternaam_voornaam_9d9db834">
+                                    <input type="text" id="searchName" placeholder="Achternaam, Voornaam" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.achternaam_voornaam_9d9db834">
                                 </div>
                                 <div class="form-group">
                                     <label for="searchPhone" data-i18n="indexHtml.text.telefoon_1888b353">Telefoon</label>
-                                    <input type="text" id="searchPhone" placeholder="Bijv. 0612345678" onkeypress="handleSearchKeyPress(event)" data-i18n-placeholder="indexHtml.placeholder.bijv_0612345678_e5ee02a0">
+                                    <input type="text" id="searchPhone" placeholder="Bijv. 0612345678" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.bijv_0612345678_e5ee02a0">
                                 </div>
                                 <div class="form-group">
                                     <label for="searchEmail" data-i18n="indexHtml.text.e_mail_31bb94b0">E-mail</label>
-                                    <input type="email" id="searchEmail" placeholder="naam@email.nl" onkeypress="handleSearchKeyPress(event)" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
+                                    <input type="email" id="searchEmail" placeholder="naam@email.nl" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-primary" onclick="searchCustomer()">
+                        <button class="btn btn-primary" type="button" data-action="search-customer">
                             <span data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</span>
                         </button>
                     </div>
@@ -240,7 +245,7 @@
                                 <span class="summary-icon">✓</span>
                                 <span id="resultCount">0</span> klanten gevonden
                             </div>
-                            <button class="btn btn-link" onclick="scrollToResults()" data-i18n="indexHtml.text.bekijk_resultaten_031dfc60">
+                            <button class="btn btn-link" type="button" data-action="scroll-to-results" data-i18n="indexHtml.text.bekijk_resultaten_031dfc60">
                                 Bekijk resultaten →
                             </button>
                         </div>
@@ -250,7 +255,7 @@
                 <!-- Quick Actions -->
                 <section class="card actions-card">
                     <h2 data-i18n="indexHtml.text.snelle_acties_b0debf12">⚡ Snelle Acties</h2>
-                    <button class="btn btn-action" onclick="showNewSubscription()">
+                    <button class="btn btn-action" type="button" data-action="show-new-subscription">
                         <span data-i18n="indexHtml.text.nieuw_abonnement_ed26c367">➕ Nieuw Abonnement</span>
                     </button>
                     <button class="btn btn-action" data-action="open-article-sale-form">
@@ -280,12 +285,12 @@
                             </div>
                             <div class="results-controls">
                                 <label for="sortBy" class="sort-label" data-i18n="indexHtml.text.sorteren_0388b769">Sorteren:</label>
-                                <select id="sortBy" class="sort-select" onchange="sortResults(this.value)">
+                                <select id="sortBy" class="sort-select" data-action="sort-results" data-action-event="change">
                                     <option value="name" data-i18n="indexHtml.text.achternaam_1eb4de6d">Achternaam</option>
                                     <option value="postal" data-i18n="indexHtml.text.postcode_e7a57d06">Postcode</option>
                                     <option value="subscriptions" data-i18n="indexHtml.text.actieve_abonnementen_bd7c947c">Actieve abonnementen</option>
                                 </select>
-                                <button class="btn btn-small btn-close-results" onclick="clearSearchResults()" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">
+                                <button class="btn btn-small btn-close-results" type="button" data-action="clear-search-results" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">
                                     ✕
                                 </button>
                             </div>
@@ -324,16 +329,17 @@
                             <div class="customer-actions">
                                 <!-- PHASE 4: Identify Caller Button (only visible during anonymous call) -->
                                 <button id="identifyCallerBtn" 
-                                        class="btn btn-small btn-primary" 
-                                        onclick="identifyCurrentCustomerAsCaller()"
+                                        class="btn btn-small btn-primary"
+                                        type="button"
+                                        data-action="call-session.identify-current-customer"
                                         style="display: none;" data-i18n="indexHtml.text.dit_is_de_persoon_die_belt_8096cd3d">
                                     👤 Dit is de persoon die belt
                                 </button>
-                                <button class="btn btn-small" onclick="editCustomer()" data-i18n="indexHtml.text.bewerken_69177f14">✏️ Bewerken</button>
-                                <button id="resendMagazineBtn" class="btn btn-small btn-action-inline" onclick="showResendMagazine()" data-i18n="indexHtml.text.editie_verzenden_f7f6196d">📮 Editie Verzenden</button>
+                                <button class="btn btn-small" type="button" data-action="edit-customer" data-i18n="indexHtml.text.bewerken_69177f14">✏️ Bewerken</button>
+                                <button id="resendMagazineBtn" class="btn btn-small btn-action-inline" type="button" data-action="show-resend-magazine" data-i18n="indexHtml.text.editie_verzenden_f7f6196d">📮 Editie Verzenden</button>
                                 <!-- <button id="winbackFlowBtn" class="btn btn-small btn-action-inline" onclick="showWinbackFlow()">🎯 Winback/Opzegging</button> -->
-                                <button class="btn btn-small btn-action-inline" onclick="showEditorialComplaintForm()" data-i18n="indexHtml.text.klacht_redactie_45bd08ef">✍️ Klacht Redactie</button>
-                                <button class="btn btn-small btn-close-customer" onclick="closeCustomerDetail()" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">
+                                <button class="btn btn-small btn-action-inline" type="button" data-action="show-editorial-complaint-form" data-i18n="indexHtml.text.klacht_redactie_45bd08ef">✍️ Klacht Redactie</button>
+                                <button class="btn btn-small btn-close-customer" type="button" data-action="close-customer-detail" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">
                                     ✕
                                 </button>
                             </div>
@@ -358,9 +364,9 @@
                     <div class="card onepager-container">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.nieuw_abonnement_aanmaken_a7bddc25">➕ Nieuw Abonnement Aanmaken</h2>
-                            <button class="btn-close" onclick="closeForm('newSubscriptionForm')">✕</button>
+                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="newSubscriptionForm">✕</button>
                         </div>
-                        <form id="subscriptionForm" class="form-section" onsubmit="createSubscription(event)">
+                        <form id="subscriptionForm" class="form-section" data-action="create-subscription" data-action-event="submit" data-action-prevent-default="true">
                             <div class="werfsleutel-fieldset">
                                 <div class="fieldset-heading">
                                     <label for="werfsleutelInput" data-i18n="indexHtml.text.werfsleutel_c5732867">Werfsleutel *</label>
@@ -424,13 +430,13 @@
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.ontvanger_abonnement_2faa4a44">Ontvanger abonnement</h3>
                             <div class="party-role-panel" id="recipientRolePanel">
                                 <div class="party-mode-toggle">
-                                    <label><input type="radio" name="recipientMode" value="existing" checked onchange="setSubscriptionRoleMode('recipient', this.value)"> <span data-i18n="indexHtml.text.bestaande_persoon_4fee1022">Bestaande persoon</span></label>
-                                    <label><input type="radio" name="recipientMode" value="create" onchange="setSubscriptionRoleMode('recipient', this.value)"> <span data-i18n="indexHtml.text.nieuwe_persoon_c574b0f2">Nieuwe persoon</span></label>
+                                    <label><input type="radio" name="recipientMode" value="existing" checked data-action="set-subscription-role-mode" data-action-event="change" data-arg-role="recipient"> <span data-i18n="indexHtml.text.bestaande_persoon_4fee1022">Bestaande persoon</span></label>
+                                    <label><input type="radio" name="recipientMode" value="create" data-action="set-subscription-role-mode" data-action-event="change" data-arg-role="recipient"> <span data-i18n="indexHtml.text.nieuwe_persoon_c574b0f2">Nieuwe persoon</span></label>
                                 </div>
                                 <div id="recipientExistingSection">
                                     <div class="form-row">
                                         <input type="search" id="recipientSearchQuery" class="form-control" placeholder="Zoek ontvanger op naam" data-i18n-placeholder="indexHtml.placeholder.zoek_ontvanger_op_naam_2046363e">
-                                        <button type="button" class="btn btn-secondary" onclick="searchSubscriptionRolePerson('recipient')" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
+                                        <button type="button" class="btn btn-secondary" data-action="search-subscription-role-person" data-arg-role="recipient" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
                                     </div>
                                     <div id="recipientSearchResults" class="party-search-results"></div>
                                     <div id="recipientSelectedPerson" class="party-selected-person empty" data-i18n="indexHtml.text.geen_ontvanger_geselecteerd_25f421dc">Geen ontvanger geselecteerd</div>
@@ -445,7 +451,7 @@
                             <div class="party-role-panel" id="requesterRolePanel">
                                 <div class="form-group">
                                     <label>
-                                        <input type="checkbox" id="requesterSameAsRecipient" checked onchange="toggleRequesterSameAsRecipient()">
+                                        <input type="checkbox" id="requesterSameAsRecipient" checked data-action="toggle-requester-same-as-recipient" data-action-event="change">
                                         <span data-i18n="indexHtml.text.zelfde_persoon_als_ontvanger_52ac9149">Zelfde persoon als ontvanger
                                     </span></label>
                                 </div>
@@ -454,13 +460,13 @@
                                 </div>
                                 <div id="requesterRoleDetails" style="display: none;">
                                     <div class="party-mode-toggle">
-                                        <label><input type="radio" name="requesterMode" value="existing" checked onchange="setSubscriptionRoleMode('requester', this.value)"> <span data-i18n="indexHtml.text.bestaande_persoon_4fee1022">Bestaande persoon</span></label>
-                                        <label><input type="radio" name="requesterMode" value="create" onchange="setSubscriptionRoleMode('requester', this.value)"> <span data-i18n="indexHtml.text.nieuwe_persoon_c574b0f2">Nieuwe persoon</span></label>
+                                        <label><input type="radio" name="requesterMode" value="existing" checked data-action="set-subscription-role-mode" data-action-event="change" data-arg-role="requester"> <span data-i18n="indexHtml.text.bestaande_persoon_4fee1022">Bestaande persoon</span></label>
+                                        <label><input type="radio" name="requesterMode" value="create" data-action="set-subscription-role-mode" data-action-event="change" data-arg-role="requester"> <span data-i18n="indexHtml.text.nieuwe_persoon_c574b0f2">Nieuwe persoon</span></label>
                                     </div>
                                     <div id="requesterExistingSection">
                                         <div class="form-row">
                                             <input type="search" id="requesterSearchQuery" class="form-control" placeholder="Zoek aanvrager/betaler op naam" data-i18n-placeholder="indexHtml.placeholder.zoek_aanvrager_betaler_op_naam_9636a951">
-                                            <button type="button" class="btn btn-secondary" onclick="searchSubscriptionRolePerson('requester')" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
+                                            <button type="button" class="btn btn-secondary" data-action="search-subscription-role-person" data-arg-role="requester" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
                                         </div>
                                         <div id="requesterSearchResults" class="party-search-results"></div>
                                         <div id="requesterSelectedPerson" class="party-selected-person empty" data-i18n="indexHtml.text.geen_aanvrager_betaler_geselecteerd_8415de35">Geen aanvrager/betaler geselecteerd</div>
@@ -502,7 +508,7 @@
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('newSubscriptionForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="newSubscriptionForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
                                 <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.abonnement_aanmaken_6f3d7e12">Abonnement Aanmaken</button>
                             </div>
                         </form>
@@ -745,9 +751,9 @@
                     <div class="card onepager-container">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.klantgegevens_bewerken_de8f3786">✏️ Klantgegevens Bewerken</h2>
-                            <button class="btn-close" onclick="closeForm('editCustomerForm')">✕</button>
+                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="editCustomerForm">✕</button>
                         </div>
-                        <form id="customerEditForm" class="form-section" onsubmit="saveCustomerEdit(event)">
+                        <form id="customerEditForm" class="form-section" data-action="save-customer-edit" data-action-event="submit" data-action-prevent-default="true">
                             <input type="hidden" id="editCustomerId">
                             
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.aanhef_1833dec8">Aanhef *</h3>
@@ -818,7 +824,7 @@
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('editCustomerForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="editCustomerForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
                                 <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.opslaan_414388eb">Opslaan</button>
                             </div>
                         </form>
@@ -830,9 +836,9 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.abonnement_bewerken_b16c21e3">✏️ Abonnement Bewerken</h2>
-                            <button class="btn-close" onclick="closeForm('editSubscriptionForm')">✕</button>
+                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="editSubscriptionForm">✕</button>
                         </div>
-                        <form id="subscriptionEditForm" onsubmit="saveSubscriptionEdit(event)">
+                        <form id="subscriptionEditForm" data-action="save-subscription-edit" data-action-event="submit" data-action-prevent-default="true">
                             <input type="hidden" id="editSubId">
                             
                             <div class="info-box">
@@ -882,7 +888,7 @@
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('editSubscriptionForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="editSubscriptionForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
                                 <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.wijzigingen_opslaan_22f167f8">Wijzigingen Opslaan</button>
                             </div>
                         </form>
@@ -894,7 +900,7 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.editie_opnieuw_verzenden_3bd3bf34">📮 Editie Opnieuw Verzenden</h2>
-                            <button class="btn-close" onclick="closeForm('resendMagazineForm')">✕</button>
+                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="resendMagazineForm">✕</button>
                         </div>
                         <div class="resend-form">
                             <p class="info-text" data-i18n="indexHtml.text.selecteer_het_abonnement_waarvoor_de_laatste_editie_opnieuw_moet_worden__616e90bb">Selecteer het abonnement waarvoor de laatste editie opnieuw moet worden verzonden.</p>
@@ -914,8 +920,8 @@
                                 </select>
                             </div>
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('resendMagazineForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                                <button type="button" class="btn btn-primary" onclick="resendMagazine()" data-i18n="indexHtml.text.editie_verzenden_ffa19d32">Editie Verzenden</button>
+                                <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="resendMagazineForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="button" class="btn btn-primary" data-action="resend-magazine" data-i18n="indexHtml.text.editie_verzenden_ffa19d32">Editie Verzenden</button>
                             </div>
                         </div>
                     </div>
@@ -926,7 +932,7 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.klacht_opmerking_voor_redactie_40e9bc48">✍️ Klacht/Opmerking voor Redactie</h2>
-                            <button class="btn-close" onclick="closeForm('editorialComplaintForm')">✕</button>
+                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="editorialComplaintForm">✕</button>
                         </div>
                         <div class="editorial-complaint-form">
                             <p class="info-text" data-i18n="indexHtml.text.registreer_klachten_of_opmerkingen_die_bestemd_zijn_voor_de_redactie_van_8e5ea830">Registreer klachten of opmerkingen die bestemd zijn voor de redactie van het magazine.</p>
@@ -984,8 +990,8 @@
                             </div>
 
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('editorialComplaintForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                                <button type="button" class="btn btn-primary" onclick="submitEditorialComplaint()" data-i18n="indexHtml.text.registreren_ad91cc03">Registreren</button>
+                                <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="editorialComplaintForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="button" class="btn btn-primary" data-action="submit-editorial-complaint" data-i18n="indexHtml.text.registreren_ad91cc03">Registreren</button>
                             </div>
                         </div>
                     </div>
@@ -996,9 +1002,9 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 id="restitutionTransferTitle" data-i18n="indexHtml.text.abonnement_overzetten_04a00045">🔄 Abonnement Overzetten</h2>
-                            <button class="btn-close" onclick="closeForm('restitutionTransferForm')">✕</button>
+                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="restitutionTransferForm">✕</button>
                         </div>
-                        <form id="restitutionTransferFormElement" onsubmit="completeRestitutionTransfer(event)">
+                        <form id="restitutionTransferFormElement" data-action="complete-restitution-transfer" data-action-event="submit" data-action-prevent-default="true">
                             <div class="info-box" style="background-color: rgba(239, 68, 68, 0.1); border-color: #ef4444;">
                                 <strong data-i18n="indexHtml.text.let_op_51f6b639">Let op:</strong> Overleden personen kunnen geen actieve abonnementen hebben. Het abonnement moet worden overgezet naar een andere persoon.
                             </div>
@@ -1039,7 +1045,7 @@
                             
                             <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="restitutionTransferSameAddress" onchange="toggleRestitutionTransferAddress()">
+                                    <input type="checkbox" id="restitutionTransferSameAddress" data-action="toggle-restitution-transfer-address" data-action-event="change">
                                     <span data-i18n="indexHtml.text.zelfde_adres_als_originele_abonnee_2ccc5d4a">Zelfde adres als originele abonnee
                                 </span></label>
                             </div>
@@ -1066,7 +1072,7 @@
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('restitutionTransferForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="restitutionTransferForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
                                 <button type="submit" class="btn btn-success" data-i18n="indexHtml.text.abonnement_overzetten_51f8b366">Abonnement Overzetten</button>
                             </div>
                         </form>
@@ -1078,7 +1084,7 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.winback_opzegging_flow_41075f12">🎯 Winback/Opzegging Flow</h2>
-                            <button class="btn-close" onclick="closeForm('winbackFlow')">✕</button>
+                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="winbackFlow">✕</button>
                         </div>
                         <div class="winback-container">
                             <!-- Step Indicator -->
@@ -1128,7 +1134,7 @@
                                         </label>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary" onclick="winbackNextStep(2)" data-i18n="indexHtml.text.volgende_88b8d391">Volgende →</button>
+                                <button class="btn btn-primary" type="button" data-action="winback-next-step" data-arg-step="2" data-i18n="indexHtml.text.volgende_88b8d391">Volgende →</button>
                             </div>
 
                             <!-- Step 1b: Deceased - Select Subscriptions -->
@@ -1141,8 +1147,8 @@
                                     <!-- Subscriptions will be dynamically inserted here -->
                                 </div>
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep(1)" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-primary" onclick="processDeceasedSubscriptions()" data-i18n="indexHtml.text.verwerken_781562ac">Verwerken →</button>
+                                    <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-primary" type="button" data-action="process-deceased-subscriptions" data-i18n="indexHtml.text.verwerken_781562ac">Verwerken →</button>
                                 </div>
                             </div>
 
@@ -1162,8 +1168,8 @@
                                     <textarea id="refundNotes" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc." data-i18n-placeholder="indexHtml.placeholder.bijv_rekeningnummer_voor_restitutie_contactpersoon_etc_6544b433"></textarea>
                                 </div>
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-danger" onclick="completeAllDeceasedActions()" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
+                                    <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1b" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-danger" type="button" data-action="complete-all-deceased-actions" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
                                 </div>
                             </div>
 
@@ -1178,8 +1184,8 @@
                                 <div id="transferCustomerForm"></div>
                                 
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-success" onclick="completeAllDeceasedActions()" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
+                                    <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1b" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-success" type="button" data-action="complete-all-deceased-actions" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
                                 </div>
                             </div>
                             
@@ -1212,8 +1218,8 @@
                                 </div>
                                 
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep('1b')" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-success" onclick="completeAllDeceasedActions()" data-i18n="indexHtml.text.alles_verwerken_db8bc36d">Alles Verwerken</button>
+                                    <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1b" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-success" type="button" data-action="complete-all-deceased-actions" data-i18n="indexHtml.text.alles_verwerken_db8bc36d">Alles Verwerken</button>
                                 </div>
                             </div>
 
@@ -1222,8 +1228,8 @@
                                 <h3 data-i18n="indexHtml.text.beschikbare_winback_aanbiedingen_28c6a25e">Beschikbare Winback Aanbiedingen</h3>
                                 <div id="winbackOffers" class="offers-container"></div>
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep(1)" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-primary" onclick="winbackNextStep(3)" data-i18n="indexHtml.text.aanbod_presenteren_bf69df31">Aanbod Presenteren →</button>
+                                    <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-primary" type="button" data-action="winback-next-step" data-arg-step="3" data-i18n="indexHtml.text.aanbod_presenteren_bf69df31">Aanbod Presenteren →</button>
                                 </div>
                             </div>
 
@@ -1247,8 +1253,8 @@
                                     </div>
                                 </div>
                                 <div class="form-actions">
-                                    <button class="btn btn-secondary" onclick="winbackPrevStep(2)" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-success" onclick="completeWinback()" data-i18n="indexHtml.text.afronden_88a9738c">Afronden</button>
+                                    <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="2" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
+                                    <button class="btn btn-success" type="button" data-action="complete-winback" data-i18n="indexHtml.text.afronden_88a9738c">Afronden</button>
                                 </div>
                             </div>
                         </div>
@@ -1364,7 +1370,7 @@
                 
                 <div class="form-group">
                     <label for="dispCategory" data-i18n="indexHtml.text.categorie_add0d64a">Categorie *</label>
-                    <select id="dispCategory" required onchange="updateDispositionOutcomes()">
+                    <select id="dispCategory" required data-action="disposition.update-outcomes" data-action-event="change">
                         <option value="" data-i18n="indexHtml.text.selecteer_categorie_1855094a">Selecteer categorie...</option>
                         <option value="subscription" data-i18n="indexHtml.text.abonnement_66200f36">Abonnement</option>
                         <option value="delivery" data-i18n="indexHtml.text.bezorging_f27deb3c">Bezorging</option>
@@ -1392,7 +1398,7 @@
                 
                 <div class="form-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="dispFollowUpRequired" onchange="toggleFollowUpSection()">
+                        <input type="checkbox" id="dispFollowUpRequired" data-action="disposition.toggle-follow-up" data-action-event="change">
                         <span data-i18n="indexHtml.text.follow_up_vereist_532ea8aa">Follow-up vereist</span>
                     </label>
                 </div>
@@ -1406,8 +1412,8 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="cancelDisposition()" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                <button class="btn btn-primary" onclick="saveDisposition()" data-i18n="indexHtml.text.opslaan_afronden_8c8cc7c2">Opslaan & Afronden</button>
+                <button class="btn btn-secondary" data-action="disposition.cancel" data-action-event="click" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                <button class="btn btn-primary" data-action="disposition.save" data-action-event="click" data-i18n="indexHtml.text.opslaan_afronden_8c8cc7c2">Opslaan & Afronden</button>
             </div>
         </div>
     </div>
@@ -1417,7 +1423,7 @@
         <div class="modal-content debug-modal-content">
             <div class="modal-header">
                 <h2 data-i18n="indexHtml.text.debug_mode_e4f999e9">🔧 Debug Mode</h2>
-                <button class="modal-close" onclick="closeDebugModal()" data-i18n="indexHtml.text.times_87977e46">&times;</button>
+                <button class="modal-close" data-action="debug.close-modal" data-action-event="click" data-i18n="indexHtml.text.times_87977e46">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- PHASE 3: Call Simulation Section -->
@@ -1448,7 +1454,7 @@
                     
                     <div class="debug-row">
                         <label data-i18n="indexHtml.text.beller_type_1176bbdd">Beller type:</label>
-                        <select id="debugCallerType" onchange="toggleKnownCallerSelect()">
+                        <select id="debugCallerType" data-action="debug.toggle-known-caller" data-action-event="change">
                             <option value="anonymous" data-i18n="indexHtml.text.anonieme_beller_0c3daeaf">Anonieme Beller</option>
                             <option value="known" data-i18n="indexHtml.text.bekende_klant_5db14695">Bekende Klant</option>
                         </select>
@@ -1462,12 +1468,13 @@
                     </div>
                     
                     <div class="debug-actions">
-                        <button class="btn btn-success btn-block" onclick="debugStartCall()" data-i18n="indexHtml.text.start_gesprek_simulatie_b219f5d2">
+                        <button class="btn btn-success btn-block" data-action="debug.start-call" data-action-event="click" data-i18n="indexHtml.text.start_gesprek_simulatie_b219f5d2">
                             � Start Gesprek Simulatie
                         </button>
                         <button id="debugEndCallBtn" 
                                 class="btn btn-danger btn-block" 
-                                onclick="debugEndCall()"
+                                data-action="debug.end-call"
+                                data-action-event="click"
                                 style="display: none;" data-i18n="indexHtml.text.beeindig_telefoongesprek_96bdb1c7">
                             ❌ Beëindig Telefoongesprek
                         </button>
@@ -1502,11 +1509,15 @@
                     
                     <div class="debug-actions">
                         <button class="btn btn-primary btn-block" 
-                                onclick="debugGenerateQueue()" data-i18n="indexHtml.text.genereer_wachtrij_822024eb">
+                                data-action="queue.debug-generate"
+                                data-action-event="click"
+                                data-i18n="indexHtml.text.genereer_wachtrij_822024eb">
                             🎯 Genereer Wachtrij
                         </button>
                         <button class="btn btn-secondary btn-block" 
-                                onclick="debugClearQueue()" data-i18n="indexHtml.text.wis_wachtrij_08792565">
+                                data-action="queue.debug-clear"
+                                data-action-event="click"
+                                data-i18n="indexHtml.text.wis_wachtrij_08792565">
                             🗑️ Wis Wachtrij
                         </button>
                     </div>
@@ -1523,7 +1534,7 @@
                 
                 <div class="debug-section">
                     <h3 data-i18n="indexHtml.text.system_reset_4c107353">System Reset</h3>
-                    <button class="btn btn-danger btn-block" onclick="fullReset()" data-i18n="indexHtml.text.purge_localstorage_full_reset_eedef037">
+                    <button class="btn btn-danger btn-block" data-action="debug.full-reset" data-action-event="click" data-i18n="indexHtml.text.purge_localstorage_full_reset_eedef037">
                         🗑️ Purge Localstorage & Full Reset
                     </button>
                 </div>
