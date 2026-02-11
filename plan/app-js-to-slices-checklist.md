@@ -44,7 +44,7 @@
 | 8 | Winback + deceased + restitution transfer workflows | `codex/migrate-winback-deceased-restitution-workflows-to-slice` | [#48](https://github.com/bindinc/kiwi/pull/48) | `merged` | `yes` |  |
 | 9 | Article sales + delivery remarks modal implementation | `codex/implement-article-sales-and-delivery-remarks-modal-slices` | [#49](https://github.com/bindinc/kiwi/pull/49) | `merged` | `yes` |  |
 | 10 | Article catalog search/order engine | `codex/extract-article-catalog-search-and-order-engine-into-slice` | [#47](https://github.com/bindinc/kiwi/pull/47) | `merged` | `yes` |  |
-| 11 | Delivery date picker/calendar engine | `codex/migrate-delivery-date-picker-calendar-engine-to-slice` | `TBD` | `in progress` | `no` |  |
+| 11 | Delivery date picker/calendar engine | `codex/migrate-delivery-date-picker-calendar-engine-to-slice` | [#50](https://github.com/bindinc/kiwi/pull/50) | `in progress` | `no` |  |
 | 12 | App shell events + form closing + toast + keyboard/click/change globals | `TBD` | `TBD` | `not started` | `no` |  |
 | 13 | Runtime compatibility bridge while migrating | `TBD` | `TBD` | `not started` | `no` |  |
 
