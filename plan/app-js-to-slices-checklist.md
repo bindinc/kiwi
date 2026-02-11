@@ -189,12 +189,12 @@
   - Bound action names: indirect runtime flows (`call-session.simulate-incoming-call`, `call-session.identify-caller`, `call-session.end`)
   - Dependency/risk note: these functions currently mix DOM rendering, timers, and runtime state; extraction must avoid duplicate timer mutation between legacy and runtime modules.
 
-- [ ] 18. Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`)
+- [x] 18. Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`)
   - Target slice file(s): `app/static/assets/js/app.js`, `app/static/assets/js/app/index.js`, `app/static/assets/js/app/slices/customer-detail-slice.js`, `app/static/assets/js/app/slices/contact-history-slice.js`, `app/static/assets/js/app/slices/order.js`, `app/static/assets/js/app/slices/delivery-remarks-slice.js`, `app/static/assets/js/app/slices/app-shell-slice.js`
   - Source range: `app.js:1547-1751`
   - Key functions/state: `getSliceApi`, `invokeSliceMethod`, `invokeSliceMethodAsync`, `getCustomerDetailSliceDependencies`, `getOrderSliceDependencies`, `getDeliveryRemarksSliceDependencies`, `getAppShellSliceDependencies`, global provider registration
   - Bound action names: none direct (cross-slice dependency plumbing)
-  - Dependency/risk note: slices currently resolve dependencies via `window.kiwiGet*` providers; migration should move this to explicit module wiring in `app/index.js` to remove global hidden coupling.
+  - Dependency/risk note: dependency resolution is now explicitly wired in `app/index.js` via `window.kiwiLegacySliceDependencies`, removing per-slice `window.kiwiGet*` provider lookups and making slice wiring explicit.
 
 - [ ] 19. Remove legacy facade wrappers that only proxy to slice methods
   - Target slice file(s): `app/static/assets/js/app.js`, `app/static/assets/js/app/slices/*.js`, `app/templates/base/index.html` (if any remaining global function invocations exist)

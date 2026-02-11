@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createActionRouter } from '../actions.js';
-import { registerDeliveryRemarksSlice } from './delivery-remarks-slice.js';
+import { configureDeliveryRemarksSliceDependencies, registerDeliveryRemarksSlice } from './delivery-remarks-slice.js';
 
 function createRouter() {
     const root = {
@@ -55,7 +55,6 @@ function testInstallsDeliveryRemarkNamespace() {
 
 function testAddDeliveryRemarkToModalByKeyAppendsText() {
     const previousNamespaceValue = globalThis.kiwiDeliveryRemarksSlice;
-    const previousProviderValue = globalThis.kiwiGetDeliveryRemarksSliceDependencies;
     const previousDocumentValue = globalThis.document;
 
     const remarksTextarea = {
@@ -78,14 +77,14 @@ function testAddDeliveryRemarkToModalByKeyAppendsText() {
             }
         };
 
-        globalThis.kiwiGetDeliveryRemarksSliceDependencies = () => ({
+        configureDeliveryRemarksSliceDependencies(() => ({
             translate(key, _params, fallback) {
                 if (key === 'delivery.remarkPresets.callBeforeDelivery') {
                     return 'Bel eerst';
                 }
                 return fallback;
             }
-        });
+        }));
 
         registerDeliveryRemarksSlice(createRouter());
         globalThis.kiwiDeliveryRemarksSlice.addDeliveryRemarkToModalByKey('delivery.remarkPresets.callBeforeDelivery');
@@ -100,11 +99,7 @@ function testAddDeliveryRemarkToModalByKeyAppendsText() {
             globalThis.kiwiDeliveryRemarksSlice = previousNamespaceValue;
         }
 
-        if (previousProviderValue === undefined) {
-            delete globalThis.kiwiGetDeliveryRemarksSliceDependencies;
-        } else {
-            globalThis.kiwiGetDeliveryRemarksSliceDependencies = previousProviderValue;
-        }
+        configureDeliveryRemarksSliceDependencies(null);
 
         if (previousDocumentValue === undefined) {
             delete globalThis.document;
