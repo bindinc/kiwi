@@ -4945,7 +4945,7 @@ function renderCustomerRow(customer) {
                 ${showIdentifyBtn ? `
                     <button class="btn btn-small btn-primary btn-identify-caller"
                             type="button"
-                            data-action="identify-caller-as-customer"
+                            data-action="call-session.identify-caller"
                             data-arg-customer-id="${customer.id}"
                             data-action-stop-propagation="true">
                         👤 Identificeer

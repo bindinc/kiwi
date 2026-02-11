@@ -24,7 +24,8 @@
                                 type="button"
                                 id="agentProfileTrigger"
                                 class="agent-profile-trigger"
-                                onclick="toggleStatusMenu(event)"
+                                data-action="agent-status.toggle-menu"
+                                data-action-event="click"
                                 aria-expanded="false"
                                 aria-haspopup="true"
                                 aria-controls="agentStatusMenu"
@@ -49,12 +50,12 @@
                                         {% endif %}
                                     </div>
                                     <div class="profile-menu-header" data-i18n="indexHtml.text.status_005ef20f">Status</div>
-                                    <button type="button" class="status-menu-item" data-status-option="ready" onclick="setAgentStatus('ready')" data-i18n="indexHtml.text.beschikbaar_f6f1ea58">Beschikbaar</button>
-                                    <button type="button" class="status-menu-item" data-status-option="busy" onclick="setAgentStatus('busy')" data-i18n="indexHtml.text.bezet_57d4daff">Bezet</button>
-                                    <button type="button" class="status-menu-item" data-status-option="dnd" onclick="setAgentStatus('dnd')" data-i18n="indexHtml.text.niet_storen_7f6c03ee">Niet storen</button>
-                                    <button type="button" class="status-menu-item" data-status-option="brb" onclick="setAgentStatus('brb')" data-i18n="indexHtml.text.ben_zo_terug_b3d0aab2">Ben zo terug</button>
-                                    <button type="button" class="status-menu-item" data-status-option="away" onclick="setAgentStatus('away')" data-i18n="indexHtml.text.als_afwezig_weergeven_b8021b1e">Als afwezig weergeven</button>
-                                    <button type="button" class="status-menu-item" data-status-option="offline" onclick="setAgentStatus('offline')" data-i18n="indexHtml.text.offline_weergeven_1ddcc844">Offline weergeven</button>
+                                    <button type="button" class="status-menu-item" data-status-option="ready" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.beschikbaar_f6f1ea58">Beschikbaar</button>
+                                    <button type="button" class="status-menu-item" data-status-option="busy" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.bezet_57d4daff">Bezet</button>
+                                    <button type="button" class="status-menu-item" data-status-option="dnd" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.niet_storen_7f6c03ee">Niet storen</button>
+                                    <button type="button" class="status-menu-item" data-status-option="brb" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.ben_zo_terug_b3d0aab2">Ben zo terug</button>
+                                    <button type="button" class="status-menu-item" data-status-option="away" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.als_afwezig_weergeven_b8021b1e">Als afwezig weergeven</button>
+                                    <button type="button" class="status-menu-item" data-status-option="offline" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.offline_weergeven_1ddcc844">Offline weergeven</button>
                                 </div>
                                 <div class="profile-menu-section">
                                     <div class="profile-menu-header" data-i18n="indexHtml.text.taal_38ec1f9f">Taal</div>
@@ -119,7 +120,9 @@
                         <div class="queue-actions">
                             <button id="acceptCallBtn" 
                                     class="btn-accept-call" 
-                                    onclick="acceptNextCall()" data-i18n="indexHtml.text.gesprek_starten_79f484da">
+                                    data-action="queue.accept-next"
+                                    data-action-event="click"
+                                    data-i18n="indexHtml.text.gesprek_starten_79f484da">
                                 📞 Gesprek Starten
                             </button>
                         </div>
@@ -157,12 +160,14 @@
                         <div class="session-actions">
                             <button id="holdCallBtn" 
                                     class="btn-hold-call" 
-                                    onclick="toggleCallHold()"
+                                    data-action="call-session.toggle-hold"
+                                    data-action-event="click"
                                     style="display: none;" data-i18n="indexHtml.text.in_wacht_52bc255e">
                                 ⏸️ In Wacht
                             </button>
                             <button id="endCallBtn" class="btn-end-call" 
-                                    onclick="endCallSession()" 
+                                    data-action="call-session.end"
+                                    data-action-event="click"
                                     style="display: none;" data-i18n="indexHtml.text.beeindig_gesprek_0ca90bd2">
                                 📞 Beëindig Gesprek
                             </button>
@@ -177,7 +182,7 @@
                         <span class="acw-label" data-i18n="indexHtml.text.nabewerkingstijd_a424f04e">Nabewerkingstijd</span>
                         <span class="acw-timer" id="acwTimer">0:00</span>
                         <span class="acw-instruction" data-i18n="indexHtml.text.vul_het_nabewerkingsscherm_in_om_klaar_te_zijn_voor_het_volgende_gesprek_230eaff9">Vul het nabewerkingsscherm in om klaar te zijn voor het volgende gesprek</span>
-                        <button class="btn-finish-acw" onclick="manualFinishACW()" data-i18n="indexHtml.text.klaar_91863a41">
+                        <button class="btn-finish-acw" data-action="acw.manual-finish" data-action-event="click" data-i18n="indexHtml.text.klaar_91863a41">
                             ✅ Klaar
                         </button>
                     </div>
@@ -326,7 +331,7 @@
                                 <button id="identifyCallerBtn" 
                                         class="btn btn-small btn-primary"
                                         type="button"
-                                        data-action="identify-current-customer-as-caller"
+                                        data-action="call-session.identify-current-customer"
                                         style="display: none;" data-i18n="indexHtml.text.dit_is_de_persoon_die_belt_8096cd3d">
                                     👤 Dit is de persoon die belt
                                 </button>
@@ -1319,7 +1324,7 @@
                 
                 <div class="form-group">
                     <label for="dispCategory" data-i18n="indexHtml.text.categorie_add0d64a">Categorie *</label>
-                    <select id="dispCategory" required onchange="updateDispositionOutcomes()">
+                    <select id="dispCategory" required data-action="disposition.update-outcomes" data-action-event="change">
                         <option value="" data-i18n="indexHtml.text.selecteer_categorie_1855094a">Selecteer categorie...</option>
                         <option value="subscription" data-i18n="indexHtml.text.abonnement_66200f36">Abonnement</option>
                         <option value="delivery" data-i18n="indexHtml.text.bezorging_f27deb3c">Bezorging</option>
@@ -1347,7 +1352,7 @@
                 
                 <div class="form-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="dispFollowUpRequired" onchange="toggleFollowUpSection()">
+                        <input type="checkbox" id="dispFollowUpRequired" data-action="disposition.toggle-follow-up" data-action-event="change">
                         <span data-i18n="indexHtml.text.follow_up_vereist_532ea8aa">Follow-up vereist</span>
                     </label>
                 </div>
@@ -1361,8 +1366,8 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="cancelDisposition()" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                <button class="btn btn-primary" onclick="saveDisposition()" data-i18n="indexHtml.text.opslaan_afronden_8c8cc7c2">Opslaan & Afronden</button>
+                <button class="btn btn-secondary" data-action="disposition.cancel" data-action-event="click" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                <button class="btn btn-primary" data-action="disposition.save" data-action-event="click" data-i18n="indexHtml.text.opslaan_afronden_8c8cc7c2">Opslaan & Afronden</button>
             </div>
         </div>
     </div>
@@ -1372,7 +1377,7 @@
         <div class="modal-content debug-modal-content">
             <div class="modal-header">
                 <h2 data-i18n="indexHtml.text.debug_mode_e4f999e9">🔧 Debug Mode</h2>
-                <button class="modal-close" onclick="closeDebugModal()" data-i18n="indexHtml.text.times_87977e46">&times;</button>
+                <button class="modal-close" data-action="debug.close-modal" data-action-event="click" data-i18n="indexHtml.text.times_87977e46">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- PHASE 3: Call Simulation Section -->
@@ -1403,7 +1408,7 @@
                     
                     <div class="debug-row">
                         <label data-i18n="indexHtml.text.beller_type_1176bbdd">Beller type:</label>
-                        <select id="debugCallerType" onchange="toggleKnownCallerSelect()">
+                        <select id="debugCallerType" data-action="debug.toggle-known-caller" data-action-event="change">
                             <option value="anonymous" data-i18n="indexHtml.text.anonieme_beller_0c3daeaf">Anonieme Beller</option>
                             <option value="known" data-i18n="indexHtml.text.bekende_klant_5db14695">Bekende Klant</option>
                         </select>
@@ -1417,12 +1422,13 @@
                     </div>
                     
                     <div class="debug-actions">
-                        <button class="btn btn-success btn-block" onclick="debugStartCall()" data-i18n="indexHtml.text.start_gesprek_simulatie_b219f5d2">
+                        <button class="btn btn-success btn-block" data-action="debug.start-call" data-action-event="click" data-i18n="indexHtml.text.start_gesprek_simulatie_b219f5d2">
                             � Start Gesprek Simulatie
                         </button>
                         <button id="debugEndCallBtn" 
                                 class="btn btn-danger btn-block" 
-                                onclick="debugEndCall()"
+                                data-action="debug.end-call"
+                                data-action-event="click"
                                 style="display: none;" data-i18n="indexHtml.text.beeindig_telefoongesprek_96bdb1c7">
                             ❌ Beëindig Telefoongesprek
                         </button>
@@ -1457,11 +1463,15 @@
                     
                     <div class="debug-actions">
                         <button class="btn btn-primary btn-block" 
-                                onclick="debugGenerateQueue()" data-i18n="indexHtml.text.genereer_wachtrij_822024eb">
+                                data-action="queue.debug-generate"
+                                data-action-event="click"
+                                data-i18n="indexHtml.text.genereer_wachtrij_822024eb">
                             🎯 Genereer Wachtrij
                         </button>
                         <button class="btn btn-secondary btn-block" 
-                                onclick="debugClearQueue()" data-i18n="indexHtml.text.wis_wachtrij_08792565">
+                                data-action="queue.debug-clear"
+                                data-action-event="click"
+                                data-i18n="indexHtml.text.wis_wachtrij_08792565">
                             🗑️ Wis Wachtrij
                         </button>
                     </div>
@@ -1478,7 +1488,7 @@
                 
                 <div class="debug-section">
                     <h3 data-i18n="indexHtml.text.system_reset_4c107353">System Reset</h3>
-                    <button class="btn btn-danger btn-block" onclick="fullReset()" data-i18n="indexHtml.text.purge_localstorage_full_reset_eedef037">
+                    <button class="btn btn-danger btn-block" data-action="debug.full-reset" data-action-event="click" data-i18n="indexHtml.text.purge_localstorage_full_reset_eedef037">
                         🗑️ Purge Localstorage & Full Reset
                     </button>
                 </div>
