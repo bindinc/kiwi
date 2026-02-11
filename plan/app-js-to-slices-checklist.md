@@ -53,7 +53,7 @@
 | 17 | Extract call-session start/duration UI bridge from app.js | `codex/extract-call-session-start-and-duration-ui-bridge` | [#60](https://github.com/bindinc/kiwi/pull/60) | `merged` | `yes` | Consolidate call-session timer/UI ownership. |
 | 18 | Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`) | `codex/remove-window-slice-dependency-provider-bridge` | [#58](https://github.com/bindinc/kiwi/pull/58) | `merged` | `yes` | Replace `window` provider lookups with explicit module wiring. |
 | 19 | Remove legacy facade wrappers that only proxy to slice methods | `codex/remove-legacy-facade-wrappers-proxying-to-slices` | [#61](https://github.com/bindinc/kiwi/pull/61) | `merged` | `yes` | Migrate remaining global function callers to router/slice entry points. |
-| 20 | Remove app-shell fallback paths + move runtime wiring out of app.js | `codex/remove-app-shell-fallbacks-and-runtime-wiring-from-app-js` | - | `not started` | `no` | App shell and runtime wiring should live in slice/runtime modules only. |
+| 20 | Remove app-shell fallback paths + move runtime wiring out of app.js | `codex/remove-app-shell-fallbacks-and-runtime-wiring-from-app-js` | [#62](https://github.com/bindinc/kiwi/pull/62) | `open` | `no` | App shell and runtime wiring should live in slice/runtime modules only. |
 | 21 | Retire legacy bootstrap wrappers and script-loader dependency on app.js | `codex/retire-legacy-bootstrap-wrappers-and-app-js-loader-path` | - | `not started` | `no` | Final deletion target for `app.js` legacy bootstrap role. |
 
 ## 4) Full migration checklist by domain
@@ -203,7 +203,7 @@
   - Bound action names: `select-customer`, `toggle-timeline-item`, `change-contact-history-page`, `cancel-subscription`, `start-winback-for-subscription`, `complete-winback`, `open-article-sale-form`, `submit-article-sale-form`, `add-delivery-remark-modal`
   - Dependency/risk note: removing wrappers requires caller migration (templates, runtime hooks, and any manual JS calls) to router actions or direct slice APIs.
 
-- [ ] 20. Remove app-shell fallback paths and move runtime dependency wiring out of app.js
+- [x] 20. Remove app-shell fallback paths and move runtime dependency wiring out of app.js
   - Target slice file(s): `app/static/assets/js/app/slices/app-shell-slice.js`, `app/static/assets/js/app/slices/call-agent-runtime-client.js`, `app/static/assets/js/app.js`
   - Source range: `app.js:1136-1192`, `app.js:1985-2086`
   - Key functions/state: `endSession` fallback body, `closeForm` fallback body, `mapToastTypeToContactType` fallback switch, `showToast` fallback DOM path, `wireCallAgentRuntimeDependencies`, `isDebugModalEnabled`
