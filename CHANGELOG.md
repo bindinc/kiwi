@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.0.7]
+
 ### Added
 - Add `/api/v1/status` endpoint with API status and rate limit snapshot.
 - Add a local Docker Compose preflight check that validates `client_secrets.json` before the app starts.
@@ -19,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
+- Implement checklist item 21 by deleting `app/static/assets/js/app.js` entirely: all state, bootstrap wrappers, bridge registrations, and utility functions moved to the new `app/static/assets/js/app/legacy-app-state.js` ES module; `legacy-loader.js` no longer injects `app.js` (renamed to `ensureRuntimeScriptsLoaded`); `index.js` now owns bootstrap initialization, calling `bootstrapSlice.initializeKiwiApplication()` directly after runtime scripts load.
 - Implement checklist item 20 by removing `endSession`/`closeForm`/`showToast`/`mapToastTypeToContactType`/`isDebugModalEnabled` fallback bodies from `app.js` (all now thin delegates to `app-shell-slice.js`), extracting `dispositionCategoryConfig`/`getDispositionCategories` into `app/disposition-categories.js`, and moving `wireCallAgentRuntimeDependencies` from the legacy script tail into `app/index.js` with direct slice imports (net −217 lines from `app.js`).
 - Implement checklist item 19 by removing 42 legacy facade wrappers from `app.js` that only proxied to slice methods via `invokeSliceMethod`/`invokeSliceMethodAsync`, deleting the shadowed original `pushContactHistory`/`addContactMoment`/`generateContactHistoryId` implementations, and inlining direct slice API calls into the four dependency providers and `wireCallAgentRuntimeDependencies` (net −333 lines).
 - Implement checklist item 17 by moving call-session start/duration UI bridge ownership from legacy `app.js` into `assets/js/app/slices/call-session-slice.js`, rewiring `call-agent-runtime.js` to call the slice bridge (`window.kiwiCallSessionSlice.startCallSession`), and adding focused runtime/slice tests for timer/UI ownership.

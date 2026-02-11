@@ -53,8 +53,8 @@
 | 17 | Extract call-session start/duration UI bridge from app.js | `codex/extract-call-session-start-and-duration-ui-bridge` | [#60](https://github.com/bindinc/kiwi/pull/60) | `merged` | `yes` | Consolidate call-session timer/UI ownership. |
 | 18 | Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`) | `codex/remove-window-slice-dependency-provider-bridge` | [#58](https://github.com/bindinc/kiwi/pull/58) | `merged` | `yes` | Replace `window` provider lookups with explicit module wiring. |
 | 19 | Remove legacy facade wrappers that only proxy to slice methods | `codex/remove-legacy-facade-wrappers-proxying-to-slices` | [#61](https://github.com/bindinc/kiwi/pull/61) | `merged` | `yes` | Migrate remaining global function callers to router/slice entry points. |
-| 20 | Remove app-shell fallback paths + move runtime wiring out of app.js | `codex/remove-app-shell-fallbacks-and-runtime-wiring-from-app-js` | [#62](https://github.com/bindinc/kiwi/pull/62) | `open` | `no` | App shell and runtime wiring should live in slice/runtime modules only. |
-| 21 | Retire legacy bootstrap wrappers and script-loader dependency on app.js | `codex/retire-legacy-bootstrap-wrappers-and-app-js-loader-path` | - | `not started` | `no` | Final deletion target for `app.js` legacy bootstrap role. |
+| 20 | Remove app-shell fallback paths + move runtime wiring out of app.js | `codex/remove-app-shell-fallbacks-and-runtime-wiring-from-app-js` | [#62](https://github.com/bindinc/kiwi/pull/62) | `merged` | `yes` | App shell and runtime wiring should live in slice/runtime modules only. |
+| 21 | Retire legacy bootstrap wrappers and script-loader dependency on app.js | `codex/retire-legacy-bootstrap-wrappers-and-app-js-loader-path` | [#63](https://github.com/bindinc/kiwi/pull/63) | `open` | `no` | Final deletion target for `app.js` legacy bootstrap role. |
 
 ## 4) Full migration checklist by domain
 
@@ -210,12 +210,17 @@
   - Bound action names: `close-form`
   - Dependency/risk note: preserve no-customer toast UX and debug-flag behavior while moving runtime dependency injection to module bootstrap instead of legacy script tail.
 
-- [ ] 21. Retire legacy bootstrap wrappers and loader dependency on app.js
-  - Target slice file(s): `app/static/assets/js/app.js`, `app/static/assets/js/app/index.js`, `app/static/assets/js/app/legacy-loader.js`, `app/static/assets/js/app/slices/bootstrap-slice.js`
-  - Source range: `app.js:1-84`, `app.js:1404-1537`
-  - Key functions/state: `initialAppDataState` globals, endpoint constants, `initializeKiwiApplication`, `loadBootstrapState`, `initializeData`, `saveCustomers`, `updateCustomerActionButtons`, `updateTime`
+- [x] 21. Retire legacy bootstrap wrappers and loader dependency on app.js
+  - Target slice file(s): `app/static/assets/js/app/legacy-app-state.js` (new module), `app/static/assets/js/app/index.js`, `app/static/assets/js/app/legacy-loader.js`
+  - Source range: entire former `app.js` (deleted)
+  - Key functions/state: all state, bridge registrations, bootstrap wrappers, and utility functions moved to `legacy-app-state.js`; initialization trigger moved to `index.js`
   - Bound action names: none direct (startup/bootstrap path)
-  - Dependency/risk note: final teardown must keep startup order intact while removing `ensureLegacyAppLoaded()` script injection and eliminating legacy global bootstrap ownership.
+  - Changes:
+    - Deleted `app/static/assets/js/app.js` — all content moved to `legacy-app-state.js` ES module.
+    - `legacy-loader.js`: renamed `ensureLegacyAppLoaded` to `ensureRuntimeScriptsLoaded`, removed `app.js` from the load chain.
+    - `index.js`: imports `legacy-app-state.js`, installs globals on `window` via `installLegacyAppState()`, triggers bootstrap initialization directly via `bootstrapSlice.initializeKiwiApplication()` after runtime scripts load.
+    - State variables shared with runtime scripts are exposed via `Object.defineProperty` getters/setters on `window`.
+    - Bootstrap-slice functions (`loadBootstrapState`, `initializeData`, `saveCustomers`, `updateCustomerActionButtons`, `updateTime`) are called directly from module code instead of through legacy proxy functions.
 
 ## 5) Recommended migration order
 
