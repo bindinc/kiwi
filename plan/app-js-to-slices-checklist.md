@@ -25,7 +25,30 @@
   - [x] `werfsleutel.js` (bridge handlers)
 - [x] `app/static/assets/js/app/legacy-actions-customer-subscription.js` is still bridge-only and not domain-implemented.
 
-## 3) Full migration checklist by domain
+## 3) PR tracking (one PR per checklist item)
+
+- Rule: each checklist item below must be implemented in its own PR.
+- Keep this table updated as the source of truth for planning and merge progress.
+- `Merged into main` must only be marked `yes` after the PR branch is merged into `main`.
+- Allowed `PR status` values: `not started`, `in progress`, `draft`, `open`, `review`, `blocked`, `merged`, `closed`.
+
+| Item | Domain | Branch | PR | PR status | Merged into main | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Localization + static i18n + locale switching | `TBD` | `TBD` | `not started` | `no` |  |
+| 2 | Bootstrap + shared data init + persistence shell | `TBD` | `TBD` | `not started` | `no` |  |
+| 3 | Werfsleutel catalog + picker implementation | `TBD` | `TBD` | `not started` | `no` |  |
+| 4 | Subscription role forms + duplicate guard + person role selection | `TBD` | `TBD` | `not started` | `no` |  |
+| 5 | Customer search + results + pagination | `TBD` | `TBD` | `not started` | `no` |  |
+| 6 | Customer detail + subscriptions rendering + contact history UI | `TBD` | `TBD` | `not started` | `no` |  |
+| 7 | Subscription workflows (create/edit/customer-edit/resend/editorial) | `TBD` | `TBD` | `not started` | `no` |  |
+| 8 | Winback + deceased + restitution transfer workflows | `TBD` | `TBD` | `not started` | `no` |  |
+| 9 | Article sales + delivery remarks modal implementation | `TBD` | `TBD` | `not started` | `no` |  |
+| 10 | Article catalog search/order engine | `TBD` | `TBD` | `not started` | `no` |  |
+| 11 | Delivery date picker/calendar engine | `TBD` | `TBD` | `not started` | `no` |  |
+| 12 | App shell events + form closing + toast + keyboard/click/change globals | `TBD` | `TBD` | `not started` | `no` |  |
+| 13 | Runtime compatibility bridge while migrating | `TBD` | `TBD` | `not started` | `no` |  |
+
+## 4) Full migration checklist by domain
 
 - [ ] 1. Localization + static i18n + locale switching
   - Target slice file(s): `app/static/assets/js/app/slices/localization-slice.js`
@@ -118,7 +141,7 @@
   - Dependency/risk note: keep compatibility exports until runtime no longer depends on legacy globals.
   - [ ] Remove this temporary bridge once runtime dependencies have been internalized by slices.
 
-## 4) Recommended migration order
+## 5) Recommended migration order
 
 1. Localization + app shell action conversion
 2. Shared bootstrap/state extraction
@@ -131,7 +154,7 @@
 9. Article sales + delivery remarks
 10. Runtime bridge cleanup
 
-## 5) Verification commands
+## 6) Verification commands
 
 - Action coverage parity (markup vs registered actions):
 
@@ -169,12 +192,12 @@ rg -n "^const\\s+[A-Za-z0-9_]+\\s*=\\s*\\([^)]*\\)\\s*=>" app/static/assets/js/a
 # Confirm that only intentional cross-cutting references remain.
 ```
 
-## Important public API/interface/type changes
+## 7) Important public API/interface/type changes
 
 - No runtime API/type changes in this task.
 - This is a documentation-only change that defines planned target slice boundaries and migration order.
 
-## Test cases and scenarios (for this planning-doc change)
+## 8) Test cases and scenarios (for this planning-doc change)
 
 1. Confirm `plan/app-js-to-slices-checklist.md` exists.
 2. Confirm all 13 domain checklist items are present and unchecked.
@@ -182,7 +205,7 @@ rg -n "^const\\s+[A-Za-z0-9_]+\\s*=\\s*\\([^)]*\\)\\s*=>" app/static/assets/js/a
 4. Confirm line references are present for every domain item (`app.js`, `article-search.js`, `delivery-date-picker.js` sources).
 5. Confirm migration order and verification commands sections are present.
 
-## Assumptions and defaults
+## 9) Assumptions and defaults
 
 - Language is English.
 - Scope is full inventory.
