@@ -109,11 +109,11 @@ function wireCallAgentRuntimeDependencies() {
     });
 }
 
-wireCallAgentRuntimeDependencies();
-
 async function bootstrapLegacyApp() {
     try {
         await ensureLegacyAppLoaded();
+        // Wire runtime dependencies after call-agent-runtime.js has loaded
+        wireCallAgentRuntimeDependencies();
     } catch (error) {
         console.error('Kon legacy app.js niet laden.', error);
     }
