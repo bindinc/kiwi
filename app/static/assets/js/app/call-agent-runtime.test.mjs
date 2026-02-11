@@ -39,28 +39,34 @@ function createRuntimeContext() {
     return { context, consoleStub };
 }
 
-function testBridgeShowToastTakesPriorityOverGlobalFallback() {
+function configureRuntimeDependencies(context, dependencies = {}) {
+    const runtimeApi = context.kiwiCallAgentRuntime;
+    assert.equal(typeof runtimeApi.configureDependencies, 'function');
+    runtimeApi.configureDependencies(dependencies);
+}
+
+function testConfiguredShowToastDependencyTakesPriorityOverGlobalFallback() {
     const { context } = createRuntimeContext();
-    const bridgeCalls = [];
+    const dependencyCalls = [];
     const fallbackCalls = [];
 
-    context.kiwiRuntimeCompatibilityBridge = {
+    configureRuntimeDependencies(context, {
         showToast(...args) {
-            bridgeCalls.push(args);
+            dependencyCalls.push(args);
         }
-    };
+    });
     context.showToast = (...args) => {
         fallbackCalls.push(args);
     };
 
     context.runtimeShowToast('saved', 'success');
 
-    assert.deepEqual(bridgeCalls, [['saved', 'success']]);
+    assert.deepEqual(dependencyCalls, [['saved', 'success']]);
     assert.equal(fallbackCalls.length, 0);
 }
 
-function testGlobalFallbackIsUsedWithoutBridgeHandler() {
-    const { context } = createRuntimeContext();
+function testGlobalFallbackIsNotUsedWithoutConfiguredDependency() {
+    const { context, consoleStub } = createRuntimeContext();
     const fallbackCalls = [];
 
     context.showToast = (...args) => {
@@ -69,7 +75,11 @@ function testGlobalFallbackIsUsedWithoutBridgeHandler() {
 
     context.runtimeShowToast('fallback', 'warning');
 
-    assert.deepEqual(fallbackCalls, [['fallback', 'warning']]);
+    assert.equal(fallbackCalls.length, 0);
+    const missingShowToastWarnings = consoleStub.warns.filter((warningArgs) => (
+        warningArgs.join(' ').includes('showToast')
+    ));
+    assert.equal(missingShowToastWarnings.length, 1);
 }
 
 function testDispositionCategoriesFallsBackToEmptyObjectAndWarnsOnce() {
@@ -87,31 +97,31 @@ function testDispositionCategoriesFallsBackToEmptyObjectAndWarnsOnce() {
     assert.equal(missingCategoryWarnings.length, 1);
 }
 
-function testBridgeHandlersSupportSelectCustomerAndStartCallSession() {
+function testConfiguredDependenciesSupportSelectCustomerAndStartCallSession() {
     const { context } = createRuntimeContext();
-    const bridgeCalls = [];
+    const dependencyCalls = [];
 
-    context.kiwiRuntimeCompatibilityBridge = {
+    configureRuntimeDependencies(context, {
         selectCustomer(customerId) {
-            bridgeCalls.push(['selectCustomer', customerId]);
+            dependencyCalls.push(['selectCustomer', customerId]);
         },
         startCallSession() {
-            bridgeCalls.push(['startCallSession']);
+            dependencyCalls.push(['startCallSession']);
         },
         addContactMoment(customerId, type, description) {
-            bridgeCalls.push(['addContactMoment', customerId, type, description]);
+            dependencyCalls.push(['addContactMoment', customerId, type, description]);
         },
         getDispositionCategories() {
             return { general: { label: 'General', outcomes: [] } };
         },
         showToast() {}
-    };
+    });
 
     context.runtimeSelectCustomer(88);
     context.runtimeStartCallSession();
     context.runtimeAddContactMoment(77, 'note', 'saved');
 
-    assert.deepEqual(bridgeCalls, [
+    assert.deepEqual(dependencyCalls, [
         ['selectCustomer', 88],
         ['startCallSession'],
         ['addContactMoment', 77, 'note', 'saved']
@@ -125,11 +135,11 @@ function testBridgeHandlersSupportSelectCustomerAndStartCallSession() {
 }
 
 function run() {
-    testBridgeShowToastTakesPriorityOverGlobalFallback();
-    testGlobalFallbackIsUsedWithoutBridgeHandler();
+    testConfiguredShowToastDependencyTakesPriorityOverGlobalFallback();
+    testGlobalFallbackIsNotUsedWithoutConfiguredDependency();
     testDispositionCategoriesFallsBackToEmptyObjectAndWarnsOnce();
-    testBridgeHandlersSupportSelectCustomerAndStartCallSession();
-    console.log('call-agent-runtime bridge tests passed');
+    testConfiguredDependenciesSupportSelectCustomerAndStartCallSession();
+    console.log('call-agent-runtime dependency wiring tests passed');
 }
 
 run();

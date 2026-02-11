@@ -62,7 +62,6 @@ const callQueueApiUrl = apiEndpoints.callQueueApiUrl;
 const callSessionApiUrl = apiEndpoints.callSessionApiUrl;
 const debugResetApiUrl = apiEndpoints.debugResetApiUrl;
 const agentStatusApiUrl = apiEndpoints.agentStatusApiUrl;
-const RUNTIME_COMPATIBILITY_BRIDGE_NAMESPACE = 'kiwiRuntimeCompatibilityBridge';
 
 let bootstrapState = initialAppDataState.bootstrapState;
 
@@ -2050,25 +2049,27 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-function installRuntimeCompatibilityBridge() {
+function wireCallAgentRuntimeDependencies() {
     if (typeof window === 'undefined') {
         return;
     }
 
-    const existingBridge = window[RUNTIME_COMPATIBILITY_BRIDGE_NAMESPACE];
-    const hasExistingBridge = existingBridge && typeof existingBridge === 'object';
-    const bridge = hasExistingBridge ? existingBridge : {};
+    const runtimeApi = window.kiwiCallAgentRuntime;
+    const canConfigureRuntimeDependencies = runtimeApi && typeof runtimeApi.configureDependencies === 'function';
+    if (!canConfigureRuntimeDependencies) {
+        return;
+    }
 
-    bridge.addContactMoment = addContactMoment;
-    bridge.getDispositionCategories = getDispositionCategories;
-    bridge.selectCustomer = selectCustomer;
-    bridge.showToast = showToast;
-    bridge.startCallSession = startCallSession;
-
-    window[RUNTIME_COMPATIBILITY_BRIDGE_NAMESPACE] = bridge;
+    runtimeApi.configureDependencies({
+        addContactMoment,
+        getDispositionCategories,
+        selectCustomer,
+        showToast,
+        startCallSession
+    });
 }
 
-installRuntimeCompatibilityBridge();
+wireCallAgentRuntimeDependencies();
 
 const isDebugModalEnabled = () => {
     const debugModalEnabled = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'isDebugModalEnabled');
