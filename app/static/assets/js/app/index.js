@@ -5,6 +5,7 @@ import { installBootstrapSlice } from './slices/bootstrap-slice.js';
 import { registerCallQueueAgentStatusSlices } from './slices/index.js';
 import { registerCustomerSearchSlice } from './slices/customer-search-slice.js';
 import { registerSubscriptionRoleSlice } from './slices/subscription-role-slice.js';
+import { registerSubscriptionWorkflowSlice } from './slices/subscription-workflow-slice.js';
 import { registerLocalizationSlice } from './slices/localization-slice.js';
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { registerCustomerSubscriptionActions } from './legacy-actions-customer-subscription.js';
@@ -31,6 +32,7 @@ registerWerfsleutelActions(actionRouter);
 registerCallQueueAgentStatusSlices(actionRouter);
 registerCustomerSearchSlice(actionRouter);
 registerSubscriptionRoleSlice(actionRouter);
+registerSubscriptionWorkflowSlice(actionRouter);
 registerCustomerSubscriptionActions(actionRouter);
 actionRouter.install();
 
