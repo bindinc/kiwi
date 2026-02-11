@@ -36,7 +36,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Localization + static i18n + locale switching | `codex/migrate-localization-and-locale-switching-to-slice` | [#40](https://github.com/bindinc/kiwi/pull/40) | `merged` | `yes` |  |
 | 2 | Bootstrap + shared data init + persistence shell | `codex/extract-bootstrap-and-shared-data-init-into-slice` | [#43](https://github.com/bindinc/kiwi/pull/43) | `merged` | `yes` |  |
-| 3 | Werfsleutel catalog + picker implementation | `codex/implement-werfsleutel-catalog-and-picker-slice` | [#45](https://github.com/bindinc/kiwi/pull/45) | `in progress` | `no` |  |
+| 3 | Werfsleutel catalog + picker implementation | `codex/implement-werfsleutel-catalog-and-picker-slice` | [#45](https://github.com/bindinc/kiwi/pull/45) | `merged` | `yes` |  |
 | 4 | Subscription role forms + duplicate guard + person role selection | `TBD` | `TBD` | `not started` | `no` |  |
 | 5 | Customer search + results + pagination | `TBD` | `TBD` | `not started` | `no` |  |
 | 6 | Customer detail + subscriptions rendering + contact history UI | `TBD` | `TBD` | `not started` | `no` |  |
