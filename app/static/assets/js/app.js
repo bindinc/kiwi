@@ -177,7 +177,7 @@ const transientAgentStatuses = new Set(['in_call']);
 // Phase 1A: Service Number Configuration
 let serviceNumbers = {};
 
-const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
+const APP_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
 
 const fallbackSubscriptionHelpers = (() => {
     const pricingTable = {
@@ -257,7 +257,7 @@ function getSubscriptionHelpers() {
         return fallbackSubscriptionHelpers;
     }
 
-    const helperNamespace = window[LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE];
+    const helperNamespace = window[APP_SUBSCRIPTION_HELPERS_NAMESPACE];
     if (!helperNamespace || typeof helperNamespace !== 'object') {
         return fallbackSubscriptionHelpers;
     }
