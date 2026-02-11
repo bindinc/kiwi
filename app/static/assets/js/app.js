@@ -588,10 +588,6 @@ function endSession() {
 // PHASE 1: CALL SESSION MANAGEMENT
 // ============================================================================
 
-// ============================================================================
-// PHASE 1: CALL SESSION MANAGEMENT
-// ============================================================================
-
 function generateContactHistoryId() {
     return `ch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
