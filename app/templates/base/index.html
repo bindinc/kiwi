@@ -258,7 +258,7 @@
                     <button class="btn btn-action" type="button" data-action="show-new-subscription">
                         <span data-i18n="indexHtml.text.nieuw_abonnement_ed26c367">➕ Nieuw Abonnement</span>
                     </button>
-                    <button class="btn btn-action" onclick="showArticleSale()">
+                    <button class="btn btn-action" data-action="open-article-sale-form">
                         <span data-i18n="indexHtml.text.artikel_verkoop_89f9bcc6">🛒 Artikel verkoop</span>
                     </button>
                 </section>
@@ -383,8 +383,15 @@
                                            aria-expanded="false"
                                            aria-controls="werfsleutelSuggestions"
                                            aria-describedby="werfsleutelInputHint"
-                                           aria-haspopup="listbox" data-i18n-placeholder="indexHtml.placeholder.typ_werfsleutel_of_scan_barcode_bijv_avrv525_of_8712345_bf6fe478">
-                                    <button type="button" class="btn btn-secondary ghost" id="werfsleutelClear" data-i18n="indexHtml.text.wissen_82491d2c">Wissen</button>
+                                           aria-haspopup="listbox"
+                                           data-action="handle-werfsleutel-input"
+                                           data-action-event="input,keydown"
+                                           data-i18n-placeholder="indexHtml.placeholder.typ_werfsleutel_of_scan_barcode_bijv_avrv525_of_8712345_bf6fe478">
+                                    <button type="button"
+                                            class="btn btn-secondary ghost"
+                                            id="werfsleutelClear"
+                                            data-action="reset-werfsleutel-picker"
+                                            data-i18n="indexHtml.text.wissen_82491d2c">Wissen</button>
                                 </div>
                                 <div class="werfsleutel-suggestions" id="werfsleutelSuggestions" role="listbox"></div>
                                 <div class="werfsleutel-summary" id="werfsleutelSummary"></div>
@@ -513,9 +520,13 @@
                     <div class="card onepager-container article-sale-container">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.artikel_verkoop_baa29866">🛒 Artikel Verkoop</h2>
-                            <button class="btn-close" onclick="closeForm('articleSaleForm')">✕</button>
+                            <button class="btn-close" type="button" data-action="close-article-sale-form">✕</button>
                         </div>
-                        <form id="articleForm" class="form-section" onsubmit="createArticleSale(event)">
+                        <form id="articleForm"
+                              class="form-section"
+                              data-action="submit-article-sale-form"
+                              data-action-event="submit"
+                              data-action-prevent-default="true">
                             <div class="article-sale-columns">
                                 <div class="article-sale-left">
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.klantgegevens_ed3d8cb3">Klantgegevens *</h3>
@@ -582,27 +593,39 @@
                                     <label for="articleNotes" data-i18n="indexHtml.text.bezorginstructies_c9f6d875">Bezorginstructies</label>
                                     <div class="delivery-remarks-shortcuts">
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.deliverToNeighbors')" data-i18n="indexHtml.text.bij_buren_06561e94">
+                                                data-action="add-delivery-remark"
+                                                data-arg-remark-key="delivery.remarkPresets.deliverToNeighbors"
+                                                data-i18n="indexHtml.text.bij_buren_06561e94">
                                             👥 Bij buren
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.useBackOrSideDoor')" data-i18n="indexHtml.text.achterdeur_a788c6f5">
+                                                data-action="add-delivery-remark"
+                                                data-arg-remark-key="delivery.remarkPresets.useBackOrSideDoor"
+                                                data-i18n="indexHtml.text.achterdeur_a788c6f5">
                                             🚪 Achterdeur
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.deliverAfterNoon')" data-i18n="indexHtml.text.na_12_00_c38dd76a">
+                                                data-action="add-delivery-remark"
+                                                data-arg-remark-key="delivery.remarkPresets.deliverAfterNoon"
+                                                data-i18n="indexHtml.text.na_12_00_c38dd76a">
                                             🕐 Na 12:00
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.callBeforeDelivery')" data-i18n="indexHtml.text.bel_eerst_0178f6be">
+                                                data-action="add-delivery-remark"
+                                                data-arg-remark-key="delivery.remarkPresets.callBeforeDelivery"
+                                                data-i18n="indexHtml.text.bel_eerst_0178f6be">
                                             📞 Bel eerst
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.packageMailboxAvailable')" data-i18n="indexHtml.text.brievenbus_2528e649">
+                                                data-action="add-delivery-remark"
+                                                data-arg-remark-key="delivery.remarkPresets.packageMailboxAvailable"
+                                                data-i18n="indexHtml.text.brievenbus_2528e649">
                                             📮 Brievenbus
                                         </button>
                                         <button type="button" class="remark-shortcut" 
-                                                onclick="addDeliveryRemarkByKey('delivery.remarkPresets.handleWithCareFragile')" data-i18n="indexHtml.text.breekbaar_ccaf32b5">
+                                                data-action="add-delivery-remark"
+                                                data-arg-remark-key="delivery.remarkPresets.handleWithCareFragile"
+                                                data-i18n="indexHtml.text.breekbaar_ccaf32b5">
                                             ⚠️ Breekbaar
                                         </button>
                                     </div>
@@ -630,7 +653,7 @@
                                 </div>
                             </div>
                             <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closeForm('articleSaleForm')" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="button" class="btn btn-secondary" data-action="close-article-sale-form" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
                                 <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.bestelling_plaatsen_07d072ea">Bestelling Plaatsen</button>
                             </div>                            
                                 </div>
@@ -643,7 +666,9 @@
                            id="articleSearch" 
                            placeholder="Type artikel naam of code..." 
                            autocomplete="off"
-                           oninput="filterArticles(this.value)" data-i18n-placeholder="indexHtml.placeholder.type_artikel_naam_of_code_47ce6be0">
+                           data-action="filter-articles"
+                           data-action-event="input"
+                           data-i18n-placeholder="indexHtml.placeholder.type_artikel_naam_of_code_47ce6be0">
                     <input type="hidden" id="articleName">
                     <div class="article-dropdown" id="articleDropdown" style="display: none;">
                         <!-- Dropdown populated by JavaScript -->
@@ -652,7 +677,13 @@
             </div>                            <div class="form-row">
                                 <div class="form-group">
                                     <label for="articleQuantity" data-i18n="indexHtml.text.aantal_21e62648">Aantal</label>
-                                    <input type="number" id="articleQuantity" min="1" value="1" required onchange="updateArticlePrice()">
+                                    <input type="number"
+                                           id="articleQuantity"
+                                           min="1"
+                                           value="1"
+                                           required
+                                           data-action="update-article-price"
+                                           data-action-event="change">
                                 </div>
                                 <div class="form-group">
                                     <label for="articlePrice" data-i18n="indexHtml.text.prijs_per_stuk_d609a24d">Prijs per stuk</label>
@@ -661,7 +692,7 @@
                             </div>
                             
                             <div class="form-row">
-                                <button type="button" class="btn btn-success btn-block" onclick="addArticleToOrder()" data-i18n="indexHtml.text.artikel_toevoegen_aan_bestelling_d23832ab">
+                                <button type="button" class="btn btn-success btn-block" data-action="add-article-to-order" data-i18n="indexHtml.text.artikel_toevoegen_aan_bestelling_d23832ab">
                                     ➕ Artikel Toevoegen aan Bestelling
                                 </button>
                             </div>
@@ -681,10 +712,13 @@
                                                id="couponCode" 
                                                placeholder="Voer kortingscode in..." 
                                                maxlength="20"
-                                               onkeydown="if(event.key==='Enter') { event.preventDefault(); applyCoupon(); }" data-i18n-placeholder="indexHtml.placeholder.voer_kortingscode_in_96982fd8">
+                                               data-action="apply-coupon-on-enter"
+                                               data-action-event="keydown"
+                                               data-i18n-placeholder="indexHtml.placeholder.voer_kortingscode_in_96982fd8">
                                         <button type="button" 
                                                 class="btn btn-secondary btn-apply-coupon" 
-                                                onclick="applyCoupon()" data-i18n="indexHtml.text.toepassen_de47f425">
+                                                data-action="apply-coupon"
+                                                data-i18n="indexHtml.text.toepassen_de47f425">
                                             Toepassen
                                         </button>
                                     </div>
@@ -1258,27 +1292,39 @@
                 <!-- Quick selection buttons -->
                 <div class="delivery-remarks-shortcuts">
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.deliverToNeighbors')" data-i18n="indexHtml.text.bij_buren_06561e94">
+                            data-action="add-delivery-remark-modal"
+                            data-arg-remark-key="delivery.remarkPresets.deliverToNeighbors"
+                            data-i18n="indexHtml.text.bij_buren_06561e94">
                         👥 Bij buren
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.useBackOrSideDoor')" data-i18n="indexHtml.text.achterdeur_a788c6f5">
+                            data-action="add-delivery-remark-modal"
+                            data-arg-remark-key="delivery.remarkPresets.useBackOrSideDoor"
+                            data-i18n="indexHtml.text.achterdeur_a788c6f5">
                         🚪 Achterdeur
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.deliverAfterNoon')" data-i18n="indexHtml.text.na_12_00_c38dd76a">
+                            data-action="add-delivery-remark-modal"
+                            data-arg-remark-key="delivery.remarkPresets.deliverAfterNoon"
+                            data-i18n="indexHtml.text.na_12_00_c38dd76a">
                         🕐 Na 12:00
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.callBeforeDelivery')" data-i18n="indexHtml.text.bel_eerst_0178f6be">
+                            data-action="add-delivery-remark-modal"
+                            data-arg-remark-key="delivery.remarkPresets.callBeforeDelivery"
+                            data-i18n="indexHtml.text.bel_eerst_0178f6be">
                         📞 Bel eerst
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.packageMailboxAvailable')" data-i18n="indexHtml.text.brievenbus_2528e649">
+                            data-action="add-delivery-remark-modal"
+                            data-arg-remark-key="delivery.remarkPresets.packageMailboxAvailable"
+                            data-i18n="indexHtml.text.brievenbus_2528e649">
                         📮 Brievenbus
                     </button>
                     <button type="button" class="remark-shortcut" 
-                            onclick="addDeliveryRemarkToModalByKey('delivery.remarkPresets.handleWithCareFragile')" data-i18n="indexHtml.text.breekbaar_ccaf32b5">
+                            data-action="add-delivery-remark-modal"
+                            data-arg-remark-key="delivery.remarkPresets.handleWithCareFragile"
+                            data-i18n="indexHtml.text.breekbaar_ccaf32b5">
                         ⚠️ Breekbaar
                     </button>
                 </div>

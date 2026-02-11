@@ -1,11 +1,14 @@
 import { createActionRouter } from './actions.js';
 import { ensureLegacyAppLoaded } from './legacy-loader.js';
+import { registerOrderActions } from './slices/order.js';
 import { registerCallQueueAgentStatusSlices } from './slices/index.js';
+import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { registerCustomerSubscriptionActions } from './legacy-actions-customer-subscription.js';
 import { getSharedState, markRouterInitialized, setRegisteredActions } from './state.js';
 
 const sharedState = getSharedState();
 const actionRouter = createActionRouter({
+    eventTypes: ['click', 'change', 'submit', 'keydown', 'input'],
     context: {
         sharedState
     },
@@ -17,6 +20,8 @@ const actionRouter = createActionRouter({
     }
 });
 
+registerOrderActions(actionRouter);
+registerWerfsleutelActions(actionRouter);
 registerCallQueueAgentStatusSlices(actionRouter);
 registerCustomerSubscriptionActions(actionRouter);
 actionRouter.install();
