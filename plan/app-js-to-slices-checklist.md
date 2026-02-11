@@ -54,7 +54,7 @@
 | 18 | Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`) | `codex/remove-window-slice-dependency-provider-bridge` | [#58](https://github.com/bindinc/kiwi/pull/58) | `merged` | `yes` | Replace `window` provider lookups with explicit module wiring. |
 | 19 | Remove legacy facade wrappers that only proxy to slice methods | `codex/remove-legacy-facade-wrappers-proxying-to-slices` | [#61](https://github.com/bindinc/kiwi/pull/61) | `merged` | `yes` | Migrate remaining global function callers to router/slice entry points. |
 | 20 | Remove app-shell fallback paths + move runtime wiring out of app.js | `codex/remove-app-shell-fallbacks-and-runtime-wiring-from-app-js` | [#62](https://github.com/bindinc/kiwi/pull/62) | `merged` | `yes` | App shell and runtime wiring should live in slice/runtime modules only. |
-| 21 | Retire legacy bootstrap wrappers and script-loader dependency on app.js | `codex/retire-legacy-bootstrap-wrappers-and-app-js-loader-path` | - | `in progress` | `no` | Final deletion target for `app.js` legacy bootstrap role. |
+| 21 | Retire legacy bootstrap wrappers and script-loader dependency on app.js | `codex/retire-legacy-bootstrap-wrappers-and-app-js-loader-path` | [#63](https://github.com/bindinc/kiwi/pull/63) | `open` | `no` | Final deletion target for `app.js` legacy bootstrap role. |
 
 ## 4) Full migration checklist by domain
 
