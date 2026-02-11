@@ -1,11 +1,11 @@
-export function registerAgentStatusSlice(actionRouter, bridge) {
-    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !bridge) {
+export function registerAgentStatusSlice(actionRouter, runtime) {
+    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !runtime) {
         return;
     }
 
     actionRouter.registerMany({
         'agent-status.toggle-menu'(_payload, context) {
-            bridge.invoke('toggleStatusMenu', [context.event]);
+            runtime.toggleStatusMenu(context.event);
         },
         'agent-status.set'(payload, context) {
             const statusFromElement = context.element?.dataset?.statusOption;
@@ -14,7 +14,7 @@ export function registerAgentStatusSlice(actionRouter, bridge) {
                 return;
             }
 
-            bridge.invoke('setAgentStatus', [requestedStatus]);
+            runtime.setAgentStatus(requestedStatus);
         }
     });
 }

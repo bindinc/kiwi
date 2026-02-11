@@ -1,8 +1,8 @@
 import { registerAcwDispositionSlice } from './acw-disposition-slice.js';
 import { registerAgentStatusSlice } from './agent-status-slice.js';
+import { createCallAgentRuntimeClient } from './call-agent-runtime-client.js';
 import { registerCallSessionSlice } from './call-session-slice.js';
 import { registerDebugSlice } from './debug-slice.js';
-import { createLegacyBridge } from './legacy-bridge.js';
 import { registerQueueSlice } from './queue-slice.js';
 
 export function registerCallQueueAgentStatusSlices(actionRouter, options = {}) {
@@ -10,10 +10,10 @@ export function registerCallQueueAgentStatusSlices(actionRouter, options = {}) {
         return;
     }
 
-    const bridge = createLegacyBridge(options);
-    registerAgentStatusSlice(actionRouter, bridge);
-    registerCallSessionSlice(actionRouter, bridge);
-    registerQueueSlice(actionRouter, bridge);
-    registerAcwDispositionSlice(actionRouter, bridge);
-    registerDebugSlice(actionRouter, bridge);
+    const runtime = createCallAgentRuntimeClient(options);
+    registerAgentStatusSlice(actionRouter, runtime);
+    registerCallSessionSlice(actionRouter, runtime);
+    registerQueueSlice(actionRouter, runtime);
+    registerAcwDispositionSlice(actionRouter, runtime);
+    registerDebugSlice(actionRouter, runtime);
 }

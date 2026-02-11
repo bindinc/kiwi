@@ -1,23 +1,23 @@
-export function registerDebugSlice(actionRouter, bridge) {
-    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !bridge) {
+export function registerDebugSlice(actionRouter, runtime) {
+    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !runtime) {
         return;
     }
 
     actionRouter.registerMany({
         'debug.close-modal'() {
-            bridge.invoke('closeDebugModal');
+            runtime.closeDebugModal();
         },
         'debug.toggle-known-caller'() {
-            bridge.invoke('toggleKnownCallerSelect');
+            runtime.toggleKnownCallerSelect();
         },
         'debug.start-call'() {
-            bridge.invoke('debugStartCall');
+            runtime.debugStartCall();
         },
         'debug.end-call'() {
-            bridge.invoke('debugEndCall');
+            runtime.debugEndCall();
         },
         'debug.full-reset'() {
-            bridge.invoke('fullReset');
+            runtime.fullReset();
         }
     });
 }

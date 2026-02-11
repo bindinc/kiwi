@@ -1,17 +1,17 @@
-export function registerQueueSlice(actionRouter, bridge) {
-    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !bridge) {
+export function registerQueueSlice(actionRouter, runtime) {
+    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !runtime) {
         return;
     }
 
     actionRouter.registerMany({
         'queue.accept-next'() {
-            bridge.invoke('acceptNextCall');
+            runtime.acceptNextCall();
         },
         'queue.debug-generate'() {
-            bridge.invoke('debugGenerateQueue');
+            runtime.debugGenerateQueue();
         },
         'queue.debug-clear'() {
-            bridge.invoke('debugClearQueue');
+            runtime.debugClearQueue();
         }
     });
 }

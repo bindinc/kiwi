@@ -145,19 +145,18 @@ function testCallQueueAgentStatusSlices() {
     );
 
     const observedCalls = [];
-    const legacyFunctionNames = [
+    const runtimeMethodNames = [
         'toggleStatusMenu',
         'setAgentStatus',
         'identifyCallerAsCustomer',
         'updateDispositionOutcomes',
         'debugGenerateQueue'
     ];
-    const previousHandlers = new Map();
-
-    for (const functionName of legacyFunctionNames) {
-        previousHandlers.set(functionName, globalThis[functionName]);
-        globalThis[functionName] = (...args) => {
-            observedCalls.push({ functionName, args });
+    const previousRuntimeNamespace = globalThis.kiwiCallAgentRuntime;
+    globalThis.kiwiCallAgentRuntime = {};
+    for (const methodName of runtimeMethodNames) {
+        globalThis.kiwiCallAgentRuntime[methodName] = (...args) => {
+            observedCalls.push({ methodName, args });
         };
     }
 
@@ -170,7 +169,7 @@ function testCallQueueAgentStatusSlices() {
         };
         const toggleMenuEvent = createDelegatedEvent(toggleMenuElement, 'click');
         listeners.click(toggleMenuEvent);
-        assert.equal(observedCalls[0].functionName, 'toggleStatusMenu');
+        assert.equal(observedCalls[0].methodName, 'toggleStatusMenu');
         assert.equal(observedCalls[0].args.length, 1);
         assert.equal(observedCalls[0].args[0], toggleMenuEvent);
 
@@ -183,7 +182,7 @@ function testCallQueueAgentStatusSlices() {
         };
         listeners.click(createDelegatedEvent(statusElement, 'click'));
         assert.deepEqual(observedCalls[1], {
-            functionName: 'setAgentStatus',
+            methodName: 'setAgentStatus',
             args: ['busy']
         });
 
@@ -204,7 +203,7 @@ function testCallQueueAgentStatusSlices() {
         );
         assert.equal(stopPropagationCalls, 1);
         assert.deepEqual(observedCalls[2], {
-            functionName: 'identifyCallerAsCustomer',
+            methodName: 'identifyCallerAsCustomer',
             args: [81]
         });
 
@@ -216,7 +215,7 @@ function testCallQueueAgentStatusSlices() {
         };
         listeners.change(createDelegatedEvent(outcomesElement, 'change'));
         assert.deepEqual(observedCalls[3], {
-            functionName: 'updateDispositionOutcomes',
+            methodName: 'updateDispositionOutcomes',
             args: []
         });
 
@@ -228,17 +227,14 @@ function testCallQueueAgentStatusSlices() {
         };
         listeners.click(createDelegatedEvent(queueGenerateElement, 'click'));
         assert.deepEqual(observedCalls[4], {
-            functionName: 'debugGenerateQueue',
+            methodName: 'debugGenerateQueue',
             args: []
         });
     } finally {
-        for (const functionName of legacyFunctionNames) {
-            const previousHandler = previousHandlers.get(functionName);
-            if (previousHandler === undefined) {
-                delete globalThis[functionName];
-            } else {
-                globalThis[functionName] = previousHandler;
-            }
+        if (previousRuntimeNamespace === undefined) {
+            delete globalThis.kiwiCallAgentRuntime;
+        } else {
+            globalThis.kiwiCallAgentRuntime = previousRuntimeNamespace;
         }
     }
 }

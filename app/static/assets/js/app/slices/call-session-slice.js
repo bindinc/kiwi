@@ -6,20 +6,20 @@ function resolveCustomerId(payload) {
     return payload.customerId;
 }
 
-export function registerCallSessionSlice(actionRouter, bridge) {
-    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !bridge) {
+export function registerCallSessionSlice(actionRouter, runtime) {
+    if (!actionRouter || typeof actionRouter.registerMany !== 'function' || !runtime) {
         return;
     }
 
     actionRouter.registerMany({
         'call-session.toggle-hold'() {
-            bridge.invoke('toggleCallHold');
+            runtime.toggleCallHold();
         },
         'call-session.end'() {
-            bridge.invoke('endCallSession');
+            runtime.endCallSession();
         },
         'call-session.identify-current-customer'() {
-            bridge.invoke('identifyCurrentCustomerAsCaller');
+            runtime.identifyCurrentCustomerAsCaller();
         },
         'call-session.identify-caller'(payload, context) {
             if (context.event && typeof context.event.stopPropagation === 'function') {
@@ -31,7 +31,7 @@ export function registerCallSessionSlice(actionRouter, bridge) {
                 return;
             }
 
-            bridge.invoke('identifyCallerAsCustomer', [customerId]);
+            runtime.identifyCallerAsCustomer(customerId);
         }
     });
 }
