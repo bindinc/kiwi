@@ -59,7 +59,7 @@ const nl = {
             "achternaam_dab9b6a7": "Achternaam *",
             "actief_3268dd8d": "Actief",
             "acties_1d68bc7e": "Acties",
-            "actieve_abonnement_en_zijn_voor_elk_abonnement_kunt_u_aangeven_wat_u_wil_1ac9e2e0": "actieve abonnement(en) zijn. Voor elk abonnement kunt u aangeven wat u wilt doen.\"",
+            "actieve_abonnement_en_zijn_voor_elk_abonnement_kunt_u_aangeven_wat_u_wil_1ac9e2e0": 'actieve abonnement(en) zijn. Voor elk abonnement kunt u aangeven wat u wilt doen."',
             "actieve_abonnementen_bd7c947c": "Actieve abonnementen",
             "actieve_sessie_b95e0a14": "Actieve sessie",
             "additionele_filters_f31032cc": "Additionele filters",
@@ -153,7 +153,7 @@ const nl = {
             "gespreksduur_0059cf73": "⏱️ Gespreksduur:",
             "gewacht_1f486b30": "Gewacht:",
             "gewenste_leverdatum_5bace022": "Gewenste leverdatum *",
-            "het_spijt_me_te_horen_dat_u_het_abonnement_wilt_opzeggen_mag_ik_vragen_w_9e7e156d": "\"Het spijt me te horen dat u het abonnement wilt opzeggen. Mag ik vragen wat de belangrijkste reden is?\"",
+            "het_spijt_me_te_horen_dat_u_het_abonnement_wilt_opzeggen_mag_ik_vragen_w_9e7e156d": '"Het spijt me te horen dat u het abonnement wilt opzeggen. Mag ik vragen wat de belangrijkste reden is?"',
             "huidige_wachtrij_84284c92": "Huidige wachtrij:",
             "huisnr_0ed0c1dc": "Huisnr.",
             "huisnummer_86db3120": "Huisnummer *",
@@ -285,7 +285,7 @@ const nl = {
             "wacht_75f4e76c": "Wacht:",
             "wachtrij_simulatie_227ad37c": "📋 Wachtrij Simulatie",
             "wachttijd_simulatie_ba4bbac4": "Wachttijd simulatie:",
-            "wat_vervelend_om_te_horen_ik_zie_dat_er_2a2c56f7": "\"Wat vervelend om te horen. Ik zie dat er",
+            "wat_vervelend_om_te_horen_ik_zie_dat_er_2a2c56f7": '"Wat vervelend om te horen. Ik zie dat er',
             "welkom_bij_kiwi_c2ee612a": "Welkom bij KIWI!",
             "werfsleutel_c5732867": "Werfsleutel *",
             "werkdag_e1c5e04e": "Werkdag",
@@ -438,7 +438,7 @@ const nl = {
         "cleared": "✅ Wachtrij gewist",
         "empty": "⚠️ Geen bellers in wachtrij",
         "activeCallExists": "⚠️ Er is al een actief gesprek",
-        "mustBeReady": "⚠️ Agent status moet \"Beschikbaar\" zijn om gesprek te accepteren",
+        "mustBeReady": '⚠️ Agent status moet "Beschikbaar" zijn om gesprek te accepteren',
         "generateUnavailable": "Queue genereren via backend is niet beschikbaar",
         "generateFailed": "Queue genereren via backend mislukt",
         "debugStatusActive": "Actief - {count} wachtenden",
@@ -529,7 +529,7 @@ const nl = {
         "cancelled": "Abonnement opgezegd",
         "processed": "{count} abonnement(en) verwerkt. Bevestigingen worden verstuurd.",
         "transferred": "{magazine} overgezet naar {name}",
-        "samePersonAutoEnabled": "Ontvanger en aanvrager zijn dezelfde persoon. \"Zelfde persoon als ontvanger\" is automatisch ingeschakeld.",
+        "samePersonAutoEnabled": 'Ontvanger en aanvrager zijn dezelfde persoon. "Zelfde persoon als ontvanger" is automatisch ingeschakeld.',
         "recipientNotSelected": "Geen ontvanger geselecteerd",
         "requesterNotSelected": "Geen aanvrager/betaler geselecteerd",
         "requesterFollowsRecipient": "Aanvrager/betaler volgt de ontvanger: <strong>{name}</strong> · {person}.",
@@ -537,8 +537,8 @@ const nl = {
         "requesterFollowsSelectedRecipient": "Aanvrager/betaler volgt de geselecteerde ontvanger.",
         "roleUnknown": "Onbekende persoonsrol in abonnement flow",
         "roleInvalid": "Persoonsrol onjuist ingesteld",
-        "selectRecipientOrCreate": "Selecteer een ontvanger of kies \"Nieuwe persoon\".",
-        "selectRequesterOrCreate": "Selecteer een aanvrager/betaler of kies \"Nieuwe persoon\".",
+        "selectRecipientOrCreate": 'Selecteer een ontvanger of kies "Nieuwe persoon".',
+        "selectRequesterOrCreate": 'Selecteer een aanvrager/betaler of kies "Nieuwe persoon".',
         "createRequiresBackend": "Abonnement aanmaken vereist backend API",
         "createFailed": "Abonnement aanmaken via backend mislukt",
         "updateFailed": "Abonnement bijwerken via backend mislukt",
@@ -703,38 +703,9 @@ const nl = {
                 "date": "12-26"
             }
         ],
-        "dayNames": [
-            "Zondag",
-            "Maandag",
-            "Dinsdag",
-            "Woensdag",
-            "Donderdag",
-            "Vrijdag",
-            "Zaterdag"
-        ],
-        "dayNamesShort": [
-            "Zo",
-            "Ma",
-            "Di",
-            "Wo",
-            "Do",
-            "Vr",
-            "Za"
-        ],
-        "monthNames": [
-            "januari",
-            "februari",
-            "maart",
-            "april",
-            "mei",
-            "juni",
-            "juli",
-            "augustus",
-            "september",
-            "oktober",
-            "november",
-            "december"
-        ]
+        "dayNames": ["Zondag", "Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag"],
+        "dayNamesShort": ["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"],
+        "monthNames": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"]
     },
     "articleSearch": {
         "noResults": "Geen artikelen gevonden.",
@@ -761,7 +732,7 @@ const nl = {
         "viewAction": "Bekijken",
         "noneFoundTitle": "Geen klanten gevonden",
         "noneFoundDescription": "Pas je zoekcriteria aan en probeer opnieuw",
-        "resultsTitle": "🔍 Zoekresultaten: \"{query}\"",
+        "resultsTitle": '🔍 Zoekresultaten: "{query}"',
         "resultsRange": "Toont {start}-{end} van {total}"
     },
     "welcome": {
