@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
+- Implement Werfsleutel checklist item 3 by replacing the bridge-only `app/static/assets/js/app/slices/werfsleutel.js` handlers with catalog/picker/channel domain logic, wiring `app.js` subscription flow to the slice bridge API, and adding focused slice tests.
 - Extract localization/static i18n/locale-switching logic into `assets/js/app/slices/localization-slice.js`, expose those helpers through the legacy global bridge, and move profile language toggles to delegated `data-action="localization.set-locale"` handlers.
 - Extract bootstrap/state initialization and persistence shell logic from `app/static/assets/js/app.js` into `app/static/assets/js/app/slices/bootstrap-slice.js`, and wire legacy bootstrap calls through slice-backed wrappers.
 - Migrate customer/subscription/winback UI events from inline HTML handlers to delegated `data-action` contracts, including generated `app.js` markup (search results, pagination, subscription actions, duplicate checks, contact history paging, and winback offer selection) with new router registrations in `assets/js/app/legacy-actions-customer-subscription.js`.

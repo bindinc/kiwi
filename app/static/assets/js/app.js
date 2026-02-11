@@ -207,6 +207,67 @@ let werfsleutelCatalogSyncedAt = 0;
 
 let werfsleutelChannels = {};
 
+function getWerfsleutelSliceApi() {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const sliceApi = window.kiwiWerfsleutelSlice;
+    if (!sliceApi || typeof sliceApi !== 'object') {
+        return null;
+    }
+
+    return sliceApi;
+}
+
+function syncWerfsleutelCatalogMetadataIntoSlice(options = {}) {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canSyncCatalogMetadata = werfsleutelSliceApi && typeof werfsleutelSliceApi.setCatalogMetadata === 'function';
+    if (!canSyncCatalogMetadata) {
+        return;
+    }
+
+    const channels = options.channels && typeof options.channels === 'object'
+        ? options.channels
+        : {};
+    const catalog = Array.isArray(options.catalog) ? options.catalog : undefined;
+
+    werfsleutelSliceApi.setCatalogMetadata({
+        channels,
+        catalog
+    });
+}
+
+function getSelectedWerfsleutelState() {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canReadSelection = werfsleutelSliceApi && typeof werfsleutelSliceApi.getSelection === 'function';
+    if (canReadSelection) {
+        const sliceSelection = werfsleutelSliceApi.getSelection();
+        return {
+            selectedKey: sliceSelection?.selectedKey || null,
+            selectedChannel: sliceSelection?.selectedChannel || null,
+            selectedChannelMeta: sliceSelection?.selectedChannelMeta || null
+        };
+    }
+
+    const selectedChannel = werfsleutelState.selectedChannel;
+    return {
+        selectedKey: werfsleutelState.selectedKey,
+        selectedChannel,
+        selectedChannelMeta: selectedChannel ? (werfsleutelChannels[selectedChannel] || null) : null
+    };
+}
+
+function getWerfsleutelOfferDetailsFromActiveSlice(selectedWerfsleutelKey) {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canComputeOfferDetails = werfsleutelSliceApi && typeof werfsleutelSliceApi.getOfferDetails === 'function';
+    if (canComputeOfferDetails) {
+        return werfsleutelSliceApi.getOfferDetails(selectedWerfsleutelKey);
+    }
+
+    return getWerfsleutelOfferDetails(selectedWerfsleutelKey);
+}
+
 const werfsleutelState = {
     selectedKey: null,
     selectedChannel: null
@@ -2821,6 +2882,15 @@ async function initializeKiwiApplication() {
         return;
     }
 
+    const initializeWerfsleutelPickerFromSlices = () => {
+        const werfsleutelSliceApi = getWerfsleutelSliceApi();
+        const canInitializeFromWerfsleutelSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.initializePicker === 'function';
+        if (canInitializeFromWerfsleutelSlice) {
+            return werfsleutelSliceApi.initializePicker();
+        }
+        return initWerfsleutelPicker();
+    };
+
     await kiwiBootstrapSlice.initializeKiwiApplication({
         applyLocaleToUi,
         loadBootstrapState,
@@ -2832,7 +2902,7 @@ async function initializeKiwiApplication() {
         populateBirthdayFields,
         initDeliveryDatePicker,
         initArticleSearch,
-        initWerfsleutelPicker,
+        initWerfsleutelPicker: initializeWerfsleutelPickerFromSlices,
         startAgentWorkSessionTimer,
         updateAgentStatusDisplay,
         initializeAgentStatusFromBackend,
@@ -2894,6 +2964,11 @@ function initializeData() {
     werfsleutelCatalog = initializedState.werfsleutelCatalog;
     callQueue = initializedState.callQueue;
     callSession = initializedState.callSession;
+
+    syncWerfsleutelCatalogMetadataIntoSlice({
+        channels: werfsleutelChannels,
+        catalog: werfsleutelCatalog
+    });
 }
 
 // Persist Customers to authenticated API state
@@ -3954,8 +4029,22 @@ function showNewSubscription() {
     }
     document.getElementById('subStartDate').value = today;
 
-    resetWerfsleutelPicker();
-    triggerWerfsleutelBackgroundRefreshIfStale();
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canResetPickerFromSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.resetPicker === 'function';
+    const canRefreshCatalogFromSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.refreshCatalogIfStale === 'function';
+
+    if (canResetPickerFromSlice) {
+        werfsleutelSliceApi.resetPicker();
+    } else {
+        resetWerfsleutelPicker();
+    }
+
+    if (canRefreshCatalogFromSlice) {
+        werfsleutelSliceApi.refreshCatalogIfStale();
+    } else {
+        triggerWerfsleutelBackgroundRefreshIfStale();
+    }
+
     initializeSubscriptionRolesForForm();
     renderRequesterSameSummary();
     document.getElementById('newSubscriptionForm').style.display = 'flex';
@@ -3965,17 +4054,22 @@ function showNewSubscription() {
 async function createSubscription(event) {
     event.preventDefault();
 
-    if (!werfsleutelState.selectedKey) {
+    const werfsleutelSelection = getSelectedWerfsleutelState();
+    const selectedWerfsleutelKey = werfsleutelSelection.selectedKey;
+    const selectedWerfsleutelChannel = werfsleutelSelection.selectedChannel;
+    const selectedWerfsleutelChannelMeta = werfsleutelSelection.selectedChannelMeta;
+
+    if (!selectedWerfsleutelKey) {
         showToast(translate('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
         return;
     }
 
-    if (!werfsleutelState.selectedChannel) {
+    if (!selectedWerfsleutelChannel) {
         showToast(translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'error');
         return;
     }
 
-    const offerDetails = getWerfsleutelOfferDetails(werfsleutelState.selectedKey);
+    const offerDetails = getWerfsleutelOfferDetailsFromActiveSlice(selectedWerfsleutelKey);
     const formData = {
         magazine: offerDetails.magazine,
         duration: offerDetails.durationKey || '',
@@ -3986,11 +4080,11 @@ async function createSubscription(event) {
         optinEmail: document.querySelector('input[name="subOptinEmail"]:checked').value,
         optinPhone: document.querySelector('input[name="subOptinPhone"]:checked').value,
         optinPost: document.querySelector('input[name="subOptinPost"]:checked').value,
-        werfsleutel: werfsleutelState.selectedKey.salesCode,
-        werfsleutelTitle: werfsleutelState.selectedKey.title,
-        werfsleutelPrice: werfsleutelState.selectedKey.price,
-        werfsleutelChannel: werfsleutelState.selectedChannel,
-        werfsleutelChannelLabel: werfsleutelChannels[werfsleutelState.selectedChannel]?.label || ''
+        werfsleutel: selectedWerfsleutelKey.salesCode,
+        werfsleutelTitle: selectedWerfsleutelKey.title,
+        werfsleutelPrice: selectedWerfsleutelKey.price,
+        werfsleutelChannel: selectedWerfsleutelChannel,
+        werfsleutelChannelLabel: selectedWerfsleutelChannelMeta?.label || ''
     };
 
     const optinData = {
