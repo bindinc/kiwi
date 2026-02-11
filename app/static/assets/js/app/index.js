@@ -1,7 +1,8 @@
 import { createActionRouter } from './actions.js';
+import { getDispositionCategories } from './disposition-categories.js';
 import { ensureLegacyAppLoaded } from './legacy-loader.js';
 import { getGlobalScope } from './services.js';
-import { configureAppShellSliceDependencies, registerAppShellSlice } from './slices/app-shell-slice.js';
+import { configureAppShellSliceDependencies, registerAppShellSlice, showToast } from './slices/app-shell-slice.js';
 import { configureOrderSliceDependencies, registerOrderActions } from './slices/order.js';
 import { registerArticleSearchSlice } from './slices/article-search-slice.js';
 import { installBootstrapSlice } from './slices/bootstrap-slice.js';
@@ -11,8 +12,8 @@ import { registerSubscriptionRoleSlice } from './slices/subscription-role-slice.
 import { registerSubscriptionWorkflowSlice } from './slices/subscription-workflow-slice.js';
 import { registerWinbackSlice } from './slices/winback-slice.js';
 import { registerLocalizationSlice } from './slices/localization-slice.js';
-import { configureContactHistorySliceDependencies, registerContactHistorySlice } from './slices/contact-history-slice.js';
-import { configureCustomerDetailSliceDependencies, registerCustomerDetailSlice } from './slices/customer-detail-slice.js';
+import { addContactMoment, configureContactHistorySliceDependencies, registerContactHistorySlice } from './slices/contact-history-slice.js';
+import { configureCustomerDetailSliceDependencies, registerCustomerDetailSlice, selectCustomer } from './slices/customer-detail-slice.js';
 import { configureDeliveryRemarksSliceDependencies, registerDeliveryRemarksSlice } from './slices/delivery-remarks-slice.js';
 import { registerDeliveryDatePickerSlice } from './slices/delivery-date-picker-slice.js';
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
@@ -83,6 +84,32 @@ registerSubscriptionWorkflowSlice(actionRouter);
 registerWinbackSlice(actionRouter);
 registerCustomerSubscriptionActions(actionRouter);
 actionRouter.install();
+
+function wireCallAgentRuntimeDependencies() {
+    const globalScope = getGlobalScope();
+    if (!globalScope) {
+        return;
+    }
+
+    const runtimeApi = globalScope.kiwiCallAgentRuntime;
+    const canConfigure = runtimeApi && typeof runtimeApi.configureDependencies === 'function';
+    if (!canConfigure) {
+        return;
+    }
+
+    runtimeApi.configureDependencies({
+        addContactMoment(customerId, type, description) {
+            return addContactMoment(customerId, type, description) || null;
+        },
+        getDispositionCategories,
+        async selectCustomer(customerId) {
+            await selectCustomer(customerId);
+        },
+        showToast
+    });
+}
+
+wireCallAgentRuntimeDependencies();
 
 async function bootstrapLegacyApp() {
     try {

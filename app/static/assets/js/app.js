@@ -439,83 +439,7 @@ let callQueue = {
     waitTimeInterval: null    // Interval voor real-time wait time updates
 };
 
-// Phase 5A: Disposition Codes Configuration
-const dispositionCategoryConfig = {
-    subscription: {
-        labelKey: 'disposition.category.subscription',
-        labelFallback: 'Abonnement',
-        outcomes: [
-            { code: 'new_subscription', key: 'disposition.outcome.newSubscription', fallback: 'Nieuw abonnement afgesloten' },
-            { code: 'subscription_changed', key: 'disposition.outcome.subscriptionChanged', fallback: 'Abonnement gewijzigd' },
-            { code: 'subscription_cancelled', key: 'disposition.outcome.subscriptionCancelled', fallback: 'Abonnement opgezegd' },
-            { code: 'subscription_paused', key: 'disposition.outcome.subscriptionPaused', fallback: 'Abonnement gepauzeerd' },
-            { code: 'info_provided', key: 'disposition.outcome.infoProvided', fallback: 'Informatie verstrekt' }
-        ]
-    },
-    delivery: {
-        labelKey: 'disposition.category.delivery',
-        labelFallback: 'Bezorging',
-        outcomes: [
-            { code: 'delivery_issue_resolved', key: 'disposition.outcome.deliveryIssueResolved', fallback: 'Bezorgprobleem opgelost' },
-            { code: 'magazine_resent', key: 'disposition.outcome.magazineResent', fallback: 'Editie opnieuw verzonden' },
-            { code: 'delivery_prefs_updated', key: 'disposition.outcome.deliveryPreferencesUpdated', fallback: 'Bezorgvoorkeuren aangepast' },
-            { code: 'escalated_delivery', key: 'disposition.outcome.deliveryEscalated', fallback: 'Geëscaleerd naar bezorging' }
-        ]
-    },
-    payment: {
-        labelKey: 'disposition.category.payment',
-        labelFallback: 'Betaling',
-        outcomes: [
-            { code: 'payment_resolved', key: 'disposition.outcome.paymentResolved', fallback: 'Betaling afgehandeld' },
-            { code: 'payment_plan_arranged', key: 'disposition.outcome.paymentPlanArranged', fallback: 'Betalingsregeling getroffen' },
-            { code: 'iban_updated', key: 'disposition.outcome.ibanUpdated', fallback: 'IBAN gegevens bijgewerkt' },
-            { code: 'escalated_finance', key: 'disposition.outcome.financeEscalated', fallback: 'Geëscaleerd naar financiën' }
-        ]
-    },
-    article_sale: {
-        labelKey: 'disposition.category.articleSale',
-        labelFallback: 'Artikel Verkoop',
-        outcomes: [
-            { code: 'article_sold', key: 'disposition.outcome.articleSold', fallback: 'Artikel verkocht' },
-            { code: 'quote_provided', key: 'disposition.outcome.quoteProvided', fallback: 'Offerte verstrekt' },
-            { code: 'no_sale', key: 'disposition.outcome.noSale', fallback: 'Geen verkoop' }
-        ]
-    },
-    complaint: {
-        labelKey: 'disposition.category.complaint',
-        labelFallback: 'Klacht',
-        outcomes: [
-            { code: 'complaint_resolved', key: 'disposition.outcome.complaintResolved', fallback: 'Klacht opgelost' },
-            { code: 'complaint_escalated', key: 'disposition.outcome.complaintEscalated', fallback: 'Klacht geëscaleerd' },
-            { code: 'callback_scheduled', key: 'disposition.outcome.callbackScheduled', fallback: 'Terugbelafspraak gemaakt' }
-        ]
-    },
-    general: {
-        labelKey: 'disposition.category.general',
-        labelFallback: 'Algemeen',
-        outcomes: [
-            { code: 'info_provided', key: 'disposition.outcome.infoProvided', fallback: 'Informatie verstrekt' },
-            { code: 'transferred', key: 'disposition.outcome.transferred', fallback: 'Doorverbonden' },
-            { code: 'customer_hung_up', key: 'disposition.outcome.customerHungUp', fallback: 'Klant opgehangen' },
-            { code: 'wrong_number', key: 'disposition.outcome.wrongNumber', fallback: 'Verkeerd verbonden' },
-            { code: 'no_answer_needed', key: 'disposition.outcome.noAnswerNeeded', fallback: 'Geen actie vereist' }
-        ]
-    }
-};
-
-function getDispositionCategories() {
-    const resolvedCategories = {};
-    for (const [categoryCode, categoryConfig] of Object.entries(dispositionCategoryConfig)) {
-        resolvedCategories[categoryCode] = {
-            label: translate(categoryConfig.labelKey, {}, categoryConfig.labelFallback),
-            outcomes: categoryConfig.outcomes.map((outcomeConfig) => ({
-                code: outcomeConfig.code,
-                label: translate(outcomeConfig.key, {}, outcomeConfig.fallback)
-            }))
-        };
-    }
-    return resolvedCategories;
-}
+// Disposition category config moved to app/disposition-categories.js.
 
 // Phase 2B: Recording Configuration
 const recordingConfig = {
@@ -524,63 +448,9 @@ const recordingConfig = {
     autoStart: true
 };
 
-// End Session - Close current customer and return to clean slate
+// End Session — delegates to app-shell-slice.
 function endSession() {
-    const handledBySlice = invokeSliceMethod('kiwiAppShellSlice', 'endSession');
-    if (handledBySlice !== undefined) {
-        return;
-    }
-
-    // End call if active (using new system)
-    if (callSession.active) {
-        endCallSession();
-    }
-    
-    // Clear current customer
-    currentCustomer = null;
-    selectedOffer = null;
-    
-    // Hide customer detail
-    document.getElementById('customerDetail').style.display = 'none';
-    
-    // Show welcome message
-    document.getElementById('welcomeMessage').style.display = 'block';
-    
-    // Hide end call button
-    const endCallBtn = document.getElementById('endCallBtn');
-    if (endCallBtn) endCallBtn.style.display = 'none';
-    
-    // Clear search form
-    document.getElementById('searchName').value = '';
-    document.getElementById('searchPostalCode').value = '';
-    document.getElementById('searchHouseNumber').value = '';
-    const phoneInput = document.getElementById('searchPhone');
-    if (phoneInput) phoneInput.value = '';
-    const emailInput = document.getElementById('searchEmail');
-    if (emailInput) emailInput.value = '';
-    setAdditionalFiltersOpen(false);
-    
-    // Hide search results
-    const searchResults = document.getElementById('searchResults');
-    searchResults.style.display = 'none';
-    document.getElementById('resultsContainer').innerHTML = '';
-    
-    // Close any open forms
-    closeForm('newSubscriptionForm');
-    closeForm('articleSaleForm');
-    closeForm('editCustomerForm');
-    closeForm('editSubscriptionForm');
-    closeForm('resendMagazineForm');
-    closeForm('winbackFlowForm');
-    
-    // Update action buttons
-    updateCustomerActionButtons();
-    
-    // Scroll to top for clean start
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Optional: Show a brief confirmation
-    console.log('Session ended - Ready for next customer');
+    invokeSliceMethod('kiwiAppShellSlice', 'endSession');
 }
 
 // Subscription role helpers moved to app/subscription-role-runtime.js.
@@ -948,115 +818,29 @@ if (typeof window !== 'undefined') {
     };
 }
 
-// Legacy facade wrappers removed — all callers now use action-router
-// handlers or direct slice APIs. Remaining app-shell fallback functions
-// (closeForm, showToast, etc.) are item 20 scope.
+// Legacy facade wrappers and app-shell fallback paths removed — all
+// callers now use action-router handlers or direct slice APIs.
 
-// Close Form
+// Close Form — delegates to app-shell-slice.
 function closeForm(formId) {
-    const handledBySlice = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'closeForm', [formId]);
-    if (handledBySlice !== undefined) {
-        return;
-    }
-
-    if (formId === 'newSubscriptionForm') {
-        resetAllSubscriptionDuplicateStates();
-    }
-
-    const form = document.getElementById(formId);
-    if (form) {
-        form.style.display = 'none';
-    }
+    invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'closeForm', [formId]);
 }
 
+// mapToastTypeToContactType — delegates to app-shell-slice.
 function mapToastTypeToContactType(toastType) {
     const mappedContactType = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'mapToastTypeToContactType', [toastType]);
-    if (typeof mappedContactType === 'string') {
-        return mappedContactType;
-    }
-
-    switch (toastType) {
-        case 'error':
-            return 'notification_error';
-        case 'warning':
-            return 'notification_warning';
-        case 'info':
-            return 'notification_info';
-        default:
-            return 'notification_success';
-    }
+    return typeof mappedContactType === 'string' ? mappedContactType : 'notification_success';
 }
 
-// Show Toast Notification (now backed by contact history)
+// Show Toast — delegates to app-shell-slice.
 function showToast(message, type = 'success') {
-    const handledBySlice = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'showToast', [message, type]);
-    if (handledBySlice !== undefined) {
-        return;
-    }
-
-    if (currentCustomer) {
-        invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'pushContactHistory', [
-            currentCustomer,
-            {
-                type: mapToastTypeToContactType(type),
-                description: message
-            },
-            { highlight: true, moveToFirstPage: true }
-        ]);
-        return;
-    }
-
-    const toast = document.getElementById('toast');
-    if (!toast) {
-        return;
-    }
-
-    toast.textContent = message;
-    toast.className = `toast ${type}`;
-    toast.classList.add('show');
-
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+    invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'showToast', [message, type]);
 }
 
-function wireCallAgentRuntimeDependencies() {
-    if (typeof window === 'undefined') {
-        return;
-    }
+// Runtime dependency wiring moved to app/index.js (wireCallAgentRuntimeDependencies).
 
-    const runtimeApi = window.kiwiCallAgentRuntime;
-    const canConfigureRuntimeDependencies = runtimeApi && typeof runtimeApi.configureDependencies === 'function';
-    if (!canConfigureRuntimeDependencies) {
-        return;
-    }
-
-    runtimeApi.configureDependencies({
-        addContactMoment(customerId, type, description) {
-            return invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'addContactMoment', [
-                customerId, type, description
-            ]) || null;
-        },
-        getDispositionCategories,
-        async selectCustomer(customerId) {
-            await invokeSliceMethodAsync(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'selectCustomer', [customerId]);
-        },
-        showToast
-    });
-}
-
-wireCallAgentRuntimeDependencies();
-
+// isDebugModalEnabled — delegates to app-shell-slice.
 const isDebugModalEnabled = () => {
-    const debugModalEnabled = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'isDebugModalEnabled');
-    if (typeof debugModalEnabled === 'boolean') {
-        return debugModalEnabled;
-    }
-
-    const flags = window.featureFlags;
-    if (!flags || typeof flags.isEnabled !== 'function') {
-        return true;
-    }
-
-    return flags.isEnabled('debugModal');
+    const result = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'isDebugModalEnabled');
+    return typeof result === 'boolean' ? result : true;
 };
