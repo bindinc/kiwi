@@ -31,26 +31,8 @@ export function registerCustomerSubscriptionActions(actionRouter) {
     }
 
     actionRouter.registerMany({
-        'search-handle-keypress': (_payload, context) => {
-            callLegacy('handleSearchKeyPress', context.event);
-        },
-        'toggle-additional-filters': () => {
-            callLegacy('toggleAdditionalFilters');
-        },
-        'search-customer': () => {
-            callLegacy('searchCustomer');
-        },
-        'scroll-to-results': () => {
-            callLegacy('scrollToResults');
-        },
         'show-new-subscription': () => {
             callLegacy('showNewSubscription');
-        },
-        'sort-results': (_payload, context) => {
-            callLegacy('sortResults', context.element ? context.element.value : undefined);
-        },
-        'clear-search-results': () => {
-            callLegacy('clearSearchResults');
         },
         'identify-current-customer-as-caller': () => {
             callLegacy('identifyCurrentCustomerAsCaller');
@@ -63,9 +45,6 @@ export function registerCustomerSubscriptionActions(actionRouter) {
         },
         'show-editorial-complaint-form': () => {
             callLegacy('showEditorialComplaintForm');
-        },
-        'close-customer-detail': () => {
-            callLegacy('closeCustomerDetail');
         },
         'close-form': (payload) => {
             callLegacy('closeForm', payload.formId);
@@ -111,9 +90,6 @@ export function registerCustomerSubscriptionActions(actionRouter) {
         },
         'identify-caller-as-customer': (payload) => {
             callLegacy('identifyCallerAsCustomer', payload.customerId);
-        },
-        'go-to-page': (payload) => {
-            callLegacy('goToPage', payload.page);
         },
         'edit-subscription': (payload) => {
             callLegacy('editSubscription', payload.subId);
