@@ -73,15 +73,6 @@ export function registerCustomerSubscriptionActions(actionRouter) {
         'create-subscription': (_payload, context) => {
             callLegacy('createSubscription', context.event);
         },
-        'set-subscription-role-mode': (payload, context) => {
-            callLegacy('setSubscriptionRoleMode', payload.role, context.element ? context.element.value : undefined);
-        },
-        'search-subscription-role-person': (payload) => {
-            callLegacy('searchSubscriptionRolePerson', payload.role);
-        },
-        'toggle-requester-same-as-recipient': () => {
-            callLegacy('toggleRequesterSameAsRecipient');
-        },
         'save-customer-edit': (_payload, context) => {
             callLegacy('saveCustomerEdit', context.event);
         },
@@ -114,21 +105,6 @@ export function registerCustomerSubscriptionActions(actionRouter) {
         },
         'complete-winback': () => {
             callLegacy('completeWinback');
-        },
-        'toggle-customer-form-address': (payload) => {
-            callLegacy('toggleCustomerFormAddress', payload.prefix);
-        },
-        'select-subscription-duplicate-person': (payload) => {
-            callLegacy('selectSubscriptionDuplicatePerson', payload.role, payload.personId);
-        },
-        'toggle-subscription-duplicate-matches': (payload) => {
-            callLegacy('toggleSubscriptionDuplicateMatches', payload.role);
-        },
-        'acknowledge-subscription-duplicate-warning': (payload) => {
-            callLegacy('acknowledgeSubscriptionDuplicateWarning', payload.role);
-        },
-        'select-subscription-role-person': (payload) => {
-            callLegacy('selectSubscriptionRolePerson', payload.role, payload.personId);
         },
         'select-customer': (payload) => {
             callLegacy('selectCustomer', payload.customerId);

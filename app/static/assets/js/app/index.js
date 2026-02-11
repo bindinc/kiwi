@@ -3,6 +3,7 @@ import { ensureLegacyAppLoaded } from './legacy-loader.js';
 import { registerOrderActions } from './slices/order.js';
 import { installBootstrapSlice } from './slices/bootstrap-slice.js';
 import { registerCallQueueAgentStatusSlices } from './slices/index.js';
+import { registerSubscriptionRoleSlice } from './slices/subscription-role-slice.js';
 import { registerLocalizationSlice } from './slices/localization-slice.js';
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { registerCustomerSubscriptionActions } from './legacy-actions-customer-subscription.js';
@@ -27,6 +28,7 @@ registerOrderActions(actionRouter);
 registerLocalizationSlice(actionRouter);
 registerWerfsleutelActions(actionRouter);
 registerCallQueueAgentStatusSlices(actionRouter);
+registerSubscriptionRoleSlice(actionRouter);
 registerCustomerSubscriptionActions(actionRouter);
 actionRouter.install();
 
