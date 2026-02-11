@@ -690,13 +690,20 @@ async function initializeKiwiApplication() {
         return;
     }
 
+    const scheduleInterval = (callback, timeout) => {
+        if (typeof window !== 'undefined' && typeof window.setInterval === 'function') {
+            return window.setInterval(callback, timeout);
+        }
+        return setInterval(callback, timeout);
+    };
+
     await kiwiBootstrapSlice.initializeKiwiApplication({
         applyLocaleToUi,
         loadBootstrapState,
         initializeData,
         initializeQueue,
         updateTime,
-        setInterval,
+        setInterval: scheduleInterval,
         updateCustomerActionButtons,
         populateBirthdayFields,
         initDeliveryDatePicker,
