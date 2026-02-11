@@ -130,9 +130,6 @@ export function registerCustomerSubscriptionActions(actionRouter) {
         'select-subscription-role-person': (payload) => {
             callLegacy('selectSubscriptionRolePerson', payload.role, payload.personId);
         },
-        'select-customer': (payload) => {
-            callLegacy('selectCustomer', payload.customerId);
-        },
         'identify-caller-as-customer': (payload) => {
             callLegacy('identifyCallerAsCustomer', payload.customerId);
         },
@@ -150,12 +147,6 @@ export function registerCustomerSubscriptionActions(actionRouter) {
         },
         'revert-restitution': (payload) => {
             callLegacy('revertRestitution', payload.subId);
-        },
-        'change-contact-history-page': (payload) => {
-            callLegacy('changeContactHistoryPage', payload.newPage);
-        },
-        'toggle-timeline-item': (payload) => {
-            callLegacy('toggleTimelineItem', payload.entryDomId);
         },
         'select-offer': (payload, context) => {
             callLegacy('selectOffer', payload.offerId, payload.title, payload.description, context.event);

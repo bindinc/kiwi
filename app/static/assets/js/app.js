@@ -3499,423 +3499,134 @@ function displaySearchResults(results) {
     displayPaginatedResults();
 }
 
+const CUSTOMER_DETAIL_SLICE_NAMESPACE = 'kiwiCustomerDetailSlice';
+const CONTACT_HISTORY_SLICE_NAMESPACE = 'kiwiContactHistorySlice';
+const CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER = 'kiwiGetCustomerDetailSliceDependencies';
+
+function getSliceApi(namespace) {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const sliceApi = window[namespace];
+    if (!sliceApi || typeof sliceApi !== 'object') {
+        return null;
+    }
+
+    return sliceApi;
+}
+
+function invokeSliceMethod(namespace, methodName, args = []) {
+    const sliceApi = getSliceApi(namespace);
+    if (!sliceApi) {
+        return undefined;
+    }
+
+    const handler = sliceApi[methodName];
+    if (typeof handler !== 'function') {
+        return undefined;
+    }
+
+    return handler(...args);
+}
+
+function invokeSliceMethodAsync(namespace, methodName, args = []) {
+    return Promise.resolve(invokeSliceMethod(namespace, methodName, args));
+}
+
+function getCustomerDetailSliceDependencies() {
+    return {
+        findCustomerById(customerId) {
+            const numericLookupId = Number(customerId);
+            const hasNumericLookup = Number.isFinite(numericLookupId);
+
+            return customers.find((customer) => {
+                if (!customer || customer.id === undefined || customer.id === null) {
+                    return false;
+                }
+
+                if (hasNumericLookup) {
+                    const customerIdNumber = Number(customer.id);
+                    if (Number.isFinite(customerIdNumber)) {
+                        return customerIdNumber === numericLookupId;
+                    }
+                }
+
+                return String(customer.id) === String(customerId);
+            }) || null;
+        },
+        upsertCustomerInCache,
+        getCurrentCustomer() {
+            return currentCustomer;
+        },
+        setCurrentCustomer(customer) {
+            currentCustomer = customer;
+        },
+        getContactHistoryState() {
+            return contactHistoryState;
+        },
+        resetContactHistoryViewState() {
+            contactHistoryState.currentPage = 1;
+            contactHistoryState.highlightId = null;
+            contactHistoryState.lastEntry = null;
+
+            if (contactHistoryHighlightTimer) {
+                clearTimeout(contactHistoryHighlightTimer);
+                contactHistoryHighlightTimer = null;
+            }
+        },
+        translate,
+        showToast,
+        displayArticles,
+        updateCustomerActionButtons,
+        updateIdentifyCallerButtons,
+        getSubscriptionDurationDisplay,
+        getSubscriptionRequesterMetaLine,
+        getDateLocaleForApp,
+        personsApiUrl
+    };
+}
+
+if (typeof window !== 'undefined') {
+    window[CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER] = getCustomerDetailSliceDependencies;
+}
+
 // Select Customer
 async function selectCustomer(customerId) {
-    let customer = customers.find(c => c.id === customerId);
-
-    if (window.kiwiApi) {
-        try {
-            customer = await window.kiwiApi.get(`/api/v1/persons/${customerId}`);
-            const existingIndex = customers.findIndex(c => c.id === customerId);
-            if (existingIndex >= 0) {
-                customers[existingIndex] = customer;
-            } else {
-                customers.push(customer);
-            }
-        } catch (error) {
-            console.error('Kon klantdetail niet laden via API', error);
-            showToast(translate('customer.detailLoadFailed', {}, 'Kon klantdetail niet laden'), 'error');
-            return;
-        }
-    }
-
-    currentCustomer = customer;
-    if (!currentCustomer) return;
-
-    contactHistoryState.currentPage = 1;
-    contactHistoryState.highlightId = null;
-    contactHistoryState.lastEntry = null;
-    if (contactHistoryHighlightTimer) {
-        clearTimeout(contactHistoryHighlightTimer);
-        contactHistoryHighlightTimer = null;
-    }
-
-    // Hide welcome message and search results view
-    document.getElementById('welcomeMessage').style.display = 'none';
-    document.getElementById('searchResultsView').style.display = 'none';
-    
-    // Show customer detail
-    const customerDetail = document.getElementById('customerDetail');
-    customerDetail.style.display = 'block';
-
-    // Populate customer info
-    const fullName = currentCustomer.middleName 
-        ? `${currentCustomer.salutation || ''} ${currentCustomer.firstName} ${currentCustomer.middleName} ${currentCustomer.lastName}`.trim()
-        : `${currentCustomer.salutation || ''} ${currentCustomer.firstName} ${currentCustomer.lastName}`.trim();
-    
-    document.getElementById('customerName').textContent = fullName;
-    document.getElementById('customerAddress').textContent = 
-        `${currentCustomer.address}, ${currentCustomer.postalCode} ${currentCustomer.city}`;
-    document.getElementById('customerEmail').textContent = currentCustomer.email;
-    document.getElementById('customerPhone').textContent = currentCustomer.phone;
-
-    // Show deceased status banner if applicable
-    displayDeceasedStatusBanner();
-
-    // Display subscriptions
-    displaySubscriptions();
-
-    // Display articles
-    displayArticles();
-
-    // Display contact history
-    displayContactHistory();
-
-    // Update action buttons visibility
-    updateCustomerActionButtons();
-    
-    // Update identify caller button visibility
-    updateIdentifyCallerButtons();
-
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await invokeSliceMethodAsync(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'selectCustomer', [customerId]);
 }
 
 // Display Deceased Status Banner
 function displayDeceasedStatusBanner() {
-    // Remove any existing banner first
-    const existingBanner = document.querySelector('.deceased-status-banner');
-    if (existingBanner) {
-        existingBanner.remove();
-    }
-
-    // Check if customer is deceased by looking at contact history
-    if (!currentCustomer || !currentCustomer.contactHistory) return;
-    
-    const hasDeceasedEntry = currentCustomer.contactHistory.some(entry => 
-        entry.type.toLowerCase().includes('overlijden') || 
-        entry.description.toLowerCase().includes('overlijden')
-    );
-
-    if (hasDeceasedEntry) {
-        // Create and insert the banner
-        const banner = document.createElement('div');
-        banner.className = 'deceased-status-banner';
-        banner.innerHTML = `
-            <div class="deceased-banner-icon">⚠️</div>
-            <div class="deceased-banner-content">
-                <strong>${translate('customer.deceasedBannerTitle', {}, 'Deze klant is overleden')}</strong>
-                <p>${translate('customer.deceasedBannerDescription', {}, 'Let op bij het verwerken van abonnementen en bestellingen')}</p>
-            </div>
-        `;
-        
-        // Insert after customer header
-        const customerDetail = document.getElementById('customerDetail');
-        const customerHeader = customerDetail.querySelector('.customer-header');
-        if (customerHeader && customerHeader.parentNode) {
-            // Insert after the customer-header div
-            customerHeader.parentNode.insertBefore(banner, customerHeader.nextSibling);
-        }
-    }
+    invokeSliceMethod(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'displayDeceasedStatusBanner');
 }
 
 // Display Subscriptions
 function displaySubscriptions() {
-    const subscriptionsList = document.getElementById('subscriptionsList');
-    
-    if (currentCustomer.subscriptions.length === 0) {
-        subscriptionsList.innerHTML = `<p class="empty-state-small">${translate('subscription.none', {}, 'Geen abonnementen')}</p>`;
-        return;
-    }
-
-    // Separate active, ended, restituted, and transferred subscriptions
-    const activeSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'active');
-    const endedSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'ended' || sub.status === 'cancelled');
-    const restitutedSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'restituted');
-    const transferredSubscriptions = currentCustomer.subscriptions.filter(sub => sub.status === 'transferred');
-
-    let html = '';
-
-    // Display active subscriptions
-    if (activeSubscriptions.length > 0) {
-        html += `<div class="subscription-group"><h4 class="subscription-group-title">${translate('subscription.groupActive', {}, 'Actieve Abonnementen')}</h4>`;
-        html += activeSubscriptions.map(sub => {
-            const pricingInfo = getSubscriptionDurationDisplay(sub);
-            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
-            
-            return `
-                <div class="subscription-item">
-                    <div class="subscription-info">
-                        <div class="subscription-name">📰 ${sub.magazine}</div>
-                        <div class="subscription-details">
-                            ${translate('subscription.startLabel', {}, 'Start')}: ${formatDate(sub.startDate)} • 
-                            ${translate('subscription.lastEditionLabel', {}, 'Laatste editie')}: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${requesterMeta}
-                        </div>
-                    </div>
-                    <div class="subscription-actions">
-                        <span class="subscription-status status-active">${translate('subscription.statusActive', {}, 'Actief')}</span>
-                        <button class="icon-btn" type="button" data-action="edit-subscription" data-arg-sub-id="${sub.id}" title="${translate('subscription.editTitle', {}, 'Bewerken')}">✏️</button>
-                        <button class="icon-btn" type="button" data-action="cancel-subscription" data-arg-sub-id="${sub.id}" title="${translate('subscription.cancelTitle', {}, 'Opzeggen')}">🚫</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        html += '</div>';
-    }
-
-    // Display ended subscriptions
-    if (endedSubscriptions.length > 0) {
-        html += `<div class="subscription-group"><h4 class="subscription-group-title">${translate('subscription.groupEnded', {}, 'Beëindigde Abonnementen')}</h4>`;
-        html += endedSubscriptions.map(sub => {
-            const pricingInfo = getSubscriptionDurationDisplay(sub);
-            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
-            const statusClass = sub.status === 'cancelled' ? 'status-cancelled' : 'status-ended';
-            const statusText = sub.status === 'cancelled'
-                ? translate('subscription.statusCancelled', {}, 'Opgezegd')
-                : translate('subscription.statusEnded', {}, 'Beëindigd');
-            
-            return `
-                <div class="subscription-item subscription-ended">
-                    <div class="subscription-info">
-                        <div class="subscription-name">📰 ${sub.magazine}</div>
-                        <div class="subscription-details">
-                            ${translate('subscription.startLabel', {}, 'Start')}: ${formatDate(sub.startDate)} • 
-                            ${sub.endDate ? `${translate('subscription.endLabel', {}, 'Einde')}: ${formatDate(sub.endDate)} • ` : ''}
-                            ${translate('subscription.lastEditionLabel', {}, 'Laatste editie')}: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${requesterMeta}
-                        </div>
-                    </div>
-                    <div class="subscription-actions">
-                        <span class="subscription-status ${statusClass}">${statusText}</span>
-                        <button class="btn btn-small btn-winback" type="button" data-action="start-winback-for-subscription" data-arg-sub-id="${sub.id}" title="${translate('subscription.winbackTitle', {}, 'Winback/Opzegging')}">
-                            ${translate('subscription.winbackAction', {}, '🎯 Winback/Opzegging')}
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        html += '</div>';
-    }
-
-    // Display restituted subscriptions (cancelled with refund due to deceased)
-    if (restitutedSubscriptions.length > 0) {
-        html += `<div class="subscription-group"><h4 class="subscription-group-title">${translate('subscription.groupRestituted', {}, 'Gerestitueerde Abonnementen')}</h4>`;
-        html += restitutedSubscriptions.map(sub => {
-            const pricingInfo = getSubscriptionDurationDisplay(sub);
-            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
-            const refundInfo = sub.refundInfo
-                ? `<br>${translate('subscription.refundToLabel', {}, 'Restitutie naar')}: ${sub.refundInfo.email}`
-                : '';
-            
-            return `
-                <div class="subscription-item subscription-restituted">
-                    <div class="subscription-info">
-                        <div class="subscription-name">📰 ${sub.magazine}</div>
-                        <div class="subscription-details">
-                            ${translate('subscription.startLabel', {}, 'Start')}: ${formatDate(sub.startDate)} • 
-                            ${sub.endDate ? `${translate('subscription.endLabel', {}, 'Einde')}: ${formatDate(sub.endDate)} • ` : ''}
-                            ${translate('subscription.lastEditionLabel', {}, 'Laatste editie')}: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${requesterMeta}${refundInfo}
-                        </div>
-                    </div>
-                    <div class="subscription-actions">
-                        <span class="subscription-status status-restituted">${translate('subscription.statusRestituted', {}, 'Gerestitueerd')}</span>
-                        <button class="btn btn-small btn-secondary" type="button" data-action="revert-restitution" data-arg-sub-id="${sub.id}" title="${translate('subscription.transferToOtherTitle', {}, 'Overzetten naar andere persoon')}">
-                            ${translate('subscription.transferAction', {}, '🔄 Overzetten')}
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        html += '</div>';
-    }
-
-    // Display transferred subscriptions (transferred to another person due to deceased)
-    if (transferredSubscriptions.length > 0) {
-        html += `<div class="subscription-group"><h4 class="subscription-group-title">${translate('subscription.groupTransferred', {}, 'Overgezette Abonnementen')}</h4>`;
-        html += transferredSubscriptions.map(sub => {
-            const pricingInfo = getSubscriptionDurationDisplay(sub);
-            const requesterMeta = getSubscriptionRequesterMetaLine(sub);
-            let transferInfo = '';
-            if (sub.transferredTo) {
-                const transferName = sub.transferredTo.middleName 
-                    ? `${sub.transferredTo.firstName} ${sub.transferredTo.middleName} ${sub.transferredTo.lastName}`
-                    : `${sub.transferredTo.firstName} ${sub.transferredTo.lastName}`;
-                transferInfo = `<br>${translate('subscription.transferredToLabel', {}, 'Overgezet naar')}: ${transferName} (${sub.transferredTo.email})`;
-            }
-            
-            return `
-                <div class="subscription-item subscription-transferred">
-                    <div class="subscription-info">
-                        <div class="subscription-name">📰 ${sub.magazine}</div>
-                        <div class="subscription-details">
-                            Start: ${formatDate(sub.startDate)} • 
-                            Laatste editie: ${formatDate(sub.lastEdition)}<br>
-                            ${pricingInfo}${requesterMeta}${transferInfo}
-                        </div>
-                    </div>
-                    <div class="subscription-actions">
-                        <span class="subscription-status status-transferred">Overgezet</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        html += '</div>';
-    }
-
-    subscriptionsList.innerHTML = html;
-}
-
-// Phase 5B: Extended Contact Types for Better Display
-const contactTypeLabelConfig = {
-    // Call-related
-    'call_started_anonymous': { key: 'contactHistory.type.callStartedAnonymous', fallback: 'Anonieme call gestart', icon: '📞', color: '#fbbf24' },
-    'call_started_identified': { key: 'contactHistory.type.callStartedIdentified', fallback: 'Call gestart', icon: '📞', color: '#3b82f6' },
-    'call_identified': { key: 'contactHistory.type.callIdentified', fallback: 'Beller geïdentificeerd', icon: '👤', color: '#10b981' },
-    'call_ended_by_agent': { key: 'contactHistory.type.callEndedByAgent', fallback: 'Call beëindigd (agent)', icon: '📞', color: '#6b7280' },
-    'call_ended_by_customer': { key: 'contactHistory.type.callEndedByCustomer', fallback: 'Call beëindigd (klant)', icon: '📞', color: '#ef4444' },
-    'call_disposition': { key: 'contactHistory.type.callDisposition', fallback: 'Gesprek afgerond', icon: '📋', color: '#3b82f6' },
-    'call_hold': { key: 'contactHistory.type.callHold', fallback: 'Gesprek in wacht', icon: '⏸️', color: '#f59e0b' },
-    'call_resumed': { key: 'contactHistory.type.callResumed', fallback: 'Gesprek hervat', icon: '▶️', color: '#10b981' },
-    'recording_started': { key: 'contactHistory.type.recordingStarted', fallback: 'Opname gestart', icon: '🔴', color: '#dc2626' },
-
-    // ACW and follow-up
-    'acw_completed': { key: 'contactHistory.type.acwCompleted', fallback: 'Nabewerking voltooid', icon: '✅', color: '#10b981' },
-    'follow_up_scheduled': { key: 'contactHistory.type.followUpScheduled', fallback: 'Follow-up gepland', icon: '📅', color: '#8b5cf6' },
-
-    // Agent status
-    'agent_status_change': { key: 'contactHistory.type.agentStatusChange', fallback: 'Agent status gewijzigd', icon: '🔄', color: '#6b7280' },
-
-    // Subscription-related
-    'subscription_created': { key: 'contactHistory.type.subscriptionCreated', fallback: 'Abonnement aangemaakt', icon: '➕', color: '#10b981' },
-    'subscription_changed': { key: 'contactHistory.type.subscriptionChanged', fallback: 'Abonnement gewijzigd', icon: '✏️', color: '#3b82f6' },
-    'subscription_cancelled': { key: 'contactHistory.type.subscriptionCancelled', fallback: 'Abonnement opgezegd', icon: '❌', color: '#ef4444' },
-
-    // Article sales
-    'article_sold': { key: 'contactHistory.type.articleSold', fallback: 'Artikel verkocht', icon: '🛒', color: '#10b981' },
-
-    // Delivery
-    'magazine_resent': { key: 'contactHistory.type.magazineResent', fallback: 'Editie opnieuw verzonden', icon: '📬', color: '#3b82f6' },
-
-    // Default
-    'notification_success': { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '✅', color: '#10b981' },
-    'notification_info': { key: 'contactHistory.type.notification', fallback: 'Melding', icon: 'ℹ️', color: '#3b82f6' },
-    'notification_warning': { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '⚠️', color: '#f59e0b' },
-    'notification_error': { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '❗', color: '#ef4444' },
-    'default': { key: 'contactHistory.type.default', fallback: 'Contact', icon: '📝', color: '#6b7280' }
-};
-
-// Get Contact Type Display Info
-function getContactTypeInfo(type) {
-    const config = contactTypeLabelConfig[type] || contactTypeLabelConfig.default;
-    return {
-        label: translate(config.key, {}, config.fallback),
-        icon: config.icon,
-        color: config.color
-    };
+    invokeSliceMethod(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'displaySubscriptions');
 }
 
 // Display Contact History
 function displayContactHistory() {
-    const historyContainer = document.getElementById('contactHistory');
-
-    if (!historyContainer) {
-        return;
-    }
-
-    if (!currentCustomer || !Array.isArray(currentCustomer.contactHistory) || currentCustomer.contactHistory.length === 0) {
-        historyContainer.innerHTML = `<div class="empty-state-small"><p>${translate('contactHistory.none', {}, 'Geen contactgeschiedenis beschikbaar')}</p></div>`;
-        return;
-    }
-
-    const sortedHistory = [...currentCustomer.contactHistory].sort((a, b) =>
-        new Date(b.date) - new Date(a.date)
-    );
-
-    const totalItems = sortedHistory.length;
-    const itemsPerPage = contactHistoryState.itemsPerPage;
-    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-
-    if (contactHistoryState.currentPage > totalPages) {
-        contactHistoryState.currentPage = totalPages;
-    }
-
-    if (contactHistoryState.currentPage < 1) {
-        contactHistoryState.currentPage = 1;
-    }
-
-    const startIndex = (contactHistoryState.currentPage - 1) * itemsPerPage;
-    const pageItems = sortedHistory.slice(startIndex, startIndex + itemsPerPage);
-
-    const paginationMarkup = totalPages > 1
-        ? `
-        <div class="timeline-pagination">
-            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage === 1 ? 'disabled' : ''} data-action="change-contact-history-page" data-arg-new-page="${contactHistoryState.currentPage - 1}">← Vorige</button>
-            <span class="timeline-page-indicator">Pagina ${contactHistoryState.currentPage} van ${totalPages}</span>
-            <button type="button" class="timeline-nav-btn" ${contactHistoryState.currentPage >= totalPages ? 'disabled' : ''} data-action="change-contact-history-page" data-arg-new-page="${contactHistoryState.currentPage + 1}">Volgende →</button>
-        </div>
-        `
-        : '';
-
-    const timelineItems = pageItems.map((item, index) => {
-        const typeInfo = getContactTypeInfo(item.type);
-        const rawId = String(item.id ?? `${startIndex + index}`);
-        const sanitizedId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
-        const entryDomId = sanitizedId ? `ch-${sanitizedId}` : `ch-entry-${startIndex + index}`;
-        const isHighlighted = contactHistoryState.highlightId && String(contactHistoryState.highlightId) === String(item.id);
-        const highlightClass = isHighlighted ? ' timeline-item--highlight' : '';
-
-        const descriptionHtml = (item.description || '').replace(/\n/g, '<br>');
-
-        return `
-        <div class="timeline-item${highlightClass}" data-contact-id="${rawId}">
-            <div class="timeline-dot" style="background-color: ${typeInfo.color}"></div>
-            <div class="timeline-header" data-action="toggle-timeline-item" data-arg-entry-dom-id="${entryDomId}">
-                <span class="timeline-type" style="color: ${typeInfo.color}">
-                    ${typeInfo.icon} ${typeInfo.label}
-                </span>
-                <span class="timeline-expand expanded" id="expand-${entryDomId}">▼</span>
-                <span class="timeline-date">${formatDateTime(item.date)}</span>
-            </div>
-            <div class="timeline-content expanded" id="content-${entryDomId}">
-                ${descriptionHtml}
-            </div>
-        </div>
-        `;
-    }).join('');
-
-    historyContainer.innerHTML = `
-        ${paginationMarkup}
-        <div class="timeline-list">
-            ${timelineItems}
-        </div>
-        ${paginationMarkup}
-    `;
+    invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'displayContactHistory');
 }
 
 // Toggle Timeline Item (Accordion)
 function toggleTimelineItem(entryDomId) {
-    const content = document.getElementById(`content-${entryDomId}`);
-    const expand = document.getElementById(`expand-${entryDomId}`);
-
-    if (!content || !expand) {
-        return;
-    }
-
-    const isExpanded = content.classList.toggle('expanded');
-    expand.classList.toggle('expanded', isExpanded);
+    invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'toggleTimelineItem', [entryDomId]);
 }
 
 function changeContactHistoryPage(newPage) {
-    if (!currentCustomer) {
-        return;
-    }
-
-    const totalItems = currentCustomer.contactHistory ? currentCustomer.contactHistory.length : 0;
-    const totalPages = Math.max(1, Math.ceil(totalItems / contactHistoryState.itemsPerPage));
-    const targetPage = Math.min(Math.max(newPage, 1), totalPages);
-
-    if (targetPage === contactHistoryState.currentPage) {
-        return;
-    }
-
-    contactHistoryState.currentPage = targetPage;
-    displayContactHistory();
+    invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'changeContactHistoryPage', [newPage]);
 }
 
 // Format Date
 function formatDate(dateString) {
+    const formattedDate = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'formatDate', [dateString]);
+    if (typeof formattedDate === 'string') {
+        return formattedDate;
+    }
+
     const date = new Date(dateString);
     return date.toLocaleDateString(getDateLocaleForApp(), {
         day: '2-digit',
@@ -3926,6 +3637,11 @@ function formatDate(dateString) {
 
 // Format DateTime
 function formatDateTime(dateString) {
+    const formattedDateTime = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'formatDateTime', [dateString]);
+    if (typeof formattedDateTime === 'string') {
+        return formattedDateTime;
+    }
+
     const date = new Date(dateString);
     return date.toLocaleDateString(getDateLocaleForApp(), {
         day: '2-digit',
