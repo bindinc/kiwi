@@ -1284,7 +1284,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 data-i18n="indexHtml.text.bezorgvoorkeuren_bewerken_2cc5cb32">📦 Bezorgvoorkeuren bewerken</h2>
-                <button class="modal-close" onclick="closeEditRemarksModal()" data-i18n="indexHtml.text.times_87977e46">&times;</button>
+                <button class="modal-close" type="button" data-action="close-edit-delivery-remarks-modal" data-i18n="indexHtml.text.times_87977e46">&times;</button>
             </div>
             <div class="modal-body">
                 <p>Klant: <strong id="editRemarksCustomerName"></strong></p>
@@ -1335,8 +1335,8 @@
                           placeholder="Voer bezorginstructies in..." data-i18n-placeholder="indexHtml.placeholder.voer_bezorginstructies_in_444e08a0"></textarea>
                 
                 <div class="modal-actions">
-                    <button class="btn btn-secondary" onclick="closeEditRemarksModal()" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                    <button class="btn btn-primary" onclick="saveDeliveryRemarks()" data-i18n="indexHtml.text.opslaan_414388eb">
+                    <button class="btn btn-secondary" type="button" data-action="close-edit-delivery-remarks-modal" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                    <button class="btn btn-primary" type="button" data-action="save-delivery-remarks" data-i18n="indexHtml.text.opslaan_414388eb">
                         Opslaan
                     </button>
                 </div>
