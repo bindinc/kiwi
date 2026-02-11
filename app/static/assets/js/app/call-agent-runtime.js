@@ -1,7 +1,6 @@
 // Runtime extracted from app.js for call/queue/agent/disposition/debug domains.
 // This file is loaded as a classic script before app.js.
 
-const RUNTIME_COMPATIBILITY_BRIDGE_NAMESPACE = 'kiwiRuntimeCompatibilityBridge';
 const RUNTIME_COMPATIBILITY_METHOD_NAMES = new Set([
     'addContactMoment',
     'getDispositionCategories',
@@ -9,19 +8,8 @@ const RUNTIME_COMPATIBILITY_METHOD_NAMES = new Set([
     'showToast',
     'startCallSession'
 ]);
+const runtimeDependencies = {};
 const runtimeCompatibilityWarningByMethod = {};
-
-function getRuntimeCompatibilityGlobalScope() {
-    if (typeof window !== 'undefined') {
-        return window;
-    }
-
-    if (typeof globalThis !== 'undefined') {
-        return globalThis;
-    }
-
-    return null;
-}
 
 function resolveRuntimeCompatibilityMethod(methodName) {
     const isKnownMethod = RUNTIME_COMPATIBILITY_METHOD_NAMES.has(methodName);
@@ -29,25 +17,17 @@ function resolveRuntimeCompatibilityMethod(methodName) {
         return null;
     }
 
-    const globalScope = getRuntimeCompatibilityGlobalScope();
-    if (!globalScope) {
-        return null;
-    }
+    const dependencyMethod = runtimeDependencies[methodName];
+    return typeof dependencyMethod === 'function' ? dependencyMethod : null;
+}
 
-    const bridgeNamespace = globalScope[RUNTIME_COMPATIBILITY_BRIDGE_NAMESPACE];
-    const bridgeMethod = bridgeNamespace && typeof bridgeNamespace[methodName] === 'function'
-        ? bridgeNamespace[methodName]
-        : null;
-    if (bridgeMethod) {
-        return bridgeMethod.bind(bridgeNamespace);
+function configureRuntimeCompatibilityDependencies(dependencies = {}) {
+    for (const methodName of RUNTIME_COMPATIBILITY_METHOD_NAMES) {
+        const dependencyMethod = dependencies[methodName];
+        runtimeDependencies[methodName] = typeof dependencyMethod === 'function'
+            ? dependencyMethod
+            : null;
     }
-
-    const fallbackMethod = globalScope[methodName];
-    if (typeof fallbackMethod === 'function') {
-        return fallbackMethod.bind(globalScope);
-    }
-
-    return null;
 }
 
 function invokeRuntimeCompatibilityMethod(methodName, args = []) {
@@ -1666,6 +1646,7 @@ if (typeof window !== 'undefined') {
         applyAgentStatusLocally,
         autoSetAgentStatus,
         cancelDisposition,
+        configureDependencies: configureRuntimeCompatibilityDependencies,
         closeDebugModal,
         closeStatusMenu,
         debugClearQueue,
