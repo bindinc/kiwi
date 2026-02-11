@@ -1,4 +1,4 @@
-import i18n from './i18n/index.js';
+import i18n from './index.js';
 
 const ATTRIBUTE_BINDINGS = [
     { keyAttribute: 'data-i18n-placeholder', targetAttribute: 'placeholder' },
