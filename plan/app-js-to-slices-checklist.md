@@ -34,7 +34,7 @@
 
 | Item | Domain | Branch | PR | PR status | Merged into main | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Localization + static i18n + locale switching | `codex/migrate-localization-and-locale-switching-to-slice` | [#40](https://github.com/bindinc/kiwi/pull/40) | `in progress` | `no` |  |
+| 1 | Localization + static i18n + locale switching | `codex/migrate-localization-and-locale-switching-to-slice` | [#40](https://github.com/bindinc/kiwi/pull/40) | `merged` | `yes` |  |
 | 2 | Bootstrap + shared data init + persistence shell | `TBD` | `TBD` | `not started` | `no` |  |
 | 3 | Werfsleutel catalog + picker implementation | `TBD` | `TBD` | `not started` | `no` |  |
 | 4 | Subscription role forms + duplicate guard + person role selection | `TBD` | `TBD` | `not started` | `no` |  |
