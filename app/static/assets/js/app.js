@@ -1541,6 +1541,7 @@ function normalizePhone(value = '') {
 
 const CUSTOMER_DETAIL_SLICE_NAMESPACE = 'kiwiCustomerDetailSlice';
 const CONTACT_HISTORY_SLICE_NAMESPACE = 'kiwiContactHistorySlice';
+const WINBACK_SLICE_NAMESPACE = 'kiwiWinbackSlice';
 const CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER = 'kiwiGetCustomerDetailSliceDependencies';
 const ORDER_SLICE_NAMESPACE = 'kiwiOrderSlice';
 const ORDER_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetOrderSliceDependencies';
@@ -1776,789 +1777,120 @@ function formatDateTime(dateString) {
 
 // Cancel Subscription (triggers winback flow)
 function cancelSubscription(subId) {
-    const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
-    if (!subscription) return;
-    
-    // Store subscription ID for winback flow
-    window.cancellingSubscriptionId = subId;
-    showWinbackFlow();
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'cancelSubscription', [subId]);
 }
 
 // Start Winback Flow for an Ended Subscription
 function startWinbackForSubscription(subId) {
-    if (!currentCustomer) return;
-    
-    const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
-    if (!subscription) return;
-    
-    // Store subscription ID for winback flow
-    window.cancellingSubscriptionId = subId;
-    window.isWinbackForEndedSub = true;
-    showWinbackFlow();
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'startWinbackForSubscription', [subId]);
 }
 
 // Show Winback Flow
 function showWinbackFlow() {
-    if (!currentCustomer) {
-        showToast(translate('customer.selectFirst', {}, 'Selecteer eerst een klant'), 'error');
-        return;
-    }
-
-    // If no subscription is selected yet, use the first active subscription
-    if (!window.cancellingSubscriptionId && currentCustomer.subscriptions.length > 0) {
-        const activeSubscription = currentCustomer.subscriptions.find(s => s.status === 'active');
-        if (activeSubscription) {
-            window.cancellingSubscriptionId = activeSubscription.id;
-        } else if (currentCustomer.subscriptions.length > 0) {
-            window.cancellingSubscriptionId = currentCustomer.subscriptions[0].id;
-        }
-    }
-
-    // Reset winback flow
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1').style.display = 'block';
-    
-    document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
-    document.querySelector('[data-step="1"]').classList.add('active');
-
-    document.getElementById('winbackFlow').style.display = 'flex';
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showWinbackFlow');
 }
 
 // Winback Next Step
 async function winbackNextStep(stepNumber) {
-    // Validation
-    if (stepNumber === 2) {
-        const selectedReason = document.querySelector('input[name="cancelReason"]:checked');
-        if (!selectedReason) {
-            showToast(translate('subscription.selectReason', {}, 'Selecteer een reden'), 'error');
-            return;
-        }
-        
-        // Special handling for deceased
-        if (selectedReason.value === 'deceased') {
-            winbackHandleDeceased();
-            return;
-        }
-        
-        // Generate offers based on reason
-        await generateWinbackOffers(selectedReason.value);
-    }
-    
-    if (stepNumber === 3) {
-        if (!selectedOffer) {
-            showToast(translate('subscription.selectOffer', {}, 'Selecteer een aanbod'), 'error');
-            return;
-        }
-        
-        // Generate script for step 3
-        generateWinbackScript();
-    }
-
-    // Hide all steps
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    
-    // Show selected step
-    document.getElementById(`winbackStep${stepNumber}`).style.display = 'block';
-    
-    // Update step indicator
-    document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
-    document.querySelector(`[data-step="${stepNumber}"]`).classList.add('active');
+    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'winbackNextStep', [stepNumber]);
 }
 
 // Winback Previous Step
 function winbackPrevStep(stepNumber) {
-    if (stepNumber === '1b') {
-        document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-        document.getElementById('winbackStep1b').style.display = 'block';
-    } else if (typeof stepNumber === 'string') {
-        document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-        document.getElementById(`winbackStep${stepNumber}`).style.display = 'block';
-    } else {
-        winbackNextStep(stepNumber);
-    }
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'winbackPrevStep', [stepNumber]);
 }
 
 // Generate Winback Offers
 async function generateWinbackOffers(reason) {
-    if (!window.kiwiApi) {
-        showToast(translate('winback.offersUnavailable', {}, 'Winback-aanbiedingen via backend zijn niet beschikbaar'), 'error');
-        return;
-    }
-
-    let relevantOffers = [];
-    try {
-        const query = new URLSearchParams({ type: 'winback', reason: reason || 'other' }).toString();
-        const payload = await window.kiwiApi.get(`${offersApiUrl}?${query}`);
-        relevantOffers = payload && Array.isArray(payload.items) ? payload.items : [];
-    } catch (error) {
-        console.warn('Winback-aanbiedingen laden via backend mislukt.', error);
-        showToast(error.message || translate('winback.offersLoadFailed', {}, 'Winback-aanbiedingen laden mislukt'), 'error');
-        return;
-    }
-
-    if (!relevantOffers.length) {
-        showToast(translate('winback.offersNoneForReason', {}, 'Geen winback-aanbiedingen beschikbaar voor deze reden'), 'warning');
-    }
-
-    const offersContainer = document.getElementById('winbackOffers');
-    
-    offersContainer.innerHTML = relevantOffers.map(offer => {
-        const safeTitle = escapeHtml(String(offer.title || ''));
-        const safeDescription = escapeHtml(String(offer.description || ''));
-        return `
-        <div class="offer-card" data-action="select-offer" data-arg-offer-id="${offer.id}" data-arg-title="${safeTitle}" data-arg-description="${safeDescription}">
-            <div class="offer-title">${offer.title}</div>
-            <div class="offer-description">${offer.description}</div>
-            <div class="offer-discount">${offer.discount}</div>
-        </div>
-    `;
-    }).join('');
+    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'generateWinbackOffers', [reason]);
 }
 
 // Select Offer
 function selectOffer(offerId, title, description, domEvent) {
-    selectedOffer = { id: offerId, title, description };
-    
-    // Update UI
-    document.querySelectorAll('.offer-card').forEach(card => {
-        card.classList.remove('selected');
-    });
-    if (domEvent && domEvent.currentTarget) {
-        domEvent.currentTarget.classList.add('selected');
-    }
+    const selectedElement = domEvent && domEvent.currentTarget ? domEvent.currentTarget : domEvent;
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'selectOffer', [offerId, title, description, selectedElement]);
 }
 
 // Generate Winback Script
 function generateWinbackScript() {
-    if (!selectedOffer) return;
-    
-    const scriptElement = document.getElementById('winbackScript');
-    scriptElement.innerHTML = `
-        <strong>${translate('winback.offerScriptTitle', {}, 'Script voor aanbod presentatie:')}</strong><br><br>
-        "${translate('winback.offerScriptIntro', {}, 'Ik begrijp dat u het abonnement wilt opzeggen. We waarderen u als klant enorm en willen graag dat u blijft. Daarom wil ik u een speciaal aanbod doen:')}<br><br>
-        <strong>${selectedOffer.title}</strong><br>
-        ${selectedOffer.description}<br><br>
-        ${translate('winback.offerScriptQuestion', {}, 'Zou dit u helpen om het abonnement aan te houden?')}"
-    `;
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'generateWinbackScript');
 }
 
 // Handle Deceased Options - Show all subscriptions
 function winbackHandleDeceased() {
-    const activeSubscriptions = currentCustomer.subscriptions.filter(s => s.status === 'active');
-    
-    if (activeSubscriptions.length === 0) {
-        showToast(translate('subscription.noneActive', {}, 'Geen actieve abonnementen gevonden'), 'error');
-        return;
-    }
-    
-    // Update count
-    document.getElementById('deceasedSubCount').textContent = activeSubscriptions.length;
-    
-    // Generate subscription cards
-    const container = document.getElementById('deceasedSubscriptionsList');
-    container.innerHTML = activeSubscriptions.map(sub => `
-        <div class="deceased-subscription-card" data-sub-id="${sub.id}">
-            <div class="deceased-sub-header">
-                <h4>📰 ${sub.magazine}</h4>
-                <span class="sub-start-date">Start: ${formatDate(sub.startDate)}</span>
-            </div>
-            <div class="form-group">
-                <label>Actie voor dit abonnement:</label>
-                <div class="radio-group">
-                    <label class="radio-option">
-                        <input type="radio" name="action_${sub.id}" value="cancel_refund" required>
-                        <span>${translate('subscription.actionCancelWithRefund', {}, 'Opzeggen met restitutie')}</span>
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="action_${sub.id}" value="transfer" required>
-                        <span>${translate('subscription.actionTransferToOther', {}, 'Overzetten op andere persoon')}</span>
-                    </label>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1b').style.display = 'block';
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'winbackHandleDeceased');
 }
 
 // Process Deceased Subscriptions
 function processDeceasedSubscriptions() {
-    const activeSubscriptions = currentCustomer.subscriptions.filter(s => s.status === 'active');
-    const subscriptionActions = [];
-    
-    // Collect all actions
-    for (const sub of activeSubscriptions) {
-        const selectedAction = document.querySelector(`input[name="action_${sub.id}"]:checked`);
-        if (!selectedAction) {
-            showToast(
-                translate('subscription.selectAction', { magazine: sub.magazine }, `Selecteer een actie voor ${sub.magazine}`),
-                'error'
-            );
-            return;
-        }
-        subscriptionActions.push({
-            subscription: sub,
-            action: selectedAction.value
-        });
-    }
-    
-    // Store for later processing
-    window.deceasedSubscriptionActions = subscriptionActions;
-    
-    // Check if we need transfer form (if any subscription needs transfer)
-    const needsTransfer = subscriptionActions.some(sa => sa.action === 'transfer');
-    const needsRefund = subscriptionActions.some(sa => sa.action === 'cancel_refund');
-    
-    if (needsTransfer && needsRefund) {
-        // Both actions needed, show combined form
-        showDeceasedCombinedForm();
-    } else if (needsTransfer) {
-        // Only transfer
-        showDeceasedTransferForm();
-    } else {
-        // Only refund
-        showDeceasedRefundForm();
-    }
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'processDeceasedSubscriptions');
 }
 
 // Show Deceased Refund Form
 function showDeceasedRefundForm() {
-    const refundSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'cancel_refund');
-    
-    const listHtml = `
-        <p><strong>Op te zeggen abonnementen:</strong></p>
-        <ul>
-            ${refundSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
-        </ul>
-    `;
-    document.getElementById('refundSubscriptionsList').innerHTML = listHtml;
-    
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1c').style.display = 'block';
-    
-    // Pre-fill email placeholder
-    const refundEmailInput = document.getElementById('refundEmail');
-    if (currentCustomer.email) {
-        refundEmailInput.placeholder = `Bijv. ${currentCustomer.email} of ander e-mailadres`;
-    }
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showDeceasedRefundForm');
 }
 
 // Show Deceased Transfer Form
 function showDeceasedTransferForm() {
-    const transferSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'transfer');
-    
-    const listHtml = `
-        <p><strong>Over te zetten abonnementen:</strong></p>
-        <ul>
-            ${transferSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
-        </ul>
-    `;
-    document.getElementById('transferSubscriptionsList').innerHTML = listHtml;
-    
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1d').style.display = 'block';
-    
-    // Render unified customer form
-    renderCustomerForm('transferCustomerForm', 'transfer', {
-        phoneRequired: true,
-        emailRequired: true,
-        showSameAddressCheckbox: true
-    });
-    
-    // Setup same address functionality
-    const checkbox = document.getElementById('transferSameAddress');
-    checkbox.addEventListener('change', function() {
-        if (this.checked && currentCustomer) {
-            setCustomerFormData('transfer', {
-                postalCode: currentCustomer.postalCode,
-                houseNumber: currentCustomer.houseNumber,
-                address: currentCustomer.address,
-                city: currentCustomer.city
-            });
-        }
-    });
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showDeceasedTransferForm');
 }
 
 // Show Deceased Combined Form
 function showDeceasedCombinedForm() {
-    const transferSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'transfer');
-    const refundSubs = window.deceasedSubscriptionActions.filter(sa => sa.action === 'cancel_refund');
-    
-    const transferListHtml = `
-        <p><strong>Over te zetten abonnementen:</strong></p>
-        <ul>
-            ${transferSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
-        </ul>
-    `;
-    document.getElementById('combinedTransferList').innerHTML = transferListHtml;
-    
-    const refundListHtml = `
-        <p><strong>Op te zeggen abonnementen:</strong></p>
-        <ul>
-            ${refundSubs.map(sa => `<li>📰 ${sa.subscription.magazine}</li>`).join('')}
-        </ul>
-    `;
-    document.getElementById('combinedRefundList').innerHTML = refundListHtml;
-    
-    document.querySelectorAll('.winback-step').forEach(step => step.style.display = 'none');
-    document.getElementById('winbackStep1e').style.display = 'block';
-    
-    // Render unified customer form
-    renderCustomerForm('transfer2CustomerForm', 'transfer2', {
-        phoneRequired: true,
-        emailRequired: true,
-        showSameAddressCheckbox: true
-    });
-    
-    // Setup same address functionality
-    const checkbox = document.getElementById('transfer2SameAddress');
-    checkbox.addEventListener('change', function() {
-        if (this.checked && currentCustomer) {
-            setCustomerFormData('transfer2', {
-                postalCode: currentCustomer.postalCode,
-                houseNumber: currentCustomer.houseNumber,
-                address: currentCustomer.address,
-                city: currentCustomer.city
-            });
-        }
-    });
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showDeceasedCombinedForm');
 }
-
-// Legacy functions removed - now using renderCustomerForm() with unified component
 
 // Revert Restitution - Transfer subscription to another person (deceased cannot have active subscriptions)
 function revertRestitution(subscriptionId) {
-    const subscription = currentCustomer.subscriptions.find(s => s.id === subscriptionId);
-    if (!subscription || subscription.status !== 'restituted') {
-        showToast(translate('subscription.notFoundOrRefund', {}, 'Abonnement niet gevonden of niet gerestitueerd'), 'error');
-        return;
-    }
-    
-    // Store the subscription ID for the transfer form
-    window.restitutionRevertSubId = subscriptionId;
-    
-    // Open transfer form
-    showRestitutionTransferForm(subscription);
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'revertRestitution', [subscriptionId]);
 }
 
 // Show Transfer Form for Restitution Revert
 function showRestitutionTransferForm(subscription) {
-    // Open the transfer form modal
-    document.getElementById('restitutionTransferForm').style.display = 'flex';
-    
-    // Update form title
-    document.getElementById('restitutionTransferTitle').textContent = translate(
-        'subscription.transferTitleWithMagazine',
-        { magazine: subscription.magazine },
-        `${subscription.magazine} Overzetten`
-    );
-    
-    // Pre-fill same address checkbox as checked by default
-    document.getElementById('restitutionTransferSameAddress').checked = true;
-    toggleRestitutionTransferAddress();
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showRestitutionTransferForm', [subscription]);
 }
 
 // Toggle Address Fields for Restitution Transfer
 function toggleRestitutionTransferAddress() {
-    const sameAddress = document.getElementById('restitutionTransferSameAddress').checked;
-    const addressFields = document.getElementById('restitutionTransferAddressFields');
-    
-    if (sameAddress) {
-        addressFields.style.display = 'none';
-        // Remove required attribute
-        document.getElementById('restitutionTransferPostalCode').removeAttribute('required');
-        document.getElementById('restitutionTransferHouseNumber').removeAttribute('required');
-        document.getElementById('restitutionTransferAddress').removeAttribute('required');
-        document.getElementById('restitutionTransferCity').removeAttribute('required');
-    } else {
-        addressFields.style.display = 'block';
-        // Add required attribute
-        document.getElementById('restitutionTransferPostalCode').setAttribute('required', 'required');
-        document.getElementById('restitutionTransferHouseNumber').setAttribute('required', 'required');
-        document.getElementById('restitutionTransferAddress').setAttribute('required', 'required');
-        document.getElementById('restitutionTransferCity').setAttribute('required', 'required');
-    }
+    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'toggleRestitutionTransferAddress');
 }
 
 // Complete Restitution Transfer
 async function completeRestitutionTransfer(event) {
-    event.preventDefault();
-    
-    const subscriptionId = window.restitutionRevertSubId;
-    const subscription = currentCustomer.subscriptions.find(s => s.id === subscriptionId);
-    
-    if (!subscription) {
-        showToast(translate('subscription.notFound', {}, 'Abonnement niet gevonden'), 'error');
-        return;
-    }
-    
-    // Get form data
-    const sameAddress = document.getElementById('restitutionTransferSameAddress').checked;
-    const transferData = {
-        salutation: document.getElementById('restitutionTransferSalutation').value,
-        firstName: document.getElementById('restitutionTransferFirstName').value.trim(),
-        middleName: document.getElementById('restitutionTransferMiddleName').value.trim(),
-        lastName: document.getElementById('restitutionTransferLastName').value.trim(),
-        email: document.getElementById('restitutionTransferEmail').value.trim(),
-        phone: document.getElementById('restitutionTransferPhone').value.trim(),
-        postalCode: sameAddress ? currentCustomer.postalCode : document.getElementById('restitutionTransferPostalCode').value.trim(),
-        houseNumber: sameAddress ? currentCustomer.houseNumber : document.getElementById('restitutionTransferHouseNumber').value.trim(),
-        address: sameAddress ? currentCustomer.address : document.getElementById('restitutionTransferAddress').value.trim(),
-        city: sameAddress ? currentCustomer.city : document.getElementById('restitutionTransferCity').value.trim()
-    };
-    
-    // Validate
-    if (!transferData.firstName || !transferData.lastName || !transferData.email || !transferData.phone) {
-        showToast(translate('forms.required', {}, 'Vul alle verplichte velden in'), 'error');
-        return;
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(transferData.email)) {
-        showToast(translate('forms.invalidEmail', {}, 'Voer een geldig e-mailadres in'), 'error');
-        return;
-    }
-    
-    // Add contact history entry
-    const newCustomerName = transferData.middleName 
-        ? `${transferData.salutation} ${transferData.firstName} ${transferData.middleName} ${transferData.lastName}`
-        : `${transferData.salutation} ${transferData.firstName} ${transferData.lastName}`;
-
-    if (window.kiwiApi) {
-        try {
-            await window.kiwiApi.post(
-                `${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}/restitution-transfer`,
-                { transferData }
-            );
-        } catch (error) {
-            showToast(error.message || translate('subscription.transferFailed', {}, 'Overzetten via backend mislukt'), 'error');
-            return;
-        }
-    } else {
-        subscription.status = 'transferred';
-        subscription.transferredTo = {
-            ...transferData,
-            transferDate: new Date().toISOString()
-        };
-        delete subscription.refundInfo;
-
-        pushContactHistory(
-            currentCustomer,
-            {
-                type: 'Restitutie Ongedaan - Abonnement Overgezet',
-                description: `Restitutie van ${subscription.magazine} ongedaan gemaakt. Abonnement overgezet naar ${newCustomerName} (${transferData.email}) op ${transferData.address}, ${transferData.postalCode} ${transferData.city}.`
-            },
-            { highlight: true, persist: false }
-        );
-
-        saveCustomers();
-    }
-    
-    // Close form
-    closeForm('restitutionTransferForm');
-    
-    // Refresh display
-    await selectCustomer(currentCustomer.id);
-    
-    showToast(
-        translate('subscription.transferred', { magazine: subscription.magazine, name: newCustomerName }, `${subscription.magazine} overgezet naar ${newCustomerName}`),
-        'success'
-    );
-    
-    // Clear stored subscription ID
-    window.restitutionRevertSubId = null;
+    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'completeRestitutionTransfer', [event]);
 }
 
 // Complete All Deceased Actions
 async function completeAllDeceasedActions() {
-    // Determine which form is active
-    const step1c = document.getElementById('winbackStep1c');
-    const step1d = document.getElementById('winbackStep1d');
-    const step1e = document.getElementById('winbackStep1e');
-    
-    let transferData = null;
-    let refundData = null;
-    
-    // Get the active form and extract data
-    if (step1e.style.display !== 'none') {
-        // Combined form
-        transferData = getTransferDataFromForm(2);
-        refundData = getRefundDataFromForm(2);
-    } else if (step1d.style.display !== 'none') {
-        // Only transfer
-        transferData = getTransferDataFromForm(1);
-    } else if (step1c.style.display !== 'none') {
-        // Only refund
-        refundData = getRefundDataFromForm(1);
-    }
-
-    // Validate transfer data if needed
-    const transferActions = window.deceasedSubscriptionActions.filter(sa => sa.action === 'transfer');
-    if (transferActions.length > 0 && transferData === null) {
-        return;
-    }
-
-    if (transferActions.length > 0 && transferData) {
-        if (!validateTransferData(transferData)) {
-            return; // Validation error already shown
-        }
-    }
-    
-    // Validate refund data if needed
-    const refundActions = window.deceasedSubscriptionActions.filter(sa => sa.action === 'cancel_refund');
-    if (refundActions.length > 0 && refundData) {
-        if (!validateRefundData(refundData)) {
-            return; // Validation error already shown
-        }
-    }
-    
-    const processedMagazines = [];
-    const actionsPayload = [];
-
-    for (const action of transferActions) {
-        processedMagazines.push(`${action.subscription.magazine} (overgezet)`);
-        actionsPayload.push({
-            subscriptionId: action.subscription.id,
-            action: 'transfer',
-            transferData
-        });
-    }
-
-    for (const action of refundActions) {
-        processedMagazines.push(`${action.subscription.magazine} (gerestitueerd)`);
-        actionsPayload.push({
-            subscriptionId: action.subscription.id,
-            action: 'cancel_refund',
-            refundData
-        });
-    }
-    
-    // Create contact history entry
-    let historyDescription = `Abonnementen verwerkt i.v.m. overlijden:\n`;
-    
-    if (transferActions.length > 0) {
-        const newCustomerName = transferData.middleName 
-            ? `${transferData.salutation} ${transferData.firstName} ${transferData.middleName} ${transferData.lastName}`
-            : `${transferData.salutation} ${transferData.firstName} ${transferData.lastName}`;
-        historyDescription += `\nOvergezet naar ${newCustomerName} (${transferData.email}):\n`;
-        historyDescription += transferActions.map(a => `- ${a.subscription.magazine}`).join('\n');
-    }
-    
-    if (refundActions.length > 0) {
-        historyDescription += `\n\nOpgezegd met restitutie naar ${refundData.email}:\n`;
-        historyDescription += refundActions.map(a => `- ${a.subscription.magazine}`).join('\n');
-        if (refundData.notes) {
-            historyDescription += `\nNotities: ${refundData.notes}`;
-        }
-    }
-    
-    if (window.kiwiApi) {
-        try {
-            await window.kiwiApi.post(`${subscriptionsApiUrl}/${currentCustomer.id}/deceased-actions`, {
-                actions: actionsPayload
-            });
-        } catch (error) {
-            showToast(error.message || translate('subscription.deceasedProcessFailed', {}, 'Verwerken overlijden via backend mislukt'), 'error');
-            return;
-        }
-    } else {
-        // Process all actions locally
-        for (const action of transferActions) {
-            action.subscription.transferredTo = {
-                ...transferData,
-                transferDate: new Date().toISOString()
-            };
-            action.subscription.status = 'transferred';
-        }
-
-        for (const action of refundActions) {
-            action.subscription.status = 'restituted';
-            action.subscription.endDate = new Date().toISOString();
-            action.subscription.refundInfo = {
-                email: refundData.email,
-                notes: refundData.notes,
-                refundDate: new Date().toISOString()
-            };
-        }
-
-        pushContactHistory(
-            currentCustomer,
-            {
-                type: 'Overlijden - Meerdere Abonnementen',
-                description: historyDescription
-            },
-            { highlight: true, persist: false }
-        );
-
-        saveCustomers();
-    }
-
-    closeForm('winbackFlow');
-    
-    // Refresh display
-    await selectCustomer(currentCustomer.id);
-    
-    showToast(
-        translate(
-            'subscription.processed',
-            { count: processedMagazines.length },
-            `${processedMagazines.length} abonnement(en) verwerkt. Bevestigingen worden verstuurd.`
-        ),
-        'success'
-    );
-    
-    // Reset
-    window.deceasedSubscriptionActions = null;
+    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'completeAllDeceasedActions');
 }
 
 // Get Transfer Data from Form (using unified customer form component)
 function getTransferDataFromForm(formVersion) {
-    const prefix = formVersion === 2 ? 'transfer2' : 'transfer';
-    const data = getCustomerFormData(prefix);
-    const birthday = ensureBirthdayValue(prefix, false);
-
-    if (birthday === null) {
-        return null;
-    }
-
-    const sameAddress = document.getElementById(`${prefix}SameAddress`)?.checked || false;
-
-    // If same address is checked, override with current customer address
-    if (sameAddress && currentCustomer) {
-        data.postalCode = currentCustomer.postalCode;
-        data.houseNumber = currentCustomer.houseNumber;
-        data.address = currentCustomer.address;
-        data.city = currentCustomer.city;
-    }
-    
-    // Convert initials to firstName for compatibility
-    return {
-        salutation: data.salutation,
-        firstName: data.initials,
-        middleName: data.middleName,
-        lastName: data.lastName,
-        birthday: birthday,
-        email: data.email,
-        phone: data.phone,
-        postalCode: data.postalCode,
-        houseNumber: data.houseNumber,
-        address: data.address,
-        city: data.city
-    };
+    return invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'getTransferDataFromForm', [formVersion]);
 }
 
 // Get Refund Data from Form
 function getRefundDataFromForm(formVersion) {
-    const suffix = formVersion === 2 ? '2' : '';
-    return {
-        email: document.getElementById(`refundEmail${suffix}`).value.trim(),
-        notes: document.getElementById(`refundNotes${suffix}`).value.trim()
-    };
+    return invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'getRefundDataFromForm', [formVersion]);
 }
 
 // Validate Transfer Data
 function validateTransferData(data) {
-    if (!data.firstName || !data.lastName || !data.email || !data.phone || !data.birthday) {
-        showToast(translate('forms.newSubscriberRequired', {}, 'Vul alle verplichte velden in voor de nieuwe abonnee'), 'error');
-        return false;
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-        showToast(translate('forms.newSubscriberInvalidEmail', {}, 'Voer een geldig e-mailadres in voor de nieuwe abonnee'), 'error');
-        return false;
-    }
-    
-    if (!data.postalCode || !data.houseNumber || !data.address || !data.city) {
-        showToast(translate('forms.newSubscriberAddressMissing', {}, 'Vul alle adresvelden in voor de nieuwe abonnee'), 'error');
-        return false;
-    }
-    
-    return true;
+    const result = invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'validateTransferData', [data]);
+    return result === true;
 }
 
 // Validate Refund Data
 function validateRefundData(data) {
-    if (!data.email) {
-        showToast(translate('forms.refundEmailMissing', {}, 'Voer een e-mailadres in voor de restitutiebevestiging'), 'error');
-        return false;
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-        showToast(translate('forms.refundEmailInvalid', {}, 'Voer een geldig e-mailadres in voor de restitutie'), 'error');
-        return false;
-    }
-    
-    return true;
+    const result = invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'validateRefundData', [data]);
+    return result === true;
 }
-
-
 
 // Complete Winback
 async function completeWinback() {
-    const result = document.querySelector('input[name="winbackResult"]:checked');
-    
-    if (!result) {
-        showToast(translate('winback.selectOutcome', {}, 'Selecteer een resultaat'), 'error');
-        return;
-    }
-
-    const subId = window.cancellingSubscriptionId;
-    const subscription = currentCustomer.subscriptions.find(s => s.id === subId);
-    
-    if (window.kiwiApi) {
-        try {
-            await window.kiwiApi.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subId}`, {
-                result: result.value,
-                offer: selectedOffer
-            });
-        } catch (error) {
-            showToast(error.message || translate('winback.saveFailed', {}, 'Winback opslaan via backend mislukt'), 'error');
-            return;
-        }
-    } else if (result.value === 'accepted') {
-        // Customer accepted offer
-        pushContactHistory(
-            currentCustomer,
-            {
-                type: 'Winback succesvol',
-                description: `Klant accepteerde winback aanbod: ${selectedOffer.title}. Abonnement ${subscription.magazine} blijft actief.`
-            },
-            { highlight: true, persist: false }
-        );
-    } else {
-        // Customer declined, cancel subscription
-        currentCustomer.subscriptions = currentCustomer.subscriptions.filter(s => s.id !== subId);
-
-        pushContactHistory(
-            currentCustomer,
-            {
-                type: 'Abonnement opgezegd',
-                description: `Klant heeft abonnement ${subscription.magazine} opgezegd na winback poging.`
-            },
-            { highlight: true, persist: false }
-        );
-    }
-
-    if (!window.kiwiApi) {
-        saveCustomers();
-    }
-    closeForm('winbackFlow');
-    
-    // Refresh display
-    await selectCustomer(currentCustomer.id);
-
-    if (result.value === 'accepted') {
-        showToast(translate('winback.success', {}, 'Winback succesvol! Klant blijft abonnee.'), 'success');
-    } else {
-        showToast(translate('subscription.cancelled', {}, 'Abonnement opgezegd'), 'error');
-    }
-    
-    // Reset
-    selectedOffer = null;
-    window.cancellingSubscriptionId = null;
+    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'completeWinback');
 }
 
 // ========== ARTICLE SALES FUNCTIONS ==========
