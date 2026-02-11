@@ -1,55 +1,86 @@
+const kiwiBootstrapSlice = (typeof window !== 'undefined' && window.kiwiBootstrapSlice)
+    ? window.kiwiBootstrapSlice
+    : null;
+
+const initialAppDataState = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.createInitialAppDataState === 'function'
+    ? kiwiBootstrapSlice.createInitialAppDataState()
+    : {
+        customers: [],
+        currentCustomer: null,
+        selectedOffer: null,
+        searchState: {
+            results: [],
+            currentPage: 1,
+            itemsPerPage: 20,
+            sortBy: 'name',
+            sortOrder: 'asc'
+        },
+        contactHistoryState: {
+            currentPage: 1,
+            itemsPerPage: 6,
+            highlightId: null,
+            lastEntry: null
+        },
+        contactHistoryHighlightTimer: null,
+        bootstrapState: null
+    };
+
 // Sample Data Storage
-let customers = [];
-let currentCustomer = null;
-let selectedOffer = null;
+let customers = initialAppDataState.customers;
+let currentCustomer = initialAppDataState.currentCustomer;
+let selectedOffer = initialAppDataState.selectedOffer;
 
 // Search State Management (for pagination)
-let searchState = {
-    results: [],
-    currentPage: 1,
-    itemsPerPage: 20,
-    sortBy: 'name',
-    sortOrder: 'asc'
-};
+let searchState = initialAppDataState.searchState;
 
-const contactHistoryState = {
-    currentPage: 1,
-    itemsPerPage: 6,
-    highlightId: null,
-    lastEntry: null
-};
+const contactHistoryState = initialAppDataState.contactHistoryState;
 
-let contactHistoryHighlightTimer = null;
+let contactHistoryHighlightTimer = initialAppDataState.contactHistoryHighlightTimer;
 
-const bootstrapApiUrl = '/api/v1/bootstrap';
-const offersApiUrl = '/api/v1/catalog/offers';
-const personsStateApiUrl = '/api/v1/persons/state';
-const personsApiUrl = '/api/v1/persons';
-const subscriptionsApiUrl = '/api/v1/subscriptions';
-const workflowsApiUrl = '/api/v1/workflows';
-const callQueueApiUrl = '/api/v1/call-queue';
-const callSessionApiUrl = '/api/v1/call-session';
-const debugResetApiUrl = '/api/v1/debug/reset-poc-state';
-const agentStatusApiUrl = '/api/v1/agent-status';
+const apiEndpoints = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.getApiEndpoints === 'function'
+    ? kiwiBootstrapSlice.getApiEndpoints()
+    : {
+        bootstrapApiUrl: '/api/v1/bootstrap',
+        offersApiUrl: '/api/v1/catalog/offers',
+        personsStateApiUrl: '/api/v1/persons/state',
+        personsApiUrl: '/api/v1/persons',
+        subscriptionsApiUrl: '/api/v1/subscriptions',
+        workflowsApiUrl: '/api/v1/workflows',
+        callQueueApiUrl: '/api/v1/call-queue',
+        callSessionApiUrl: '/api/v1/call-session',
+        debugResetApiUrl: '/api/v1/debug/reset-poc-state',
+        agentStatusApiUrl: '/api/v1/agent-status'
+    };
 
-let bootstrapState = null;
+const bootstrapApiUrl = apiEndpoints.bootstrapApiUrl;
+const offersApiUrl = apiEndpoints.offersApiUrl;
+const personsStateApiUrl = apiEndpoints.personsStateApiUrl;
+const personsApiUrl = apiEndpoints.personsApiUrl;
+const subscriptionsApiUrl = apiEndpoints.subscriptionsApiUrl;
+const workflowsApiUrl = apiEndpoints.workflowsApiUrl;
+const callQueueApiUrl = apiEndpoints.callQueueApiUrl;
+const callSessionApiUrl = apiEndpoints.callSessionApiUrl;
+const debugResetApiUrl = apiEndpoints.debugResetApiUrl;
+const agentStatusApiUrl = apiEndpoints.agentStatusApiUrl;
+
+let bootstrapState = initialAppDataState.bootstrapState;
 
 function upsertCustomerInCache(customer) {
-    if (!customer || typeof customer !== 'object' || customer.id === undefined || customer.id === null) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.upsertCustomerInCache === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
 
-    const customerId = Number(customer.id);
-    const existingIndex = customers.findIndex((entry) => Number(entry.id) === customerId);
-    if (existingIndex >= 0) {
-        customers[existingIndex] = customer;
-    } else {
-        customers.push(customer);
-    }
-
-    if (currentCustomer && Number(currentCustomer.id) === customerId) {
-        currentCustomer = customer;
-    }
+    kiwiBootstrapSlice.upsertCustomerInCache(customer, {
+        customers,
+        currentCustomer,
+        setCustomers(nextCustomers) {
+            customers = nextCustomers;
+        },
+        setCurrentCustomer(nextCustomer) {
+            currentCustomer = nextCustomer;
+        }
+    });
 }
 
 // Phase 1A: Call Session State Management
@@ -71,6 +102,23 @@ let callSession = {
 
 // Last completed call session data (for ACW/disposition)
 let lastCallSession = null;
+
+if (typeof window !== 'undefined') {
+    window.kiwiLegacyCustomerSearchBridge = {
+        getCustomers() {
+            return customers;
+        },
+        getCurrentCustomer() {
+            return currentCustomer;
+        },
+        setCurrentCustomer(customer) {
+            currentCustomer = customer;
+        },
+        getCallSession() {
+            return callSession;
+        }
+    };
+}
 
 // Phase 1B: Agent Status State Management
 let agentStatus = {
@@ -175,6 +223,67 @@ let werfsleutelCatalogSyncPromise = null;
 let werfsleutelCatalogSyncedAt = 0;
 
 let werfsleutelChannels = {};
+
+function getWerfsleutelSliceApi() {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const sliceApi = window.kiwiWerfsleutelSlice;
+    if (!sliceApi || typeof sliceApi !== 'object') {
+        return null;
+    }
+
+    return sliceApi;
+}
+
+function syncWerfsleutelCatalogMetadataIntoSlice(options = {}) {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canSyncCatalogMetadata = werfsleutelSliceApi && typeof werfsleutelSliceApi.setCatalogMetadata === 'function';
+    if (!canSyncCatalogMetadata) {
+        return;
+    }
+
+    const channels = options.channels && typeof options.channels === 'object'
+        ? options.channels
+        : {};
+    const catalog = Array.isArray(options.catalog) ? options.catalog : undefined;
+
+    werfsleutelSliceApi.setCatalogMetadata({
+        channels,
+        catalog
+    });
+}
+
+function getSelectedWerfsleutelState() {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canReadSelection = werfsleutelSliceApi && typeof werfsleutelSliceApi.getSelection === 'function';
+    if (canReadSelection) {
+        const sliceSelection = werfsleutelSliceApi.getSelection();
+        return {
+            selectedKey: sliceSelection?.selectedKey || null,
+            selectedChannel: sliceSelection?.selectedChannel || null,
+            selectedChannelMeta: sliceSelection?.selectedChannelMeta || null
+        };
+    }
+
+    const selectedChannel = werfsleutelState.selectedChannel;
+    return {
+        selectedKey: werfsleutelState.selectedKey,
+        selectedChannel,
+        selectedChannelMeta: selectedChannel ? (werfsleutelChannels[selectedChannel] || null) : null
+    };
+}
+
+function getWerfsleutelOfferDetailsFromActiveSlice(selectedWerfsleutelKey) {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canComputeOfferDetails = werfsleutelSliceApi && typeof werfsleutelSliceApi.getOfferDetails === 'function';
+    if (canComputeOfferDetails) {
+        return werfsleutelSliceApi.getOfferDetails(selectedWerfsleutelKey);
+    }
+
+    return getWerfsleutelOfferDetails(selectedWerfsleutelKey);
+}
 
 const werfsleutelState = {
     selectedKey: null,
@@ -1077,1505 +1186,8 @@ function endSession() {
     console.log('Session ended - Ready for next customer');
 }
 
-// ============================================================================
-// Birthday helpers (shared across NAW forms)
-// ============================================================================
+// Subscription role helpers moved to app/subscription-role-runtime.js.
 
-const BIRTHDAY_MONTHS = [
-    { value: '01', label: 'Januari' },
-    { value: '02', label: 'Februari' },
-    { value: '03', label: 'Maart' },
-    { value: '04', label: 'April' },
-    { value: '05', label: 'Mei' },
-    { value: '06', label: 'Juni' },
-    { value: '07', label: 'Juli' },
-    { value: '08', label: 'Augustus' },
-    { value: '09', label: 'September' },
-    { value: '10', label: 'Oktober' },
-    { value: '11', label: 'November' },
-    { value: '12', label: 'December' }
-];
-
-function populateBirthdayFields(prefix) {
-    const daySelect = document.getElementById(`${prefix}BirthdayDay`);
-    const monthSelect = document.getElementById(`${prefix}BirthdayMonth`);
-    const yearSelect = document.getElementById(`${prefix}BirthdayYear`);
-
-    if (!daySelect || !monthSelect || !yearSelect) return;
-
-    // Populate Days
-    if (daySelect.options.length <= 1) {
-        for (let i = 1; i <= 31; i++) {
-            const day = String(i).padStart(2, '0');
-            const option = document.createElement('option');
-            option.value = day;
-            option.textContent = i;
-            daySelect.appendChild(option);
-        }
-    }
-
-    // Populate Months
-    if (monthSelect.options.length <= 1) {
-        BIRTHDAY_MONTHS.forEach(month => {
-            const option = document.createElement('option');
-            option.value = month.value;
-            option.textContent = month.label;
-            monthSelect.appendChild(option);
-        });
-    }
-
-    // Populate Years
-    if (yearSelect.options.length <= 1) {
-        const currentYear = new Date().getFullYear();
-        const startYear = currentYear - 120;
-        for (let year = currentYear; year >= startYear; year--) {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            yearSelect.appendChild(option);
-        }
-    }
-}
-
-function buildBirthdayValue(prefix) {
-    const day = document.getElementById(`${prefix}BirthdayDay`)?.value;
-    const month = document.getElementById(`${prefix}BirthdayMonth`)?.value;
-    const year = document.getElementById(`${prefix}BirthdayYear`)?.value;
-
-    // If all empty, return empty string (valid, but empty)
-    if (!day && !month && !year) return '';
-
-    // If any is missing, return null (invalid)
-    if (!day || !month || !year) return null;
-
-    // Validate date
-    const date = new Date(`${year}-${month}-${day}`);
-    if (isNaN(date.getTime()) || date.getDate() !== parseInt(day) || date.getMonth() + 1 !== parseInt(month)) {
-        return null; // Invalid date (e.g. 31 Feb)
-    }
-
-    return `${year}-${month}-${day}`;
-}
-
-function ensureBirthdayValue(prefix, required = false) {
-    const birthday = buildBirthdayValue(prefix);
-
-    if (birthday === null) {
-         showToast(translate('forms.invalidBirthday', {}, 'Voer een geldige geboortedatum in'), 'error');
-         return null;
-    }
-
-    if (!birthday && required) {
-        showToast(translate('forms.invalidBirthday', {}, 'Voer een geldige geboortedatum in'), 'error');
-        return null;
-    }
-
-    return birthday || '';
-}
-
-function setBirthdayFields(prefix, birthday) {
-    const daySelect = document.getElementById(`${prefix}BirthdayDay`);
-    const monthSelect = document.getElementById(`${prefix}BirthdayMonth`);
-    const yearSelect = document.getElementById(`${prefix}BirthdayYear`);
-
-    if (!daySelect || !monthSelect || !yearSelect) return;
-
-    if (!birthday) {
-        daySelect.value = '';
-        monthSelect.value = '';
-        yearSelect.value = '';
-        return;
-    }
-
-    const [year, month, day] = birthday.split('-');
-    if (year && month && day) {
-        yearSelect.value = year;
-        monthSelect.value = month;
-        daySelect.value = day;
-    }
-}
-
-// ============================================================================
-// DRY: Reusable Customer Data Form Component
-// ============================================================================
-
-/**
- * Renders a unified customer data form into a container
- * @param {string} containerId - ID of the container element
- * @param {string} prefix - Prefix for all form field IDs (e.g., 'sub', 'article', 'transfer')
- * @param {object} config - Configuration options
- * @param {boolean} config.includePhone - Include phone field (default: true)
- * @param {boolean} config.includeEmail - Include email field (default: true)
- * @param {boolean} config.phoneRequired - Make phone required (default: false)
- * @param {boolean} config.emailRequired - Make email required (default: true)
- * @param {boolean} config.showSameAddressCheckbox - Show "same address" checkbox (default: false)
- */
-function renderCustomerForm(containerId, prefix, config = {}) {
-    const defaults = {
-        includePhone: true,
-        includeEmail: true,
-        phoneRequired: false,
-        emailRequired: true,
-        showSameAddressCheckbox: false
-    };
-    const cfg = { ...defaults, ...config };
-    const phonePlaceholderBase = translate('forms.phonePlaceholder', {}, 'Telefoonnummer');
-    const emailPlaceholderBase = translate('forms.emailPlaceholder', {}, 'E-mailadres');
-    const phonePlaceholder = `${phonePlaceholderBase}${cfg.phoneRequired ? '*' : ''}`;
-    const emailPlaceholder = `${emailPlaceholderBase}${cfg.emailRequired ? '*' : ''}`;
-
-    const html = `
-        <h3 class="form-subtitle">${translate('forms.salutationLabel', {}, 'Aanhef *')}</h3>
-        <div class="aanhef-row">
-            <label><input type="radio" name="${prefix}Salutation" value="Dhr." required checked> ${translate('forms.salutationMr', {}, 'Dhr.')}</label>
-            <label><input type="radio" name="${prefix}Salutation" value="Mevr."> ${translate('forms.salutationMrs', {}, 'Mevr.')}</label>
-            <label><input type="radio" name="${prefix}Salutation" value="Anders"> ${translate('forms.salutationOther', {}, 'Anders')}</label>
-        </div>
-        
-        <div class="form-row">
-            <input type="text" id="${prefix}Initials" placeholder="${translate('forms.initialsPlaceholder', {}, 'Voorletters*')}" required>
-            <input type="text" id="${prefix}MiddleName" placeholder="${translate('forms.middleNamePlaceholder', {}, 'Tussenvoegsel')}">
-            <input type="text" id="${prefix}LastName" placeholder="${translate('forms.lastNamePlaceholder', {}, 'Achternaam*')}" required>
-        </div>
-
-        <div class="form-group">
-            <label>${translate('forms.birthdayLabel', {}, 'Geboortedatum*')}</label>
-            <div class="form-row">
-                <select id="${prefix}BirthdayDay">
-                    <option value="">${translate('forms.birthdayDayPlaceholder', {}, 'Dag')}</option>
-                </select>
-                <select id="${prefix}BirthdayMonth">
-                    <option value="">${translate('forms.birthdayMonthPlaceholder', {}, 'Maand')}</option>
-                </select>
-                <select id="${prefix}BirthdayYear">
-                    <option value="">${translate('forms.birthdayYearPlaceholder', {}, 'Jaar')}</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="form-row">
-            <input type="text" id="${prefix}PostalCode" placeholder="${translate('forms.postalCodePlaceholder', {}, 'Postcode*')}" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="${translate('forms.postalCodeTitle', {}, 'Voer een geldige postcode in (bijv. 1234AB)')}" required>
-            <input type="text" id="${prefix}HouseNumber" placeholder="${translate('forms.houseNumberPlaceholder', {}, 'Huisnr. (en letter)*')}" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="${translate('forms.houseNumberTitle', {}, 'Voer een geldig huisnummer in (bijv. 123 of 123A)')}" required>
-            <input type="text" id="${prefix}HouseExt" placeholder="${translate('forms.houseExtensionPlaceholder', {}, 'Toevoeging')}" maxlength="10">
-        </div>
-        
-        <div class="form-row">
-            <input type="text" id="${prefix}Address" placeholder="${translate('forms.streetPlaceholder', {}, 'Straat*')}" required>
-            <input type="text" id="${prefix}City" placeholder="${translate('forms.cityPlaceholder', {}, 'Plaats*')}" required>
-        </div>
-        
-        ${cfg.includePhone || cfg.includeEmail ? `
-        <div class="form-row">
-            ${cfg.includePhone ? `<input type="tel" id="${prefix}Phone" placeholder="${phonePlaceholder}" ${cfg.phoneRequired ? 'required' : ''}>` : ''}
-            ${cfg.includeEmail ? `<input type="email" id="${prefix}Email" placeholder="${emailPlaceholder}" ${cfg.emailRequired ? 'required' : ''}>` : ''}
-        </div>
-        ` : ''}
-        
-        ${cfg.showSameAddressCheckbox ? `
-        <div class="form-group">
-            <label>
-                <input type="checkbox" id="${prefix}SameAddress" data-action="toggle-customer-form-address" data-action-event="change" data-arg-prefix="${prefix}">
-                ${translate('forms.sameAddressAsOriginalSubscriber', {}, 'Zelfde adres als originele abonnee')}
-            </label>
-        </div>
-        ` : ''}
-    `;
-
-    document.getElementById(containerId).innerHTML = html;
-    populateBirthdayFields(prefix);
-}
-
-/**
- * Gets customer data from a rendered customer form
- * @param {string} prefix - Prefix used when rendering the form
- * @returns {object} Customer data object
- */
-function getCustomerFormData(prefix) {
-    return {
-        salutation: document.querySelector(`input[name="${prefix}Salutation"]:checked`)?.value || '',
-        initials: document.getElementById(`${prefix}Initials`)?.value || '',
-        middleName: document.getElementById(`${prefix}MiddleName`)?.value || '',
-        lastName: document.getElementById(`${prefix}LastName`)?.value || '',
-        birthday: buildBirthdayValue(prefix) || '',
-        postalCode: document.getElementById(`${prefix}PostalCode`)?.value || '',
-        houseNumber: document.getElementById(`${prefix}HouseNumber`)?.value || '',
-        houseExt: document.getElementById(`${prefix}HouseExt`)?.value || '',
-        address: document.getElementById(`${prefix}Address`)?.value || '',
-        city: document.getElementById(`${prefix}City`)?.value || '',
-        phone: document.getElementById(`${prefix}Phone`)?.value || '',
-        email: document.getElementById(`${prefix}Email`)?.value || ''
-    };
-}
-
-/**
- * Sets customer data in a rendered customer form
- * @param {string} prefix - Prefix used when rendering the form
- * @param {object} data - Customer data object
- */
-function setCustomerFormData(prefix, data) {
-    if (data.salutation) {
-        const salutationRadio = document.querySelector(`input[name="${prefix}Salutation"][value="${data.salutation}"]`);
-        if (salutationRadio) salutationRadio.checked = true;
-    }
-    if (data.initials) document.getElementById(`${prefix}Initials`).value = data.initials;
-    if (data.middleName) document.getElementById(`${prefix}MiddleName`).value = data.middleName;
-    if (data.lastName) document.getElementById(`${prefix}LastName`).value = data.lastName;
-    if (data.birthday) setBirthdayFields(prefix, data.birthday);
-    if (data.postalCode) document.getElementById(`${prefix}PostalCode`).value = data.postalCode;
-    if (data.houseNumber) document.getElementById(`${prefix}HouseNumber`).value = data.houseNumber;
-    if (data.houseExt) document.getElementById(`${prefix}HouseExt`).value = data.houseExt;
-    if (data.address) document.getElementById(`${prefix}Address`).value = data.address;
-    if (data.city) document.getElementById(`${prefix}City`).value = data.city;
-    if (data.phone && document.getElementById(`${prefix}Phone`)) document.getElementById(`${prefix}Phone`).value = data.phone;
-    if (data.email && document.getElementById(`${prefix}Email`)) document.getElementById(`${prefix}Email`).value = data.email;
-}
-
-/**
- * Toggles address fields visibility (for "same address" checkbox)
- * @param {string} prefix - Prefix used when rendering the form
- */
-function toggleCustomerFormAddress(prefix) {
-    const checkbox = document.getElementById(`${prefix}SameAddress`);
-    const addressFields = ['PostalCode', 'HouseNumber', 'HouseExt', 'Address', 'City'];
-    
-    addressFields.forEach(field => {
-        const element = document.getElementById(`${prefix}${field}`);
-        if (element) {
-            if (checkbox.checked) {
-                element.disabled = true;
-                element.removeAttribute('required');
-                element.style.opacity = '0.5';
-            } else {
-                element.disabled = false;
-                if (!field.includes('HouseExt') && !field.includes('MiddleName')) {
-                    element.setAttribute('required', '');
-                }
-                element.style.opacity = '1';
-            }
-        }
-    });
-}
-
-function escapeHtml(value) {
-    return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function getSubscriptionRoleConfig(role) {
-    if (role === 'recipient') {
-        return {
-            roleLabel: 'ontvanger',
-            prefix: 'subRecipient',
-            modeName: 'recipientMode',
-            existingSectionId: 'recipientExistingSection',
-            createSectionId: 'recipientCreateSection',
-            createFormContainerId: 'recipientCreateForm',
-            duplicateCheckId: 'recipientDuplicateCheck',
-            searchQueryId: 'recipientSearchQuery',
-            searchResultsId: 'recipientSearchResults',
-            selectedPersonId: 'recipientSelectedPerson'
-        };
-    }
-
-    if (role === 'requester') {
-        return {
-            roleLabel: 'aanvrager/betaler',
-            prefix: 'subRequester',
-            modeName: 'requesterMode',
-            existingSectionId: 'requesterExistingSection',
-            createSectionId: 'requesterCreateSection',
-            createFormContainerId: 'requesterCreateForm',
-            duplicateCheckId: 'requesterDuplicateCheck',
-            searchQueryId: 'requesterSearchQuery',
-            searchResultsId: 'requesterSearchResults',
-            selectedPersonId: 'requesterSelectedPerson'
-        };
-    }
-
-    return null;
-}
-
-function buildPersonDisplayName(person) {
-    if (!person) {
-        return '';
-    }
-    const middleName = person.middleName ? `${person.middleName} ` : '';
-    return `${person.firstName || ''} ${middleName}${person.lastName || ''}`.trim();
-}
-
-function buildPersonDisplayAddress(person) {
-    if (!person) {
-        return '';
-    }
-    const postalCode = (person.postalCode || '').trim();
-    const city = (person.city || '').trim();
-    if (!postalCode && !city) {
-        return '';
-    }
-    return `${postalCode} ${city}`.trim();
-}
-
-function formatPersonReference(personId) {
-    return translate('common.personWithId', { id: personId }, `persoon #${personId}`);
-}
-
-function renderSubscriptionRoleSelectedPerson(role) {
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!cfg) return;
-
-    const selectedNode = document.getElementById(cfg.selectedPersonId);
-    if (!selectedNode) return;
-
-    const selectedPerson = subscriptionRoleState[role].selectedPerson;
-    if (!selectedPerson || selectedPerson.id === undefined || selectedPerson.id === null) {
-        selectedNode.classList.add('empty');
-        selectedNode.textContent = role === 'recipient'
-            ? translate('subscription.recipientNotSelected', {}, 'Geen ontvanger geselecteerd')
-            : translate('subscription.requesterNotSelected', {}, 'Geen aanvrager/betaler geselecteerd');
-        return;
-    }
-
-    const name = escapeHtml(buildPersonDisplayName(selectedPerson) || formatPersonReference(selectedPerson.id));
-    const address = escapeHtml(buildPersonDisplayAddress(selectedPerson));
-    const personId = escapeHtml(formatPersonReference(selectedPerson.id));
-    const addressLine = address ? ` · ${address}` : '';
-    selectedNode.classList.remove('empty');
-    selectedNode.innerHTML = `<strong>${name}</strong> · ${personId}${addressLine}`;
-}
-
-function renderRequesterSameSummary() {
-    const summaryNode = document.getElementById('requesterSameSummary');
-    if (!summaryNode) return;
-
-    if (!subscriptionRoleState.requesterSameAsRecipient) {
-        summaryNode.textContent = '';
-        return;
-    }
-
-    const recipient = subscriptionRoleState.recipient.selectedPerson;
-    if (recipient && recipient.id !== undefined && recipient.id !== null) {
-        const name = escapeHtml(buildPersonDisplayName(recipient) || formatPersonReference(recipient.id));
-        summaryNode.innerHTML = translate(
-            'subscription.requesterFollowsRecipient',
-            { name, person: formatPersonReference(recipient.id) },
-            `Aanvrager/betaler volgt de ontvanger: <strong>${name}</strong> · ${formatPersonReference(recipient.id)}.`
-        );
-        return;
-    }
-
-    if (subscriptionRoleState.recipient.mode === 'create') {
-        const initials = document.getElementById('subRecipientInitials')?.value?.trim() || '';
-        const middleName = document.getElementById('subRecipientMiddleName')?.value?.trim() || '';
-        const lastName = document.getElementById('subRecipientLastName')?.value?.trim() || '';
-        const composedName = [initials, middleName, lastName].filter(Boolean).join(' ');
-        if (composedName) {
-            const safeComposedName = escapeHtml(composedName);
-            summaryNode.innerHTML = translate(
-                'subscription.requesterFollowsNewRecipient',
-                { name: safeComposedName },
-                `Aanvrager/betaler volgt de nieuwe ontvanger: <strong>${safeComposedName}</strong>.`
-            );
-            return;
-        }
-    }
-
-    summaryNode.textContent = translate(
-        'subscription.requesterFollowsSelectedRecipient',
-        {},
-        'Aanvrager/betaler volgt de geselecteerde ontvanger.'
-    );
-}
-
-function clearSubscriptionRoleCreateForm(role) {
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!cfg) return;
-
-    const formContainer = document.getElementById(cfg.createFormContainerId);
-    if (!formContainer) return;
-
-    formContainer.innerHTML = '';
-    clearSubscriptionDuplicateUi(role);
-}
-
-function ensureSubscriptionRoleCreateForm(role) {
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!cfg) return;
-
-    const formContainer = document.getElementById(cfg.createFormContainerId);
-    if (!formContainer) return;
-
-    if (formContainer.childElementCount === 0) {
-        renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
-            includePhone: true,
-            includeEmail: true,
-            phoneRequired: false,
-            emailRequired: true
-        });
-    }
-
-    bindSubscriptionDuplicateListeners(role);
-    void evaluateSubscriptionDuplicateRole(role);
-}
-
-function setSubscriptionRoleMode(role, mode) {
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!cfg) return;
-
-    subscriptionRoleState[role].mode = mode === 'create' ? 'create' : 'existing';
-
-    const modeRadio = document.querySelector(`input[name="${cfg.modeName}"][value="${subscriptionRoleState[role].mode}"]`);
-    if (modeRadio) {
-        modeRadio.checked = true;
-    }
-
-    const existingSection = document.getElementById(cfg.existingSectionId);
-    const createSection = document.getElementById(cfg.createSectionId);
-    if (existingSection) existingSection.style.display = subscriptionRoleState[role].mode === 'existing' ? 'block' : 'none';
-    if (createSection) createSection.style.display = subscriptionRoleState[role].mode === 'create' ? 'block' : 'none';
-
-    if (subscriptionRoleState[role].mode === 'create') {
-        ensureSubscriptionRoleCreateForm(role);
-        subscriptionRoleState[role].selectedPerson = null;
-        renderSubscriptionRoleSelectedPerson(role);
-    } else {
-        resetSubscriptionDuplicateRoleState(role);
-        clearSubscriptionRoleCreateForm(role);
-    }
-
-    if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
-        renderRequesterSameSummary();
-    }
-}
-
-function toggleRequesterSameAsRecipient() {
-    const sameCheckbox = document.getElementById('requesterSameAsRecipient');
-    const requesterDetails = document.getElementById('requesterRoleDetails');
-    const sameSummary = document.getElementById('requesterSameSummary');
-    if (!sameCheckbox) {
-        return;
-    }
-
-    subscriptionRoleState.requesterSameAsRecipient = sameCheckbox.checked;
-    if (requesterDetails) {
-        requesterDetails.style.display = sameCheckbox.checked ? 'none' : 'block';
-    }
-    if (sameSummary) {
-        sameSummary.style.display = sameCheckbox.checked ? 'block' : 'none';
-    }
-
-    if (sameCheckbox.checked) {
-        resetSubscriptionDuplicateRoleState('requester');
-        clearSubscriptionRoleCreateForm('requester');
-        renderRequesterSameSummary();
-    } else if (subscriptionRoleState.requester.mode === 'create') {
-        ensureSubscriptionRoleCreateForm('requester');
-    }
-}
-
-function getSelectedSubscriptionRolePersonId(role) {
-    const selectedPerson = subscriptionRoleState[role]?.selectedPerson;
-    if (!selectedPerson || selectedPerson.id === undefined || selectedPerson.id === null) {
-        return null;
-    }
-
-    const personId = Number(selectedPerson.id);
-    return Number.isFinite(personId) ? personId : null;
-}
-
-function hasSameSelectedExistingRecipientAndRequester() {
-    const recipientIsExisting = subscriptionRoleState.recipient.mode === 'existing';
-    const requesterIsExisting = subscriptionRoleState.requester.mode === 'existing';
-    if (!recipientIsExisting || !requesterIsExisting) {
-        return false;
-    }
-
-    const recipientId = getSelectedSubscriptionRolePersonId('recipient');
-    const requesterId = getSelectedSubscriptionRolePersonId('requester');
-    if (recipientId === null || requesterId === null) {
-        return false;
-    }
-
-    return recipientId === requesterId;
-}
-
-function normalizeRequesterSameAsRecipientSelection(options = {}) {
-    const { silent = false } = options;
-    if (subscriptionRoleState.requesterSameAsRecipient) {
-        return false;
-    }
-
-    if (!hasSameSelectedExistingRecipientAndRequester()) {
-        return false;
-    }
-
-    const sameCheckbox = document.getElementById('requesterSameAsRecipient');
-    if (sameCheckbox && !sameCheckbox.checked) {
-        sameCheckbox.checked = true;
-    }
-
-    toggleRequesterSameAsRecipient();
-
-    if (!silent) {
-        showToast(
-            translate(
-                'subscription.samePersonAutoEnabled',
-                {},
-                'Ontvanger en aanvrager zijn dezelfde persoon. "Zelfde persoon als ontvanger" is automatisch ingeschakeld.'
-            ),
-            'info'
-        );
-    }
-
-    return true;
-}
-
-function normalizeRoleSearchQuery(value) {
-    return String(value || '').trim();
-}
-
-function getSubscriptionDuplicateRoleState(role) {
-    return subscriptionDuplicateState[role] || null;
-}
-
-function clearSubscriptionDuplicateDebounceTimer(roleDuplicateState) {
-    if (!roleDuplicateState || !roleDuplicateState.debounceTimer) {
-        return;
-    }
-    window.clearTimeout(roleDuplicateState.debounceTimer);
-    roleDuplicateState.debounceTimer = null;
-}
-
-function clearSubscriptionDuplicateUi(role) {
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!cfg) return;
-
-    const duplicateNode = document.getElementById(cfg.duplicateCheckId);
-    if (!duplicateNode) return;
-
-    duplicateNode.classList.add('hidden');
-    duplicateNode.innerHTML = '';
-}
-
-function resetSubscriptionDuplicateRoleState(role) {
-    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-    if (!roleDuplicateState) {
-        return;
-    }
-
-    clearSubscriptionDuplicateDebounceTimer(roleDuplicateState);
-    roleDuplicateState.requestVersion += 1;
-    roleDuplicateState.lastApiStartedAt = 0;
-    roleDuplicateState.lastApiFingerprint = '';
-    roleDuplicateState.lastFingerprint = 'none';
-    roleDuplicateState.acknowledgedFingerprint = '';
-    roleDuplicateState.expandedFingerprint = '';
-    roleDuplicateState.isExpanded = false;
-    roleDuplicateState.isChecking = false;
-    roleDuplicateState.apiWarning = '';
-    roleDuplicateState.cache = {};
-    roleDuplicateState.resolvedFingerprints = {};
-    roleDuplicateState.strongMatches = [];
-    clearSubscriptionDuplicateUi(role);
-}
-
-function resetAllSubscriptionDuplicateStates() {
-    resetSubscriptionDuplicateRoleState('recipient');
-    resetSubscriptionDuplicateRoleState('requester');
-}
-
-function normalizeDuplicatePostalCode(value) {
-    return String(value || '').replace(/\s+/g, '').toUpperCase();
-}
-
-function normalizeDuplicateHouseToken(houseNumber, houseExt = '') {
-    const combined = `${String(houseNumber || '').trim()}${String(houseExt || '').trim()}`;
-    return combined.replace(/\s+/g, '').toUpperCase();
-}
-
-function normalizeDuplicateEmail(value) {
-    return String(value || '').trim().toLowerCase();
-}
-
-function normalizeDuplicateLastName(value) {
-    return normalizeNameFragment(String(value || '').trim());
-}
-
-function buildSubscriptionDuplicateFingerprint(normalizedInput) {
-    if (
-        normalizedInput.postalCode
-        && normalizedInput.houseToken
-        && normalizedInput.lastNameNormalized
-    ) {
-        return `address:${normalizedInput.postalCode}:${normalizedInput.houseToken}:${normalizedInput.lastNameNormalized}`;
-    }
-
-    if (normalizedInput.email) {
-        return `email:${normalizedInput.email}`;
-    }
-
-    if (normalizedInput.phoneDigits.length >= 9 && normalizedInput.lastNameNormalized) {
-        return `phone:${normalizedInput.phoneDigits}:${normalizedInput.lastNameNormalized}`;
-    }
-
-    return 'none';
-}
-
-function normalizeSubscriptionDuplicateInput(data) {
-    const lastNameRaw = String(data.lastName || '').trim();
-    const middleNameRaw = String(data.middleName || '').trim();
-    const postalCode = normalizeDuplicatePostalCode(data.postalCode);
-    const houseToken = normalizeDuplicateHouseToken(data.houseNumber, data.houseExt);
-    const email = normalizeDuplicateEmail(data.email);
-    const phoneDigits = normalizePhone(String(data.phone || ''));
-    const lastNameNormalized = normalizeDuplicateLastName(lastNameRaw);
-    const fullLastNameNormalized = normalizeDuplicateLastName(`${middleNameRaw} ${lastNameRaw}`.trim());
-
-    return {
-        lastNameRaw,
-        middleNameRaw,
-        postalCode,
-        houseToken,
-        email,
-        phoneDigits,
-        lastNameNormalized,
-        fullLastNameNormalized,
-        fingerprint: buildSubscriptionDuplicateFingerprint({
-            postalCode,
-            houseToken,
-            email,
-            phoneDigits,
-            lastNameNormalized
-        })
-    };
-}
-
-function collectSubscriptionRoleDuplicateInput(role) {
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!cfg) {
-        return null;
-    }
-
-    const roleState = subscriptionRoleState[role];
-    if (!roleState || roleState.mode !== 'create') {
-        return null;
-    }
-
-    const data = getCustomerFormData(cfg.prefix);
-    return normalizeSubscriptionDuplicateInput(data);
-}
-
-function buildSubscriptionDuplicateApiRequest(normalizedInput) {
-    if (!normalizedInput || normalizedInput.fingerprint === 'none') {
-        return null;
-    }
-
-    const params = new URLSearchParams({
-        page: '1',
-        pageSize: String(DUPLICATE_CHECK_FETCH_LIMIT),
-        sortBy: 'name'
-    });
-
-    if (normalizedInput.fingerprint.startsWith('address:')) {
-        params.set('postalCode', normalizedInput.postalCode);
-        params.set('houseNumber', normalizedInput.houseToken);
-        params.set('name', normalizedInput.lastNameRaw.toLowerCase());
-    } else if (normalizedInput.fingerprint.startsWith('email:')) {
-        params.set('email', normalizedInput.email);
-    } else if (normalizedInput.fingerprint.startsWith('phone:')) {
-        params.set('phone', normalizedInput.phoneDigits);
-    } else {
-        return null;
-    }
-
-    return {
-        fingerprint: normalizedInput.fingerprint,
-        params
-    };
-}
-
-function normalizeCandidateHouseToken(candidate) {
-    return normalizeDuplicateHouseToken(candidate.houseNumber, candidate.houseExt || '');
-}
-
-function isStrongDuplicateCandidate(candidate, normalizedInput) {
-    if (!candidate || !normalizedInput) {
-        return false;
-    }
-
-    const candidateEmail = normalizeDuplicateEmail(candidate.email);
-    const candidatePhone = normalizePhone(String(candidate.phone || ''));
-    const candidatePostalCode = normalizeDuplicatePostalCode(candidate.postalCode);
-    const candidateHouseToken = normalizeCandidateHouseToken(candidate);
-    const candidateLastName = normalizeDuplicateLastName(candidate.lastName);
-
-    const emailMatch = Boolean(
-        normalizedInput.email
-        && candidateEmail
-        && normalizedInput.email === candidateEmail
-    );
-
-    const phoneMatch = Boolean(
-        normalizedInput.phoneDigits.length >= 9
-        && candidatePhone
-        && normalizedInput.phoneDigits === candidatePhone
-    );
-
-    const lastNameMatches = Boolean(
-        candidateLastName
-        && (
-            candidateLastName === normalizedInput.lastNameNormalized
-            || (normalizedInput.fullLastNameNormalized && candidateLastName === normalizedInput.fullLastNameNormalized)
-        )
-    );
-
-    const addressMatch = Boolean(
-        normalizedInput.postalCode
-        && normalizedInput.houseToken
-        && normalizedInput.lastNameNormalized
-        && candidatePostalCode === normalizedInput.postalCode
-        && candidateHouseToken === normalizedInput.houseToken
-        && lastNameMatches
-    );
-
-    return emailMatch || phoneMatch || addressMatch;
-}
-
-function findStrongDuplicateMatches(normalizedInput, persons) {
-    if (!normalizedInput || !Array.isArray(persons) || persons.length === 0) {
-        return [];
-    }
-
-    const matches = [];
-    const seenIds = new Set();
-    for (const person of persons) {
-        if (!person || person.id === undefined || person.id === null) {
-            continue;
-        }
-        const personId = Number(person.id);
-        if (seenIds.has(personId)) {
-            continue;
-        }
-        if (!isStrongDuplicateCandidate(person, normalizedInput)) {
-            continue;
-        }
-        seenIds.add(personId);
-        matches.push(person);
-    }
-
-    return matches;
-}
-
-function mergeDuplicateMatchLists(primaryMatches, secondaryMatches) {
-    const merged = [];
-    const seenIds = new Set();
-
-    for (const candidate of [...(primaryMatches || []), ...(secondaryMatches || [])]) {
-        if (!candidate || candidate.id === undefined || candidate.id === null) {
-            continue;
-        }
-        const candidateId = Number(candidate.id);
-        if (seenIds.has(candidateId)) {
-            continue;
-        }
-        seenIds.add(candidateId);
-        merged.push(candidate);
-    }
-
-    return merged;
-}
-
-function getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, fingerprint) {
-    if (!roleDuplicateState || !fingerprint || fingerprint === 'none') {
-        return null;
-    }
-
-    const cacheEntry = roleDuplicateState.cache[fingerprint];
-    if (!cacheEntry) {
-        return null;
-    }
-
-    if (Date.now() - cacheEntry.cachedAt > DUPLICATE_CHECK_CACHE_TTL_MS) {
-        delete roleDuplicateState.cache[fingerprint];
-        return null;
-    }
-
-    return cacheEntry;
-}
-
-function refreshSubscriptionDuplicateMatches(role, normalizedInput) {
-    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-    if (!roleDuplicateState || !normalizedInput) {
-        return [];
-    }
-
-    const localStrongMatches = findStrongDuplicateMatches(normalizedInput, customers);
-    const cacheEntry = getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, normalizedInput.fingerprint);
-    const cachedStrongMatches = cacheEntry ? cacheEntry.matches : [];
-
-    roleDuplicateState.strongMatches = mergeDuplicateMatchLists(localStrongMatches, cachedStrongMatches);
-    return roleDuplicateState.strongMatches;
-}
-
-function renderSubscriptionDuplicateCheck(role) {
-    const cfg = getSubscriptionRoleConfig(role);
-    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-    if (!cfg || !roleDuplicateState) return;
-
-    const duplicateNode = document.getElementById(cfg.duplicateCheckId);
-    if (!duplicateNode) return;
-
-    const roleState = subscriptionRoleState[role];
-    if (!roleState || roleState.mode !== 'create') {
-        clearSubscriptionDuplicateUi(role);
-        return;
-    }
-
-    const matches = roleDuplicateState.strongMatches || [];
-    const hasMatches = matches.length > 0;
-    const hasFingerprint = roleDuplicateState.lastFingerprint !== 'none';
-    const shouldShowChecking = hasFingerprint && roleDuplicateState.isChecking;
-    const shouldShowWarning = Boolean(roleDuplicateState.apiWarning);
-
-    if (!hasMatches && !shouldShowChecking && !shouldShowWarning) {
-        clearSubscriptionDuplicateUi(role);
-        return;
-    }
-
-    duplicateNode.classList.remove('hidden');
-
-    if (!hasMatches) {
-        const checkingLine = shouldShowChecking
-            ? `<div class="subscription-duplicate-inline-status">${escapeHtml(translate('subscription.duplicateCheck.checking', {}, 'Zoeken naar bestaande personen...'))}</div>`
-            : '';
-        const warningLine = shouldShowWarning
-            ? `<div class="subscription-duplicate-inline-status muted">${escapeHtml(roleDuplicateState.apiWarning)}</div>`
-            : '';
-        duplicateNode.innerHTML = `${checkingLine}${warningLine}`;
-        return;
-    }
-
-    const isExpanded = roleDuplicateState.isExpanded && roleDuplicateState.expandedFingerprint === roleDuplicateState.lastFingerprint;
-    const toggleLabel = isExpanded
-        ? translate('subscription.duplicateCheck.hideMatches', {}, 'Verberg matches')
-        : translate('subscription.duplicateCheck.showMatches', {}, 'Toon matches');
-    const duplicateTitle = translate(
-        'subscription.duplicateCheck.possibleFound',
-        { count: matches.length },
-        `Mogelijk bestaande persoon gevonden (${matches.length}).`
-    );
-    const createAnywayLabel = translate('subscription.duplicateCheck.createAnyway', {}, 'Toch nieuwe persoon');
-    const useExistingLabel = translate('subscription.duplicateCheck.useExisting', {}, 'Gebruik bestaande');
-    const visibleMatches = matches.slice(0, DUPLICATE_CHECK_VISIBLE_LIMIT);
-
-    const matchRows = visibleMatches.map((person) => {
-        const safeId = escapeHtml(person.id);
-        const safeName = escapeHtml(buildPersonDisplayName(person) || `Persoon #${person.id}`);
-        const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
-        const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
-        return `
-            <div class="subscription-duplicate-item">
-                <div>
-                    <strong>${safeName}</strong>
-                    <div class="subscription-duplicate-item-meta">persoon #${safeId}${safeAddressLine}</div>
-                </div>
-                <button type="button" class="subscription-duplicate-action" data-action="select-subscription-duplicate-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}">${escapeHtml(useExistingLabel)}</button>
-            </div>
-        `;
-    }).join('');
-
-    const moreMatchesLine = matches.length > DUPLICATE_CHECK_VISIBLE_LIMIT
-        ? `<div class="subscription-duplicate-more">Nog ${matches.length - DUPLICATE_CHECK_VISIBLE_LIMIT} mogelijke match(es).</div>`
-        : '';
-    const checkingLine = shouldShowChecking
-        ? `<div class="subscription-duplicate-inline-status">${escapeHtml(translate('subscription.duplicateCheck.checking', {}, 'Zoeken naar bestaande personen...'))}</div>`
-        : '';
-    const warningLine = shouldShowWarning
-        ? `<div class="subscription-duplicate-inline-status muted">${escapeHtml(roleDuplicateState.apiWarning)}</div>`
-        : '';
-
-    duplicateNode.innerHTML = `
-        <div class="subscription-duplicate-banner">
-            <div class="subscription-duplicate-header">
-                <div class="subscription-duplicate-title">${escapeHtml(duplicateTitle)}</div>
-                <div class="subscription-duplicate-actions">
-                    <button type="button" class="subscription-duplicate-action" data-action="toggle-subscription-duplicate-matches" data-arg-role="${role}">${escapeHtml(toggleLabel)}</button>
-                    <button type="button" class="subscription-duplicate-action warning" data-action="acknowledge-subscription-duplicate-warning" data-arg-role="${role}">${escapeHtml(createAnywayLabel)}</button>
-                </div>
-            </div>
-            ${checkingLine}
-            ${warningLine}
-            ${isExpanded ? `<div class="subscription-duplicate-list">${matchRows}</div>${moreMatchesLine}` : ''}
-        </div>
-    `;
-}
-
-function toggleSubscriptionDuplicateMatches(role) {
-    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-    if (!roleDuplicateState || roleDuplicateState.lastFingerprint === 'none') {
-        return;
-    }
-
-    const shouldExpand = !(roleDuplicateState.isExpanded && roleDuplicateState.expandedFingerprint === roleDuplicateState.lastFingerprint);
-    roleDuplicateState.isExpanded = shouldExpand;
-    roleDuplicateState.expandedFingerprint = shouldExpand ? roleDuplicateState.lastFingerprint : '';
-    renderSubscriptionDuplicateCheck(role);
-}
-
-function acknowledgeSubscriptionDuplicateWarning(role) {
-    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-    if (!roleDuplicateState || roleDuplicateState.lastFingerprint === 'none') {
-        return;
-    }
-
-    roleDuplicateState.acknowledgedFingerprint = roleDuplicateState.lastFingerprint;
-    roleDuplicateState.isExpanded = false;
-    roleDuplicateState.expandedFingerprint = '';
-    renderSubscriptionDuplicateCheck(role);
-}
-
-function selectSubscriptionDuplicatePerson(role, personId) {
-    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-    if (!roleDuplicateState) {
-        return;
-    }
-
-    const selectedPerson = (roleDuplicateState.strongMatches || [])
-        .find((entry) => Number(entry.id) === Number(personId));
-    if (!selectedPerson) {
-        showToast(translate('subscription.duplicateCheck.personNotFoundControlList', {}, 'Geselecteerde persoon niet gevonden in controlelijst'), 'error');
-        return;
-    }
-
-    upsertCustomerInCache(selectedPerson);
-    subscriptionRoleState[role].searchResults = [selectedPerson];
-    subscriptionRoleState[role].selectedPerson = selectedPerson;
-    setSubscriptionRoleMode(role, 'existing');
-    renderSubscriptionRoleSelectedPerson(role);
-
-    if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
-        renderRequesterSameSummary();
-    }
-}
-
-function waitForTimeout(milliseconds) {
-    if (milliseconds <= 0) {
-        return Promise.resolve();
-    }
-    return new Promise((resolve) => {
-        window.setTimeout(resolve, milliseconds);
-    });
-}
-
-async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, options = {}) {
-    const { force = false } = options;
-    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-    if (!roleDuplicateState || !window.kiwiApi || !expectedFingerprint || expectedFingerprint === 'none') {
-        return;
-    }
-
-    const roleState = subscriptionRoleState[role];
-    if (!roleState || roleState.mode !== 'create') {
-        return;
-    }
-
-    const normalizedInput = collectSubscriptionRoleDuplicateInput(role);
-    if (!normalizedInput || normalizedInput.fingerprint !== expectedFingerprint) {
-        roleDuplicateState.isChecking = false;
-        renderSubscriptionDuplicateCheck(role);
-        return;
-    }
-
-    const cacheEntry = getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, expectedFingerprint);
-    if (cacheEntry) {
-        roleDuplicateState.resolvedFingerprints[expectedFingerprint] = true;
-        refreshSubscriptionDuplicateMatches(role, normalizedInput);
-        roleDuplicateState.isChecking = false;
-        renderSubscriptionDuplicateCheck(role);
-        return;
-    }
-
-    if (!force && roleDuplicateState.resolvedFingerprints[expectedFingerprint]) {
-        roleDuplicateState.isChecking = false;
-        renderSubscriptionDuplicateCheck(role);
-        return;
-    }
-
-    const apiRequest = buildSubscriptionDuplicateApiRequest(normalizedInput);
-    if (!apiRequest || apiRequest.fingerprint !== expectedFingerprint) {
-        roleDuplicateState.isChecking = false;
-        renderSubscriptionDuplicateCheck(role);
-        return;
-    }
-
-    const elapsedSinceLastApi = Date.now() - roleDuplicateState.lastApiStartedAt;
-    const minimumWait = Math.max(0, DUPLICATE_CHECK_MIN_API_INTERVAL_MS - elapsedSinceLastApi);
-    await waitForTimeout(minimumWait);
-
-    const postWaitInput = collectSubscriptionRoleDuplicateInput(role);
-    if (!postWaitInput || postWaitInput.fingerprint !== expectedFingerprint) {
-        roleDuplicateState.isChecking = false;
-        renderSubscriptionDuplicateCheck(role);
-        return;
-    }
-
-    const requestVersion = roleDuplicateState.requestVersion + 1;
-    roleDuplicateState.requestVersion = requestVersion;
-    roleDuplicateState.lastApiStartedAt = Date.now();
-    roleDuplicateState.lastApiFingerprint = expectedFingerprint;
-    roleDuplicateState.apiWarning = '';
-    roleDuplicateState.isChecking = true;
-    renderSubscriptionDuplicateCheck(role);
-
-    try {
-        const payload = await window.kiwiApi.get(`${personsApiUrl}?${apiRequest.params.toString()}`);
-        if (requestVersion !== roleDuplicateState.requestVersion) {
-            return;
-        }
-
-        const latestInput = collectSubscriptionRoleDuplicateInput(role);
-        if (!latestInput || latestInput.fingerprint !== expectedFingerprint) {
-            return;
-        }
-
-        const items = Array.isArray(payload && payload.items) ? payload.items : [];
-        const apiStrongMatches = findStrongDuplicateMatches(latestInput, items);
-        roleDuplicateState.cache[expectedFingerprint] = {
-            cachedAt: Date.now(),
-            matches: apiStrongMatches
-        };
-        roleDuplicateState.resolvedFingerprints[expectedFingerprint] = true;
-        refreshSubscriptionDuplicateMatches(role, latestInput);
-        roleDuplicateState.isChecking = false;
-        roleDuplicateState.apiWarning = '';
-        renderSubscriptionDuplicateCheck(role);
-    } catch (error) {
-        if (requestVersion !== roleDuplicateState.requestVersion) {
-            return;
-        }
-
-        const latestInput = collectSubscriptionRoleDuplicateInput(role);
-        if (!latestInput || latestInput.fingerprint !== expectedFingerprint) {
-            return;
-        }
-
-        roleDuplicateState.resolvedFingerprints[expectedFingerprint] = true;
-        roleDuplicateState.isChecking = false;
-        roleDuplicateState.apiWarning = translate(
-            'subscription.duplicateCheck.apiFallback',
-            {},
-            'Controle via backend tijdelijk niet beschikbaar. Lokale controle blijft actief.'
-        );
-        refreshSubscriptionDuplicateMatches(role, latestInput);
-        renderSubscriptionDuplicateCheck(role);
-        console.warn('Achtergrondcontrole van dubbele personen via API mislukt.', error);
-    }
-}
-
-function scheduleSubscriptionDuplicateApiCheck(role, expectedFingerprint) {
-    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-    if (!roleDuplicateState || !expectedFingerprint || expectedFingerprint === 'none') {
-        return;
-    }
-
-    clearSubscriptionDuplicateDebounceTimer(roleDuplicateState);
-    const elapsedSinceLastApi = Date.now() - roleDuplicateState.lastApiStartedAt;
-    const minimumWait = Math.max(0, DUPLICATE_CHECK_MIN_API_INTERVAL_MS - elapsedSinceLastApi);
-    const waitMs = Math.max(DUPLICATE_CHECK_DEBOUNCE_MS, minimumWait);
-
-    roleDuplicateState.isChecking = true;
-    roleDuplicateState.apiWarning = '';
-    renderSubscriptionDuplicateCheck(role);
-
-    roleDuplicateState.debounceTimer = window.setTimeout(() => {
-        roleDuplicateState.debounceTimer = null;
-        void runSubscriptionDuplicateApiCheck(role, expectedFingerprint);
-    }, waitMs);
-}
-
-async function evaluateSubscriptionDuplicateRole(role, options = {}) {
-    const { forceApi = false } = options;
-    const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-    if (!roleDuplicateState) {
-        return {
-            fingerprint: 'none',
-            strongMatches: []
-        };
-    }
-
-    const normalizedInput = collectSubscriptionRoleDuplicateInput(role);
-    if (!normalizedInput) {
-        clearSubscriptionDuplicateDebounceTimer(roleDuplicateState);
-        roleDuplicateState.isChecking = false;
-        roleDuplicateState.strongMatches = [];
-        roleDuplicateState.lastFingerprint = 'none';
-        renderSubscriptionDuplicateCheck(role);
-        return {
-            fingerprint: 'none',
-            strongMatches: []
-        };
-    }
-
-    const previousFingerprint = roleDuplicateState.lastFingerprint;
-    roleDuplicateState.lastFingerprint = normalizedInput.fingerprint;
-    if (previousFingerprint !== normalizedInput.fingerprint) {
-        roleDuplicateState.isExpanded = false;
-        roleDuplicateState.expandedFingerprint = '';
-        roleDuplicateState.apiWarning = '';
-    }
-
-    refreshSubscriptionDuplicateMatches(role, normalizedInput);
-    roleDuplicateState.isChecking = false;
-    renderSubscriptionDuplicateCheck(role);
-
-    const apiRequest = buildSubscriptionDuplicateApiRequest(normalizedInput);
-    if (!apiRequest || !window.kiwiApi) {
-        clearSubscriptionDuplicateDebounceTimer(roleDuplicateState);
-        return {
-            fingerprint: normalizedInput.fingerprint,
-            strongMatches: roleDuplicateState.strongMatches
-        };
-    }
-
-    const cacheEntry = getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, normalizedInput.fingerprint);
-    if (cacheEntry) {
-        roleDuplicateState.resolvedFingerprints[normalizedInput.fingerprint] = true;
-        refreshSubscriptionDuplicateMatches(role, normalizedInput);
-        renderSubscriptionDuplicateCheck(role);
-        return {
-            fingerprint: normalizedInput.fingerprint,
-            strongMatches: roleDuplicateState.strongMatches
-        };
-    }
-
-    if (roleDuplicateState.resolvedFingerprints[normalizedInput.fingerprint] && !forceApi) {
-        return {
-            fingerprint: normalizedInput.fingerprint,
-            strongMatches: roleDuplicateState.strongMatches
-        };
-    }
-
-    if (forceApi) {
-        await runSubscriptionDuplicateApiCheck(role, normalizedInput.fingerprint, { force: true });
-        return {
-            fingerprint: roleDuplicateState.lastFingerprint,
-            strongMatches: roleDuplicateState.strongMatches
-        };
-    }
-
-    scheduleSubscriptionDuplicateApiCheck(role, normalizedInput.fingerprint);
-    return {
-        fingerprint: normalizedInput.fingerprint,
-        strongMatches: roleDuplicateState.strongMatches
-    };
-}
-
-function bindSubscriptionDuplicateListeners(role) {
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!cfg) return;
-
-    for (const inputSuffix of SUBSCRIPTION_DUPLICATE_INPUT_FIELDS) {
-        const inputNode = document.getElementById(`${cfg.prefix}${inputSuffix}`);
-        if (!inputNode || inputNode.dataset.subscriptionDuplicateBound === 'true') {
-            continue;
-        }
-
-        inputNode.dataset.subscriptionDuplicateBound = 'true';
-        inputNode.addEventListener('input', () => {
-            void evaluateSubscriptionDuplicateRole(role);
-            if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
-                renderRequesterSameSummary();
-            }
-        });
-        inputNode.addEventListener('blur', () => {
-            void evaluateSubscriptionDuplicateRole(role);
-        });
-    }
-}
-
-async function validateSubscriptionDuplicateSubmitGuard() {
-    const rolesToCheck = [];
-    if (subscriptionRoleState.recipient.mode === 'create') {
-        rolesToCheck.push('recipient');
-    }
-    if (!subscriptionRoleState.requesterSameAsRecipient && subscriptionRoleState.requester.mode === 'create') {
-        rolesToCheck.push('requester');
-    }
-
-    for (const role of rolesToCheck) {
-        await evaluateSubscriptionDuplicateRole(role, { forceApi: true });
-        const roleDuplicateState = getSubscriptionDuplicateRoleState(role);
-        if (!roleDuplicateState) {
-            continue;
-        }
-
-        const fingerprint = roleDuplicateState.lastFingerprint;
-        const hasStrongMatches = Array.isArray(roleDuplicateState.strongMatches) && roleDuplicateState.strongMatches.length > 0;
-        const isAcknowledged = fingerprint !== 'none' && roleDuplicateState.acknowledgedFingerprint === fingerprint;
-        if (!hasStrongMatches || isAcknowledged) {
-            continue;
-        }
-
-        roleDuplicateState.isExpanded = true;
-        roleDuplicateState.expandedFingerprint = fingerprint;
-        renderSubscriptionDuplicateCheck(role);
-
-        const roleLabel = getSubscriptionRoleConfig(role)?.roleLabel || 'persoon';
-        showToast(
-            translate(
-                'subscription.duplicateCheck.submitAdvisory',
-                { roleLabel },
-                `Controleer mogelijke bestaande ${roleLabel} voordat u doorgaat.`
-            ),
-            'warning'
-        );
-        return false;
-    }
-
-    return true;
-}
-
-function searchPersonsLocallyForRole(query) {
-    const normalizedQuery = normalizeRoleSearchQuery(query).toLowerCase();
-    if (!normalizedQuery) {
-        return [];
-    }
-
-    return customers.filter((person) => {
-        const name = buildPersonDisplayName(person).toLowerCase();
-        const email = (person.email || '').toLowerCase();
-        const phone = normalizePhone(person.phone || '');
-        const postalCode = (person.postalCode || '').toLowerCase();
-        const queryPhone = normalizePhone(normalizedQuery);
-        return name.includes(normalizedQuery)
-            || email.includes(normalizedQuery)
-            || postalCode.includes(normalizedQuery)
-            || (queryPhone && phone.includes(queryPhone));
-    }).slice(0, 10);
-}
-
-function renderSubscriptionRoleSearchResults(role) {
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!cfg) return;
-
-    const resultsNode = document.getElementById(cfg.searchResultsId);
-    if (!resultsNode) return;
-
-    const results = subscriptionRoleState[role].searchResults || [];
-    if (results.length === 0) {
-        resultsNode.innerHTML = '';
-        return;
-    }
-
-    resultsNode.innerHTML = results.map((person) => {
-        const safeName = escapeHtml(buildPersonDisplayName(person) || formatPersonReference(person.id));
-        const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
-        const safeId = escapeHtml(formatPersonReference(person.id));
-        const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
-        const selectLabel = escapeHtml(translate('subscription.search.selectButton', {}, 'Selecteer'));
-        return `
-            <div class="party-search-result">
-                <div>
-                    <strong>${safeName}</strong>
-                    <div class="party-search-result-meta">${safeId}${safeAddressLine}</div>
-                </div>
-                <button type="button" class="btn btn-small" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}">${selectLabel}</button>
-            </div>
-        `;
-    }).join('');
-}
-
-async function searchSubscriptionRolePerson(role) {
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!cfg) return;
-
-    const query = normalizeRoleSearchQuery(document.getElementById(cfg.searchQueryId)?.value);
-    if (!query) {
-        showToast(translate('subscription.search.enterQuery', {}, 'Voer eerst een zoekterm in'), 'warning');
-        return;
-    }
-
-    let results = [];
-    if (window.kiwiApi) {
-        const params = new URLSearchParams({
-            page: '1',
-            pageSize: '10',
-            sortBy: 'name'
-        });
-
-        if (query.includes('@')) {
-            params.set('email', query.toLowerCase());
-        } else {
-            const numericPhone = normalizePhone(query);
-            if (numericPhone.length >= 6) {
-                params.set('phone', numericPhone);
-            } else {
-                params.set('name', query.toLowerCase());
-            }
-        }
-
-        try {
-            const payload = await window.kiwiApi.get(`${personsApiUrl}?${params.toString()}`);
-            results = Array.isArray(payload && payload.items) ? payload.items : [];
-        } catch (error) {
-            showToast(error.message || translate('subscription.search.failed', {}, 'Zoeken van personen mislukt'), 'error');
-            return;
-        }
-    } else {
-        results = searchPersonsLocallyForRole(query);
-    }
-
-    subscriptionRoleState[role].searchResults = results;
-    renderSubscriptionRoleSearchResults(role);
-}
-
-function selectSubscriptionRolePerson(role, personId) {
-    const selected = (subscriptionRoleState[role].searchResults || [])
-        .find((entry) => Number(entry.id) === Number(personId));
-    if (!selected) {
-        showToast(translate('subscription.search.personNotFound', {}, 'Geselecteerde persoon niet gevonden in zoekresultaat'), 'error');
-        return;
-    }
-
-    subscriptionRoleState[role].selectedPerson = selected;
-    renderSubscriptionRoleSelectedPerson(role);
-
-    const cfg = getSubscriptionRoleConfig(role);
-    const resultsNode = document.getElementById(cfg.searchResultsId);
-    if (resultsNode) {
-        resultsNode.innerHTML = '';
-    }
-
-    if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
-        renderRequesterSameSummary();
-    }
-
-    if (!subscriptionRoleState.requesterSameAsRecipient) {
-        normalizeRequesterSameAsRecipientSelection();
-    }
-}
-
-function resetSubscriptionRoleState() {
-    subscriptionRoleState.recipient.mode = 'existing';
-    subscriptionRoleState.recipient.selectedPerson = null;
-    subscriptionRoleState.recipient.searchResults = [];
-    subscriptionRoleState.requester.mode = 'existing';
-    subscriptionRoleState.requester.selectedPerson = null;
-    subscriptionRoleState.requester.searchResults = [];
-    subscriptionRoleState.requesterSameAsRecipient = true;
-    resetAllSubscriptionDuplicateStates();
-}
-
-function createPersonPayloadFromForm(prefix, optinData = null) {
-    const data = getCustomerFormData(prefix);
-    const birthday = ensureBirthdayValue(prefix, false);
-    if (birthday === null) {
-        return null;
-    }
-
-    const initials = data.initials.trim();
-    const middleName = data.middleName.trim();
-    const lastName = data.lastName.trim();
-    const street = data.address.trim();
-    const houseNumber = data.houseNumber.trim();
-    const houseExt = data.houseExt.trim();
-    const combinedHouseNumber = `${houseNumber}${houseExt}`.trim();
-
-    if (!initials || !lastName || !street || !houseNumber || !data.postalCode.trim() || !data.city.trim() || !data.email.trim()) {
-        showToast(translate('forms.required', {}, 'Vul alle verplichte velden in'), 'error');
-        return null;
-    }
-
-    const fullLastName = middleName ? `${middleName} ${lastName}` : lastName;
-    const personPayload = {
-        salutation: data.salutation,
-        firstName: initials,
-        middleName: middleName,
-        lastName: fullLastName,
-        birthday: birthday,
-        postalCode: data.postalCode.trim().toUpperCase(),
-        houseNumber: combinedHouseNumber,
-        address: `${street} ${combinedHouseNumber}`.trim(),
-        city: data.city.trim(),
-        email: data.email.trim(),
-        phone: data.phone.trim()
-    };
-
-    if (optinData) {
-        personPayload.optinEmail = optinData.optinEmail;
-        personPayload.optinPhone = optinData.optinPhone;
-        personPayload.optinPost = optinData.optinPost;
-    }
-
-    return personPayload;
-}
-
-function buildSubscriptionRolePayload(role, options = {}) {
-    if (role === 'requester' && subscriptionRoleState.requesterSameAsRecipient) {
-        return { sameAsRecipient: true };
-    }
-
-    const roleState = subscriptionRoleState[role];
-    const cfg = getSubscriptionRoleConfig(role);
-    if (!roleState || !cfg) {
-        showToast(translate('subscription.roleUnknown', {}, 'Onbekende persoonsrol in abonnement flow'), 'error');
-        return null;
-    }
-
-    if (roleState.mode === 'existing') {
-        if (!roleState.selectedPerson || roleState.selectedPerson.id === undefined || roleState.selectedPerson.id === null) {
-            const message = role === 'recipient'
-                ? translate('subscription.selectRecipientOrCreate', {}, 'Selecteer een ontvanger of kies "Nieuwe persoon".')
-                : translate('subscription.selectRequesterOrCreate', {}, 'Selecteer een aanvrager/betaler of kies "Nieuwe persoon".');
-            showToast(message, 'error');
-            return null;
-        }
-        return { personId: Number(roleState.selectedPerson.id) };
-    }
-
-    if (roleState.mode === 'create') {
-        const personPayload = createPersonPayloadFromForm(cfg.prefix, options.optinData || null);
-        if (!personPayload) {
-            return null;
-        }
-        return { person: personPayload };
-    }
-
-    showToast(translate('subscription.roleInvalid', {}, 'Persoonsrol onjuist ingesteld'), 'error');
-    return null;
-}
-
-function initializeSubscriptionRolesForForm() {
-    resetSubscriptionRoleState();
-
-    const recipientSearchQuery = document.getElementById('recipientSearchQuery');
-    if (recipientSearchQuery) recipientSearchQuery.value = '';
-    const requesterSearchQuery = document.getElementById('requesterSearchQuery');
-    if (requesterSearchQuery) requesterSearchQuery.value = '';
-
-    setSubscriptionRoleMode('recipient', 'existing');
-    setSubscriptionRoleMode('requester', 'existing');
-
-    if (currentCustomer) {
-        subscriptionRoleState.recipient.selectedPerson = currentCustomer;
-        renderSubscriptionRoleSelectedPerson('recipient');
-    } else {
-        setSubscriptionRoleMode('recipient', 'create');
-    }
-
-    const sameCheckbox = document.getElementById('requesterSameAsRecipient');
-    if (sameCheckbox) {
-        sameCheckbox.checked = true;
-    }
-    toggleRequesterSameAsRecipient();
-}
-
-// ============================================================================
-// End of DRY Component
-// ============================================================================
 
 // Subscription Pricing Information
 const subscriptionPricing = {
@@ -2784,44 +1396,49 @@ function updateCallDuration() {
 }
 
 
-let hasInitializedKiwiApplication = false;
-
 async function initializeKiwiApplication() {
-    if (hasInitializedKiwiApplication) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.initializeKiwiApplication === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
-    hasInitializedKiwiApplication = true;
 
-    applyLocaleToUi();
-    await loadBootstrapState();
-    initializeData();
-    initializeQueue();
-    updateTime();
-    setInterval(updateTime, 1000);
-    updateCustomerActionButtons();
-    populateBirthdayFields('article');
-    populateBirthdayFields('edit');
-    // Initialize Phase 3 components
-    initDeliveryDatePicker();
-    initArticleSearch();
-    initWerfsleutelPicker().catch((error) => {
-        console.error('Kon werfsleutels niet initialiseren', error);
-    });
-    // Initialize agent status display (agent starts as ready)
-    startAgentWorkSessionTimer();
-    updateAgentStatusDisplay();
-    initializeAgentStatusFromBackend();
+    const initializeWerfsleutelPickerFromSlices = () => {
+        const werfsleutelSliceApi = getWerfsleutelSliceApi();
+        const canInitializeFromWerfsleutelSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.initializePicker === 'function';
+        if (canInitializeFromWerfsleutelSlice) {
+            return werfsleutelSliceApi.initializePicker();
+        }
+        return initWerfsleutelPicker();
+    };
 
-    const advancedFilterIds = ['searchName', 'searchPhone', 'searchEmail'];
-    const hasAdvancedValues = advancedFilterIds.some(id => {
-        const input = document.getElementById(id);
-        return input && input.value.trim().length > 0;
+    await kiwiBootstrapSlice.initializeKiwiApplication({
+        applyLocaleToUi,
+        loadBootstrapState,
+        initializeData,
+        initializeQueue,
+        updateTime,
+        setInterval,
+        updateCustomerActionButtons,
+        populateBirthdayFields,
+        initDeliveryDatePicker,
+        initArticleSearch,
+        initWerfsleutelPicker: initializeWerfsleutelPickerFromSlices,
+        startAgentWorkSessionTimer,
+        updateAgentStatusDisplay,
+        initializeAgentStatusFromBackend,
+        setAdditionalFiltersOpen,
+        documentRef: document
     });
-    setAdditionalFiltersOpen(hasAdvancedValues);
 }
 
 // Initialize App
-if (document.readyState === 'loading') {
+const canInstallBootstrapInitialization = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.installInitializationHook === 'function';
+if (canInstallBootstrapInitialization) {
+    kiwiBootstrapSlice.installInitializationHook({
+        documentRef: document,
+        initializeKiwiApplication
+    });
+} else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         void initializeKiwiApplication();
     }, { once: true });
@@ -2830,102 +1447,88 @@ if (document.readyState === 'loading') {
 }
 
 async function loadBootstrapState() {
-    if (!window.kiwiApi) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.loadBootstrapState === 'function';
+    if (!canUseBootstrapSlice) {
         bootstrapState = null;
         return;
     }
 
-    try {
-        bootstrapState = await window.kiwiApi.get(bootstrapApiUrl);
-    } catch (error) {
-        console.warn('Kon bootstrap state niet laden.', error);
-        bootstrapState = null;
-    }
+    bootstrapState = await kiwiBootstrapSlice.loadBootstrapState({
+        kiwiApi: window.kiwiApi,
+        bootstrapApiUrl
+    });
 }
 
 // Initialize API-backed state
 function initializeData() {
-    const hasBootstrapCustomers = bootstrapState && Array.isArray(bootstrapState.customers);
-    if (!hasBootstrapCustomers) {
-        console.warn('Bootstrap state ontbreekt; frontend start met lege API-afhankelijke dataset.');
-        customers = [];
-        lastCallSession = null;
-        serviceNumbers = {};
-        werfsleutelChannels = {};
-        werfsleutelCatalog = [];
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.initializeData === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
 
-    customers = bootstrapState.customers;
-
-    if (bootstrapState.call_queue && typeof bootstrapState.call_queue === 'object') {
-        callQueue = {
-            ...callQueue,
-            ...bootstrapState.call_queue
-        };
+    const initializedState = kiwiBootstrapSlice.initializeData({
+        bootstrapState,
+        callQueue,
+        callSession,
+        werfsleutelCatalog
+    });
+    const hasInitializedState = initializedState && typeof initializedState === 'object';
+    if (!hasInitializedState) {
+        return;
     }
 
-    if (bootstrapState.call_session && typeof bootstrapState.call_session === 'object') {
-        callSession = {
-            ...callSession,
-            ...bootstrapState.call_session
-        };
-    }
+    customers = initializedState.customers;
+    lastCallSession = initializedState.lastCallSession;
+    serviceNumbers = initializedState.serviceNumbers;
+    werfsleutelChannels = initializedState.werfsleutelChannels;
+    werfsleutelCatalog = initializedState.werfsleutelCatalog;
+    callQueue = initializedState.callQueue;
+    callSession = initializedState.callSession;
 
-    lastCallSession = bootstrapState.last_call_session || null;
-
-    const catalogPayload = bootstrapState.catalog && typeof bootstrapState.catalog === 'object'
-        ? bootstrapState.catalog
-        : {};
-    serviceNumbers = catalogPayload.serviceNumbers && typeof catalogPayload.serviceNumbers === 'object'
-        ? catalogPayload.serviceNumbers
-        : {};
-    werfsleutelChannels = catalogPayload.werfsleutelChannels && typeof catalogPayload.werfsleutelChannels === 'object'
-        ? catalogPayload.werfsleutelChannels
-        : {};
+    syncWerfsleutelCatalogMetadataIntoSlice({
+        channels: werfsleutelChannels,
+        catalog: werfsleutelCatalog
+    });
 }
 
 // Persist Customers to authenticated API state
 function saveCustomers() {
-    if (!window.kiwiApi) {
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.saveCustomers === 'function';
+    if (!canUseBootstrapSlice) {
         return;
     }
 
-    window.kiwiApi.put(personsStateApiUrl, { customers }).catch((error) => {
-        console.error('Kon klantstaat niet opslaan via API', error);
+    kiwiBootstrapSlice.saveCustomers({
+        kiwiApi: window.kiwiApi,
+        personsStateApiUrl,
+        customers
     });
 }
 
 // Update Customer Action Buttons visibility
 function updateCustomerActionButtons() {
-    const hasCustomer = currentCustomer !== null;
-    const resendBtn = document.getElementById('resendMagazineBtn');
-    const winbackBtn = document.getElementById('winbackFlowBtn');
-    
-    if (resendBtn) {
-        resendBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.updateCustomerActionButtons === 'function';
+    if (!canUseBootstrapSlice) {
+        return;
     }
-    if (winbackBtn) {
-        winbackBtn.style.display = hasCustomer ? 'inline-flex' : 'none';
-    }
+
+    kiwiBootstrapSlice.updateCustomerActionButtons({
+        documentRef: document,
+        currentCustomer
+    });
 }
 
 // Update Time Display
 function updateTime() {
-    const now = new Date();
-    const locale = getDateLocaleForApp();
-    const timeString = now.toLocaleTimeString(locale, {
-        hour: '2-digit', 
-        minute: '2-digit',
-        second: '2-digit'
+    const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.updateTime === 'function';
+    if (!canUseBootstrapSlice) {
+        return;
+    }
+
+    kiwiBootstrapSlice.updateTime({
+        documentRef: document,
+        getDateLocaleForApp
     });
-    const dateString = now.toLocaleDateString(locale, {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-    document.getElementById('currentTime').textContent = `${dateString} - ${timeString}`;
 }
 
 // Search Customer
@@ -2933,571 +1536,8 @@ function normalizePhone(value = '') {
     return value.replace(/\D/g, '');
 }
 
-function getSearchFilters() {
-    const postalCode = document.getElementById('searchPostalCode').value.toUpperCase().trim();
-    const houseNumber = document.getElementById('searchHouseNumber').value.trim();
-    const nameInput = document.getElementById('searchName');
-    const phoneInput = document.getElementById('searchPhone');
-    const emailInput = document.getElementById('searchEmail');
-
-    const name = nameInput ? nameInput.value.toLowerCase().trim() : '';
-    const phone = normalizePhone(phoneInput ? phoneInput.value : '');
-    const email = emailInput ? emailInput.value.toLowerCase().trim() : '';
-
-    return { postalCode, houseNumber, name, phone, email };
-}
-
-function matchesCustomerName(customer, nameQuery) {
-    if (!nameQuery) return true;
-
-    const nameCandidates = [
-        customer.firstName,
-        customer.lastName,
-        `${customer.firstName} ${customer.lastName}`,
-        customer.middleName ? `${customer.firstName} ${customer.middleName} ${customer.lastName}` : null
-    ]
-        .filter(Boolean)
-        .map(value => value.toLowerCase());
-
-    return nameCandidates.some(value => value.includes(nameQuery));
-}
-
-function matchesCustomerPhone(customer, phoneQuery) {
-    if (!phoneQuery) return true;
-
-    const customerPhone = normalizePhone(customer.phone || '');
-    return customerPhone.includes(phoneQuery);
-}
-
-function matchesCustomerEmail(customer, emailQuery) {
-    if (!emailQuery) return true;
-
-    const customerEmail = (customer.email || '').toLowerCase();
-    return customerEmail.includes(emailQuery);
-}
-
-function buildSearchQueryLabel() {
-    const postalCode = document.getElementById('searchPostalCode').value.trim();
-    const houseNumber = document.getElementById('searchHouseNumber').value.trim();
-    const nameInput = document.getElementById('searchName');
-    const name = nameInput ? nameInput.value.trim() : '';
-
-    const labelParts = [];
-    
-    if (postalCode || houseNumber) {
-        const addressLabel = [postalCode, houseNumber].filter(Boolean).join(' ');
-        labelParts.push(addressLabel);
-    }
-    if (name) {
-        labelParts.push(
-            translate('search.nameFilterLabel', { name }, `Naam: ${name}`)
-        );
-    }
-
-    return labelParts.length
-        ? labelParts.join(' • ')
-        : translate('search.allCustomers', {}, 'alle klanten');
-}
-
-function setAdditionalFiltersOpen(isOpen) {
-    const panel = document.getElementById('additionalFiltersPanel');
-    const toggle = document.getElementById('additionalFiltersToggle');
-
-    if (!panel || !toggle) return;
-
-    if (isOpen) {
-        panel.classList.add('is-open');
-        panel.style.display = 'grid';
-    } else {
-        panel.classList.remove('is-open');
-        panel.style.display = 'none';
-    }
-    toggle.setAttribute('aria-expanded', String(isOpen));
-}
-
-function toggleAdditionalFilters() {
-    const panel = document.getElementById('additionalFiltersPanel');
-    if (!panel) return;
-
-    const willOpen = !panel.classList.contains('is-open');
-    setAdditionalFiltersOpen(willOpen);
-}
-
-async function searchCustomer() {
-    const filters = getSearchFilters();
-    let results = [];
-
-    if (window.kiwiApi) {
-        const query = new URLSearchParams();
-        if (filters.postalCode) query.set('postalCode', filters.postalCode);
-        if (filters.houseNumber) query.set('houseNumber', filters.houseNumber);
-        if (filters.name) query.set('name', filters.name);
-        if (filters.phone) query.set('phone', filters.phone);
-        if (filters.email) query.set('email', filters.email);
-        query.set('sortBy', searchState.sortBy || 'name');
-        query.set('page', '1');
-        query.set('pageSize', '200');
-
-        try {
-            const payload = await window.kiwiApi.get(`/api/v1/persons?${query.toString()}`);
-            results = Array.isArray(payload && payload.items) ? payload.items : [];
-        } catch (error) {
-            console.error('Kon klanten niet zoeken via API', error);
-            showToast(translate('search.backendFailed', {}, 'Zoeken via backend mislukt'), 'error');
-            return;
-        }
-    } else {
-        results = customers.filter(customer => {
-            const matchPostal = !filters.postalCode || customer.postalCode === filters.postalCode;
-            const matchHouse = !filters.houseNumber || customer.houseNumber === filters.houseNumber;
-            const matchName = matchesCustomerName(customer, filters.name);
-            const matchPhone = matchesCustomerPhone(customer, filters.phone);
-            const matchEmail = matchesCustomerEmail(customer, filters.email);
-            
-            return matchPostal && matchHouse && matchName && matchPhone && matchEmail;
-        });
-    }
-
-    // Update search state
-    searchState.results = results;
-    searchState.currentPage = 1;
-    searchState.sortBy = 'name';
-    
-    // Sort results
-    sortResultsData();
-    
-    // Display results
-    displayPaginatedResults();
-}
-
-// Handle Enter key press in search fields
-function handleSearchKeyPress(event) {
-    if (event.key === 'Enter' || event.keyCode === 13) {
-        event.preventDefault();
-        searchCustomer();
-    }
-}
-
-// Display Paginated Results
-function displayPaginatedResults() {
-    const { results, currentPage, itemsPerPage } = searchState;
-    
-    // Update summary in left panel
-    const searchSummary = document.getElementById('searchSummary');
-    const resultCount = document.getElementById('resultCount');
-    resultCount.textContent = results.length;
-    searchSummary.style.display = results.length > 0 ? 'block' : 'none';
-    
-    // Show/hide views
-    const searchResultsView = document.getElementById('searchResultsView');
-    const welcomeMessage = document.getElementById('welcomeMessage');
-    const customerDetail = document.getElementById('customerDetail');
-    
-    if (results.length === 0) {
-        // Show empty state in center panel
-        searchResultsView.style.display = 'none';
-        customerDetail.style.display = 'none';
-        welcomeMessage.style.display = 'flex';
-        welcomeMessage.innerHTML = `
-            <div class="empty-state">
-                <span class="empty-icon">🔍</span>
-                <h2>${translate('search.noneFoundTitle', {}, 'Geen klanten gevonden')}</h2>
-                <p>${translate('search.noneFoundDescription', {}, 'Pas je zoekcriteria aan en probeer opnieuw')}</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Hide welcome and customer detail, show results view
-    welcomeMessage.style.display = 'none';
-    customerDetail.style.display = 'none';
-    searchResultsView.style.display = 'block';
-    
-    // Calculate pagination
-    const startIdx = (currentPage - 1) * itemsPerPage;
-    const endIdx = startIdx + itemsPerPage;
-    const pageResults = results.slice(startIdx, endIdx);
-    
-    // Update results title and range
-    const searchQuery = buildSearchQueryLabel();
-    document.getElementById('resultsTitle').textContent = translate(
-        'search.resultsTitle',
-        { query: searchQuery },
-        `🔍 Zoekresultaten: "${searchQuery}"`
-    );
-    document.getElementById('resultsRange').textContent = translate(
-        'search.resultsRange',
-        { start: startIdx + 1, end: Math.min(endIdx, results.length), total: results.length },
-        `Toont ${startIdx + 1}-${Math.min(endIdx, results.length)} van ${results.length}`
-    );
-    
-    // Render results
-    const container = document.getElementById('paginatedResults');
-    container.innerHTML = pageResults.map(customer => renderCustomerRow(customer)).join('');
-    
-    // Render pagination
-    renderPagination();
-    
-    // Scroll to top of results
-    searchResultsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// Render a single customer row
-function getCustomerInitials(customer) {
-    const providedInitials = customer.initials?.trim();
-    if (providedInitials) return providedInitials;
-
-    const firstName = (customer.firstName || '').replace(/\./g, ' ').trim();
-    if (!firstName) return '';
-
-    const initials = firstName
-        .split(/[\s-]+/)
-        .filter(Boolean)
-        .map(part => part[0].toUpperCase())
-        .join('.');
-
-    return initials ? `${initials}.` : '';
-}
-
-function splitLastNameComponents(customer) {
-    let lastName = (customer.lastName || '').trim();
-    let insertion = (customer.middleName || '').trim();
-
-    if (!insertion && lastName.includes(' ')) {
-        const lower = lastName.toLowerCase();
-        const matchedPrefix = NAME_INSERTION_PREFIXES.find(prefix => lower.startsWith(`${prefix} `));
-        if (matchedPrefix) {
-            insertion = lastName.substring(0, matchedPrefix.length);
-            const remainder = lastName.substring(matchedPrefix.length).trim();
-            if (remainder) {
-                lastName = remainder;
-            } else {
-                // If no remainder, fallback to original lastName
-                insertion = (customer.middleName || '').trim();
-            }
-        }
-    }
-
-    return { lastName, insertion };
-}
-
-function buildNameRest(customer) {
-    const restParts = [];
-    if (customer.salutation) restParts.push(customer.salutation.trim());
-    if (customer.firstName) restParts.push(customer.firstName.trim());
-    return restParts.join(' ').trim();
-}
-
-function getInitialsDisplay(customer) {
-    const initials = getCustomerInitials(customer) || '-';
-    const rest = buildNameRest(customer);
-    const showRest = rest && normalizeNameFragment(rest) !== normalizeNameFragment(initials);
-    return {
-        initials,
-        rest: showRest ? rest : ''
-    };
-}
-
-function formatLastNameSection(customer) {
-    const { lastName, insertion } = splitLastNameComponents(customer);
-
-    if (!lastName && !insertion) return '';
-    if (!lastName) return insertion;
-
-    return insertion
-        ? `<span class="last-name">${lastName}</span>, ${insertion}`
-        : `<span class="last-name">${lastName}</span>`;
-}
-
-function renderCustomerRow(customer) {
-    const lastNameSection = formatLastNameSection(customer) || '-';
-    const { initials, rest } = getInitialsDisplay(customer);
-    const viewActionLabel = translate('search.viewAction', {}, 'Bekijken');
-    
-    const activeSubscriptions = customer.subscriptions.filter(s => s.status === 'active');
-    const inactiveSubscriptions = customer.subscriptions.filter(s => s.status !== 'active');
-    
-    // Build subscription badges with subscription numbers
-    let subscriptionBadges = '';
-    if (activeSubscriptions.length > 0) {
-        subscriptionBadges = activeSubscriptions.map(s => 
-            `<span class="subscription-badge active">${s.magazine}</span>`
-        ).join('');
-    }
-    if (inactiveSubscriptions.length > 0 && activeSubscriptions.length === 0) {
-        subscriptionBadges = `<span class="subscription-badge inactive">${inactiveSubscriptions[0].magazine} (beëindigd)</span>`;
-    }
-    if (!subscriptionBadges) {
-        subscriptionBadges = '<span style="color: var(--text-secondary); font-size: 0.875rem;">Geen actief</span>';
-    }
-    
-    // Get primary active subscription number (or first subscription if no active)
-    let subscriberNumber = '-';
-    const primarySubscription = activeSubscriptions.length > 0 
-        ? activeSubscriptions[0] 
-        : customer.subscriptions[0];
-    
-    if (primarySubscription) {
-        subscriberNumber = generateSubscriptionNumber(customer.id, primarySubscription.id);
-    }
-    
-    // Show identify button only during anonymous call
-    const showIdentifyBtn = callSession.active && callSession.callerType === 'anonymous';
-    
-    return `
-        <tr class="result-row" data-action="select-customer" data-arg-customer-id="${customer.id}">
-            <td class="result-row-lastname">${lastNameSection}</td>
-            <td class="result-row-initials">
-                <span class="initials-value">${initials}</span>
-            </td>
-            <td class="result-row-address">
-                <span>${customer.address}</span><br>
-                <span>${customer.postalCode} ${customer.city}</span>
-            </td>
-            <td class="result-row-subscriptions">${subscriptionBadges}</td>
-            <td class="result-row-subscriber-number">${subscriberNumber}</td>
-            <td class="result-row-actions">
-                <button class="btn btn-small" type="button" data-action="select-customer" data-arg-customer-id="${customer.id}" data-action-stop-propagation="true">
-                    ${viewActionLabel}
-                </button>
-                ${showIdentifyBtn ? `
-                    <button class="btn btn-small btn-primary btn-identify-caller"
-                            type="button"
-                            data-action="call-session.identify-caller"
-                            data-arg-customer-id="${customer.id}"
-                            data-action-stop-propagation="true">
-                        👤 Identificeer
-                    </button>
-                ` : ''}
-            </td>
-        </tr>
-    `;
-}
-
-// Render Pagination Controls
-function renderPagination() {
-    const { results, currentPage, itemsPerPage } = searchState;
-    const totalPages = Math.ceil(results.length / itemsPerPage);
-    const pagination = document.getElementById('pagination');
-    
-    if (totalPages <= 1) {
-        pagination.innerHTML = '';
-        return;
-    }
-    
-    let html = '';
-    
-    // Previous button
-    html += `<button class="page-btn" type="button" data-action="go-to-page" data-arg-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>
-        ← Vorige
-    </button>`;
-    
-    // Page numbers (with smart ellipsis)
-    const pageNumbers = getPageNumbers(currentPage, totalPages);
-    pageNumbers.forEach(page => {
-        if (page === '...') {
-            html += `<span class="page-ellipsis">...</span>`;
-        } else {
-            const activeClass = page === currentPage ? 'active' : '';
-            html += `<button class="page-btn ${activeClass}" type="button" data-action="go-to-page" data-arg-page="${page}">${page}</button>`;
-        }
-    });
-    
-    // Next button
-    html += `<button class="page-btn" type="button" data-action="go-to-page" data-arg-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>
-        Volgende →
-    </button>`;
-    
-    pagination.innerHTML = html;
-}
-
-// Get page numbers with smart ellipsis
-function getPageNumbers(currentPage, totalPages) {
-    const pages = [];
-    const maxVisible = 7; // Maximum number of page buttons to show
-    
-    if (totalPages <= maxVisible) {
-        // Show all pages
-        for (let i = 1; i <= totalPages; i++) {
-            pages.push(i);
-        }
-    } else {
-        // Always show first page
-        pages.push(1);
-        
-        // Calculate range around current page
-        let rangeStart = Math.max(2, currentPage - 1);
-        let rangeEnd = Math.min(totalPages - 1, currentPage + 1);
-        
-        // Adjust range if near start or end
-        if (currentPage <= 3) {
-            rangeEnd = Math.min(5, totalPages - 1);
-        }
-        if (currentPage >= totalPages - 2) {
-            rangeStart = Math.max(2, totalPages - 4);
-        }
-        
-        // Add ellipsis before range if needed
-        if (rangeStart > 2) {
-            pages.push('...');
-        }
-        
-        // Add range
-        for (let i = rangeStart; i <= rangeEnd; i++) {
-            pages.push(i);
-        }
-        
-        // Add ellipsis after range if needed
-        if (rangeEnd < totalPages - 1) {
-            pages.push('...');
-        }
-        
-        // Always show last page
-        pages.push(totalPages);
-    }
-    
-    return pages;
-}
-
-// Go to specific page
-function goToPage(page) {
-    const totalPages = Math.ceil(searchState.results.length / searchState.itemsPerPage);
-    
-    if (page < 1 || page > totalPages) return;
-    
-    searchState.currentPage = page;
-    displayPaginatedResults();
-}
-
-// Scroll to results (from left panel button)
-function scrollToResults() {
-    // Hide customer detail and welcome message
-    document.getElementById('customerDetail').style.display = 'none';
-    document.getElementById('welcomeMessage').style.display = 'none';
-    
-    // Show search results view
-    const searchResultsView = document.getElementById('searchResultsView');
-    searchResultsView.style.display = 'block';
-    
-    // Scroll to results
-    searchResultsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// Clear search results and return to previous state
-function clearSearchResults() {
-    // Clear search state
-    searchState.results = [];
-    searchState.currentPage = 1;
-    
-    // Hide search results view and summary
-    document.getElementById('searchResultsView').style.display = 'none';
-    document.getElementById('searchSummary').style.display = 'none';
-    
-    // Clear search input fields
-    document.getElementById('searchName').value = '';
-    document.getElementById('searchPostalCode').value = '';
-    document.getElementById('searchHouseNumber').value = '';
-    const phoneInput = document.getElementById('searchPhone');
-    if (phoneInput) phoneInput.value = '';
-    const emailInput = document.getElementById('searchEmail');
-    if (emailInput) emailInput.value = '';
-    setAdditionalFiltersOpen(false);
-    
-    // Always restore welcome message HTML (in case it was overwritten by empty search)
-    const welcomeMessage = document.getElementById('welcomeMessage');
-    welcomeMessage.innerHTML = `
-        <div class="empty-state">
-            <span class="empty-icon">👤</span>
-            <h2>${translate('welcome.title', {}, 'Welkom bij Klantenservice')}</h2>
-            <p>${translate('welcome.description', {}, 'Zoek een klant of start een nieuwe actie')}</p>
-        </div>
-    `;
-    
-    // Check if there was a customer loaded before the search
-    if (currentCustomer) {
-        // Show the previously loaded customer detail
-        document.getElementById('customerDetail').style.display = 'block';
-        welcomeMessage.style.display = 'none';
-    } else {
-        // No customer was loaded, show welcome message
-        document.getElementById('customerDetail').style.display = 'none';
-        welcomeMessage.style.display = 'flex';
-    }
-    
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// Close customer detail and return to welcome screen
-function closeCustomerDetail() {
-    // Clear current customer
-    currentCustomer = null;
-    
-    // Hide customer detail
-    document.getElementById('customerDetail').style.display = 'none';
-    
-    // Restore and show welcome message
-    const welcomeMessage = document.getElementById('welcomeMessage');
-    welcomeMessage.innerHTML = `
-        <div class="empty-state">
-            <span class="empty-icon">👤</span>
-            <h2>${translate('welcome.title', {}, 'Welkom bij Klantenservice')}</h2>
-            <p>${translate('welcome.description', {}, 'Zoek een klant of start een nieuwe actie')}</p>
-        </div>
-    `;
-    welcomeMessage.style.display = 'flex';
-    
-    // Hide search results if visible
-    document.getElementById('searchResultsView').style.display = 'none';
-    document.getElementById('searchSummary').style.display = 'none';
-    
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// Sort results
-function sortResults(sortBy) {
-    searchState.sortBy = sortBy;
-    searchState.currentPage = 1; // Reset to first page when sorting
-    sortResultsData();
-    displayPaginatedResults();
-}
-
-// Sort results data
-function sortResultsData() {
-    const { sortBy } = searchState;
-    
-    searchState.results.sort((a, b) => {
-        switch(sortBy) {
-            case 'name':
-                // Sort by last name, then first name
-                const lastNameCompare = a.lastName.localeCompare(b.lastName);
-                if (lastNameCompare !== 0) return lastNameCompare;
-                return a.firstName.localeCompare(b.firstName);
-            
-            case 'postal':
-                return a.postalCode.localeCompare(b.postalCode);
-            
-            case 'subscriptions':
-                // Sort by number of active subscriptions (descending)
-                const aActive = a.subscriptions.filter(s => s.status === 'active').length;
-                const bActive = b.subscriptions.filter(s => s.status === 'active').length;
-                return bActive - aActive;
-            
-            default:
-                return 0;
-        }
-    });
-}
-
-// Legacy Display Search Results (keep for backward compatibility but not used)
-function displaySearchResults(results) {
-    // This function is now replaced by displayPaginatedResults
-    // Keeping it for backward compatibility
-    searchState.results = results;
-    searchState.currentPage = 1;
-    displayPaginatedResults();
-}
+// Customer search, pagination, and filter handlers are now implemented in
+// app/static/assets/js/app/slices/customer-search-slice.js.
 
 const CUSTOMER_DETAIL_SLICE_NAMESPACE = 'kiwiCustomerDetailSlice';
 const CONTACT_HISTORY_SLICE_NAMESPACE = 'kiwiContactHistorySlice';
@@ -3662,8 +1702,22 @@ function showNewSubscription() {
     }
     document.getElementById('subStartDate').value = today;
 
-    resetWerfsleutelPicker();
-    triggerWerfsleutelBackgroundRefreshIfStale();
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canResetPickerFromSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.resetPicker === 'function';
+    const canRefreshCatalogFromSlice = werfsleutelSliceApi && typeof werfsleutelSliceApi.refreshCatalogIfStale === 'function';
+
+    if (canResetPickerFromSlice) {
+        werfsleutelSliceApi.resetPicker();
+    } else {
+        resetWerfsleutelPicker();
+    }
+
+    if (canRefreshCatalogFromSlice) {
+        werfsleutelSliceApi.refreshCatalogIfStale();
+    } else {
+        triggerWerfsleutelBackgroundRefreshIfStale();
+    }
+
     initializeSubscriptionRolesForForm();
     renderRequesterSameSummary();
     document.getElementById('newSubscriptionForm').style.display = 'flex';
@@ -3673,17 +1727,22 @@ function showNewSubscription() {
 async function createSubscription(event) {
     event.preventDefault();
 
-    if (!werfsleutelState.selectedKey) {
+    const werfsleutelSelection = getSelectedWerfsleutelState();
+    const selectedWerfsleutelKey = werfsleutelSelection.selectedKey;
+    const selectedWerfsleutelChannel = werfsleutelSelection.selectedChannel;
+    const selectedWerfsleutelChannelMeta = werfsleutelSelection.selectedChannelMeta;
+
+    if (!selectedWerfsleutelKey) {
         showToast(translate('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
         return;
     }
 
-    if (!werfsleutelState.selectedChannel) {
+    if (!selectedWerfsleutelChannel) {
         showToast(translate('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'error');
         return;
     }
 
-    const offerDetails = getWerfsleutelOfferDetails(werfsleutelState.selectedKey);
+    const offerDetails = getWerfsleutelOfferDetailsFromActiveSlice(selectedWerfsleutelKey);
     const formData = {
         magazine: offerDetails.magazine,
         duration: offerDetails.durationKey || '',
@@ -3694,11 +1753,11 @@ async function createSubscription(event) {
         optinEmail: document.querySelector('input[name="subOptinEmail"]:checked').value,
         optinPhone: document.querySelector('input[name="subOptinPhone"]:checked').value,
         optinPost: document.querySelector('input[name="subOptinPost"]:checked').value,
-        werfsleutel: werfsleutelState.selectedKey.salesCode,
-        werfsleutelTitle: werfsleutelState.selectedKey.title,
-        werfsleutelPrice: werfsleutelState.selectedKey.price,
-        werfsleutelChannel: werfsleutelState.selectedChannel,
-        werfsleutelChannelLabel: werfsleutelChannels[werfsleutelState.selectedChannel]?.label || ''
+        werfsleutel: selectedWerfsleutelKey.salesCode,
+        werfsleutelTitle: selectedWerfsleutelKey.title,
+        werfsleutelPrice: selectedWerfsleutelKey.price,
+        werfsleutelChannel: selectedWerfsleutelChannel,
+        werfsleutelChannelLabel: selectedWerfsleutelChannelMeta?.label || ''
     };
 
     const optinData = {

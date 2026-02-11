@@ -35,10 +35,10 @@
 | Item | Domain | Branch | PR | PR status | Merged into main | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Localization + static i18n + locale switching | `codex/migrate-localization-and-locale-switching-to-slice` | [#40](https://github.com/bindinc/kiwi/pull/40) | `merged` | `yes` |  |
-| 2 | Bootstrap + shared data init + persistence shell | `TBD` | `TBD` | `not started` | `no` |  |
-| 3 | Werfsleutel catalog + picker implementation | `TBD` | `TBD` | `not started` | `no` |  |
-| 4 | Subscription role forms + duplicate guard + person role selection | `TBD` | `TBD` | `not started` | `no` |  |
-| 5 | Customer search + results + pagination | `TBD` | `TBD` | `not started` | `no` |  |
+| 2 | Bootstrap + shared data init + persistence shell | `codex/extract-bootstrap-and-shared-data-init-into-slice` | [#43](https://github.com/bindinc/kiwi/pull/43) | `merged` | `yes` |  |
+| 3 | Werfsleutel catalog + picker implementation | `codex/implement-werfsleutel-catalog-and-picker-slice` | [#45](https://github.com/bindinc/kiwi/pull/45) | `merged` | `yes` |  |
+| 4 | Subscription role forms + duplicate guard + person role selection | `codex/migrate-subscription-role-forms-duplicate-guard-person-role-selection` | [#41](https://github.com/bindinc/kiwi/pull/41) | `merged` | `yes` |  |
+| 5 | Customer search + results + pagination | `codex/migrate-customer-search-results-and-pagination-to-slice` | [#42](https://github.com/bindinc/kiwi/pull/42) | `merged` | `yes` |  |
 | 6 | Customer detail + subscriptions rendering + contact history UI | `codex/migrate-customer-detail-and-contact-history-to-slices` | [#44](https://github.com/bindinc/kiwi/pull/44) | `in progress` | `no` |  |
 | 7 | Subscription workflows (create/edit/customer-edit/resend/editorial) | `TBD` | `TBD` | `not started` | `no` |  |
 | 8 | Winback + deceased + restitution transfer workflows | `TBD` | `TBD` | `not started` | `no` |  |
