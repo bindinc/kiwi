@@ -17,8 +17,10 @@ import { registerDeliveryDatePickerSlice } from './slices/delivery-date-picker-s
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { registerCustomerSubscriptionActions } from './legacy-actions-customer-subscription.js';
 import { getSharedState } from './state.js';
+import { installLegacySubscriptionHelpers } from './subscription-shared-helpers.js';
 
 const sharedState = getSharedState();
+installLegacySubscriptionHelpers(globalThis);
 installBootstrapSlice();
 const actionRouter = createActionRouter({
     eventTypes: ['click', 'change', 'submit', 'keydown', 'input'],
