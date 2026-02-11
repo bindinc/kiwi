@@ -1331,76 +1331,6 @@ function addContactMoment(customerId, type, description) {
     );
 }
 
-// Start Call Session
-function startCallSession() {
-    // Toon sessie info in bovenbalk
-    document.getElementById('sessionInfo').style.display = 'flex';
-    
-    // Update service nummer
-    const serviceLabels = {
-        'AVROBODE': translate('serviceNumbers.avrobode', {}, 'AVROBODE SERVICE'),
-        'MIKROGIDS': translate('serviceNumbers.mikrogids', {}, 'MIKROGIDS SERVICE'),
-        'NCRVGIDS': translate('serviceNumbers.ncrvgids', {}, 'NCRVGIDS SERVICE'),
-        'ALGEMEEN': translate('serviceNumbers.algemeen', {}, 'ALGEMEEN SERVICE')
-    };
-    document.getElementById('sessionServiceNumber').textContent = 
-        serviceLabels[callSession.serviceNumber] || callSession.serviceNumber;
-    
-    // Update wachttijd
-    document.getElementById('sessionWaitTime').textContent = 
-        formatTime(callSession.waitTime);
-    
-    // Update beller naam
-    document.getElementById('sessionCallerName').textContent = 
-        callSession.customerName || translate('calls.anonymousCaller', {}, 'Anonieme Beller');
-    
-    // Toon gesprek beëindigen knop
-    document.getElementById('endCallBtn').style.display = 'inline-block';
-    
-    // Update agent status naar Busy
-    autoSetAgentStatus('call_started');
-    
-    // Toon hold button
-    const holdBtn = document.getElementById('holdCallBtn');
-    if (holdBtn) {
-        holdBtn.style.display = 'inline-block';
-        holdBtn.innerHTML = translate('calls.holdButtonLabel', {}, '⏸️ In Wacht Zetten');
-        holdBtn.classList.remove('on-hold');
-    }
-    
-    // Toon debug end call button
-    const debugEndBtn = document.getElementById('debugEndCallBtn');
-    if (debugEndBtn) {
-        debugEndBtn.style.display = 'block';
-    }
-    
-    // Toon recording indicator (Phase 2B)
-    if (recordingConfig.enabled) {
-        const recordingIndicator = document.getElementById('recordingIndicator');
-        if (recordingIndicator) {
-            recordingIndicator.style.display = 'flex';
-            callSession.recordingActive = true;
-        }
-    }
-    
-    // Start gespreksduur timer
-    updateCallDuration();
-    callSession.durationInterval = setInterval(updateCallDuration, 1000);
-    
-    // Update "Dit is de beller" knoppen zichtbaarheid
-    updateIdentifyCallerButtons();
-    saveCallSession();
-}
-
-// Update Call Duration Timer
-function updateCallDuration() {
-    if (!callSession.active) return;
-    
-    const elapsed = Math.floor((Date.now() - callSession.startTime) / 1000);
-    document.getElementById('sessionDuration').textContent = formatTime(elapsed);
-}
-
-
 async function initializeKiwiApplication() {
     const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.initializeKiwiApplication === 'function';
     if (!canUseBootstrapSlice) {
@@ -2064,8 +1994,7 @@ function wireCallAgentRuntimeDependencies() {
         addContactMoment,
         getDispositionCategories,
         selectCustomer,
-        showToast,
-        startCallSession
+        showToast
     });
 }
 
