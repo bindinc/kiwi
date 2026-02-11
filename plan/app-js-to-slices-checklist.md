@@ -39,7 +39,7 @@
 | 3 | Werfsleutel catalog + picker implementation | `TBD` | `TBD` | `not started` | `no` |  |
 | 4 | Subscription role forms + duplicate guard + person role selection | `TBD` | `TBD` | `not started` | `no` |  |
 | 5 | Customer search + results + pagination | `TBD` | `TBD` | `not started` | `no` |  |
-| 6 | Customer detail + subscriptions rendering + contact history UI | `TBD` | `TBD` | `not started` | `no` |  |
+| 6 | Customer detail + subscriptions rendering + contact history UI | `codex/migrate-customer-detail-and-contact-history-to-slices` | [#44](https://github.com/bindinc/kiwi/pull/44) | `in progress` | `no` |  |
 | 7 | Subscription workflows (create/edit/customer-edit/resend/editorial) | `TBD` | `TBD` | `not started` | `no` |  |
 | 8 | Winback + deceased + restitution transfer workflows | `TBD` | `TBD` | `not started` | `no` |  |
 | 9 | Article sales + delivery remarks modal implementation | `TBD` | `TBD` | `not started` | `no` |  |
