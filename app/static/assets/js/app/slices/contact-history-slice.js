@@ -1,7 +1,13 @@
 import { getGlobalScope } from '../services.js';
 
-const CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER = 'kiwiGetCustomerDetailSliceDependencies';
 const CONTACT_HISTORY_SLICE_NAMESPACE = 'kiwiContactHistorySlice';
+let contactHistoryDependenciesResolver = null;
+
+export function configureContactHistorySliceDependencies(dependenciesResolver) {
+    contactHistoryDependenciesResolver = typeof dependenciesResolver === 'function'
+        ? dependenciesResolver
+        : null;
+}
 
 const contactTypeLabelConfig = {
     call_started_anonymous: { key: 'contactHistory.type.callStartedAnonymous', fallback: 'Anonieme call gestart', icon: '📞', color: '#fbbf24' },
@@ -29,13 +35,11 @@ const contactTypeLabelConfig = {
 };
 
 function resolveDependencies() {
-    const globalScope = getGlobalScope();
-    const provider = globalScope ? globalScope[CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER] : null;
-    if (typeof provider !== 'function') {
+    if (typeof contactHistoryDependenciesResolver !== 'function') {
         return null;
     }
 
-    const dependencies = provider();
+    const dependencies = contactHistoryDependenciesResolver();
     if (!dependencies || typeof dependencies !== 'object') {
         return null;
     }

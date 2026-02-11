@@ -3,6 +3,7 @@ import { createActionRouter } from '../actions.js';
 import {
     __appShellTestUtils,
     closeForm,
+    configureAppShellSliceDependencies,
     registerAppShellSlice,
     showToast
 } from './app-shell-slice.js';
@@ -40,27 +41,22 @@ function createDocumentStub(overrides = {}) {
 function withGlobalState(testFn) {
     const previousValues = {
         kiwiAppShellSlice: globalThis.kiwiAppShellSlice,
-        kiwiGetAppShellSliceDependencies: globalThis.kiwiGetAppShellSliceDependencies,
         document: globalThis.document,
         featureFlags: globalThis.featureFlags
     };
 
     try {
         __appShellTestUtils.resetDebugKeySequence();
+        configureAppShellSliceDependencies(null);
         testFn();
     } finally {
         __appShellTestUtils.uninstallGlobalListeners();
+        configureAppShellSliceDependencies(null);
 
         if (previousValues.kiwiAppShellSlice === undefined) {
             delete globalThis.kiwiAppShellSlice;
         } else {
             globalThis.kiwiAppShellSlice = previousValues.kiwiAppShellSlice;
-        }
-
-        if (previousValues.kiwiGetAppShellSliceDependencies === undefined) {
-            delete globalThis.kiwiGetAppShellSliceDependencies;
-        } else {
-            globalThis.kiwiGetAppShellSliceDependencies = previousValues.kiwiGetAppShellSliceDependencies;
         }
 
         if (previousValues.document === undefined) {
@@ -81,7 +77,7 @@ function testRegistersItemTwelveActionAndNamespace() {
     withGlobalState(() => {
         const documentStub = createDocumentStub();
         globalThis.document = documentStub;
-        globalThis.kiwiGetAppShellSliceDependencies = () => ({});
+        configureAppShellSliceDependencies(() => ({}));
 
         const router = createRouter(documentStub);
         registerAppShellSlice(router);
@@ -108,11 +104,11 @@ function testCloseFormResetsDuplicateStateForNewSubscriptionForm() {
         globalThis.document = documentStub;
 
         let resetCount = 0;
-        globalThis.kiwiGetAppShellSliceDependencies = () => ({
+        configureAppShellSliceDependencies(() => ({
             resetAllSubscriptionDuplicateStates() {
                 resetCount += 1;
             }
-        });
+        }));
 
         closeForm('newSubscriptionForm');
 
@@ -129,7 +125,7 @@ function testShowToastUsesContactHistoryAndDeduplicatesRecentSuccessToast() {
             highlightId: null,
             lastEntry: null
         };
-        globalThis.kiwiGetAppShellSliceDependencies = () => ({
+        configureAppShellSliceDependencies(() => ({
             getCurrentCustomer() {
                 return currentCustomer;
             },
@@ -139,7 +135,7 @@ function testShowToastUsesContactHistoryAndDeduplicatesRecentSuccessToast() {
             pushContactHistory(customer, entry, options) {
                 contactHistoryEntries.push({ customer, entry, options });
             }
-        });
+        }));
 
         showToast('saved', 'success');
         assert.equal(contactHistoryEntries.length, 1);
@@ -206,7 +202,7 @@ function testGlobalListenersHandleKeyboardClickAndChangeEvents() {
                 return flagName === 'debugModal';
             }
         };
-        globalThis.kiwiGetAppShellSliceDependencies = () => ({
+        configureAppShellSliceDependencies(() => ({
             openDebugModal() {
                 openedDebugModal += 1;
             },
@@ -217,7 +213,7 @@ function testGlobalListenersHandleKeyboardClickAndChangeEvents() {
             closeStatusMenu() {
                 closedStatusMenu += 1;
             }
-        });
+        }));
 
         const router = createRouter(documentStub);
         registerAppShellSlice(router);

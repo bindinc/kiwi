@@ -51,7 +51,7 @@
 | 15 | Extract shared pricing + subscription identity helpers from app.js globals | `codex/extract-shared-pricing-and-subscription-identity-helpers` | - | `not started` | `no` | Move helper ownership out of legacy globals. |
 | 16 | Extract contact-history mutation + contact-moment adapter from app.js | `codex/extract-contact-history-mutation-and-contact-moment-adapter` | - | `not started` | `no` | Remove direct state mutation and persistence fallback from legacy script. |
 | 17 | Extract call-session start/duration UI bridge from app.js | `codex/extract-call-session-start-and-duration-ui-bridge` | - | `not started` | `no` | Consolidate call-session timer/UI ownership. |
-| 18 | Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`) | `codex/remove-window-slice-dependency-provider-bridge` | - | `not started` | `no` | Replace `window` provider lookups with explicit module wiring. |
+| 18 | Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`) | `codex/remove-window-slice-dependency-provider-bridge` | - | `in progress` | `no` | Replace `window` provider lookups with explicit module wiring. |
 | 19 | Remove legacy facade wrappers that only proxy to slice methods | `codex/remove-legacy-facade-wrappers-proxying-to-slices` | - | `not started` | `no` | Migrate remaining global function callers to router/slice entry points. |
 | 20 | Remove app-shell fallback paths + move runtime wiring out of app.js | `codex/remove-app-shell-fallbacks-and-runtime-wiring-from-app-js` | - | `not started` | `no` | App shell and runtime wiring should live in slice/runtime modules only. |
 | 21 | Retire legacy bootstrap wrappers and script-loader dependency on app.js | `codex/retire-legacy-bootstrap-wrappers-and-app-js-loader-path` | - | `not started` | `no` | Final deletion target for `app.js` legacy bootstrap role. |
@@ -189,12 +189,12 @@
   - Bound action names: indirect runtime flows (`call-session.simulate-incoming-call`, `call-session.identify-caller`, `call-session.end`)
   - Dependency/risk note: these functions currently mix DOM rendering, timers, and runtime state; extraction must avoid duplicate timer mutation between legacy and runtime modules.
 
-- [ ] 18. Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`)
+- [x] 18. Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`)
   - Target slice file(s): `app/static/assets/js/app.js`, `app/static/assets/js/app/index.js`, `app/static/assets/js/app/slices/customer-detail-slice.js`, `app/static/assets/js/app/slices/contact-history-slice.js`, `app/static/assets/js/app/slices/order.js`, `app/static/assets/js/app/slices/delivery-remarks-slice.js`, `app/static/assets/js/app/slices/app-shell-slice.js`
   - Source range: `app.js:1547-1751`
   - Key functions/state: `getSliceApi`, `invokeSliceMethod`, `invokeSliceMethodAsync`, `getCustomerDetailSliceDependencies`, `getOrderSliceDependencies`, `getDeliveryRemarksSliceDependencies`, `getAppShellSliceDependencies`, global provider registration
   - Bound action names: none direct (cross-slice dependency plumbing)
-  - Dependency/risk note: slices currently resolve dependencies via `window.kiwiGet*` providers; migration should move this to explicit module wiring in `app/index.js` to remove global hidden coupling.
+  - Dependency/risk note: dependency resolution is now explicitly wired in `app/index.js` via `window.kiwiLegacySliceDependencies`, removing per-slice `window.kiwiGet*` provider lookups and making slice wiring explicit.
 
 - [ ] 19. Remove legacy facade wrappers that only proxy to slice methods
   - Target slice file(s): `app/static/assets/js/app.js`, `app/static/assets/js/app/slices/*.js`, `app/templates/base/index.html` (if any remaining global function invocations exist)

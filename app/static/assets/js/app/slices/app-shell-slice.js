@@ -1,7 +1,7 @@
 import { getGlobalScope } from '../services.js';
 
 const APP_SHELL_SLICE_NAMESPACE = 'kiwiAppShellSlice';
-const APP_SHELL_DEPENDENCIES_PROVIDER = 'kiwiGetAppShellSliceDependencies';
+let appShellDependenciesResolver = null;
 const DEBUG_KEY = ']';
 const DEBUG_KEY_COUNT = 4;
 const DEBUG_KEY_WINDOW_MS = 10000;
@@ -16,14 +16,18 @@ const listenersByEventType = {
     change: null
 };
 
+export function configureAppShellSliceDependencies(dependenciesResolver) {
+    appShellDependenciesResolver = typeof dependenciesResolver === 'function'
+        ? dependenciesResolver
+        : null;
+}
+
 function resolveDependencies() {
-    const globalScope = getGlobalScope();
-    const provider = globalScope ? globalScope[APP_SHELL_DEPENDENCIES_PROVIDER] : null;
-    if (typeof provider !== 'function') {
+    if (typeof appShellDependenciesResolver !== 'function') {
         return null;
     }
 
-    const dependencies = provider();
+    const dependencies = appShellDependenciesResolver();
     if (!dependencies || typeof dependencies !== 'object') {
         return null;
     }

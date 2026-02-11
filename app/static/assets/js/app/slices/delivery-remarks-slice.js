@@ -1,16 +1,20 @@
 import { getGlobalScope } from '../services.js';
 
 const DELIVERY_REMARKS_SLICE_NAMESPACE = 'kiwiDeliveryRemarksSlice';
-const DELIVERY_REMARKS_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetDeliveryRemarksSliceDependencies';
+let deliveryRemarksDependenciesResolver = null;
+
+export function configureDeliveryRemarksSliceDependencies(dependenciesResolver) {
+    deliveryRemarksDependenciesResolver = typeof dependenciesResolver === 'function'
+        ? dependenciesResolver
+        : null;
+}
 
 function resolveDependencies() {
-    const globalScope = getGlobalScope();
-    const provider = globalScope ? globalScope[DELIVERY_REMARKS_SLICE_DEPENDENCIES_PROVIDER] : null;
-    if (typeof provider !== 'function') {
+    if (typeof deliveryRemarksDependenciesResolver !== 'function') {
         return null;
     }
 
-    const dependencies = provider();
+    const dependencies = deliveryRemarksDependenciesResolver();
     if (!dependencies || typeof dependencies !== 'object') {
         return null;
     }

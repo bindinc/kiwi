@@ -1,7 +1,13 @@
 import { getGlobalScope } from '../services.js';
 
 const ORDER_SLICE_NAMESPACE = 'kiwiOrderSlice';
-const ORDER_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetOrderSliceDependencies';
+let orderDependenciesResolver = null;
+
+export function configureOrderSliceDependencies(dependenciesResolver) {
+    orderDependenciesResolver = typeof dependenciesResolver === 'function'
+        ? dependenciesResolver
+        : null;
+}
 
 const DELIVERY_STATUS_CLASS_BY_KEY = {
     ordered: 'status-ordered',
@@ -17,13 +23,11 @@ const PAYMENT_STATUS_CLASS_BY_KEY = {
 };
 
 function resolveDependencies() {
-    const globalScope = getGlobalScope();
-    const provider = globalScope ? globalScope[ORDER_SLICE_DEPENDENCIES_PROVIDER] : null;
-    if (typeof provider !== 'function') {
+    if (typeof orderDependenciesResolver !== 'function') {
         return null;
     }
 
-    const dependencies = provider();
+    const dependencies = orderDependenciesResolver();
     if (!dependencies || typeof dependencies !== 'object') {
         return null;
     }
