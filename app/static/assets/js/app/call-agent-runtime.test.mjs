@@ -97,16 +97,14 @@ function testDispositionCategoriesFallsBackToEmptyObjectAndWarnsOnce() {
     assert.equal(missingCategoryWarnings.length, 1);
 }
 
-function testConfiguredDependenciesSupportSelectCustomerAndStartCallSession() {
+function testConfiguredDependenciesSupportSelectCustomerAndCallSessionSliceBridge() {
     const { context } = createRuntimeContext();
     const dependencyCalls = [];
+    const sliceCalls = [];
 
     configureRuntimeDependencies(context, {
         selectCustomer(customerId) {
             dependencyCalls.push(['selectCustomer', customerId]);
-        },
-        startCallSession() {
-            dependencyCalls.push(['startCallSession']);
         },
         addContactMoment(customerId, type, description) {
             dependencyCalls.push(['addContactMoment', customerId, type, description]);
@@ -116,6 +114,11 @@ function testConfiguredDependenciesSupportSelectCustomerAndStartCallSession() {
         },
         showToast() {}
     });
+    context.kiwiCallSessionSlice = {
+        startCallSession() {
+            sliceCalls.push(['startCallSession']);
+        }
+    };
 
     context.runtimeSelectCustomer(88);
     context.runtimeStartCallSession();
@@ -123,9 +126,9 @@ function testConfiguredDependenciesSupportSelectCustomerAndStartCallSession() {
 
     assert.deepEqual(dependencyCalls, [
         ['selectCustomer', 88],
-        ['startCallSession'],
         ['addContactMoment', 77, 'note', 'saved']
     ]);
+    assert.deepEqual(sliceCalls, [['startCallSession']]);
     assert.equal(
         JSON.stringify(context.runtimeGetDispositionCategories()),
         JSON.stringify({
@@ -134,11 +137,24 @@ function testConfiguredDependenciesSupportSelectCustomerAndStartCallSession() {
     );
 }
 
+function testRuntimeStartCallSessionWarnsOnceWithoutSliceBridge() {
+    const { context, consoleStub } = createRuntimeContext();
+
+    context.runtimeStartCallSession();
+    context.runtimeStartCallSession();
+
+    const missingBridgeWarnings = consoleStub.warns.filter((warningArgs) => (
+        warningArgs.join(' ').includes('Missing call-session slice method')
+    ));
+    assert.equal(missingBridgeWarnings.length, 1);
+}
+
 function run() {
     testConfiguredShowToastDependencyTakesPriorityOverGlobalFallback();
     testGlobalFallbackIsNotUsedWithoutConfiguredDependency();
     testDispositionCategoriesFallsBackToEmptyObjectAndWarnsOnce();
-    testConfiguredDependenciesSupportSelectCustomerAndStartCallSession();
+    testConfiguredDependenciesSupportSelectCustomerAndCallSessionSliceBridge();
+    testRuntimeStartCallSessionWarnsOnceWithoutSliceBridge();
     console.log('call-agent-runtime dependency wiring tests passed');
 }
 

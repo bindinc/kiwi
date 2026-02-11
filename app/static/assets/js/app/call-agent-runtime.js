@@ -5,11 +5,13 @@ const RUNTIME_COMPATIBILITY_METHOD_NAMES = new Set([
     'addContactMoment',
     'getDispositionCategories',
     'selectCustomer',
-    'showToast',
-    'startCallSession'
+    'showToast'
 ]);
 const runtimeDependencies = {};
 const runtimeCompatibilityWarningByMethod = {};
+const CALL_SESSION_SLICE_NAMESPACE = 'kiwiCallSessionSlice';
+const CALL_SESSION_SLICE_START_METHOD = 'startCallSession';
+let missingCallSessionSliceWarningShown = false;
 
 function resolveRuntimeCompatibilityMethod(methodName) {
     const isKnownMethod = RUNTIME_COMPATIBILITY_METHOD_NAMES.has(methodName);
@@ -63,8 +65,37 @@ function runtimeShowToast(message, type = 'success') {
     return invokeRuntimeCompatibilityMethod('showToast', [message, type]);
 }
 
+function resolveCallSessionSliceStartMethod() {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const callSessionSlice = window[CALL_SESSION_SLICE_NAMESPACE];
+    if (!callSessionSlice || typeof callSessionSlice !== 'object') {
+        return null;
+    }
+
+    const startMethod = callSessionSlice[CALL_SESSION_SLICE_START_METHOD];
+    if (typeof startMethod !== 'function') {
+        return null;
+    }
+
+    return startMethod;
+}
+
 function runtimeStartCallSession() {
-    return invokeRuntimeCompatibilityMethod('startCallSession');
+    const startMethod = resolveCallSessionSliceStartMethod();
+    if (startMethod) {
+        startMethod();
+        return;
+    }
+
+    if (!missingCallSessionSliceWarningShown && typeof console !== 'undefined' && typeof console.warn === 'function') {
+        console.warn(
+            `[kiwi-call-agent-runtime] Missing call-session slice method "${CALL_SESSION_SLICE_NAMESPACE}.${CALL_SESSION_SLICE_START_METHOD}"`
+        );
+        missingCallSessionSliceWarningShown = true;
+    }
 }
 
 // End Call Session
@@ -1348,6 +1379,14 @@ function formatTime(seconds) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+function getCallSession() {
+    return callSession;
+}
+
+function isRecordingEnabled() {
+    return Boolean(recordingConfig && recordingConfig.enabled);
+}
+
 /**
  * Accept next call from queue
  */
@@ -1659,11 +1698,13 @@ if (typeof window !== 'undefined') {
         formatElapsedSessionTime,
         formatTime,
         fullReset,
+        getCallSession,
         getOutcomeLabel,
         identifyCallerAsCustomer,
         identifyCurrentCustomerAsCaller,
         initializeAgentStatusFromBackend,
         initializeQueue,
+        isRecordingEnabled,
         manualFinishACW,
         maybeNotifyTeamsSyncIssue,
         normalizeAgentStatus,
@@ -1689,6 +1730,7 @@ if (typeof window !== 'undefined') {
         updateAgentWorkSummary,
         updateDebugQueuePreview,
         updateDispositionOutcomes,
+        updateIdentifyCallerButtons,
         updateQueueDisplay,
         updateStatusMenuSelection,
         updateTeamsSyncState

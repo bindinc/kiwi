@@ -177,7 +177,7 @@ const transientAgentStatuses = new Set(['in_call']);
 // Phase 1A: Service Number Configuration
 let serviceNumbers = {};
 
-const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
+const APP_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
 
 const fallbackSubscriptionHelpers = (() => {
     const pricingTable = {
@@ -257,7 +257,7 @@ function getSubscriptionHelpers() {
         return fallbackSubscriptionHelpers;
     }
 
-    const helperNamespace = window[LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE];
+    const helperNamespace = window[APP_SUBSCRIPTION_HELPERS_NAMESPACE];
     if (!helperNamespace || typeof helperNamespace !== 'object') {
         return fallbackSubscriptionHelpers;
     }
@@ -588,75 +588,101 @@ function endSession() {
 // PHASE 1: CALL SESSION MANAGEMENT
 // ============================================================================
 
-// Start Call Session
-function startCallSession() {
-    // Toon sessie info in bovenbalk
-    document.getElementById('sessionInfo').style.display = 'flex';
-    
-    // Update service nummer
-    const serviceLabels = {
-        'AVROBODE': translate('serviceNumbers.avrobode', {}, 'AVROBODE SERVICE'),
-        'MIKROGIDS': translate('serviceNumbers.mikrogids', {}, 'MIKROGIDS SERVICE'),
-        'NCRVGIDS': translate('serviceNumbers.ncrvgids', {}, 'NCRVGIDS SERVICE'),
-        'ALGEMEEN': translate('serviceNumbers.algemeen', {}, 'ALGEMEEN SERVICE')
+function generateContactHistoryId() {
+    return `ch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function pushContactHistory(customer, entry, options = {}) {
+    if (!customer) {
+        return null;
+    }
+
+    const {
+        highlight = false,
+        persist = true,
+        refresh = true,
+        moveToFirstPage = false
+    } = options;
+
+    const normalizedEntry = {
+        id: entry.id || generateContactHistoryId(),
+        type: entry.type || 'default',
+        date: entry.date || new Date().toISOString(),
+        description: entry.description || ''
     };
-    document.getElementById('sessionServiceNumber').textContent = 
-        serviceLabels[callSession.serviceNumber] || callSession.serviceNumber;
-    
-    // Update wachttijd
-    document.getElementById('sessionWaitTime').textContent = 
-        formatTime(callSession.waitTime);
-    
-    // Update beller naam
-    document.getElementById('sessionCallerName').textContent = 
-        callSession.customerName || translate('calls.anonymousCaller', {}, 'Anonieme Beller');
-    
-    // Toon gesprek beëindigen knop
-    document.getElementById('endCallBtn').style.display = 'inline-block';
-    
-    // Update agent status naar Busy
-    autoSetAgentStatus('call_started');
-    
-    // Toon hold button
-    const holdBtn = document.getElementById('holdCallBtn');
-    if (holdBtn) {
-        holdBtn.style.display = 'inline-block';
-        holdBtn.innerHTML = translate('calls.holdButtonLabel', {}, '⏸️ In Wacht Zetten');
-        holdBtn.classList.remove('on-hold');
+
+    if (!Array.isArray(customer.contactHistory)) {
+        customer.contactHistory = [];
     }
-    
-    // Toon debug end call button
-    const debugEndBtn = document.getElementById('debugEndCallBtn');
-    if (debugEndBtn) {
-        debugEndBtn.style.display = 'block';
-    }
-    
-    // Toon recording indicator (Phase 2B)
-    if (recordingConfig.enabled) {
-        const recordingIndicator = document.getElementById('recordingIndicator');
-        if (recordingIndicator) {
-            recordingIndicator.style.display = 'flex';
-            callSession.recordingActive = true;
+
+    customer.contactHistory.unshift(normalizedEntry);
+
+    if (persist) {
+        if (window.kiwiApi && customer.id !== undefined && customer.id !== null) {
+            window.kiwiApi
+                .post(`${personsApiUrl}/${customer.id}/contact-history`, normalizedEntry)
+                .then((savedEntry) => {
+                    if (savedEntry && savedEntry.id) {
+                        normalizedEntry.id = savedEntry.id;
+                    }
+                })
+                .catch((error) => {
+                    console.warn('Kon contacthistorie niet opslaan via API', error);
+                });
+        } else {
+            saveCustomers();
         }
     }
-    
-    // Start gespreksduur timer
-    updateCallDuration();
-    callSession.durationInterval = setInterval(updateCallDuration, 1000);
-    
-    // Update "Dit is de beller" knoppen zichtbaarheid
-    updateIdentifyCallerButtons();
-    saveCallSession();
+
+    const isCurrentCustomer = currentCustomer && currentCustomer.id === customer.id;
+
+    if (isCurrentCustomer && (highlight || moveToFirstPage)) {
+        contactHistoryState.currentPage = 1;
+    }
+
+    if (highlight && isCurrentCustomer) {
+        contactHistoryState.highlightId = normalizedEntry.id;
+
+        if (contactHistoryHighlightTimer) {
+            clearTimeout(contactHistoryHighlightTimer);
+        }
+
+        contactHistoryHighlightTimer = setTimeout(() => {
+            contactHistoryState.highlightId = null;
+            if (currentCustomer && currentCustomer.id === customer.id) {
+                displayContactHistory();
+            }
+            contactHistoryHighlightTimer = null;
+        }, 5000);
+    }
+
+    if (refresh && isCurrentCustomer) {
+        displayContactHistory();
+    }
+
+    contactHistoryState.lastEntry = {
+        id: normalizedEntry.id,
+        type: normalizedEntry.type,
+        createdAt: Date.now()
+    };
+
+    return normalizedEntry;
 }
 
-// Update Call Duration Timer
-function updateCallDuration() {
-    if (!callSession.active) return;
-    
-    const elapsed = Math.floor((Date.now() - callSession.startTime) / 1000);
-    document.getElementById('sessionDuration').textContent = formatTime(elapsed);
-}
+// Helper function to add contact moment to customer history
+function addContactMoment(customerId, type, description) {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
 
+    pushContactHistory(
+        customer,
+        {
+            type: type,
+            description: description
+        },
+        { highlight: true }
+    );
+}
 
 async function initializeKiwiApplication() {
     const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.initializeKiwiApplication === 'function';
@@ -664,13 +690,20 @@ async function initializeKiwiApplication() {
         return;
     }
 
+    const scheduleInterval = (callback, timeout) => {
+        if (typeof window !== 'undefined' && typeof window.setInterval === 'function') {
+            return window.setInterval(callback, timeout);
+        }
+        return setInterval(callback, timeout);
+    };
+
     await kiwiBootstrapSlice.initializeKiwiApplication({
         applyLocaleToUi,
         loadBootstrapState,
         initializeData,
         initializeQueue,
         updateTime,
-        setInterval,
+        setInterval: scheduleInterval,
         updateCustomerActionButtons,
         populateBirthdayFields,
         initDeliveryDatePicker,
@@ -1337,8 +1370,7 @@ function wireCallAgentRuntimeDependencies() {
         addContactMoment,
         getDispositionCategories,
         selectCustomer,
-        showToast,
-        startCallSession
+        showToast
     });
 }
 
