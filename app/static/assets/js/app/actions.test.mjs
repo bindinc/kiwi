@@ -52,14 +52,19 @@ function testRouterDispatch() {
     router.install();
     assert.equal(typeof listeners.click, 'function');
 
+    let stopPropagationCalled = false;
     const actionElement = {
         dataset: {
             action: 'select-customer',
-            argCustomerId: '81'
+            argCustomerId: '81',
+            actionStopPropagation: 'true'
         }
     };
     const event = {
         type: 'click',
+        stopPropagation() {
+            stopPropagationCalled = true;
+        },
         target: {
             closest(selector) {
                 if (selector === '[data-action]') {
@@ -75,6 +80,7 @@ function testRouterDispatch() {
         payload: { customerId: 81 },
         actionName: 'select-customer'
     });
+    assert.equal(stopPropagationCalled, true);
 }
 
 function run() {

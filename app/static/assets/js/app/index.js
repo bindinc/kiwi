@@ -1,5 +1,6 @@
 import { createActionRouter } from './actions.js';
 import { ensureLegacyAppLoaded } from './legacy-loader.js';
+import { registerCustomerSubscriptionActions } from './legacy-actions-customer-subscription.js';
 import { getSharedState, markRouterInitialized, setRegisteredActions } from './state.js';
 
 const sharedState = getSharedState();
@@ -15,6 +16,7 @@ const actionRouter = createActionRouter({
     }
 });
 
+registerCustomerSubscriptionActions(actionRouter);
 actionRouter.install();
 markRouterInitialized();
 setRegisteredActions(actionRouter.getRegisteredActions());
