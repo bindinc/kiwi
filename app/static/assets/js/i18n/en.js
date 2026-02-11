@@ -72,7 +72,7 @@ const en = {
             "alleen_anoniem_e92222cf": "Anonymous only",
             "alleen_bekende_klanten_cdc2f32d": "Only known customers",
             "alles_verwerken_db8bc36d": "Process everything",
-            "als_afwezig_weergeven_b8021b1e": "Show as absent",
+            "als_afwezig_weergeven_b8021b1e": "Away",
             "anders_ca587926": "Otherwise",
             "annuleren_35de0a19": "Cancel",
             "anonieme_beller_0c3daeaf": "Anonymous Caller",
@@ -288,7 +288,7 @@ const en = {
             "wat_vervelend_om_te_horen_ik_zie_dat_er_2a2c56f7": "\"How annoying to hear. I see that",
             "welkom_bij_kiwi_c2ee612a": "Welcome to KIWI!",
             "werfsleutel_c5732867": "Site key *",
-            "werkdag_e1c5e04e": "Working day",
+            "werkdag_e1c5e04e": "Workday statistics",
             "wijzigingen_aan_het_abonnement_worden_direct_doorgevoerd_ad39cffa": "Changes to the subscription are implemented immediately.",
             "wijzigingen_opslaan_22f167f8": "Save changes",
             "willekeurig_15_90_sec_4e78066b": "Random (15-90 sec)",
@@ -298,7 +298,7 @@ const en = {
             "zelfde_adres_als_originele_abonnee_2ccc5d4a": "Same address as original subscriber",
             "zelfde_persoon_als_ontvanger_52ac9149": "Same person as recipient",
             "zoek_op_salescode_of_titel_en_kies_het_kanaal_83ec4db3": "Search by sales code or title and choose the channel",
-            "zoeken_23d150c5": "To search",
+            "zoeken_23d150c5": "search",
             "zoekresultaten_b9b61881": "🔍 Search results"
         },
         "placeholder": {
@@ -411,7 +411,8 @@ const en = {
     },
     "common": {
         "unknown": "Unknown",
-        "unknownDuration": "Duration unknown"
+        "unknownDuration": "Duration unknown",
+        "personWithId": "person #{id}"
     },
     "calls": {
         "ended": "Call ended",
@@ -420,14 +421,34 @@ const en = {
         "resumed": "Call resumed (wait: {duration})",
         "startedFromQueue": "📞 Started conversation with {name}",
         "completed": "Conversation completed successfully",
-        "simulationStarted": "Call simulation started: {serviceNumber} (waiting time: {wait})"
+        "simulationStarted": "Call simulation started: {serviceNumber} (waiting time: {wait})",
+        "identifyFailed": "Caller identification via backend failed",
+        "holdResumeFailed": "Call hold/resume via backend failed",
+        "holdButtonLabel": "⏸️ Put On Hold",
+        "resumeButtonLabel": "▶️ Resume",
+        "holdIndicator": "🎵 Customer on hold",
+        "identificationPromptAfterCreate": "✅ {customerName} was created successfully.\n\nIs this the person calling?",
+        "anonymousCaller": "Anonymous Caller",
+        "activeCallReplaceConfirm": "⚠️ There is already an active call. End it and start a new one?",
+        "debugStartFailed": "Starting debug call via backend failed",
+        "endConversationConfirm": "📞 End the phone call?\n\nCall duration: {duration}"
     },
     "queue": {
         "generated": "✅ Queue generated with {count} callers",
         "cleared": "✅ Queue cleared",
         "empty": "⚠️ No callers in queue",
         "activeCallExists": "⚠️ There is already an active conversation",
-        "mustBeReady": "⚠️ Agent status must be \"Available\" to accept call"
+        "mustBeReady": "⚠️ Agent status must be \"Available\" to accept call",
+        "generateUnavailable": "Generating queue via backend is unavailable",
+        "generateFailed": "Generating queue via backend failed",
+        "debugStatusActive": "Active - {count} waiting",
+        "clearConfirm": "🗑️ Clear entire queue?",
+        "clearFailed": "Clearing queue via backend failed",
+        "debugStatusDisabled": "Disabled",
+        "callerTypeKnown": "👤 Known",
+        "callerTypeAnonymous": "❓ Anonymous",
+        "acceptNextUnavailable": "Accepting next call via backend is unavailable",
+        "acceptNextFailed": "Accepting next call via backend failed"
     },
     "agent": {
         "statusChanged": "Status changed to: {status}",
@@ -447,12 +468,52 @@ const en = {
     },
     "disposition": {
         "selectCategory": "Select category and outcome",
-        "cancelled": "Disposition canceled - ACW continues"
+        "cancelled": "Disposition canceled - ACW continues",
+        "selectCategoryFirst": "Select a category first",
+        "selectOutcomePlaceholder": "Select outcome...",
+        "category": {
+            "subscription": "Subscription",
+            "delivery": "Delivery",
+            "payment": "Payment",
+            "articleSale": "Article Sales",
+            "complaint": "Complaint",
+            "general": "General"
+        },
+        "outcome": {
+            "newSubscription": "New subscription created",
+            "subscriptionChanged": "Subscription changed",
+            "subscriptionCancelled": "Subscription cancelled",
+            "subscriptionPaused": "Subscription paused",
+            "infoProvided": "Information provided",
+            "deliveryIssueResolved": "Delivery issue resolved",
+            "magazineResent": "Edition resent",
+            "deliveryPreferencesUpdated": "Delivery preferences updated",
+            "deliveryEscalated": "Escalated to delivery",
+            "paymentResolved": "Payment resolved",
+            "paymentPlanArranged": "Payment plan arranged",
+            "ibanUpdated": "IBAN details updated",
+            "financeEscalated": "Escalated to finance",
+            "articleSold": "Article sold",
+            "quoteProvided": "Quote provided",
+            "noSale": "No sale",
+            "complaintResolved": "Complaint resolved",
+            "complaintEscalated": "Complaint escalated",
+            "callbackScheduled": "Callback scheduled",
+            "transferred": "Transferred",
+            "customerHungUp": "Customer hung up",
+            "wrongNumber": "Wrong number",
+            "noAnswerNeeded": "No action required"
+        }
     },
     "customer": {
         "notFound": "Customer not found",
         "updated": "Customer details successfully updated!",
-        "selectFirst": "First select a customer"
+        "selectFirst": "First select a customer",
+        "detailLoadFailed": "Could not load customer details",
+        "deceasedBannerTitle": "This customer is deceased",
+        "deceasedBannerDescription": "Please be careful when processing subscriptions and orders",
+        "noneAvailable": "No customers available",
+        "updateFailed": "Updating customer details via backend failed"
     },
     "subscription": {
         "extraAdded": "Extra subscription successfully added!",
@@ -469,6 +530,45 @@ const en = {
         "processed": "{count} subscription(s) processed. Confirmations are sent.",
         "transferred": "{magazine} transferred to {name}",
         "samePersonAutoEnabled": "Recipient and applicant are the same person. \"Same person as recipient\" is automatically enabled.",
+        "recipientNotSelected": "No recipient selected",
+        "requesterNotSelected": "No applicant/payer selected",
+        "requesterFollowsRecipient": "Applicant/payer follows the recipient: <strong>{name}</strong> · {person}.",
+        "requesterFollowsNewRecipient": "Applicant/payer follows the new recipient: <strong>{name}</strong>.",
+        "requesterFollowsSelectedRecipient": "Applicant/payer follows the selected recipient.",
+        "roleUnknown": "Unknown person role in subscription flow",
+        "roleInvalid": "Person role was configured incorrectly",
+        "selectRecipientOrCreate": "Select a recipient or choose \"New person\".",
+        "selectRequesterOrCreate": "Select an applicant/payer or choose \"New person\".",
+        "createRequiresBackend": "Creating subscription requires backend API",
+        "createFailed": "Creating subscription via backend failed",
+        "updateFailed": "Updating subscription via backend failed",
+        "transferFailed": "Transfer via backend failed",
+        "deceasedProcessFailed": "Processing deceased workflow via backend failed",
+        "requestedPaidByPerson": "Requested/paid by person #{personId}",
+        "none": "No subscriptions",
+        "noneAvailable": "No subscriptions available",
+        "groupActive": "Active Subscriptions",
+        "groupEnded": "Ended Subscriptions",
+        "groupRestituted": "Refunded Subscriptions",
+        "groupTransferred": "Transferred Subscriptions",
+        "statusActive": "Active",
+        "statusCancelled": "Cancelled",
+        "statusEnded": "Ended",
+        "statusRestituted": "Refunded",
+        "editTitle": "Edit",
+        "cancelTitle": "Cancel",
+        "winbackTitle": "Winback/Cancellation",
+        "winbackAction": "🎯 Winback/Cancellation",
+        "transferToOtherTitle": "Transfer to another person",
+        "transferAction": "🔄 Transfer",
+        "startLabel": "Start",
+        "endLabel": "End",
+        "lastEditionLabel": "Last edition",
+        "refundToLabel": "Refund to",
+        "transferredToLabel": "Transferred to",
+        "actionCancelWithRefund": "Cancel with refund",
+        "actionTransferToOther": "Transfer to another person",
+        "transferTitleWithMagazine": "Transfer {magazine}",
         "duplicateCheck": {
             "checking": "Search for existing people...",
             "possibleFound": "Possible existing person found ({count}).",
@@ -477,14 +577,24 @@ const en = {
             "useExisting": "Use existing",
             "createAnyway": "Still a new person",
             "submitAdvisory": "Please check any existing {roleLabel} before continuing.",
-            "apiFallback": "Backend control temporarily unavailable. Local control remains active."
+            "apiFallback": "Backend control temporarily unavailable. Local control remains active.",
+            "personNotFoundControlList": "Selected person was not found in the check list"
+        },
+        "search": {
+            "selectButton": "Select",
+            "enterQuery": "Enter a search term first",
+            "failed": "Searching people failed",
+            "personNotFound": "Selected person not found in search results"
         }
     },
     "resend": {
-        "editionResent": "Edition of {magazine} is being reshipped!"
+        "editionResent": "Edition of {magazine} is being reshipped!",
+        "failed": "Resend via backend failed",
+        "selectSubscription": "Select subscription..."
     },
     "editorial": {
-        "registered": "{typeLabel} registered for editors!"
+        "registered": "{typeLabel} registered for editors!",
+        "registerFailed": "Registering editorial item via backend failed"
     },
     "forms": {
         "required": "Complete all required fields",
@@ -500,19 +610,68 @@ const en = {
         "birthdayMonthPlaceholder": "Month",
         "birthdayYearPlaceholder": "Year",
         "invalidBirthday": "Please enter a valid date of birth",
-        "selectMagazine": "Select a magazine"
+        "selectMagazine": "Select a magazine",
+        "selectMagazinePlaceholder": "Select magazine...",
+        "salutationLabel": "Salutation *",
+        "salutationMr": "Mr.",
+        "salutationMrs": "Mrs.",
+        "salutationOther": "Other",
+        "initialsPlaceholder": "Initials*",
+        "middleNamePlaceholder": "Middle name",
+        "lastNamePlaceholder": "Surname*",
+        "postalCodePlaceholder": "Postal code*",
+        "postalCodeTitle": "Enter a valid postal code (e.g. 1234AB)",
+        "houseNumberPlaceholder": "House no. (and suffix)*",
+        "houseNumberTitle": "Enter a valid house number (e.g. 123 or 123A)",
+        "houseExtensionPlaceholder": "Suffix",
+        "streetPlaceholder": "Street*",
+        "cityPlaceholder": "City*",
+        "phonePlaceholder": "Phone number",
+        "emailPlaceholder": "Email address",
+        "sameAddressAsOriginalSubscriber": "Same address as original subscriber"
     },
     "winback": {
         "selectOutcome": "Select a result",
-        "success": "Winback successful! Customer remains a subscriber."
+        "success": "Winback successful! Customer remains a subscriber.",
+        "offersUnavailable": "Winback offers via backend are unavailable",
+        "offersLoadFailed": "Loading winback offers failed",
+        "offersNoneForReason": "No winback offers are available for this reason",
+        "offerScriptTitle": "Offer presentation script:",
+        "offerScriptIntro": "I understand you want to cancel your subscription. We highly value you as a customer and would like you to stay. That is why I would like to offer you a special deal:",
+        "offerScriptQuestion": "Would this help you keep the subscription?",
+        "saveFailed": "Saving winback via backend failed"
     },
     "articleOrders": {
         "addItem": "Add at least one item to the order",
         "created": "Item order successfully created!",
-        "createdWithCustomer": "New customer and item order successfully created!"
+        "createdWithCustomer": "New customer and item order successfully created!",
+        "none": "No items",
+        "calculationFailed": "Order calculation via backend failed",
+        "createFailed": "Creating item order via backend failed",
+        "deliveryStatusOrdered": "Ordered",
+        "deliveryStatusInTransit": "In transit",
+        "deliveryStatusDelivered": "Delivered",
+        "deliveryStatusReturned": "Returned",
+        "paymentStatusPending": "Pending",
+        "paymentStatusPaid": "Paid",
+        "paymentStatusRefunded": "Refunded",
+        "subtotalLabel": "Subtotal",
+        "discountLabel": "Discount",
+        "totalLabel": "Total",
+        "itemFallback": "Item",
+        "priceLabel": "Price",
+        "orderNumber": "🛒 Order #{id}",
+        "itemsLabel": "Items",
+        "orderedLabel": "Ordered",
+        "desiredDeliveryLabel": "Desired delivery",
+        "deliveredLabel": "Delivered",
+        "trackingLabel": "Track & Trace",
+        "remarkLabel": "Remark",
+        "returnPossibleUntilLabel": "Return possible until"
     },
     "delivery": {
         "remarksSaved": "Delivery preferences saved!",
+        "saveFailed": "Saving delivery preferences via backend failed",
         "remarkPresets": {
             "deliverToNeighbors": "Deliver to the neighbors if not at home",
             "useBackOrSideDoor": "Use back door or side door",
@@ -591,7 +750,53 @@ const en = {
         "emptyState": "No articles found"
     },
     "storage": {
-        "cleared": "Local storage cleared. Page is reloading..."
+        "cleared": "Local storage cleared. Page is reloading...",
+        "resetConfirm": "⚠️ This will clear all session data and reload the page. Are you sure?",
+        "resetFailed": "Reset via backend failed"
+    },
+    "search": {
+        "allCustomers": "all customers",
+        "backendFailed": "Search via backend failed",
+        "nameFilterLabel": "Name: {name}",
+        "viewAction": "View",
+        "noneFoundTitle": "No customers found",
+        "noneFoundDescription": "Adjust your search criteria and try again",
+        "resultsTitle": "🔍 Search results: \"{query}\"",
+        "resultsRange": "Showing {start}-{end} of {total}"
+    },
+    "welcome": {
+        "title": "Welcome to Customer Service",
+        "description": "Search for a customer or start a new action"
+    },
+    "serviceNumbers": {
+        "avrobode": "AVROBODE SERVICE",
+        "mikrogids": "MIKROGIDS SERVICE",
+        "ncrvgids": "NCRVGIDS SERVICE",
+        "algemeen": "GENERAL SERVICE"
+    },
+    "contactHistory": {
+        "none": "No contact history available",
+        "type": {
+            "callStartedAnonymous": "Anonymous call started",
+            "callStartedIdentified": "Call started",
+            "callIdentified": "Caller identified",
+            "callEndedByAgent": "Call ended (agent)",
+            "callEndedByCustomer": "Call ended (customer)",
+            "callDisposition": "Call completed",
+            "callHold": "Call on hold",
+            "callResumed": "Call resumed",
+            "recordingStarted": "Recording started",
+            "acwCompleted": "After-call work completed",
+            "followUpScheduled": "Follow-up scheduled",
+            "agentStatusChange": "Agent status changed",
+            "subscriptionCreated": "Subscription created",
+            "subscriptionChanged": "Subscription changed",
+            "subscriptionCancelled": "Subscription cancelled",
+            "articleSold": "Item sold",
+            "magazineResent": "Edition resent",
+            "notification": "Notification",
+            "default": "Contact"
+        }
     }
 };
 

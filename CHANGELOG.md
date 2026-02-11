@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Add full English i18n coverage via `app/static/assets/js/i18n/en.js` (matching the current `nl` keyset), register `en` in the i18n runtime, and add profile-menu language switching (`NL`/`EN`) with immediate UI re-translation and locale-aware date/time/currency formatting.
+- Localize remaining dynamic `app.js` UI strings (toasts, confirms, search/result states, queue/debug labels, subscription/article rendering labels, and contact-history labels), add missing `nl`/`en` translation keys, and remove hardcoded `nl-NL` date formatting in favor of active app locale.
 - Make `app/templates/base/index.html` fully i18n-backed by translating static text/placeholder/title literals through `window.i18n`, and add matching `indexHtml` keys in `app/static/assets/js/i18n/nl.js`.
 - Add explicit `data-i18n`, `data-i18n-placeholder`, and `data-i18n-title` bindings across `app/templates/base/index.html`, with `app.js` using these attributes as the primary static-page i18n source and literal scanning only as fallback.
 - Move delivery remark preset phrases out of inline `onclick` string literals in `app/templates/base/index.html` and resolve them via `delivery.remarkPresets` keys in `app/static/assets/js/i18n/nl.js`.
