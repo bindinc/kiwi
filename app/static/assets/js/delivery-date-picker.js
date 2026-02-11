@@ -192,13 +192,13 @@ async function generateCalendar(startDate) {
 
     let html = '<div class="delivery-calendar-content">';
     html += '<div class="delivery-quick-buttons">';
-    html += '<button type="button" class="delivery-quick-btn" onclick="selectRecommendedDate(event)" aria-label="Selecteer eerst beschikbare datum"><span aria-hidden="true">★</span> Eerst beschikbare</button>';
+    html += '<button type="button" class="delivery-quick-btn" data-action="select-recommended-delivery-date" aria-label="Selecteer eerst beschikbare datum"><span aria-hidden="true">★</span> Eerst beschikbare</button>';
     html += '</div>';
 
     html += '<div class="delivery-calendar-header">';
-    html += '<button type="button" class="calendar-nav" onclick="navigateCalendar(-1, event)" aria-label="Vorige maand"><span aria-hidden="true">&lsaquo;</span></button>';
+    html += '<button type="button" class="calendar-nav" data-action="navigate-delivery-calendar" data-arg-direction="-1" aria-label="Vorige maand"><span aria-hidden="true">&lsaquo;</span></button>';
     html += `<span class="calendar-month" aria-live="polite">${calendarData.monthLabel}</span>`;
-    html += '<button type="button" class="calendar-nav" onclick="navigateCalendar(1, event)" aria-label="Volgende maand"><span aria-hidden="true">&rsaquo;</span></button>';
+    html += '<button type="button" class="calendar-nav" data-action="navigate-delivery-calendar" data-arg-direction="1" aria-label="Volgende maand"><span aria-hidden="true">&rsaquo;</span></button>';
     html += '</div>';
 
     html += '<div class="delivery-calendar-grid">';
@@ -250,8 +250,9 @@ async function generateCalendar(startDate) {
         if (dayItem.available && !dayItem.past) {
             attrs.push('role="button"');
             attrs.push('tabindex="0"');
-            attrs.push(`onclick="selectDeliveryDateByString('${dayItem.date}', event)"`);
-            attrs.push(`onkeydown="handleDayCellKeydown(event, '${dayItem.date}')"`);
+            attrs.push('data-action="select-delivery-date"');
+            attrs.push('data-action-event="click,keydown"');
+            attrs.push(`data-arg-date="${dayItem.date}"`);
         }
         attrs.push(`title="${dayItem.title}"`);
         attrs.push(`aria-label="${ariaParts.join(' - ')}"`);

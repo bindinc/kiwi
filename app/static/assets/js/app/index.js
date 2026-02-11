@@ -1,9 +1,12 @@
 import { createActionRouter } from './actions.js';
 import { ensureLegacyAppLoaded } from './legacy-loader.js';
+import { registerOrderActions } from './slices/order.js';
+import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { getSharedState, markRouterInitialized, setRegisteredActions } from './state.js';
 
 const sharedState = getSharedState();
 const actionRouter = createActionRouter({
+    eventTypes: ['click', 'change', 'submit', 'keydown', 'input'],
     context: {
         sharedState
     },
@@ -14,6 +17,9 @@ const actionRouter = createActionRouter({
         console.debug(`[kiwi-actions] Unhandled action "${actionName}"`, context.element);
     }
 });
+
+registerOrderActions(actionRouter);
+registerWerfsleutelActions(actionRouter);
 
 actionRouter.install();
 markRouterInitialized();

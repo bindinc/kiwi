@@ -152,7 +152,7 @@ function renderArticleDropdown(filteredArticles, query) {
     if (!filteredArticles.length) {
         const noResults = translateArticle('articleSearch.noResults', {}, 'Geen artikelen gevonden.');
         const browseAllCta = translateArticle('articleSearch.browseAllCta', {}, 'Blader door alle artikelen →');
-        dropdown.innerHTML = `<div class="article-no-results">${noResults} <button type="button" onclick="showAllArticles()" class="browse-all-link">${browseAllCta}</button></div>`;
+        dropdown.innerHTML = `<div class="article-no-results">${noResults} <button type="button" data-action="show-all-articles" class="browse-all-link">${browseAllCta}</button></div>`;
         return;
     }
 
@@ -166,7 +166,7 @@ function renderArticleDropdown(filteredArticles, query) {
 
     let html = '';
     const browseAll = translateArticle('articleSearch.browseAll', {}, '📚 Blader door alle artikelen');
-    html += `<div class="article-browse-all"><button type="button" onclick="showAllArticles()" class="browse-all-link">${browseAll}</button></div>`;
+    html += `<div class="article-browse-all"><button type="button" data-action="show-all-articles" class="browse-all-link">${browseAll}</button></div>`;
 
     Object.keys(groupedByMagazine).forEach((magazine) => {
         html += `<div class="article-category">${magazine}</div>`;
@@ -174,7 +174,12 @@ function renderArticleDropdown(filteredArticles, query) {
             const highlightedName = highlightMatch(article.name, query);
             const highlightedCode = highlightMatch(article.code, query);
             html += `
-                <div class="article-item" onclick="selectArticle(${article.id})" tabindex="0">
+                <div class="article-item"
+                     role="button"
+                     tabindex="0"
+                     data-action="select-article"
+                     data-action-event="click,keydown"
+                     data-arg-article-id="${article.id}">
                     <div class="article-item-main">
                         <div class="article-item-name">${highlightedName}</div>
                         <div class="article-item-code">${highlightedCode}</div>
@@ -262,18 +267,22 @@ function createAllArticlesModal() {
             <div class="modal-content modal-large">
                 <div class="modal-header">
                     <h3>${modalTitle}</h3>
-                    <button class="btn-close" onclick="closeAllArticlesModal()">✕</button>
+                    <button class="btn-close" type="button" data-action="close-all-articles-modal">✕</button>
                 </div>
                 <div class="modal-body">
                     <div class="article-search-in-modal">
-                        <input type="text" id="modalArticleSearch" placeholder="${searchPlaceholder}" oninput="filterModalArticles(this.value)">
+                        <input type="text"
+                               id="modalArticleSearch"
+                               placeholder="${searchPlaceholder}"
+                               data-action="filter-modal-articles"
+                               data-action-event="input">
                     </div>
                     <div class="article-tabs">
-                        <button class="article-tab active" data-tab="all" onclick="showArticleTab('all', event)">${tabAll}</button>
-                        <button class="article-tab" data-tab="popular" onclick="showArticleTab('popular', event)">${tabPopular}</button>
-                        <button class="article-tab" data-tab="Avrobode" onclick="showArticleTab('Avrobode', event)">${tabAvrobode}</button>
-                        <button class="article-tab" data-tab="Mikrogids" onclick="showArticleTab('Mikrogids', event)">${tabMikrogids}</button>
-                        <button class="article-tab" data-tab="Ncrvgids" onclick="showArticleTab('Ncrvgids', event)">${tabNcrvgids}</button>
+                        <button class="article-tab active" data-tab="all" data-action="show-article-tab" data-arg-tab="all">${tabAll}</button>
+                        <button class="article-tab" data-tab="popular" data-action="show-article-tab" data-arg-tab="popular">${tabPopular}</button>
+                        <button class="article-tab" data-tab="Avrobode" data-action="show-article-tab" data-arg-tab="Avrobode">${tabAvrobode}</button>
+                        <button class="article-tab" data-tab="Mikrogids" data-action="show-article-tab" data-arg-tab="Mikrogids">${tabMikrogids}</button>
+                        <button class="article-tab" data-tab="Ncrvgids" data-action="show-article-tab" data-arg-tab="Ncrvgids">${tabNcrvgids}</button>
                     </div>
                     <div id="articleTabContent" class="article-grid"></div>
                 </div>
@@ -346,7 +355,12 @@ function renderArticleGrid(articles) {
     let html = '';
     articles.forEach((article) => {
         html += `
-            <div class="article-card" onclick="selectArticleFromModal(${article.id})">
+            <div class="article-card"
+                 role="button"
+                 tabindex="0"
+                 data-action="select-article-from-modal"
+                 data-action-event="click,keydown"
+                 data-arg-article-id="${article.id}">
                 <div class="article-card-header">
                     <span class="article-card-magazine">${article.magazine}</span>
                     ${article.popular ? '<span class="article-card-badge">⭐</span>' : ''}
@@ -633,7 +647,10 @@ async function renderOrderItems() {
                     </div>
                     <div class="order-item-quantity">${item.quantity}x</div>
                     <div class="order-item-price">${asCurrency(itemTotal)}</div>
-                    <button class="order-item-remove" onclick="removeArticleFromOrder(${item.articleId})" type="button">🗑️</button>
+                    <button class="order-item-remove"
+                            data-action="remove-article-from-order"
+                            data-arg-article-id="${item.articleId}"
+                            type="button">🗑️</button>
                 </div>
             `;
         });
@@ -658,7 +675,7 @@ async function renderOrderItems() {
                         </div>
                         <div class="discount-item-amount">
                             -${asCurrency(discount.amount)}
-                            ${isCoupon ? '<button onclick="removeCoupon()" type="button" style="margin-left: 0.5rem; background: none; border: none; cursor: pointer; color: #dc2626; font-size: 1rem;" title="Verwijder kortingscode">✕</button>' : ''}
+                            ${isCoupon ? '<button data-action="remove-coupon" type="button" style="margin-left: 0.5rem; background: none; border: none; cursor: pointer; color: #dc2626; font-size: 1rem;" title="Verwijder kortingscode">✕</button>' : ''}
                         </div>
                     </div>
                 `;

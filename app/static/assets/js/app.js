@@ -796,19 +796,8 @@ async function initWerfsleutelPicker() {
     await ensureWerfsleutelsLoaded();
 
     const input = document.getElementById('werfsleutelInput');
-    const clearButton = document.getElementById('werfsleutelClear');
-
     if (!input) {
         return;
-    }
-
-    input.addEventListener('input', (event) => handleWerfsleutelQuery(event.target.value));
-    input.addEventListener('keydown', (event) => {
-        void handleWerfsleutelInputKeyDown(event);
-    });
-
-    if (clearButton) {
-        clearButton.addEventListener('click', () => resetWerfsleutelPicker());
     }
 
     resetWerfsleutelPicker();
@@ -966,6 +955,8 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
                 id="werfsleutelOption-${index}"
                 aria-selected="${index === werfsleutelPickerState.activeIndex ? 'true' : 'false'}"
                 class="werfsleutel-suggestion${item.isActive ? '' : ' inactive'}${index === werfsleutelPickerState.activeIndex ? ' active' : ''}"
+                data-action="select-werfsleutel"
+                data-arg-sales-code="${item.salesCode}"
                 data-code="${item.salesCode}">
             <span class="code">${item.salesCode}</span>
             <span class="title">${item.title}</span>
@@ -984,12 +975,6 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
             werfsleutelPickerState.activeIndex = index;
             renderWerfsleutelSuggestions(werfsleutelPickerState.visibleMatches, { preserveActiveIndex: true });
         });
-
-        if (button.classList.contains('inactive')) {
-            button.addEventListener('click', () => showToast(translate('werfsleutel.notActive', {}, 'Deze werfsleutel is niet meer actief.'), 'warning'));
-            return;
-        }
-        button.addEventListener('click', () => selectWerfsleutel(button.dataset.code));
     });
 
     const activeOption = container.querySelector(`#werfsleutelOption-${werfsleutelPickerState.activeIndex}`);
@@ -1125,6 +1110,8 @@ function renderWerfsleutelChannelOptions() {
         return `
             <button type="button"
                     class="channel-chip${isSelected ? ' selected' : ''}"
+                    data-action="select-werfsleutel-channel"
+                    data-arg-channel-code="${code}"
                     data-channel="${code}"
                     title="${meta.label}">
                 <span class="channel-icon">${meta.icon}</span>
@@ -1133,12 +1120,6 @@ function renderWerfsleutelChannelOptions() {
             </button>
         `;
     }).join('');
-
-    container.querySelectorAll('.channel-chip').forEach((button) => {
-        button.addEventListener('click', () => {
-            selectWerfsleutelChannel(button.dataset.channel);
-        });
-    });
 }
 
 function selectWerfsleutelChannel(channelCode) {
