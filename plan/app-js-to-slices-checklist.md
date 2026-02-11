@@ -3,13 +3,13 @@
 ## 1) Header and scope
 
 - Inventory sources:
-  - `app/static/assets/js/app.js` (`6,325` lines)
-  - `app/static/assets/js/app/slices/article-search-slice.js` (`695` lines)
-  - `app/static/assets/js/app/slices/delivery-date-picker-slice.js` (`378` lines)
+  - `app/static/assets/js/app.js` (`2,086` lines)
+  - `app/static/assets/js/app/slices/article-search-slice.js` (`1,014` lines)
+  - `app/static/assets/js/app/slices/delivery-date-picker-slice.js` (`635` lines)
 - Inventory depth: full inventory (function-level grouped by domain).
 - Snapshot count:
-  - `app.js`: `205` top-level `function` declarations + `2` top-level arrow function constants (`translate`, `isDebugModalEnabled`)
-  - `article-search.js`: `28` top-level `function` declarations
+  - `app.js`: `107` top-level `function` declarations + `1` top-level arrow function constant (`isDebugModalEnabled`)
+  - `article-search.js`: `16` top-level `function` declarations
   - `delivery-date-picker.js`: `19` top-level `function` declarations
 
 ## 2) Baseline already extracted
@@ -47,13 +47,22 @@
 | 11 | Delivery date picker/calendar engine | `codex/migrate-delivery-date-picker-calendar-engine-to-slice` | [#50](https://github.com/bindinc/kiwi/pull/50) | `merged` | `yes` |  |
 | 12 | App shell events + form closing + toast + keyboard/click/change globals | `codex/extract-app-shell-events-and-global-listeners-into-app-shell-slice` | [#51](https://github.com/bindinc/kiwi/pull/51) | `merged` | `yes` |  |
 | 13 | Runtime compatibility bridge while migrating | `codex/implement-runtime-compatibility-bridge-while-migrating` | [#52](https://github.com/bindinc/kiwi/pull/52) | `merged` | `yes` |  |
+| 14 | Remove duplicated Werfsleutel implementation from legacy app.js | `codex/remove-duplicated-werfsleutel-implementation-from-legacy-app-js` | - | `not started` | `no` | Keep a single source of truth in `slices/werfsleutel.js`. |
+| 15 | Extract shared pricing + subscription identity helpers from app.js globals | `codex/extract-shared-pricing-and-subscription-identity-helpers` | - | `not started` | `no` | Move helper ownership out of legacy globals. |
+| 16 | Extract contact-history mutation + contact-moment adapter from app.js | `codex/extract-contact-history-mutation-and-contact-moment-adapter` | - | `not started` | `no` | Remove direct state mutation and persistence fallback from legacy script. |
+| 17 | Extract call-session start/duration UI bridge from app.js | `codex/extract-call-session-start-and-duration-ui-bridge` | - | `not started` | `no` | Consolidate call-session timer/UI ownership. |
+| 18 | Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`) | `codex/remove-window-slice-dependency-provider-bridge` | - | `not started` | `no` | Replace `window` provider lookups with explicit module wiring. |
+| 19 | Remove legacy facade wrappers that only proxy to slice methods | `codex/remove-legacy-facade-wrappers-proxying-to-slices` | - | `not started` | `no` | Migrate remaining global function callers to router/slice entry points. |
+| 20 | Remove app-shell fallback paths + move runtime wiring out of app.js | `codex/remove-app-shell-fallbacks-and-runtime-wiring-from-app-js` | - | `not started` | `no` | App shell and runtime wiring should live in slice/runtime modules only. |
+| 21 | Retire legacy bootstrap wrappers and script-loader dependency on app.js | `codex/retire-legacy-bootstrap-wrappers-and-app-js-loader-path` | - | `not started` | `no` | Final deletion target for `app.js` legacy bootstrap role. |
 
 ## 4) Full migration checklist by domain
 
 - Status update (inspected on 2026-02-11):
-  - Domains `1-12` are implemented and wired through `app/static/assets/js/app/index.js`.
-  - Domain `13` runtime compatibility bridge is implemented.
-  - Final bridge removal remains pending (tracked as an explicit subtask under item 13).
+  - Domains `1-13` are implemented and merged.
+  - Domains `1-13` keep historical line references from the pre-slice legacy snapshot (`app.js` at `6,325` lines) for merged-PR traceability.
+  - `app.js` still contains residual legacy code that duplicates slice logic and bridges dependencies through `window`.
+  - Domains `14-21` use the current snapshot (`app.js` at `2,086` lines) and track the remaining post-migration cleanup.
 
 - [x] 1. Localization + static i18n + locale switching
   - Target slice file(s): `app/static/assets/js/app/slices/localization-slice.js`
@@ -152,6 +161,62 @@
     - Add/extend tests to assert runtime behavior with no `window.kiwiRuntimeCompatibilityBridge` and no direct legacy global method fallback.
   - [x] Remove this temporary bridge once runtime dependencies have been internalized by slices.
 
+- [ ] 14. Remove duplicated Werfsleutel implementation from legacy app.js
+  - Target slice file(s): `app/static/assets/js/app/slices/werfsleutel.js`
+  - Source range: `app.js:182-1039`
+  - Key functions/state: `getEuroFormatter`, Werfsleutel catalog constants/state, `getWerfsleutelSliceApi`, `syncWerfsleutelCatalogMetadataIntoSlice`, `getSelectedWerfsleutelState`, `getWerfsleutelOfferDetailsFromActiveSlice`, `ensureWerfsleutelsLoaded`, `syncWerfsleutelsCatalog`, `searchWerfsleutelsViaApi`, `findWerfsleutelCandidate`, picker rendering/select/reset functions
+  - Bound action names: `handle-werfsleutel-input`, `reset-werfsleutel-picker`, `select-werfsleutel`, `select-werfsleutel-channel`
+  - Dependency/risk note: current dual implementations (`app.js` and `slices/werfsleutel.js`) can diverge in state and trigger duplicate API refresh behavior.
+
+- [ ] 15. Extract shared pricing + subscription identity helpers from app.js globals
+  - Target slice file(s): `app/static/assets/js/app/slices/customer-detail-slice.js`, `app/static/assets/js/app/slices/customer-search-slice.js`, `app/static/assets/js/app/subscription-role-runtime.js` (consumer updates), plus shared helper module
+  - Source range: `app.js:577-625`, `app.js:1198-1232`
+  - Key functions/state: `MIN_SUB_NUMBER`, `MAX_SUB_NUMBER`, `NAME_INSERTION_PREFIXES`, `normalizeNameFragment`, `generateSubscriptionNumber`, `formatEuro`, `subscriptionPricing`, `getPricingDisplay`, `getSubscriptionDurationDisplay`
+  - Bound action names: none direct (cross-cutting helpers)
+  - Dependency/risk note: helper behavior is currently accessed via globals/fallback lookups; extraction must preserve deterministic subscription-number generation and duration-label rendering.
+
+- [ ] 16. Extract contact-history mutation + contact-moment adapter from app.js
+  - Target slice file(s): `app/static/assets/js/app/slices/contact-history-slice.js` (or dedicated contact-history state module), `app/static/assets/js/app/slices/call-agent-runtime-client.js`
+  - Source range: `app.js:1238-1332`
+  - Key functions/state: `generateContactHistoryId`, `pushContactHistory`, `addContactMoment`, `contactHistoryHighlightTimer` interactions
+  - Bound action names: indirect via toast/contact updates and runtime call events
+  - Dependency/risk note: this block touches API persistence fallback, paging/highlight state, and runtime notifications; state ownership must be centralized before deleting legacy code.
+
+- [ ] 17. Extract call-session start/duration UI bridge from app.js
+  - Target slice file(s): `app/static/assets/js/app/slices/call-session-slice.js`, `app/static/assets/js/app/call-agent-runtime.js` (wiring update)
+  - Source range: `app.js:1335-1401`
+  - Key functions/state: `startCallSession`, `updateCallDuration`, `recordingConfig` interactions, `callSession.durationInterval` timer ownership
+  - Bound action names: indirect runtime flows (`call-session.simulate-incoming-call`, `call-session.identify-caller`, `call-session.end`)
+  - Dependency/risk note: these functions currently mix DOM rendering, timers, and runtime state; extraction must avoid duplicate timer mutation between legacy and runtime modules.
+
+- [ ] 18. Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`)
+  - Target slice file(s): `app/static/assets/js/app.js`, `app/static/assets/js/app/index.js`, `app/static/assets/js/app/slices/customer-detail-slice.js`, `app/static/assets/js/app/slices/contact-history-slice.js`, `app/static/assets/js/app/slices/order.js`, `app/static/assets/js/app/slices/delivery-remarks-slice.js`, `app/static/assets/js/app/slices/app-shell-slice.js`
+  - Source range: `app.js:1547-1751`
+  - Key functions/state: `getSliceApi`, `invokeSliceMethod`, `invokeSliceMethodAsync`, `getCustomerDetailSliceDependencies`, `getOrderSliceDependencies`, `getDeliveryRemarksSliceDependencies`, `getAppShellSliceDependencies`, global provider registration
+  - Bound action names: none direct (cross-slice dependency plumbing)
+  - Dependency/risk note: slices currently resolve dependencies via `window.kiwiGet*` providers; migration should move this to explicit module wiring in `app/index.js` to remove global hidden coupling.
+
+- [ ] 19. Remove legacy facade wrappers that only proxy to slice methods
+  - Target slice file(s): `app/static/assets/js/app.js`, `app/static/assets/js/app/slices/*.js`, `app/templates/base/index.html` (if any remaining global function invocations exist)
+  - Source range: `app.js:1754-1981`
+  - Key functions: `selectCustomer`, `displayDeceasedStatusBanner`, `displaySubscriptions`, contact-history wrappers, winback wrappers, order/delivery-remarks wrappers
+  - Bound action names: `select-customer`, `toggle-timeline-item`, `change-contact-history-page`, `cancel-subscription`, `start-winback-for-subscription`, `complete-winback`, `open-article-sale-form`, `submit-article-sale-form`, `add-delivery-remark-modal`
+  - Dependency/risk note: removing wrappers requires caller migration (templates, runtime hooks, and any manual JS calls) to router actions or direct slice APIs.
+
+- [ ] 20. Remove app-shell fallback paths and move runtime dependency wiring out of app.js
+  - Target slice file(s): `app/static/assets/js/app/slices/app-shell-slice.js`, `app/static/assets/js/app/slices/call-agent-runtime-client.js`, `app/static/assets/js/app.js`
+  - Source range: `app.js:1136-1192`, `app.js:1985-2086`
+  - Key functions/state: `endSession` fallback body, `closeForm` fallback body, `mapToastTypeToContactType` fallback switch, `showToast` fallback DOM path, `wireCallAgentRuntimeDependencies`, `isDebugModalEnabled`
+  - Bound action names: `close-form`
+  - Dependency/risk note: preserve no-customer toast UX and debug-flag behavior while moving runtime dependency injection to module bootstrap instead of legacy script tail.
+
+- [ ] 21. Retire legacy bootstrap wrappers and loader dependency on app.js
+  - Target slice file(s): `app/static/assets/js/app.js`, `app/static/assets/js/app/index.js`, `app/static/assets/js/app/legacy-loader.js`, `app/static/assets/js/app/slices/bootstrap-slice.js`
+  - Source range: `app.js:1-84`, `app.js:1404-1537`
+  - Key functions/state: `initialAppDataState` globals, endpoint constants, `initializeKiwiApplication`, `loadBootstrapState`, `initializeData`, `saveCustomers`, `updateCustomerActionButtons`, `updateTime`
+  - Bound action names: none direct (startup/bootstrap path)
+  - Dependency/risk note: final teardown must keep startup order intact while removing `ensureLegacyAppLoaded()` script injection and eliminating legacy global bootstrap ownership.
+
 ## 5) Recommended migration order
 
 1. Localization + app shell action conversion
@@ -164,6 +229,14 @@
 8. Winback/deceased/restitution
 9. Article sales + delivery remarks
 10. Runtime bridge cleanup
+11. Remove duplicated Werfsleutel implementation from legacy app.js (item 14)
+12. Extract shared pricing/subscription helper ownership (item 15)
+13. Extract contact-history mutation and contact-moment adapter (item 16)
+14. Extract call-session start/duration UI bridge (item 17)
+15. Remove `window.kiwiGet*SliceDependencies` bridge (item 18)
+16. Remove legacy facade wrappers that proxy to slices (item 19)
+17. Remove app-shell fallback logic and runtime tail wiring from app.js (item 20)
+18. Retire legacy bootstrap wrappers and app.js loader path (item 21)
 
 ## 6) Verification commands
 
@@ -198,7 +271,7 @@ rg -n "^const\\s+[A-Za-z0-9_]+\\s*=\\s*\\([^)]*\\)\\s*=>" app/static/assets/js/a
 - Manual coverage check:
 
 ```bash
-# Manually verify every app.js range appears exactly once across domains 1-13.
+# Manually verify every app.js range appears exactly once across domains 1-21.
 # Manually verify full-file ranges are covered for article-search.js and delivery-date-picker.js.
 # Confirm that only intentional cross-cutting references remain.
 ```
@@ -211,7 +284,7 @@ rg -n "^const\\s+[A-Za-z0-9_]+\\s*=\\s*\\([^)]*\\)\\s*=>" app/static/assets/js/a
 ## 8) Test cases and scenarios (for this planning-doc change)
 
 1. Confirm `plan/app-js-to-slices-checklist.md` exists.
-2. Confirm all 13 domain checklist items are present and marked completed, with the explicit bridge-removal subtask still open.
+2. Confirm domains `1-13` are marked completed and domains `14-21` are present as unchecked follow-up work.
 3. Confirm baseline-completed section exists and marks current extracted slices/runtime as done.
 4. Confirm line references are present for every domain item (`app.js`, `article-search.js`, `delivery-date-picker.js` sources).
 5. Confirm migration order and verification commands sections are present.
