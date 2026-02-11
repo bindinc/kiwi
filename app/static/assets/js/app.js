@@ -588,44 +588,6 @@ function endSession() {
 // PHASE 1: CALL SESSION MANAGEMENT
 // ============================================================================
 
-
-// Subscription Pricing Information
-const subscriptionPricing = {
-    '1-jaar': { price: 52.00, perMonth: 4.33, description: '1 jaar - Jaarlijks betaald' },
-    '2-jaar': { price: 98.00, perMonth: 4.08, description: '2 jaar - Jaarlijks betaald (5% korting)' },
-    '3-jaar': { price: 140.00, perMonth: 3.89, description: '3 jaar - Jaarlijks betaald (10% korting)' },
-    '1-jaar-maandelijks': { price: 54.00, perMonth: 4.50, description: '1 jaar - Maandelijks betaald' },
-    '2-jaar-maandelijks': { price: 104.40, perMonth: 4.35, description: '2 jaar - Maandelijks betaald' },
-    '3-jaar-maandelijks': { price: 151.20, perMonth: 4.20, description: '3 jaar - Maandelijks betaald' }
-};
-
-// Helper function to get pricing display
-function getPricingDisplay(duration) {
-    const pricing = subscriptionPricing[duration];
-    if (!pricing) return '';
-    return `€${pricing.perMonth.toFixed(2)}/maand (${pricing.description})`;
-}
-
-function getSubscriptionDurationDisplay(subscription) {
-    if (!subscription) {
-        return 'Oude prijsstructuur';
-    }
-
-    if (subscription.duration && subscriptionPricing[subscription.duration]) {
-        return getPricingDisplay(subscription.duration);
-    }
-
-    if (subscription.durationLabel) {
-        return subscription.durationLabel;
-    }
-
-    if (subscription.duration) {
-        return subscription.duration;
-    }
-
-    return 'Oude prijsstructuur';
-}
-
 // ============================================================================
 // PHASE 1: CALL SESSION MANAGEMENT
 // ============================================================================
