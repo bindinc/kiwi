@@ -143,7 +143,13 @@
   - Target slice file(s): temporary bridge section only (no final target slice)
   - Source functions required by runtime namespace: `addContactMoment` (`app.js:1321`), `getDispositionCategories` (`app.js:1115`), `selectCustomer` (`app.js:1755`), `showToast` (`app.js:2021`), `startCallSession` (`app.js:1336`)
   - Bound action names: indirect via runtime client methods in `app/static/assets/js/app/slices/call-agent-runtime-client.js`
-  - Dependency/risk note: keep compatibility exports until runtime no longer depends on legacy globals.
+  - Dependency/risk note: runtime still depends on legacy globals through the compatibility adapter in `app/static/assets/js/app/call-agent-runtime.js` (`resolveRuntimeCompatibilityMethod` + `invokeRuntimeCompatibilityMethod`) and bridge installation in `app/static/assets/js/app.js` (`installRuntimeCompatibilityBridge`).
+  - Bridge removal prerequisites:
+    - Wire the runtime to explicit slice-owned dependencies for the five bridge methods (`addContactMoment`, `getDispositionCategories`, `selectCustomer`, `showToast`, `startCallSession`) and stop resolving them from `window`.
+    - Remove fallback global lookup (`window[methodName]`) from runtime compatibility resolution to avoid accidental legacy coupling.
+    - Verify call flows still work end-to-end without legacy bridge globals: caller identification, contact-moment writes, disposition category rendering, toast/contact-history updates, and call-session start.
+    - Remove `installRuntimeCompatibilityBridge` and `RUNTIME_COMPATIBILITY_BRIDGE_NAMESPACE` from `app.js` after the runtime has no bridge consumers.
+    - Add/extend tests to assert runtime behavior with no `window.kiwiRuntimeCompatibilityBridge` and no direct legacy global method fallback.
   - [ ] Remove this temporary bridge once runtime dependencies have been internalized by slices.
 
 ## 5) Recommended migration order
