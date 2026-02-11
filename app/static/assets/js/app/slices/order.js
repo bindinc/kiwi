@@ -250,14 +250,6 @@ function getWorkflowsApiUrl(dependencies) {
     return dependencies.getWorkflowsApiUrl() || '/api/v1/workflows';
 }
 
-function getElementValue(context, payload, fallbackKey = 'query') {
-    if (context && context.element && 'value' in context.element) {
-        return context.element.value;
-    }
-
-    return payload && payload[fallbackKey] ? payload[fallbackKey] : '';
-}
-
 function isActivationKey(event) {
     return event && (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar');
 }
@@ -912,87 +904,6 @@ export function registerOrderActions(actionRouter) {
                 return;
             }
             addDeliveryRemarkByKey(payload.remarkKey);
-        },
-
-        // Item 10+11 remain legacy-bridged until those checklist items migrate.
-        'filter-articles': (payload, context) => {
-            const query = getElementValue(context, payload);
-            void callLegacyAsync('filterArticles', [query]);
-        },
-        'update-article-price': () => {
-            callLegacy('updateArticlePrice');
-        },
-        'add-article-to-order': () => {
-            void callLegacyAsync('addArticleToOrder');
-        },
-        'apply-coupon': () => {
-            void callLegacyAsync('applyCoupon');
-        },
-        'apply-coupon-on-enter': (_payload, context) => {
-            const isEnterPress = context && context.event && context.event.key === 'Enter';
-            if (!isEnterPress) {
-                return;
-            }
-
-            context.event.preventDefault();
-            void callLegacyAsync('applyCoupon');
-        },
-        'show-all-articles': () => {
-            void callLegacyAsync('showAllArticles');
-        },
-        'select-article': (payload = {}, context) => {
-            if (payload.articleId === undefined || payload.articleId === null) {
-                return;
-            }
-
-            const isKeyboardEvent = context && context.event && context.event.type === 'keydown';
-            if (isKeyboardEvent && !isActivationKey(context.event)) {
-                return;
-            }
-            if (isKeyboardEvent) {
-                context.event.preventDefault();
-            }
-
-            void callLegacyAsync('selectArticle', [payload.articleId]);
-        },
-        'filter-modal-articles': (payload, context) => {
-            const query = getElementValue(context, payload);
-            void callLegacyAsync('filterModalArticles', [query]);
-        },
-        'show-article-tab': (payload = {}, context) => {
-            if (!payload.tab) {
-                return;
-            }
-
-            void callLegacyAsync('showArticleTab', [payload.tab, context.event]);
-        },
-        'select-article-from-modal': (payload = {}, context) => {
-            if (payload.articleId === undefined || payload.articleId === null) {
-                return;
-            }
-
-            const isKeyboardEvent = context && context.event && context.event.type === 'keydown';
-            if (isKeyboardEvent && !isActivationKey(context.event)) {
-                return;
-            }
-            if (isKeyboardEvent) {
-                context.event.preventDefault();
-            }
-
-            void callLegacyAsync('selectArticleFromModal', [payload.articleId]);
-        },
-        'close-all-articles-modal': () => {
-            callLegacy('closeAllArticlesModal');
-        },
-        'remove-article-from-order': (payload = {}) => {
-            if (payload.articleId === undefined || payload.articleId === null) {
-                return;
-            }
-
-            void callLegacyAsync('removeArticleFromOrder', [payload.articleId]);
-        },
-        'remove-coupon': () => {
-            void callLegacyAsync('removeCoupon');
         },
         'select-recommended-delivery-date': (_payload, context) => {
             void callLegacyAsync('selectRecommendedDate', [context.event]);

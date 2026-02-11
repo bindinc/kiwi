@@ -1,6 +1,7 @@
 import { createActionRouter } from './actions.js';
 import { ensureLegacyAppLoaded } from './legacy-loader.js';
 import { registerOrderActions } from './slices/order.js';
+import { registerArticleSearchSlice } from './slices/article-search-slice.js';
 import { installBootstrapSlice } from './slices/bootstrap-slice.js';
 import { registerCallQueueAgentStatusSlices } from './slices/index.js';
 import { registerCustomerSearchSlice } from './slices/customer-search-slice.js';
@@ -31,6 +32,7 @@ const actionRouter = createActionRouter({
 });
 
 registerOrderActions(actionRouter);
+registerArticleSearchSlice(actionRouter);
 registerDeliveryRemarksSlice(actionRouter);
 registerLocalizationSlice(actionRouter);
 registerContactHistorySlice(actionRouter);

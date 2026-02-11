@@ -43,7 +43,7 @@
 | 7 | Subscription workflows (create/edit/customer-edit/resend/editorial) | `codex/migrate-subscription-workflows-to-subscription-workflow-slice` | [#46](https://github.com/bindinc/kiwi/pull/46) | `merged` | `yes` |  |
 | 8 | Winback + deceased + restitution transfer workflows | `codex/migrate-winback-deceased-restitution-workflows-to-slice` | [#48](https://github.com/bindinc/kiwi/pull/48) | `merged` | `yes` |  |
 | 9 | Article sales + delivery remarks modal implementation | `codex/implement-article-sales-and-delivery-remarks-modal-slices` | [#49](https://github.com/bindinc/kiwi/pull/49) | `merged` | `yes` |  |
-| 10 | Article catalog search/order engine | `TBD` | `TBD` | `not started` | `no` |  |
+| 10 | Article catalog search/order engine | `codex/extract-article-catalog-search-and-order-engine-into-slice` | [#47](https://github.com/bindinc/kiwi/pull/47) | `in progress` | `no` |  |
 | 11 | Delivery date picker/calendar engine | `TBD` | `TBD` | `not started` | `no` |  |
 | 12 | App shell events + form closing + toast + keyboard/click/change globals | `TBD` | `TBD` | `not started` | `no` |  |
 | 13 | Runtime compatibility bridge while migrating | `TBD` | `TBD` | `not started` | `no` |  |
