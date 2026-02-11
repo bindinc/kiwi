@@ -1,5 +1,6 @@
 import { createActionRouter } from './actions.js';
 import { ensureLegacyAppLoaded } from './legacy-loader.js';
+import { registerCallQueueAgentStatusSlices } from './slices/index.js';
 import { getSharedState, markRouterInitialized, setRegisteredActions } from './state.js';
 
 const sharedState = getSharedState();
@@ -15,6 +16,7 @@ const actionRouter = createActionRouter({
     }
 });
 
+registerCallQueueAgentStatusSlices(actionRouter);
 actionRouter.install();
 markRouterInitialized();
 setRegisteredActions(actionRouter.getRegisteredActions());
