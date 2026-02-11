@@ -2,6 +2,7 @@ import { createActionRouter } from './actions.js';
 import { ensureLegacyAppLoaded } from './legacy-loader.js';
 import { registerOrderActions } from './slices/order.js';
 import { registerCallQueueAgentStatusSlices } from './slices/index.js';
+import { registerLocalizationSlice } from './slices/localization-slice.js';
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { registerCustomerSubscriptionActions } from './legacy-actions-customer-subscription.js';
 import { getSharedState } from './state.js';
@@ -21,6 +22,7 @@ const actionRouter = createActionRouter({
 });
 
 registerOrderActions(actionRouter);
+registerLocalizationSlice(actionRouter);
 registerWerfsleutelActions(actionRouter);
 registerCallQueueAgentStatusSlices(actionRouter);
 registerCustomerSubscriptionActions(actionRouter);

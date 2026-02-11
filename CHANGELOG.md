@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
+- Extract localization/static i18n/locale-switching logic into `assets/js/app/slices/localization-slice.js`, expose those helpers through the legacy global bridge, and move profile language toggles to delegated `data-action="localization.set-locale"` handlers.
 - Migrate customer/subscription/winback UI events from inline HTML handlers to delegated `data-action` contracts, including generated `app.js` markup (search results, pagination, subscription actions, duplicate checks, contact history paging, and winback offer selection) with new router registrations in `assets/js/app/legacy-actions-customer-subscription.js`.
 - Start `app.js` modularization with a new ES-module entrypoint (`assets/js/app/index.js`), shared router/state/service foundation files, and a legacy bootstrap bridge that preserves current runtime behavior while future slices migrate off global handlers.
 - Refactor article-sale, delivery-remark, delivery-calendar, and werfsleutel picker/channel UI interactions into dedicated app-module slices with delegated `data-action` handlers, replacing in-scope inline/generated handlers while preserving existing legacy workflow behavior.
