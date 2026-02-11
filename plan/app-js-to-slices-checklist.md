@@ -47,12 +47,12 @@
 | 11 | Delivery date picker/calendar engine | `codex/migrate-delivery-date-picker-calendar-engine-to-slice` | [#50](https://github.com/bindinc/kiwi/pull/50) | `merged` | `yes` |  |
 | 12 | App shell events + form closing + toast + keyboard/click/change globals | `codex/extract-app-shell-events-and-global-listeners-into-app-shell-slice` | [#51](https://github.com/bindinc/kiwi/pull/51) | `merged` | `yes` |  |
 | 13 | Runtime compatibility bridge while migrating | `codex/implement-runtime-compatibility-bridge-while-migrating` | [#52](https://github.com/bindinc/kiwi/pull/52) | `merged` | `yes` |  |
-| 14 | Remove duplicated Werfsleutel implementation from legacy app.js | `codex/remove-duplicated-werfsleutel-implementation-from-legacy-app-js` | [#56](https://github.com/bindinc/kiwi/pull/56) | `open` | `no` | Keep a single source of truth in `slices/werfsleutel.js`. |
-| 15 | Extract shared pricing + subscription identity helpers from app.js globals | `codex/extract-shared-pricing-and-subscription-identity-helpers` | [#59](https://github.com/bindinc/kiwi/pull/59) | `open` | `no` | Move helper ownership out of legacy globals. |
-| 16 | Extract contact-history mutation + contact-moment adapter from app.js | `codex/extract-contact-history-mutation-and-contact-moment-adapter` | [#57](https://github.com/bindinc/kiwi/pull/57) | `open` | `no` | Remove direct state mutation and persistence fallback from legacy script. |
-| 17 | Extract call-session start/duration UI bridge from app.js | `codex/extract-call-session-start-and-duration-ui-bridge` | [#60](https://github.com/bindinc/kiwi/pull/60) | `open` | `no` | Consolidate call-session timer/UI ownership. |
-| 18 | Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`) | `codex/remove-window-slice-dependency-provider-bridge` | [#58](https://github.com/bindinc/kiwi/pull/58) | `open` | `no` | Replace `window` provider lookups with explicit module wiring. |
-| 19 | Remove legacy facade wrappers that only proxy to slice methods | `codex/remove-legacy-facade-wrappers-proxying-to-slices` | - | `not started` | `no` | Migrate remaining global function callers to router/slice entry points. |
+| 14 | Remove duplicated Werfsleutel implementation from legacy app.js | `codex/remove-duplicated-werfsleutel-implementation-from-legacy-app-js` | [#56](https://github.com/bindinc/kiwi/pull/56) | `merged` | `yes` | Keep a single source of truth in `slices/werfsleutel.js`. |
+| 15 | Extract shared pricing + subscription identity helpers from app.js globals | `codex/extract-shared-pricing-and-subscription-identity-helpers` | [#59](https://github.com/bindinc/kiwi/pull/59) | `merged` | `yes` | Move helper ownership out of legacy globals. |
+| 16 | Extract contact-history mutation + contact-moment adapter from app.js | `codex/extract-contact-history-mutation-and-contact-moment-adapter` | [#57](https://github.com/bindinc/kiwi/pull/57) | `merged` | `yes` | Remove direct state mutation and persistence fallback from legacy script. |
+| 17 | Extract call-session start/duration UI bridge from app.js | `codex/extract-call-session-start-and-duration-ui-bridge` | [#60](https://github.com/bindinc/kiwi/pull/60) | `merged` | `yes` | Consolidate call-session timer/UI ownership. |
+| 18 | Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`) | `codex/remove-window-slice-dependency-provider-bridge` | [#58](https://github.com/bindinc/kiwi/pull/58) | `merged` | `yes` | Replace `window` provider lookups with explicit module wiring. |
+| 19 | Remove legacy facade wrappers that only proxy to slice methods | `codex/remove-legacy-facade-wrappers-proxying-to-slices` | [#61](https://github.com/bindinc/kiwi/pull/61) | `merged` | `yes` | Migrate remaining global function callers to router/slice entry points. |
 | 20 | Remove app-shell fallback paths + move runtime wiring out of app.js | `codex/remove-app-shell-fallbacks-and-runtime-wiring-from-app-js` | - | `not started` | `no` | App shell and runtime wiring should live in slice/runtime modules only. |
 | 21 | Retire legacy bootstrap wrappers and script-loader dependency on app.js | `codex/retire-legacy-bootstrap-wrappers-and-app-js-loader-path` | - | `not started` | `no` | Final deletion target for `app.js` legacy bootstrap role. |
 
@@ -161,14 +161,14 @@
     - Add/extend tests to assert runtime behavior with no `window.kiwiRuntimeCompatibilityBridge` and no direct legacy global method fallback.
   - [x] Remove this temporary bridge once runtime dependencies have been internalized by slices.
 
-- [ ] 14. Remove duplicated Werfsleutel implementation from legacy app.js
+- [x] 14. Remove duplicated Werfsleutel implementation from legacy app.js
   - Target slice file(s): `app/static/assets/js/app/slices/werfsleutel.js`
   - Source range: `app.js:182-1039`
   - Key functions/state: `getEuroFormatter`, Werfsleutel catalog constants/state, `getWerfsleutelSliceApi`, `syncWerfsleutelCatalogMetadataIntoSlice`, `getSelectedWerfsleutelState`, `getWerfsleutelOfferDetailsFromActiveSlice`, `ensureWerfsleutelsLoaded`, `syncWerfsleutelsCatalog`, `searchWerfsleutelsViaApi`, `findWerfsleutelCandidate`, picker rendering/select/reset functions
   - Bound action names: `handle-werfsleutel-input`, `reset-werfsleutel-picker`, `select-werfsleutel`, `select-werfsleutel-channel`
   - Dependency/risk note: current dual implementations (`app.js` and `slices/werfsleutel.js`) can diverge in state and trigger duplicate API refresh behavior.
 
-- [ ] 15. Extract shared pricing + subscription identity helpers from app.js globals
+- [x] 15. Extract shared pricing + subscription identity helpers from app.js globals
   - Target slice file(s): `app/static/assets/js/app/slices/customer-detail-slice.js`, `app/static/assets/js/app/slices/customer-search-slice.js`, `app/static/assets/js/app/subscription-role-runtime.js` (consumer updates), plus shared helper module
   - Source range: `app.js:577-625`, `app.js:1198-1232`
   - Key functions/state: `MIN_SUB_NUMBER`, `MAX_SUB_NUMBER`, `NAME_INSERTION_PREFIXES`, `normalizeNameFragment`, `generateSubscriptionNumber`, `formatEuro`, `subscriptionPricing`, `getPricingDisplay`, `getSubscriptionDurationDisplay`
@@ -196,7 +196,7 @@
   - Bound action names: none direct (cross-slice dependency plumbing)
   - Dependency/risk note: dependency resolution is now explicitly wired in `app/index.js` via `window.kiwiLegacySliceDependencies`, removing per-slice `window.kiwiGet*` provider lookups and making slice wiring explicit.
 
-- [ ] 19. Remove legacy facade wrappers that only proxy to slice methods
+- [x] 19. Remove legacy facade wrappers that only proxy to slice methods
   - Target slice file(s): `app/static/assets/js/app.js`, `app/static/assets/js/app/slices/*.js`, `app/templates/base/index.html` (if any remaining global function invocations exist)
   - Source range: `app.js:1754-1981`
   - Key functions: `selectCustomer`, `displayDeceasedStatusBanner`, `displaySubscriptions`, contact-history wrappers, winback wrappers, order/delivery-remarks wrappers

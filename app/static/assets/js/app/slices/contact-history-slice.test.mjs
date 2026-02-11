@@ -3,6 +3,7 @@ import { createActionRouter } from '../actions.js';
 import {
     __contactHistoryTestUtils,
     addContactMoment,
+    configureContactHistorySliceDependencies,
     pushContactHistory,
     registerContactHistorySlice,
     resetContactHistoryViewState
@@ -23,7 +24,6 @@ function createRouter() {
 function withGlobalState(testFn) {
     const previousValues = {
         kiwiContactHistorySlice: globalThis.kiwiContactHistorySlice,
-        kiwiGetCustomerDetailSliceDependencies: globalThis.kiwiGetCustomerDetailSliceDependencies,
         document: globalThis.document,
         setTimeout: globalThis.setTimeout,
         clearTimeout: globalThis.clearTimeout
@@ -43,8 +43,8 @@ function withGlobalState(testFn) {
         testFn();
     } finally {
         __contactHistoryTestUtils.clearContactHistoryHighlightTimer();
+        configureContactHistorySliceDependencies(null);
         restoreValue('kiwiContactHistorySlice', previousValues.kiwiContactHistorySlice);
-        restoreValue('kiwiGetCustomerDetailSliceDependencies', previousValues.kiwiGetCustomerDetailSliceDependencies);
         restoreValue('document', previousValues.document);
         restoreValue('setTimeout', previousValues.setTimeout);
         restoreValue('clearTimeout', previousValues.clearTimeout);
@@ -53,7 +53,7 @@ function withGlobalState(testFn) {
 
 function testRegistersItemSixteenActionsAndNamespace() {
     withGlobalState(() => {
-        globalThis.kiwiGetCustomerDetailSliceDependencies = () => ({
+        configureContactHistorySliceDependencies(() => ({
             getCurrentCustomer() {
                 return null;
             },
@@ -65,7 +65,7 @@ function testRegistersItemSixteenActionsAndNamespace() {
                     lastEntry: null
                 };
             }
-        });
+        }));
 
         const router = createRouter();
         registerContactHistorySlice(router);
@@ -103,7 +103,7 @@ function testPushContactHistoryTracksHighlightAndPersistsViaSaveCustomers() {
         globalThis.clearTimeout = (timerId) => {
             clearedTimeoutIds.push(timerId);
         };
-        globalThis.kiwiGetCustomerDetailSliceDependencies = () => ({
+        configureContactHistorySliceDependencies(() => ({
             findCustomerById(customerId) {
                 return Number(customerId) === 7 ? customer : null;
             },
@@ -120,7 +120,7 @@ function testPushContactHistoryTracksHighlightAndPersistsViaSaveCustomers() {
             saveCustomers() {
                 savedCustomersCount += 1;
             }
-        });
+        }));
 
         const firstEntry = pushContactHistory(
             customer,
@@ -161,7 +161,6 @@ function testPushContactHistoryTracksHighlightAndPersistsViaSaveCustomers() {
 }
 
 async function testPushContactHistoryPersistsViaApiWhenAvailable() {
-    const previousProvider = globalThis.kiwiGetCustomerDetailSliceDependencies;
     try {
         const customer = {
             id: 17,
@@ -176,7 +175,7 @@ async function testPushContactHistoryPersistsViaApiWhenAvailable() {
         const postCalls = [];
         let saveCustomersCount = 0;
 
-        globalThis.kiwiGetCustomerDetailSliceDependencies = () => ({
+        configureContactHistorySliceDependencies(() => ({
             findCustomerById(customerId) {
                 return Number(customerId) === 17 ? customer : null;
             },
@@ -198,7 +197,7 @@ async function testPushContactHistoryPersistsViaApiWhenAvailable() {
             saveCustomers() {
                 saveCustomersCount += 1;
             }
-        });
+        }));
 
         const entry = pushContactHistory(
             customer,
@@ -218,11 +217,7 @@ async function testPushContactHistoryPersistsViaApiWhenAvailable() {
         assert.equal(entry.id, 'server-entry-id');
     } finally {
         __contactHistoryTestUtils.clearContactHistoryHighlightTimer();
-        if (previousProvider === undefined) {
-            delete globalThis.kiwiGetCustomerDetailSliceDependencies;
-        } else {
-            globalThis.kiwiGetCustomerDetailSliceDependencies = previousProvider;
-        }
+        configureContactHistorySliceDependencies(null);
     }
 }
 
@@ -239,7 +234,7 @@ function testAddContactMomentResolvesCustomerById() {
             lastEntry: null
         };
 
-        globalThis.kiwiGetCustomerDetailSliceDependencies = () => ({
+        configureContactHistorySliceDependencies(() => ({
             findCustomerById(customerId) {
                 return Number(customerId) === 23 ? targetCustomer : null;
             },
@@ -254,7 +249,7 @@ function testAddContactMomentResolvesCustomerById() {
             },
             personsApiUrl: '/api/v1/persons',
             saveCustomers() {}
-        });
+        }));
 
         const entry = addContactMoment(23, 'call_identified', 'Beller gekoppeld');
 
@@ -288,7 +283,7 @@ function testResetContactHistoryViewStateClearsTimerAndState() {
         globalThis.clearTimeout = (timerId) => {
             clearedTimeoutIds.push(timerId);
         };
-        globalThis.kiwiGetCustomerDetailSliceDependencies = () => ({
+        configureContactHistorySliceDependencies(() => ({
             findCustomerById(customerId) {
                 return Number(customerId) === 8 ? customer : null;
             },
@@ -303,7 +298,7 @@ function testResetContactHistoryViewStateClearsTimerAndState() {
             },
             personsApiUrl: '/api/v1/persons',
             saveCustomers() {}
-        });
+        }));
 
         pushContactHistory(
             customer,

@@ -584,105 +584,9 @@ function endSession() {
 }
 
 // Subscription role helpers moved to app/subscription-role-runtime.js.
-// ============================================================================
-// PHASE 1: CALL SESSION MANAGEMENT
-// ============================================================================
 
-function generateContactHistoryId() {
-    return `ch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function pushContactHistory(customer, entry, options = {}) {
-    if (!customer) {
-        return null;
-    }
-
-    const {
-        highlight = false,
-        persist = true,
-        refresh = true,
-        moveToFirstPage = false
-    } = options;
-
-    const normalizedEntry = {
-        id: entry.id || generateContactHistoryId(),
-        type: entry.type || 'default',
-        date: entry.date || new Date().toISOString(),
-        description: entry.description || ''
-    };
-
-    if (!Array.isArray(customer.contactHistory)) {
-        customer.contactHistory = [];
-    }
-
-    customer.contactHistory.unshift(normalizedEntry);
-
-    if (persist) {
-        if (window.kiwiApi && customer.id !== undefined && customer.id !== null) {
-            window.kiwiApi
-                .post(`${personsApiUrl}/${customer.id}/contact-history`, normalizedEntry)
-                .then((savedEntry) => {
-                    if (savedEntry && savedEntry.id) {
-                        normalizedEntry.id = savedEntry.id;
-                    }
-                })
-                .catch((error) => {
-                    console.warn('Kon contacthistorie niet opslaan via API', error);
-                });
-        } else {
-            saveCustomers();
-        }
-    }
-
-    const isCurrentCustomer = currentCustomer && currentCustomer.id === customer.id;
-
-    if (isCurrentCustomer && (highlight || moveToFirstPage)) {
-        contactHistoryState.currentPage = 1;
-    }
-
-    if (highlight && isCurrentCustomer) {
-        contactHistoryState.highlightId = normalizedEntry.id;
-
-        if (contactHistoryHighlightTimer) {
-            clearTimeout(contactHistoryHighlightTimer);
-        }
-
-        contactHistoryHighlightTimer = setTimeout(() => {
-            contactHistoryState.highlightId = null;
-            if (currentCustomer && currentCustomer.id === customer.id) {
-                displayContactHistory();
-            }
-            contactHistoryHighlightTimer = null;
-        }, 5000);
-    }
-
-    if (refresh && isCurrentCustomer) {
-        displayContactHistory();
-    }
-
-    contactHistoryState.lastEntry = {
-        id: normalizedEntry.id,
-        type: normalizedEntry.type,
-        createdAt: Date.now()
-    };
-
-    return normalizedEntry;
-}
-
-// Helper function to add contact moment to customer history
-function addContactMoment(customerId, type, description) {
-    const customer = customers.find(c => c.id === customerId);
-    if (!customer) return;
-
-    pushContactHistory(
-        customer,
-        {
-            type: type,
-            description: description
-        },
-        { highlight: true }
-    );
-}
+// Contact-history mutation (generateContactHistoryId, pushContactHistory,
+// addContactMoment) is now owned by contact-history-slice.js.
 
 async function initializeKiwiApplication() {
     const canUseBootstrapSlice = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.initializeKiwiApplication === 'function';
@@ -903,7 +807,9 @@ function getCustomerDetailSliceDependencies() {
         saveCustomers,
         translate,
         showToast,
-        displayArticles,
+        displayArticles() {
+            invokeSliceMethod(ORDER_SLICE_NAMESPACE, 'displayArticles');
+        },
         updateCustomerActionButtons,
         updateIdentifyCallerButtons,
         getSubscriptionRequesterMetaLine,
@@ -953,12 +859,18 @@ function getOrderSliceDependencies() {
         closeForm,
         showToast,
         translate,
-        formatDate,
+        formatDate(dateString) {
+            return invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'formatDate', [dateString]);
+        },
         saveCustomers,
         upsertCustomerInCache,
-        pushContactHistory,
+        pushContactHistory(customer, entry, options) {
+            return invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'pushContactHistory', [customer, entry, options]) || null;
+        },
         showSuccessIdentificationPrompt,
-        selectCustomer
+        async selectCustomer(customerId) {
+            await invokeSliceMethodAsync(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'selectCustomer', [customerId]);
+        }
     };
 }
 
@@ -982,8 +894,12 @@ function getDeliveryRemarksSliceDependencies() {
         },
         translate,
         showToast,
-        selectCustomer,
-        pushContactHistory,
+        async selectCustomer(customerId) {
+            await invokeSliceMethodAsync(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'selectCustomer', [customerId]);
+        },
+        pushContactHistory(customer, entry, options) {
+            return invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'pushContactHistory', [customer, entry, options]) || null;
+        },
         saveCustomers
     };
 }
@@ -996,7 +912,9 @@ function getAppShellSliceDependencies() {
         getContactHistoryState() {
             return contactHistoryState;
         },
-        pushContactHistory,
+        pushContactHistory(customer, entry, options) {
+            return invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'pushContactHistory', [customer, entry, options]) || null;
+        },
         resetAllSubscriptionDuplicateStates,
         isCallSessionActive() {
             return Boolean(callSession && callSession.active);
@@ -1030,265 +948,9 @@ if (typeof window !== 'undefined') {
     };
 }
 
-// Select Customer
-async function selectCustomer(customerId) {
-    await invokeSliceMethodAsync(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'selectCustomer', [customerId]);
-}
-
-// Display Deceased Status Banner
-function displayDeceasedStatusBanner() {
-    invokeSliceMethod(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'displayDeceasedStatusBanner');
-}
-
-// Display Subscriptions
-function displaySubscriptions() {
-    invokeSliceMethod(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'displaySubscriptions');
-}
-
-// Display Contact History
-function displayContactHistory() {
-    invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'displayContactHistory');
-}
-
-// Toggle Timeline Item (Accordion)
-function toggleTimelineItem(entryDomId) {
-    invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'toggleTimelineItem', [entryDomId]);
-}
-
-function changeContactHistoryPage(newPage) {
-    invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'changeContactHistoryPage', [newPage]);
-}
-
-function generateContactHistoryId() {
-    const generatedId = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'generateContactHistoryId');
-    if (typeof generatedId === 'string' && generatedId.length > 0) {
-        return generatedId;
-    }
-
-    return `ch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function pushContactHistory(customer, entry, options = {}) {
-    const pushedEntry = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'pushContactHistory', [
-        customer,
-        entry,
-        options
-    ]);
-
-    return pushedEntry || null;
-}
-
-function addContactMoment(customerId, type, description) {
-    const contactMoment = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'addContactMoment', [
-        customerId,
-        type,
-        description
-    ]);
-
-    return contactMoment || null;
-}
-
-// Format Date
-function formatDate(dateString) {
-    const formattedDate = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'formatDate', [dateString]);
-    if (typeof formattedDate === 'string') {
-        return formattedDate;
-    }
-
-    const date = new Date(dateString);
-    return date.toLocaleDateString(getDateLocaleForApp(), {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-}
-
-// Format DateTime
-function formatDateTime(dateString) {
-    const formattedDateTime = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'formatDateTime', [dateString]);
-    if (typeof formattedDateTime === 'string') {
-        return formattedDateTime;
-    }
-
-    const date = new Date(dateString);
-    return date.toLocaleDateString(getDateLocaleForApp(), {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-// Cancel Subscription (triggers winback flow)
-function cancelSubscription(subId) {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'cancelSubscription', [subId]);
-}
-
-// Start Winback Flow for an Ended Subscription
-function startWinbackForSubscription(subId) {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'startWinbackForSubscription', [subId]);
-}
-
-// Show Winback Flow
-function showWinbackFlow() {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showWinbackFlow');
-}
-
-// Winback Next Step
-async function winbackNextStep(stepNumber) {
-    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'winbackNextStep', [stepNumber]);
-}
-
-// Winback Previous Step
-function winbackPrevStep(stepNumber) {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'winbackPrevStep', [stepNumber]);
-}
-
-// Generate Winback Offers
-async function generateWinbackOffers(reason) {
-    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'generateWinbackOffers', [reason]);
-}
-
-// Select Offer
-function selectOffer(offerId, title, description, domEvent) {
-    const selectedElement = domEvent && domEvent.currentTarget ? domEvent.currentTarget : domEvent;
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'selectOffer', [offerId, title, description, selectedElement]);
-}
-
-// Generate Winback Script
-function generateWinbackScript() {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'generateWinbackScript');
-}
-
-// Handle Deceased Options - Show all subscriptions
-function winbackHandleDeceased() {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'winbackHandleDeceased');
-}
-
-// Process Deceased Subscriptions
-function processDeceasedSubscriptions() {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'processDeceasedSubscriptions');
-}
-
-// Show Deceased Refund Form
-function showDeceasedRefundForm() {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showDeceasedRefundForm');
-}
-
-// Show Deceased Transfer Form
-function showDeceasedTransferForm() {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showDeceasedTransferForm');
-}
-
-// Show Deceased Combined Form
-function showDeceasedCombinedForm() {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showDeceasedCombinedForm');
-}
-
-// Revert Restitution - Transfer subscription to another person (deceased cannot have active subscriptions)
-function revertRestitution(subscriptionId) {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'revertRestitution', [subscriptionId]);
-}
-
-// Show Transfer Form for Restitution Revert
-function showRestitutionTransferForm(subscription) {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'showRestitutionTransferForm', [subscription]);
-}
-
-// Toggle Address Fields for Restitution Transfer
-function toggleRestitutionTransferAddress() {
-    invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'toggleRestitutionTransferAddress');
-}
-
-// Complete Restitution Transfer
-async function completeRestitutionTransfer(event) {
-    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'completeRestitutionTransfer', [event]);
-}
-
-// Complete All Deceased Actions
-async function completeAllDeceasedActions() {
-    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'completeAllDeceasedActions');
-}
-
-// Get Transfer Data from Form (using unified customer form component)
-function getTransferDataFromForm(formVersion) {
-    return invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'getTransferDataFromForm', [formVersion]);
-}
-
-// Get Refund Data from Form
-function getRefundDataFromForm(formVersion) {
-    return invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'getRefundDataFromForm', [formVersion]);
-}
-
-// Validate Transfer Data
-function validateTransferData(data) {
-    const result = invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'validateTransferData', [data]);
-    return result === true;
-}
-
-// Validate Refund Data
-function validateRefundData(data) {
-    const result = invokeSliceMethod(WINBACK_SLICE_NAMESPACE, 'validateRefundData', [data]);
-    return result === true;
-}
-
-// Complete Winback
-async function completeWinback() {
-    await invokeSliceMethodAsync(WINBACK_SLICE_NAMESPACE, 'completeWinback');
-}
-
-// ========== ARTICLE SALES FUNCTIONS ==========
-
-// Display Articles
-function displayArticles() {
-    invokeSliceMethod(ORDER_SLICE_NAMESPACE, 'displayArticles');
-}
-
-// Show Article Sale Form
-function showArticleSale() {
-    invokeSliceMethod(ORDER_SLICE_NAMESPACE, 'showArticleSale');
-}
-
-// Add Delivery Remark
-function addDeliveryRemark(remark) {
-    invokeSliceMethod(ORDER_SLICE_NAMESPACE, 'addDeliveryRemark', [remark]);
-}
-
-function addDeliveryRemarkByKey(key) {
-    invokeSliceMethod(ORDER_SLICE_NAMESPACE, 'addDeliveryRemarkByKey', [key]);
-}
-
-// Update Article Price - handled by article-search.js
-
-// Create Article Sale
-async function createArticleSale(event) {
-    await invokeSliceMethodAsync(ORDER_SLICE_NAMESPACE, 'createArticleSale', [event]);
-}
-
-// Edit Delivery Remarks
-function editDeliveryRemarks() {
-    invokeSliceMethod(DELIVERY_REMARKS_SLICE_NAMESPACE, 'editDeliveryRemarks');
-}
-
-// Add Delivery Remark to Modal
-function addDeliveryRemarkToModal(remark) {
-    invokeSliceMethod(DELIVERY_REMARKS_SLICE_NAMESPACE, 'addDeliveryRemarkToModal', [remark]);
-}
-
-function addDeliveryRemarkToModalByKey(key) {
-    invokeSliceMethod(DELIVERY_REMARKS_SLICE_NAMESPACE, 'addDeliveryRemarkToModalByKey', [key]);
-}
-
-// Save Delivery Remarks
-async function saveDeliveryRemarks() {
-    await invokeSliceMethodAsync(DELIVERY_REMARKS_SLICE_NAMESPACE, 'saveDeliveryRemarks');
-}
-
-// Close Edit Remarks Modal
-function closeEditRemarksModal() {
-    invokeSliceMethod(DELIVERY_REMARKS_SLICE_NAMESPACE, 'closeEditRemarksModal');
-}
+// Legacy facade wrappers removed — all callers now use action-router
+// handlers or direct slice APIs. Remaining app-shell fallback functions
+// (closeForm, showToast, etc.) are item 20 scope.
 
 // Close Form
 function closeForm(formId) {
@@ -1333,14 +995,14 @@ function showToast(message, type = 'success') {
     }
 
     if (currentCustomer) {
-        pushContactHistory(
+        invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'pushContactHistory', [
             currentCustomer,
             {
                 type: mapToastTypeToContactType(type),
                 description: message
             },
             { highlight: true, moveToFirstPage: true }
-        );
+        ]);
         return;
     }
 
@@ -1370,9 +1032,15 @@ function wireCallAgentRuntimeDependencies() {
     }
 
     runtimeApi.configureDependencies({
-        addContactMoment,
+        addContactMoment(customerId, type, description) {
+            return invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'addContactMoment', [
+                customerId, type, description
+            ]) || null;
+        },
         getDispositionCategories,
-        selectCustomer,
+        async selectCustomer(customerId) {
+            await invokeSliceMethodAsync(CUSTOMER_DETAIL_SLICE_NAMESPACE, 'selectCustomer', [customerId]);
+        },
         showToast
     });
 }
