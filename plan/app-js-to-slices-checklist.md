@@ -37,7 +37,7 @@
 | 1 | Localization + static i18n + locale switching | `codex/migrate-localization-and-locale-switching-to-slice` | [#40](https://github.com/bindinc/kiwi/pull/40) | `in progress` | `no` |  |
 | 2 | Bootstrap + shared data init + persistence shell | `TBD` | `TBD` | `not started` | `no` |  |
 | 3 | Werfsleutel catalog + picker implementation | `TBD` | `TBD` | `not started` | `no` |  |
-| 4 | Subscription role forms + duplicate guard + person role selection | `codex/migrate-subscription-role-forms-duplicate-guard-person-role-selection` | `TBD` | `in progress` | `no` |  |
+| 4 | Subscription role forms + duplicate guard + person role selection | `codex/migrate-subscription-role-forms-duplicate-guard-person-role-selection` | [#41](https://github.com/bindinc/kiwi/pull/41) | `in progress` | `no` |  |
 | 5 | Customer search + results + pagination | `TBD` | `TBD` | `not started` | `no` |  |
 | 6 | Customer detail + subscriptions rendering + contact history UI | `TBD` | `TBD` | `not started` | `no` |  |
 | 7 | Subscription workflows (create/edit/customer-edit/resend/editorial) | `TBD` | `TBD` | `not started` | `no` |  |
