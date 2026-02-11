@@ -35,8 +35,6 @@ let searchState = initialAppDataState.searchState;
 
 const contactHistoryState = initialAppDataState.contactHistoryState;
 
-let contactHistoryHighlightTimer = initialAppDataState.contactHistoryHighlightTimer;
-
 const apiEndpoints = kiwiBootstrapSlice && typeof kiwiBootstrapSlice.getApiEndpoints === 'function'
     ? kiwiBootstrapSlice.getApiEndpoints()
     : {
@@ -586,106 +584,9 @@ function endSession() {
 }
 
 // Subscription role helpers moved to app/subscription-role-runtime.js.
-
 // ============================================================================
 // PHASE 1: CALL SESSION MANAGEMENT
 // ============================================================================
-
-function generateContactHistoryId() {
-    return `ch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function pushContactHistory(customer, entry, options = {}) {
-    if (!customer) {
-        return null;
-    }
-
-    const {
-        highlight = false,
-        persist = true,
-        refresh = true,
-        moveToFirstPage = false
-    } = options;
-
-    const normalizedEntry = {
-        id: entry.id || generateContactHistoryId(),
-        type: entry.type || 'default',
-        date: entry.date || new Date().toISOString(),
-        description: entry.description || ''
-    };
-
-    if (!Array.isArray(customer.contactHistory)) {
-        customer.contactHistory = [];
-    }
-
-    customer.contactHistory.unshift(normalizedEntry);
-
-    if (persist) {
-        if (window.kiwiApi && customer.id !== undefined && customer.id !== null) {
-            window.kiwiApi
-                .post(`${personsApiUrl}/${customer.id}/contact-history`, normalizedEntry)
-                .then((savedEntry) => {
-                    if (savedEntry && savedEntry.id) {
-                        normalizedEntry.id = savedEntry.id;
-                    }
-                })
-                .catch((error) => {
-                    console.warn('Kon contacthistorie niet opslaan via API', error);
-                });
-        } else {
-            saveCustomers();
-        }
-    }
-
-    const isCurrentCustomer = currentCustomer && currentCustomer.id === customer.id;
-
-    if (isCurrentCustomer && (highlight || moveToFirstPage)) {
-        contactHistoryState.currentPage = 1;
-    }
-
-    if (highlight && isCurrentCustomer) {
-        contactHistoryState.highlightId = normalizedEntry.id;
-
-        if (contactHistoryHighlightTimer) {
-            clearTimeout(contactHistoryHighlightTimer);
-        }
-
-        contactHistoryHighlightTimer = setTimeout(() => {
-            contactHistoryState.highlightId = null;
-            if (currentCustomer && currentCustomer.id === customer.id) {
-                displayContactHistory();
-            }
-            contactHistoryHighlightTimer = null;
-        }, 5000);
-    }
-
-    if (refresh && isCurrentCustomer) {
-        displayContactHistory();
-    }
-
-    contactHistoryState.lastEntry = {
-        id: normalizedEntry.id,
-        type: normalizedEntry.type,
-        createdAt: Date.now()
-    };
-
-    return normalizedEntry;
-}
-
-// Helper function to add contact moment to customer history
-function addContactMoment(customerId, type, description) {
-    const customer = customers.find(c => c.id === customerId);
-    if (!customer) return;
-
-    pushContactHistory(
-        customer,
-        {
-            type: type,
-            description: description
-        },
-        { highlight: true }
-    );
-}
 
 // Start Call Session
 function startCallSession() {
@@ -965,15 +866,12 @@ function getCustomerDetailSliceDependencies() {
             return contactHistoryState;
         },
         resetContactHistoryViewState() {
-            contactHistoryState.currentPage = 1;
-            contactHistoryState.highlightId = null;
-            contactHistoryState.lastEntry = null;
-
-            if (contactHistoryHighlightTimer) {
-                clearTimeout(contactHistoryHighlightTimer);
-                contactHistoryHighlightTimer = null;
-            }
+            invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'resetContactHistoryViewState');
         },
+        getApiClient() {
+            return window.kiwiApi || null;
+        },
+        saveCustomers,
         translate,
         showToast,
         displayArticles,
@@ -1123,6 +1021,35 @@ function toggleTimelineItem(entryDomId) {
 
 function changeContactHistoryPage(newPage) {
     invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'changeContactHistoryPage', [newPage]);
+}
+
+function generateContactHistoryId() {
+    const generatedId = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'generateContactHistoryId');
+    if (typeof generatedId === 'string' && generatedId.length > 0) {
+        return generatedId;
+    }
+
+    return `ch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function pushContactHistory(customer, entry, options = {}) {
+    const pushedEntry = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'pushContactHistory', [
+        customer,
+        entry,
+        options
+    ]);
+
+    return pushedEntry || null;
+}
+
+function addContactMoment(customerId, type, description) {
+    const contactMoment = invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'addContactMoment', [
+        customerId,
+        type,
+        description
+    ]);
+
+    return contactMoment || null;
 }
 
 // Format Date
