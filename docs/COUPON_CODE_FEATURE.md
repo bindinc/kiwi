@@ -98,7 +98,7 @@ Enhanced the article sales order system with improved discount visualization and
    - Badge and icon styles
    - Mobile responsive adjustments
 
-3. **app/static/assets/js/article-search.js**
+3. **app/static/assets/js/app/slices/article-search-slice.js**
    - Coupon validation logic
    - Apply/remove coupon functions
    - Enhanced calculateDiscounts()

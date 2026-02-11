@@ -26,7 +26,7 @@ Example slices for this project:
 
 ## Feature flags
 Use feature flags when a slice cannot be fully finished in one PR.
-This repo has a small helper in `feature-flags.js`.
+This repo has a small helper in `app/static/assets/js/app/feature-flags.js`.
 
 Rules:
 - Query params override localStorage, localStorage overrides defaults.

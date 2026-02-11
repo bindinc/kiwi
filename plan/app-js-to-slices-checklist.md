@@ -4,8 +4,8 @@
 
 - Inventory sources:
   - `app/static/assets/js/app.js` (`6,325` lines)
-  - `app/static/assets/js/article-search.js` (`695` lines)
-  - `app/static/assets/js/delivery-date-picker.js` (`378` lines)
+  - `app/static/assets/js/app/slices/article-search-slice.js` (`695` lines)
+  - `app/static/assets/js/app/slices/delivery-date-picker-slice.js` (`378` lines)
 - Inventory depth: full inventory (function-level grouped by domain).
 - Snapshot count:
   - `app.js`: `205` top-level `function` declarations + `2` top-level arrow function constants (`translate`, `isDebugModalEnabled`)
@@ -174,7 +174,7 @@ set -euo pipefail
 TMPA=$(mktemp)
 TMPB=$(mktemp)
 rg -o 'data-action="[^"]+"' app/templates/base/index.html app/static/assets/js/app.js \
-  app/static/assets/js/article-search.js app/static/assets/js/delivery-date-picker.js \
+  app/static/assets/js/app/slices/article-search-slice.js app/static/assets/js/app/slices/delivery-date-picker-slice.js \
   | sed -E 's/.*data-action="([^"]+)"/\1/' | sort -u > "$TMPA"
 rg -n "^[[:space:]]*'[^']+'" app/static/assets/js/app/legacy-actions-customer-subscription.js app/static/assets/js/app/slices/*.js \
   | sed -E "s/.*'([^']+)'.*/\1/" | sort -u > "$TMPB"
@@ -188,10 +188,10 @@ rm -f "$TMPA" "$TMPB"
 - Function inventory check against legacy frontend sources:
 
 ```bash
-wc -l app/static/assets/js/app.js app/static/assets/js/article-search.js app/static/assets/js/delivery-date-picker.js
+wc -l app/static/assets/js/app.js app/static/assets/js/app/slices/article-search-slice.js app/static/assets/js/app/slices/delivery-date-picker-slice.js
 rg -n "^(async\\s+)?function\\s+[A-Za-z0-9_]+" app/static/assets/js/app.js | wc -l
-rg -n "^(async\\s+)?function\\s+[A-Za-z0-9_]+" app/static/assets/js/article-search.js | wc -l
-rg -n "^(async\\s+)?function\\s+[A-Za-z0-9_]+" app/static/assets/js/delivery-date-picker.js | wc -l
+rg -n "^(async\\s+)?function\\s+[A-Za-z0-9_]+" app/static/assets/js/app/slices/article-search-slice.js | wc -l
+rg -n "^(async\\s+)?function\\s+[A-Za-z0-9_]+" app/static/assets/js/app/slices/delivery-date-picker-slice.js | wc -l
 rg -n "^const\\s+[A-Za-z0-9_]+\\s*=\\s*\\([^)]*\\)\\s*=>" app/static/assets/js/app.js | wc -l
 ```
 
@@ -220,6 +220,6 @@ rg -n "^const\\s+[A-Za-z0-9_]+\\s*=\\s*\\([^)]*\\)\\s*=>" app/static/assets/js/a
 
 - Language is English.
 - Scope is full inventory.
-- Primary inventory scope includes `app/static/assets/js/app.js`, `app/static/assets/js/article-search.js`, and `app/static/assets/js/delivery-date-picker.js`.
+- Primary inventory scope includes `app/static/assets/js/app.js`, `app/static/assets/js/app/slices/article-search-slice.js`, and `app/static/assets/js/app/slices/delivery-date-picker-slice.js`.
 - Template coupling notes are kept for tracking residual dependencies and compatibility bridges.
 - Line references are based on the current snapshot and may drift after later edits.
