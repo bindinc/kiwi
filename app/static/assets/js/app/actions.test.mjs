@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { coerceActionValue, createActionRouter, extractActionPayload } from './actions.js';
 import { registerCallQueueAgentStatusSlices } from './slices/index.js';
+import { registerContactHistorySlice } from './slices/contact-history-slice.js';
+import { registerCustomerDetailSlice } from './slices/customer-detail-slice.js';
 import { registerLocalizationSlice } from './slices/localization-slice.js';
 
 function testCoerceActionValue() {
@@ -98,6 +100,31 @@ function createDelegatedEvent(actionElement, eventType, options = {}) {
         },
         stopPropagation: options.stopPropagation || (() => {}),
         preventDefault: options.preventDefault || (() => {})
+    };
+}
+
+function createToggleClassList(initialValues = []) {
+    const classes = new Set(initialValues);
+    return {
+        toggle(className, forcedState) {
+            if (forcedState === true) {
+                classes.add(className);
+                return true;
+            }
+            if (forcedState === false) {
+                classes.delete(className);
+                return false;
+            }
+            if (classes.has(className)) {
+                classes.delete(className);
+                return false;
+            }
+            classes.add(className);
+            return true;
+        },
+        contains(className) {
+            return classes.has(className);
+        }
     };
 }
 
@@ -302,13 +329,332 @@ function testLocalizationSlice() {
     }
 }
 
-function run() {
+function testContactHistorySlice() {
+    const listeners = {};
+    const root = {
+        addEventListener(eventType, handler) {
+            listeners[eventType] = handler;
+        },
+        removeEventListener(eventType) {
+            delete listeners[eventType];
+        }
+    };
+
+    const previousDependenciesProvider = globalThis.kiwiGetCustomerDetailSliceDependencies;
+    const previousDocument = globalThis.document;
+    const previousContactHistoryNamespace = globalThis.kiwiContactHistorySlice;
+
+    const contactHistoryState = {
+        currentPage: 1,
+        itemsPerPage: 1,
+        highlightId: null,
+        lastEntry: null
+    };
+    const currentCustomer = {
+        id: 17,
+        contactHistory: [
+            { id: 'a', type: 'default', date: '2025-01-01T10:00:00Z', description: 'Een' },
+            { id: 'b', type: 'default', date: '2025-01-02T10:00:00Z', description: 'Twee' }
+        ]
+    };
+
+    const historyContainer = { innerHTML: '' };
+    const contentNode = {
+        classList: createToggleClassList(['expanded'])
+    };
+    const expandNode = {
+        classList: createToggleClassList(['expanded'])
+    };
+
+    globalThis.kiwiGetCustomerDetailSliceDependencies = () => ({
+        getCurrentCustomer() {
+            return currentCustomer;
+        },
+        getContactHistoryState() {
+            return contactHistoryState;
+        },
+        translate(_key, _params, fallback) {
+            return fallback;
+        },
+        getDateLocaleForApp() {
+            return 'nl-NL';
+        }
+    });
+    globalThis.document = {
+        getElementById(id) {
+            if (id === 'contactHistory') {
+                return historyContainer;
+            }
+            if (id === 'content-row-1') {
+                return contentNode;
+            }
+            if (id === 'expand-row-1') {
+                return expandNode;
+            }
+            return null;
+        }
+    };
+
+    try {
+        const router = createActionRouter({
+            root,
+            eventTypes: ['click']
+        });
+        registerContactHistorySlice(router);
+        router.install();
+
+        const registeredActions = router.getRegisteredActions().slice().sort();
+        assert.equal(registeredActions.includes('toggle-timeline-item'), true);
+        assert.equal(registeredActions.includes('change-contact-history-page'), true);
+        assert.equal(typeof globalThis.kiwiContactHistorySlice.displayContactHistory, 'function');
+
+        const changePageElement = {
+            dataset: {
+                action: 'change-contact-history-page',
+                actionEvent: 'click',
+                argNewPage: '2'
+            }
+        };
+        listeners.click(createDelegatedEvent(changePageElement, 'click'));
+        assert.equal(contactHistoryState.currentPage, 2);
+
+        const toggleItemElement = {
+            dataset: {
+                action: 'toggle-timeline-item',
+                actionEvent: 'click',
+                argEntryDomId: 'row-1'
+            }
+        };
+        listeners.click(createDelegatedEvent(toggleItemElement, 'click'));
+        assert.equal(contentNode.classList.contains('expanded'), false);
+        assert.equal(expandNode.classList.contains('expanded'), false);
+    } finally {
+        if (previousDependenciesProvider === undefined) {
+            delete globalThis.kiwiGetCustomerDetailSliceDependencies;
+        } else {
+            globalThis.kiwiGetCustomerDetailSliceDependencies = previousDependenciesProvider;
+        }
+
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+
+        if (previousContactHistoryNamespace === undefined) {
+            delete globalThis.kiwiContactHistorySlice;
+        } else {
+            globalThis.kiwiContactHistorySlice = previousContactHistoryNamespace;
+        }
+    }
+}
+
+async function testCustomerDetailSlice() {
+    const listeners = {};
+    const root = {
+        addEventListener(eventType, handler) {
+            listeners[eventType] = handler;
+        },
+        removeEventListener(eventType) {
+            delete listeners[eventType];
+        }
+    };
+
+    const previousDependenciesProvider = globalThis.kiwiGetCustomerDetailSliceDependencies;
+    const previousDocument = globalThis.document;
+    const previousScrollTo = globalThis.scrollTo;
+    const previousCustomerDetailNamespace = globalThis.kiwiCustomerDetailSlice;
+    const previousContactHistoryNamespace = globalThis.kiwiContactHistorySlice;
+    const previousKiwiApi = globalThis.kiwiApi;
+
+    const cachedCustomer = {
+        id: 81,
+        salutation: 'Dhr.',
+        firstName: 'Jan',
+        middleName: '',
+        lastName: 'Jansen',
+        address: 'Dorpsstraat 1',
+        postalCode: '1234AB',
+        city: 'Hilversum',
+        email: 'jan@example.com',
+        phone: '0612345678',
+        subscriptions: [],
+        contactHistory: []
+    };
+
+    const contactHistoryState = {
+        currentPage: 3,
+        itemsPerPage: 6,
+        highlightId: 'x',
+        lastEntry: { id: 'x' }
+    };
+    let currentCustomer = null;
+    let resetContactHistoryViewStateCalls = 0;
+    let displayArticlesCalls = 0;
+    let updateCustomerActionButtonsCalls = 0;
+    let updateIdentifyCallerButtonsCalls = 0;
+    let scrollToCalls = 0;
+
+    const elements = {
+        welcomeMessage: { style: { display: 'block' } },
+        searchResultsView: { style: { display: 'block' } },
+        customerDetail: {
+            style: { display: 'none' },
+            querySelector() {
+                return null;
+            }
+        },
+        customerName: { textContent: '' },
+        customerAddress: { textContent: '' },
+        customerEmail: { textContent: '' },
+        customerPhone: { textContent: '' },
+        subscriptionsList: { innerHTML: '' },
+        contactHistory: { innerHTML: '' }
+    };
+
+    globalThis.kiwiGetCustomerDetailSliceDependencies = () => ({
+        findCustomerById(customerId) {
+            return Number(customerId) === cachedCustomer.id ? cachedCustomer : null;
+        },
+        upsertCustomerInCache() {},
+        getCurrentCustomer() {
+            return currentCustomer;
+        },
+        setCurrentCustomer(customer) {
+            currentCustomer = customer;
+        },
+        getContactHistoryState() {
+            return contactHistoryState;
+        },
+        resetContactHistoryViewState() {
+            resetContactHistoryViewStateCalls += 1;
+            contactHistoryState.currentPage = 1;
+            contactHistoryState.highlightId = null;
+            contactHistoryState.lastEntry = null;
+        },
+        translate(_key, _params, fallback) {
+            return fallback;
+        },
+        showToast() {},
+        displayArticles() {
+            displayArticlesCalls += 1;
+        },
+        updateCustomerActionButtons() {
+            updateCustomerActionButtonsCalls += 1;
+        },
+        updateIdentifyCallerButtons() {
+            updateIdentifyCallerButtonsCalls += 1;
+        },
+        getSubscriptionDurationDisplay() {
+            return '';
+        },
+        getSubscriptionRequesterMetaLine() {
+            return '';
+        },
+        getDateLocaleForApp() {
+            return 'nl-NL';
+        },
+        personsApiUrl: '/api/v1/persons'
+    });
+    globalThis.document = {
+        getElementById(id) {
+            return elements[id] || null;
+        },
+        querySelector() {
+            return null;
+        }
+    };
+    globalThis.scrollTo = () => {
+        scrollToCalls += 1;
+    };
+    delete globalThis.kiwiApi;
+
+    try {
+        const router = createActionRouter({
+            root,
+            eventTypes: ['click']
+        });
+        registerContactHistorySlice(router);
+        registerCustomerDetailSlice(router);
+        router.install();
+
+        const registeredActions = router.getRegisteredActions().slice().sort();
+        assert.equal(registeredActions.includes('select-customer'), true);
+        assert.equal(typeof globalThis.kiwiCustomerDetailSlice.selectCustomer, 'function');
+
+        const selectCustomerElement = {
+            dataset: {
+                action: 'select-customer',
+                actionEvent: 'click',
+                argCustomerId: '81'
+            }
+        };
+        listeners.click(createDelegatedEvent(selectCustomerElement, 'click'));
+        await Promise.resolve();
+
+        assert.equal(currentCustomer.id, 81);
+        assert.equal(resetContactHistoryViewStateCalls, 1);
+        assert.equal(displayArticlesCalls, 1);
+        assert.equal(updateCustomerActionButtonsCalls, 1);
+        assert.equal(updateIdentifyCallerButtonsCalls, 1);
+        assert.equal(scrollToCalls, 1);
+        assert.equal(elements.welcomeMessage.style.display, 'none');
+        assert.equal(elements.searchResultsView.style.display, 'none');
+        assert.equal(elements.customerDetail.style.display, 'block');
+        assert.equal(elements.customerName.textContent, 'Dhr. Jan Jansen');
+        assert.equal(elements.subscriptionsList.innerHTML.includes('Geen abonnementen'), true);
+        assert.equal(elements.contactHistory.innerHTML.includes('Geen contactgeschiedenis beschikbaar'), true);
+    } finally {
+        if (previousDependenciesProvider === undefined) {
+            delete globalThis.kiwiGetCustomerDetailSliceDependencies;
+        } else {
+            globalThis.kiwiGetCustomerDetailSliceDependencies = previousDependenciesProvider;
+        }
+
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+
+        if (previousScrollTo === undefined) {
+            delete globalThis.scrollTo;
+        } else {
+            globalThis.scrollTo = previousScrollTo;
+        }
+
+        if (previousCustomerDetailNamespace === undefined) {
+            delete globalThis.kiwiCustomerDetailSlice;
+        } else {
+            globalThis.kiwiCustomerDetailSlice = previousCustomerDetailNamespace;
+        }
+
+        if (previousContactHistoryNamespace === undefined) {
+            delete globalThis.kiwiContactHistorySlice;
+        } else {
+            globalThis.kiwiContactHistorySlice = previousContactHistoryNamespace;
+        }
+
+        if (previousKiwiApi === undefined) {
+            delete globalThis.kiwiApi;
+        } else {
+            globalThis.kiwiApi = previousKiwiApi;
+        }
+    }
+}
+
+async function run() {
     testCoerceActionValue();
     testExtractActionPayload();
     testRouterDispatch();
     testCallQueueAgentStatusSlices();
     testLocalizationSlice();
+    testContactHistorySlice();
+    await testCustomerDetailSlice();
     console.log('actions router tests passed');
 }
 
-run();
+run().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+});
