@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
+- Implement checklist item 15 by extracting shared subscription identity/pricing helpers into `app/static/assets/js/app/subscription-shared-helpers.js`, wiring legacy runtime access from `app/index.js`, and updating `customer-search`, `customer-detail`, and `subscription-role-runtime` consumers to stop relying on `app.js` helper globals.
 - Implement checklist item 14 by removing duplicated Werfsleutel catalog/picker/search/selection logic from legacy `app.js`, keeping only thin compatibility wrappers that delegate to `app/static/assets/js/app/slices/werfsleutel.js`, and syncing bootstrap Werfsleutel metadata directly into the slice.
 - Expand `plan/app-js-to-slices-checklist.md` with post-migration cleanup scope: add checklist/PR-tracking items 14-21 for remaining `app.js` slice-bridge removal work, and refresh inventory counts for the current frontend snapshot.
 - Reorganize frontend script locations by moving legacy article/delivery scripts (`assets/js/article-search.js`, `assets/js/delivery-date-picker.js`, and `assets/js/delivery-date-picker.test.js`) into `assets/js/legacy/`, moving `assets/js/static-page-i18n.js` into `assets/js/i18n/`, moving `assets/js/feature-flags.js` into `assets/js/app/`, and updating template/script references accordingly.

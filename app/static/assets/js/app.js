@@ -179,21 +179,105 @@ const transientAgentStatuses = new Set(['in_call']);
 // Phase 1A: Service Number Configuration
 let serviceNumbers = {};
 
-// Currency formatter reused for werfsleutels and notes
-const euroFormattersByLocale = {};
+const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
 
-function getEuroFormatter() {
-    const locale = getDateLocaleForApp();
-    if (!euroFormattersByLocale[locale]) {
-        euroFormattersByLocale[locale] = new Intl.NumberFormat(locale, {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: 2
-        });
+const fallbackSubscriptionHelpers = (() => {
+    const pricingTable = {
+        '1-jaar': { price: 52.00, perMonth: 4.33, description: '1 jaar - Jaarlijks betaald' },
+        '2-jaar': { price: 98.00, perMonth: 4.08, description: '2 jaar - Jaarlijks betaald (5% korting)' },
+        '3-jaar': { price: 140.00, perMonth: 3.89, description: '3 jaar - Jaarlijks betaald (10% korting)' },
+        '1-jaar-maandelijks': { price: 54.00, perMonth: 4.50, description: '1 jaar - Maandelijks betaald' },
+        '2-jaar-maandelijks': { price: 104.40, perMonth: 4.35, description: '2 jaar - Maandelijks betaald' },
+        '3-jaar-maandelijks': { price: 151.20, perMonth: 4.20, description: '3 jaar - Maandelijks betaald' }
+    };
+    const euroFormattersByLocale = {};
+
+    function resolveLocale(locale) {
+        if (typeof locale === 'string' && locale.trim()) {
+            return locale;
+        }
+        return 'nl-NL';
     }
 
-    return euroFormattersByLocale[locale];
+    function getEuroFormatter(locale) {
+        const resolvedLocale = resolveLocale(locale);
+        if (!euroFormattersByLocale[resolvedLocale]) {
+            euroFormattersByLocale[resolvedLocale] = new Intl.NumberFormat(resolvedLocale, {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 2
+            });
+        }
+
+        return euroFormattersByLocale[resolvedLocale];
+    }
+
+    function formatEuro(amount, options = {}) {
+        const numericValue = Number(amount);
+        const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
+        return getEuroFormatter(options.locale).format(safeValue);
+    }
+
+    function getPricingDisplay(duration) {
+        const pricing = pricingTable[duration];
+        if (!pricing) {
+            return '';
+        }
+
+        return `€${pricing.perMonth.toFixed(2)}/maand (${pricing.description})`;
+    }
+
+    function getSubscriptionDurationDisplay(subscription) {
+        if (!subscription) {
+            return 'Oude prijsstructuur';
+        }
+
+        if (subscription.duration && pricingTable[subscription.duration]) {
+            return getPricingDisplay(subscription.duration);
+        }
+
+        if (subscription.durationLabel) {
+            return subscription.durationLabel;
+        }
+
+        if (subscription.duration) {
+            return subscription.duration;
+        }
+
+        return 'Oude prijsstructuur';
+    }
+
+    return {
+        subscriptionPricing: pricingTable,
+        formatEuro,
+        getSubscriptionDurationDisplay
+    };
+})();
+
+function getSubscriptionHelpers() {
+    if (typeof window === 'undefined') {
+        return fallbackSubscriptionHelpers;
+    }
+
+    const helperNamespace = window[LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE];
+    if (!helperNamespace || typeof helperNamespace !== 'object') {
+        return fallbackSubscriptionHelpers;
+    }
+
+    const hasPricingTable = helperNamespace.subscriptionPricing && typeof helperNamespace.subscriptionPricing === 'object';
+    const hasFormatHelper = typeof helperNamespace.formatEuro === 'function';
+    const hasDurationHelper = typeof helperNamespace.getSubscriptionDurationDisplay === 'function';
+    if (!hasPricingTable || !hasFormatHelper || !hasDurationHelper) {
+        return fallbackSubscriptionHelpers;
+    }
+
+    return helperNamespace;
 }
+
+const subscriptionHelpers = getSubscriptionHelpers();
+const subscriptionPricing = subscriptionHelpers.subscriptionPricing;
+const formatEuro = (amount) => subscriptionHelpers.formatEuro(amount, { locale: getDateLocaleForApp() });
+const getSubscriptionDurationDisplay = (subscription) => subscriptionHelpers.getSubscriptionDurationDisplay(subscription);
 
 const DUPLICATE_CHECK_DEBOUNCE_MS = 750;
 const DUPLICATE_CHECK_MIN_API_INTERVAL_MS = 1500;
@@ -321,53 +405,6 @@ const subscriptionDuplicateState = {
 
 // Phase 5A: ACW Configuration
 const ACW_DEFAULT_DURATION = 120; // 120 seconds
-
-const MIN_SUB_NUMBER = 8099098;
-const MAX_SUB_NUMBER = 12199098;
-const NAME_INSERTION_PREFIXES = [
-    'van der',
-    'van den',
-    'van de',
-    'von der',
-    'ten',
-    'ter',
-    'op de',
-    'op den',
-    'op',
-    'aan de',
-    'aan den',
-    'aan',
-    'bij',
-    'uit de',
-    'uit den',
-    'uit',
-    'de',
-    'den',
-    'der',
-    'van',
-    'von',
-    'te'
-];
-
-function normalizeNameFragment(value) {
-    return (value || '').replace(/[\s.]/g, '').toLowerCase();
-}
-
-function generateSubscriptionNumber(customerId, subscriptionId) {
-    const range = MAX_SUB_NUMBER - MIN_SUB_NUMBER + 1;
-    const seed = Math.abs((customerId * 73856093) ^ (subscriptionId * 193939));
-    const offset = seed % range;
-    return String(MIN_SUB_NUMBER + offset);
-}
-
-function formatEuro(amount) {
-    const euroFormatter = getEuroFormatter();
-    if (typeof amount !== 'number') {
-        const numericValue = Number(amount);
-        return euroFormatter.format(Number.isFinite(numericValue) ? numericValue : 0);
-    }
-    return euroFormatter.format(amount);
-}
 
 async function initWerfsleutelPicker() {
     const werfsleutelSliceApi = getWerfsleutelSliceApi();
@@ -549,44 +586,6 @@ function endSession() {
 }
 
 // Subscription role helpers moved to app/subscription-role-runtime.js.
-
-
-// Subscription Pricing Information
-const subscriptionPricing = {
-    '1-jaar': { price: 52.00, perMonth: 4.33, description: '1 jaar - Jaarlijks betaald' },
-    '2-jaar': { price: 98.00, perMonth: 4.08, description: '2 jaar - Jaarlijks betaald (5% korting)' },
-    '3-jaar': { price: 140.00, perMonth: 3.89, description: '3 jaar - Jaarlijks betaald (10% korting)' },
-    '1-jaar-maandelijks': { price: 54.00, perMonth: 4.50, description: '1 jaar - Maandelijks betaald' },
-    '2-jaar-maandelijks': { price: 104.40, perMonth: 4.35, description: '2 jaar - Maandelijks betaald' },
-    '3-jaar-maandelijks': { price: 151.20, perMonth: 4.20, description: '3 jaar - Maandelijks betaald' }
-};
-
-// Helper function to get pricing display
-function getPricingDisplay(duration) {
-    const pricing = subscriptionPricing[duration];
-    if (!pricing) return '';
-    return `€${pricing.perMonth.toFixed(2)}/maand (${pricing.description})`;
-}
-
-function getSubscriptionDurationDisplay(subscription) {
-    if (!subscription) {
-        return 'Oude prijsstructuur';
-    }
-
-    if (subscription.duration && subscriptionPricing[subscription.duration]) {
-        return getPricingDisplay(subscription.duration);
-    }
-
-    if (subscription.durationLabel) {
-        return subscription.durationLabel;
-    }
-
-    if (subscription.duration) {
-        return subscription.duration;
-    }
-
-    return 'Oude prijsstructuur';
-}
 
 // ============================================================================
 // PHASE 1: CALL SESSION MANAGEMENT
@@ -980,7 +979,6 @@ function getCustomerDetailSliceDependencies() {
         displayArticles,
         updateCustomerActionButtons,
         updateIdentifyCallerButtons,
-        getSubscriptionDurationDisplay,
         getSubscriptionRequesterMetaLine,
         getDateLocaleForApp,
         personsApiUrl
