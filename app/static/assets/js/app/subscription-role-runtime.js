@@ -6,6 +6,28 @@
 // Birthday helpers (shared across NAW forms)
 // ============================================================================
 
+const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
+
+function resolveSharedNormalizeNameFragment() {
+    const globalScope = typeof window !== 'undefined'
+        ? window
+        : (typeof globalThis !== 'undefined' ? globalThis : null);
+    const helperNamespace = globalScope
+        ? globalScope[LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE]
+        : null;
+    const normalizeFromHelpers = helperNamespace && typeof helperNamespace.normalizeNameFragment === 'function'
+        ? helperNamespace.normalizeNameFragment
+        : null;
+
+    if (normalizeFromHelpers) {
+        return normalizeFromHelpers;
+    }
+
+    return function normalizeLocalNameFragment(value) {
+        return String(value || '').replace(/[\s.]/g, '').toLowerCase();
+    };
+}
+
 const BIRTHDAY_MONTHS = [
     { value: '01', label: 'Januari' },
     { value: '02', label: 'Februari' },
@@ -626,7 +648,8 @@ function normalizeDuplicateEmail(value) {
 }
 
 function normalizeDuplicateLastName(value) {
-    return normalizeNameFragment(String(value || '').trim());
+    const normalizeName = resolveSharedNormalizeNameFragment();
+    return normalizeName(String(value || '').trim());
 }
 
 function buildSubscriptionDuplicateFingerprint(normalizedInput) {

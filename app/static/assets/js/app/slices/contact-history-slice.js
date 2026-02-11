@@ -2,6 +2,7 @@ import { getGlobalScope } from '../services.js';
 
 const CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER = 'kiwiGetCustomerDetailSliceDependencies';
 const CONTACT_HISTORY_SLICE_NAMESPACE = 'kiwiContactHistorySlice';
+const CONTACT_HISTORY_HIGHLIGHT_DURATION_MS = 5000;
 
 const contactTypeLabelConfig = {
     call_started_anonymous: { key: 'contactHistory.type.callStartedAnonymous', fallback: 'Anonieme call gestart', icon: '📞', color: '#fbbf24' },
@@ -28,6 +29,8 @@ const contactTypeLabelConfig = {
     default: { key: 'contactHistory.type.default', fallback: 'Contact', icon: '📝', color: '#6b7280' }
 };
 
+let contactHistoryHighlightTimer = null;
+
 function resolveDependencies() {
     const globalScope = getGlobalScope();
     const provider = globalScope ? globalScope[CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER] : null;
@@ -41,6 +44,95 @@ function resolveDependencies() {
     }
 
     return dependencies;
+}
+
+function clearContactHistoryHighlightTimer() {
+    if (!contactHistoryHighlightTimer) {
+        return;
+    }
+
+    clearTimeout(contactHistoryHighlightTimer);
+    contactHistoryHighlightTimer = null;
+}
+
+function hasCustomerId(customer) {
+    return customer && customer.id !== undefined && customer.id !== null;
+}
+
+function areSameCustomer(leftCustomer, rightCustomer) {
+    if (!hasCustomerId(leftCustomer) || !hasCustomerId(rightCustomer)) {
+        return false;
+    }
+
+    return String(leftCustomer.id) === String(rightCustomer.id);
+}
+
+function normalizeContactHistoryEntry(entry = {}) {
+    return {
+        id: entry.id || generateContactHistoryId(),
+        type: entry.type || 'default',
+        date: entry.date || new Date().toISOString(),
+        description: entry.description || ''
+    };
+}
+
+function persistContactHistoryEntry(dependencies, customer, normalizedEntry) {
+    const shouldPersistViaApi = (
+        dependencies
+        && typeof dependencies.getApiClient === 'function'
+        && typeof dependencies.personsApiUrl === 'string'
+        && dependencies.personsApiUrl.length > 0
+        && hasCustomerId(customer)
+    );
+
+    if (shouldPersistViaApi) {
+        const apiClient = dependencies.getApiClient();
+        const canPersistViaApi = apiClient && typeof apiClient.post === 'function';
+        if (canPersistViaApi) {
+            apiClient
+                .post(`${dependencies.personsApiUrl}/${customer.id}/contact-history`, normalizedEntry)
+                .then((savedEntry) => {
+                    if (!savedEntry || savedEntry.id === undefined || savedEntry.id === null) {
+                        return;
+                    }
+
+                    normalizedEntry.id = savedEntry.id;
+                })
+                .catch((error) => {
+                    console.warn('Kon contacthistorie niet opslaan via API', error);
+                });
+            return;
+        }
+    }
+
+    const canPersistLocally = dependencies && typeof dependencies.saveCustomers === 'function';
+    if (canPersistLocally) {
+        dependencies.saveCustomers();
+    }
+}
+
+function getCurrentCustomer(dependencies) {
+    if (!dependencies || typeof dependencies.getCurrentCustomer !== 'function') {
+        return null;
+    }
+
+    return dependencies.getCurrentCustomer() || null;
+}
+
+function getContactHistoryState(dependencies) {
+    if (!dependencies || typeof dependencies.getContactHistoryState !== 'function') {
+        return null;
+    }
+
+    return dependencies.getContactHistoryState() || null;
+}
+
+function findCustomerById(dependencies, customerId) {
+    if (!dependencies || typeof dependencies.findCustomerById !== 'function') {
+        return null;
+    }
+
+    return dependencies.findCustomerById(customerId) || null;
 }
 
 function translateLabel(dependencies, key, fallback) {
@@ -88,6 +180,106 @@ export function formatDateTime(dateString) {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+export function generateContactHistoryId() {
+    return `ch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function pushContactHistory(customer, entry, options = {}) {
+    if (!customer) {
+        return null;
+    }
+
+    const dependencies = resolveDependencies();
+    const {
+        highlight = false,
+        persist = true,
+        refresh = true,
+        moveToFirstPage = false
+    } = options;
+    const normalizedEntry = normalizeContactHistoryEntry(entry);
+    const hasHistoryEntries = Array.isArray(customer.contactHistory);
+    if (!hasHistoryEntries) {
+        customer.contactHistory = [];
+    }
+    customer.contactHistory.unshift(normalizedEntry);
+
+    if (persist) {
+        persistContactHistoryEntry(dependencies, customer, normalizedEntry);
+    }
+
+    const currentCustomer = getCurrentCustomer(dependencies);
+    const isCurrentCustomer = areSameCustomer(currentCustomer, customer);
+    const contactHistoryState = getContactHistoryState(dependencies);
+    const shouldResetToFirstPage = highlight || moveToFirstPage;
+    if (contactHistoryState && isCurrentCustomer && shouldResetToFirstPage) {
+        contactHistoryState.currentPage = 1;
+    }
+
+    if (contactHistoryState && highlight && isCurrentCustomer) {
+        contactHistoryState.highlightId = normalizedEntry.id;
+        clearContactHistoryHighlightTimer();
+        contactHistoryHighlightTimer = setTimeout(() => {
+            const activeDependencies = resolveDependencies();
+            const activeContactHistoryState = getContactHistoryState(activeDependencies);
+            if (activeContactHistoryState) {
+                activeContactHistoryState.highlightId = null;
+            }
+
+            const activeCustomer = getCurrentCustomer(activeDependencies);
+            if (areSameCustomer(activeCustomer, customer)) {
+                displayContactHistory();
+            }
+
+            contactHistoryHighlightTimer = null;
+        }, CONTACT_HISTORY_HIGHLIGHT_DURATION_MS);
+    }
+
+    if (refresh && isCurrentCustomer) {
+        displayContactHistory();
+    }
+
+    if (contactHistoryState) {
+        contactHistoryState.lastEntry = {
+            id: normalizedEntry.id,
+            type: normalizedEntry.type,
+            createdAt: Date.now()
+        };
+    }
+
+    return normalizedEntry;
+}
+
+export function addContactMoment(customerId, type, description) {
+    const dependencies = resolveDependencies();
+    const customer = findCustomerById(dependencies, customerId);
+    if (!customer) {
+        return null;
+    }
+
+    return pushContactHistory(
+        customer,
+        {
+            type,
+            description
+        },
+        { highlight: true }
+    );
+}
+
+export function resetContactHistoryViewState() {
+    const dependencies = resolveDependencies();
+    const contactHistoryState = getContactHistoryState(dependencies);
+    if (!contactHistoryState) {
+        clearContactHistoryHighlightTimer();
+        return;
+    }
+
+    contactHistoryState.currentPage = 1;
+    contactHistoryState.highlightId = null;
+    contactHistoryState.lastEntry = null;
+    clearContactHistoryHighlightTimer();
 }
 
 function renderTimelinePagination(currentPage, totalPages) {
@@ -257,10 +449,18 @@ function exposeContactHistoryGlobals() {
         displayContactHistory,
         toggleTimelineItem,
         changeContactHistoryPage,
+        generateContactHistoryId,
+        pushContactHistory,
+        addContactMoment,
+        resetContactHistoryViewState,
         formatDate,
         formatDateTime
     };
 }
+
+export const __contactHistoryTestUtils = {
+    clearContactHistoryHighlightTimer
+};
 
 export function registerContactHistorySlice(actionRouter) {
     exposeContactHistoryGlobals();

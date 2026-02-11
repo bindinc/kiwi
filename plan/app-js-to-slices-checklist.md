@@ -47,9 +47,9 @@
 | 11 | Delivery date picker/calendar engine | `codex/migrate-delivery-date-picker-calendar-engine-to-slice` | [#50](https://github.com/bindinc/kiwi/pull/50) | `merged` | `yes` |  |
 | 12 | App shell events + form closing + toast + keyboard/click/change globals | `codex/extract-app-shell-events-and-global-listeners-into-app-shell-slice` | [#51](https://github.com/bindinc/kiwi/pull/51) | `merged` | `yes` |  |
 | 13 | Runtime compatibility bridge while migrating | `codex/implement-runtime-compatibility-bridge-while-migrating` | [#52](https://github.com/bindinc/kiwi/pull/52) | `merged` | `yes` |  |
-| 14 | Remove duplicated Werfsleutel implementation from legacy app.js | `codex/remove-duplicated-werfsleutel-implementation-from-legacy-app-js` | - | `not started` | `no` | Keep a single source of truth in `slices/werfsleutel.js`. |
-| 15 | Extract shared pricing + subscription identity helpers from app.js globals | `codex/extract-shared-pricing-and-subscription-identity-helpers` | - | `not started` | `no` | Move helper ownership out of legacy globals. |
-| 16 | Extract contact-history mutation + contact-moment adapter from app.js | `codex/extract-contact-history-mutation-and-contact-moment-adapter` | - | `not started` | `no` | Remove direct state mutation and persistence fallback from legacy script. |
+| 14 | Remove duplicated Werfsleutel implementation from legacy app.js | `codex/remove-duplicated-werfsleutel-implementation-from-legacy-app-js` | [#56](https://github.com/bindinc/kiwi/pull/56) | `open` | `no` | Keep a single source of truth in `slices/werfsleutel.js`. |
+| 15 | Extract shared pricing + subscription identity helpers from app.js globals | `codex/extract-shared-pricing-and-subscription-identity-helpers` | [#59](https://github.com/bindinc/kiwi/pull/59) | `open` | `no` | Move helper ownership out of legacy globals. |
+| 16 | Extract contact-history mutation + contact-moment adapter from app.js | `codex/extract-contact-history-mutation-and-contact-moment-adapter` | [#57](https://github.com/bindinc/kiwi/pull/57) | `open` | `no` | Remove direct state mutation and persistence fallback from legacy script. |
 | 17 | Extract call-session start/duration UI bridge from app.js | `codex/extract-call-session-start-and-duration-ui-bridge` | [#60](https://github.com/bindinc/kiwi/pull/60) | `open` | `no` | Consolidate call-session timer/UI ownership. |
 | 18 | Remove window dependency-provider bridge (`kiwiGet*SliceDependencies`) | `codex/remove-window-slice-dependency-provider-bridge` | - | `not started` | `no` | Replace `window` provider lookups with explicit module wiring. |
 | 19 | Remove legacy facade wrappers that only proxy to slice methods | `codex/remove-legacy-facade-wrappers-proxying-to-slices` | - | `not started` | `no` | Migrate remaining global function callers to router/slice entry points. |
@@ -175,7 +175,7 @@
   - Bound action names: none direct (cross-cutting helpers)
   - Dependency/risk note: helper behavior is currently accessed via globals/fallback lookups; extraction must preserve deterministic subscription-number generation and duration-label rendering.
 
-- [ ] 16. Extract contact-history mutation + contact-moment adapter from app.js
+- [x] 16. Extract contact-history mutation + contact-moment adapter from app.js
   - Target slice file(s): `app/static/assets/js/app/slices/contact-history-slice.js` (or dedicated contact-history state module), `app/static/assets/js/app/slices/call-agent-runtime-client.js`
   - Source range: `app.js:1238-1332`
   - Key functions/state: `generateContactHistoryId`, `pushContactHistory`, `addContactMoment`, `contactHistoryHighlightTimer` interactions

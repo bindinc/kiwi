@@ -1,4 +1,5 @@
 import { getGlobalScope } from '../services.js';
+import { getSubscriptionDurationDisplay } from '../subscription-shared-helpers.js';
 import { displayContactHistory, formatDate } from './contact-history-slice.js';
 
 const CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER = 'kiwiGetCustomerDetailSliceDependencies';
@@ -104,9 +105,7 @@ function getCurrentCustomer(dependencies) {
 }
 
 function getSubscriptionMetadata(dependencies, subscription) {
-    const pricingInfo = typeof dependencies.getSubscriptionDurationDisplay === 'function'
-        ? dependencies.getSubscriptionDurationDisplay(subscription)
-        : '';
+    const pricingInfo = getSubscriptionDurationDisplay(subscription);
     const requesterMeta = typeof dependencies.getSubscriptionRequesterMetaLine === 'function'
         ? dependencies.getSubscriptionRequesterMetaLine(subscription)
         : '';

@@ -268,6 +268,17 @@ function refreshWerfsleutelCatalogIfStale() {
 }
 
 function getSelectedWerfsleutelSelection() {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canReadSelection = werfsleutelSliceApi && typeof werfsleutelSliceApi.getSelection === 'function';
+    if (canReadSelection) {
+        const selection = werfsleutelSliceApi.getSelection();
+        return {
+            selectedKey: selection?.selectedKey || null,
+            selectedChannel: selection?.selectedChannel || null,
+            selectedChannelMeta: selection?.selectedChannelMeta || null
+        };
+    }
+
     const legacySelector = getLegacyFunction('getSelectedWerfsleutelState');
     if (!legacySelector) {
         return {
@@ -286,6 +297,17 @@ function getSelectedWerfsleutelSelection() {
 }
 
 function getWerfsleutelOfferDetails(selectionKey) {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    const canResolveOfferDetails = werfsleutelSliceApi && typeof werfsleutelSliceApi.getOfferDetails === 'function';
+    if (canResolveOfferDetails) {
+        const offerDetails = werfsleutelSliceApi.getOfferDetails(selectionKey);
+        return {
+            magazine: offerDetails?.magazine || '',
+            durationKey: offerDetails?.durationKey || '',
+            durationLabel: offerDetails?.durationLabel || ''
+        };
+    }
+
     const offerResolver = getLegacyFunction('getWerfsleutelOfferDetailsFromActiveSlice');
     if (!offerResolver) {
         return {
@@ -295,10 +317,11 @@ function getWerfsleutelOfferDetails(selectionKey) {
         };
     }
 
-    return offerResolver(selectionKey) || {
-        magazine: '',
-        durationKey: '',
-        durationLabel: ''
+    const offerDetails = offerResolver(selectionKey);
+    return {
+        magazine: offerDetails?.magazine || '',
+        durationKey: offerDetails?.durationKey || '',
+        durationLabel: offerDetails?.durationLabel || ''
     };
 }
 

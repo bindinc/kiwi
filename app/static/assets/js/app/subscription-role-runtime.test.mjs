@@ -45,6 +45,8 @@ function createElementStub() {
 }
 
 function createRuntimeContext(options = {}) {
+    const sharedNormalizeNameFragment = options.sharedNormalizeNameFragment
+        || ((value = '') => String(value || '').replace(/[\s.]/g, '').toLowerCase());
     const checkbox = { checked: Boolean(options.checkboxChecked) };
     const requesterRoleDetails = createElementStub();
     const requesterSameSummary = createElementStub();
@@ -110,8 +112,8 @@ function createRuntimeContext(options = {}) {
         normalizePhone(value = '') {
             return String(value).replace(/\D+/g, '');
         },
-        normalizeNameFragment(value = '') {
-            return String(value).trim().toLowerCase();
+        kiwiSubscriptionIdentityPricingHelpers: {
+            normalizeNameFragment: sharedNormalizeNameFragment
         },
         customers: [],
         currentCustomer: null,
@@ -182,8 +184,19 @@ function testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester()
     assert.equal(context.__toasts[0].type, 'info');
 }
 
+function testNormalizeDuplicateLastNameUsesSharedHelpers() {
+    const { runtime } = createRuntimeContext({
+        sharedNormalizeNameFragment(value = '') {
+            return `normalized:${String(value || '').toUpperCase()}`;
+        }
+    });
+
+    assert.equal(runtime.normalizeDuplicateLastName('de Groot'), 'normalized:DE GROOT');
+}
+
 function run() {
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
+    testNormalizeDuplicateLastNameUsesSharedHelpers();
     console.log('subscription role runtime tests passed');
 }
 
