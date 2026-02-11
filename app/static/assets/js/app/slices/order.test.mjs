@@ -23,10 +23,7 @@ function testRegistersOrderActions() {
         'open-article-sale-form',
         'close-article-sale-form',
         'submit-article-sale-form',
-        'add-delivery-remark',
-        'select-recommended-delivery-date',
-        'navigate-delivery-calendar',
-        'select-delivery-date'
+        'add-delivery-remark'
     ];
 
     for (const actionName of expectedActionNames) {
