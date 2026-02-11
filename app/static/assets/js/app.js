@@ -1134,6 +1134,11 @@ const recordingConfig = {
 
 // End Session - Close current customer and return to clean slate
 function endSession() {
+    const handledBySlice = invokeSliceMethod('kiwiAppShellSlice', 'endSession');
+    if (handledBySlice !== undefined) {
+        return;
+    }
+
     // End call if active (using new system)
     if (callSession.active) {
         endCallSession();
@@ -1547,6 +1552,8 @@ const ORDER_SLICE_NAMESPACE = 'kiwiOrderSlice';
 const ORDER_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetOrderSliceDependencies';
 const DELIVERY_REMARKS_SLICE_NAMESPACE = 'kiwiDeliveryRemarksSlice';
 const DELIVERY_REMARKS_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetDeliveryRemarksSliceDependencies';
+const APP_SHELL_SLICE_NAMESPACE = 'kiwiAppShellSlice';
+const APP_SHELL_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetAppShellSliceDependencies';
 
 function getSliceApi(namespace) {
     if (typeof window === 'undefined') {
@@ -1708,10 +1715,39 @@ function getDeliveryRemarksSliceDependencies() {
     };
 }
 
+function getAppShellSliceDependencies() {
+    return {
+        getCurrentCustomer() {
+            return currentCustomer;
+        },
+        getContactHistoryState() {
+            return contactHistoryState;
+        },
+        pushContactHistory,
+        resetAllSubscriptionDuplicateStates,
+        isCallSessionActive() {
+            return Boolean(callSession && callSession.active);
+        },
+        endCallSession,
+        setCurrentCustomer(customer) {
+            currentCustomer = customer;
+        },
+        setSelectedOffer(offer) {
+            selectedOffer = offer;
+        },
+        setAdditionalFiltersOpen,
+        updateCustomerActionButtons,
+        closeDebugModal,
+        openDebugModal,
+        closeStatusMenu
+    };
+}
+
 if (typeof window !== 'undefined') {
     window[CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER] = getCustomerDetailSliceDependencies;
     window[ORDER_SLICE_DEPENDENCIES_PROVIDER] = getOrderSliceDependencies;
     window[DELIVERY_REMARKS_SLICE_DEPENDENCIES_PROVIDER] = getDeliveryRemarksSliceDependencies;
+    window[APP_SHELL_SLICE_DEPENDENCIES_PROVIDER] = getAppShellSliceDependencies;
 }
 
 // Select Customer
@@ -1947,6 +1983,11 @@ function closeEditRemarksModal() {
 
 // Close Form
 function closeForm(formId) {
+    const handledBySlice = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'closeForm', [formId]);
+    if (handledBySlice !== undefined) {
+        return;
+    }
+
     if (formId === 'newSubscriptionForm') {
         resetAllSubscriptionDuplicateStates();
     }
@@ -1958,6 +1999,11 @@ function closeForm(formId) {
 }
 
 function mapToastTypeToContactType(toastType) {
+    const mappedContactType = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'mapToastTypeToContactType', [toastType]);
+    if (typeof mappedContactType === 'string') {
+        return mappedContactType;
+    }
+
     switch (toastType) {
         case 'error':
             return 'notification_error';
@@ -1972,20 +2018,12 @@ function mapToastTypeToContactType(toastType) {
 
 // Show Toast Notification (now backed by contact history)
 function showToast(message, type = 'success') {
+    const handledBySlice = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'showToast', [message, type]);
+    if (handledBySlice !== undefined) {
+        return;
+    }
+
     if (currentCustomer) {
-        const recentEntry = contactHistoryState.lastEntry;
-        const now = Date.now();
-        const justLoggedMutation = Boolean(
-            recentEntry &&
-            contactHistoryState.highlightId &&
-            recentEntry.id === contactHistoryState.highlightId &&
-            now - recentEntry.createdAt < 1500
-        );
-
-        if (type === 'success' && justLoggedMutation) {
-            return;
-        }
-
         pushContactHistory(
             currentCustomer,
             {
@@ -2011,8 +2049,12 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Debug Mode - Secret Key Sequence
 const isDebugModalEnabled = () => {
+    const debugModalEnabled = invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'isDebugModalEnabled');
+    if (typeof debugModalEnabled === 'boolean') {
+        return debugModalEnabled;
+    }
+
     const flags = window.featureFlags;
     if (!flags || typeof flags.isEnabled !== 'function') {
         return true;
@@ -2020,90 +2062,3 @@ const isDebugModalEnabled = () => {
 
     return flags.isEnabled('debugModal');
 };
-
-let debugKeySequence = [];
-const DEBUG_KEY = ']';
-const DEBUG_KEY_COUNT = 4;
-
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-    const debugFeatureEnabled = isDebugModalEnabled();
-
-    // Debug mode activation - press ']' 4 times
-    if (debugFeatureEnabled) {
-        if (e.key === DEBUG_KEY) {
-            debugKeySequence.push(Date.now());
-            
-            // Keep only recent keypresses (within 10 seconds)
-            debugKeySequence = debugKeySequence.filter(time => Date.now() - time < 10000);
-            
-            // Check if we have 4 presses
-            if (debugKeySequence.length >= DEBUG_KEY_COUNT) {
-                openDebugModal();
-                debugKeySequence = []; // Reset sequence
-            }
-        } else {
-            // Reset sequence on any other key
-            debugKeySequence = [];
-        }
-    }
-    
-    // Escape to close forms and modals
-    if (e.key === 'Escape') {
-        // Close debug modal if open
-        const debugModal = document.getElementById('debugModal');
-        if (debugModal.classList.contains('show')) {
-            closeDebugModal();
-            return;
-        }
-        
-        // Close forms
-        document.querySelectorAll('.form-container').forEach(form => {
-            if (form.style.display === 'flex') {
-                form.style.display = 'none';
-            }
-        });
-    }
-    
-    // Ctrl/Cmd + K for search focus
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        document.getElementById('searchName').focus();
-    }
-});
-
-
-// Close modal when clicking outside
-document.addEventListener('click', (e) => {
-    const modal = document.getElementById('debugModal');
-    const statusMenu = document.getElementById('agentStatusMenu');
-    const profileTrigger = document.getElementById('agentProfileTrigger');
-
-    const clickInsideStatusMenu = statusMenu && statusMenu.contains(e.target);
-    const clickOnProfileTrigger = profileTrigger && profileTrigger.contains(e.target);
-    const menuIsOpen = statusMenu && !statusMenu.hidden;
-
-    if (menuIsOpen && !clickInsideStatusMenu && !clickOnProfileTrigger) {
-        closeStatusMenu();
-    }
-
-    if (e.target === modal) {
-        closeDebugModal();
-    }
-});
-
-// Handle payment method selection - show/hide IBAN field
-document.addEventListener('change', (e) => {
-    if (e.target.name === 'subPayment' || e.target.name === 'editPayment') {
-        const additionalInput = e.target.closest('.payment-option').querySelector('.additional-input');
-        if (additionalInput) {
-            // Payment selected, IBAN field is shown via CSS
-            const ibanInput = additionalInput.querySelector('input[type="text"]');
-            if (ibanInput && e.target.value === 'automatisch') {
-                ibanInput.setAttribute('required', 'required');
-            } else if (ibanInput) {
-                ibanInput.removeAttribute('required');
-            }
-        }
-    }
-});
