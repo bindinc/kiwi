@@ -14,6 +14,9 @@ const deliveryCalendarApiUrl = '/api/v1/catalog/delivery-calendar';
 const deliveryCalendarCache = new Map();
 let currentCalendarDate = new Date();
 let selectedDeliveryDate = null;
+let deliveryCalendarClickHandler = null;
+let deliveryCalendarKeyHandler = null;
+let deliveryCalendarResizeHandlerAttached = false;
 
 function formatDateInputValue(date) {
     const year = date.getFullYear();
@@ -94,28 +97,28 @@ async function initDeliveryDatePicker() {
         }
     });
 
-    if (!window._deliveryCalendarClickHandler) {
-        window._deliveryCalendarClickHandler = (event) => {
+    if (!deliveryCalendarClickHandler) {
+        deliveryCalendarClickHandler = (event) => {
             const currentContainer = document.getElementById('deliveryDatePickerContainer');
             if (currentContainer && !currentContainer.contains(event.target)) {
                 closeCalendar();
             }
         };
-        document.addEventListener('click', window._deliveryCalendarClickHandler);
+        document.addEventListener('click', deliveryCalendarClickHandler);
     }
 
-    if (!window._deliveryCalendarKeyHandler) {
-        window._deliveryCalendarKeyHandler = (event) => {
+    if (!deliveryCalendarKeyHandler) {
+        deliveryCalendarKeyHandler = (event) => {
             if (event.key === 'Escape') {
                 closeCalendar();
             }
         };
-        document.addEventListener('keydown', window._deliveryCalendarKeyHandler);
+        document.addEventListener('keydown', deliveryCalendarKeyHandler);
     }
 
-    if (!window._deliveryCalendarResizeHandlerAttached) {
+    if (!deliveryCalendarResizeHandlerAttached) {
         window.addEventListener('resize', handleCalendarResize);
-        window._deliveryCalendarResizeHandlerAttached = true;
+        deliveryCalendarResizeHandlerAttached = true;
     }
 }
 

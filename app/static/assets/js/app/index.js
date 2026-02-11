@@ -1,6 +1,6 @@
 import { createActionRouter } from './actions.js';
 import { ensureLegacyAppLoaded } from './legacy-loader.js';
-import { getSharedState, markRouterInitialized, setRegisteredActions } from './state.js';
+import { getSharedState } from './state.js';
 
 const sharedState = getSharedState();
 const actionRouter = createActionRouter({
@@ -16,15 +16,6 @@ const actionRouter = createActionRouter({
 });
 
 actionRouter.install();
-markRouterInitialized();
-setRegisteredActions(actionRouter.getRegisteredActions());
-
-if (typeof window !== 'undefined') {
-    window.kiwiApp = {
-        actionRouter,
-        state: sharedState
-    };
-}
 
 async function bootstrapLegacyApp() {
     try {

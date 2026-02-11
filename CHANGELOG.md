@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Start `app.js` modularization with a new ES-module entrypoint (`assets/js/app/index.js`), shared router/state/service foundation files, and a legacy bootstrap bridge that preserves current runtime behavior while future slices migrate off global handlers.
+- Finalize JS modularization guardrails with a new `script/check` command (`no-inline-handler`, `no-duplicate-top-level-function`), remove now-unneeded module-shell globals/shims (`window.kiwiApp`, `kiwi:legacy-ready`, delivery picker listener sentinels on `window`), and document action-router conventions in `docs/ACTION_ROUTER_CONVENTIONS.md`.
 - Add full English i18n coverage via `app/static/assets/js/i18n/en.js` (matching the current `nl` keyset), register `en` in the i18n runtime, and add profile-menu language switching (`NL`/`EN`) with immediate UI re-translation and locale-aware date/time/currency formatting.
 - Localize remaining dynamic `app.js` UI strings (toasts, confirms, search/result states, queue/debug labels, subscription/article rendering labels, and contact-history labels), add missing `nl`/`en` translation keys, and remove hardcoded `nl-NL` date formatting in favor of active app locale.
 - Make `app/templates/base/index.html` fully i18n-backed by translating static text/placeholder/title literals through `window.i18n`, and add matching `indexHtml` keys in `app/static/assets/js/i18n/nl.js`.

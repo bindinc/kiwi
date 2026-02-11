@@ -179,6 +179,16 @@ make compose-down
 - `infra/docker/` contains Dockerfiles for the base and app images.
 - `scripts/` provides local dev helpers.
 
+## Frontend Action Router Checks
+
+Use the guardrail script before opening/refining refactor PRs:
+
+```bash
+script/check
+```
+
+Convention details are documented in `docs/ACTION_ROUTER_CONVENTIONS.md`.
+
 ## Container Images
 
 Versioned images are built by GitHub Actions on tag pushes (`v*`) and published to GHCR as

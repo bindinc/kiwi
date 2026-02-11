@@ -1,0 +1,145 @@
+#!/usr/bin/env node
+
+const fs = require('node:fs/promises');
+const path = require('node:path');
+
+const repoRoot = path.resolve(__dirname, '..');
+const inlineHandlerPattern = /\bon(?:abort|blur|change|click|dblclick|error|focus|input|keydown|keypress|keyup|load|mousedown|mouseenter|mouseleave|mousemove|mouseout|mouseover|mouseup|reset|resize|scroll|submit|touchstart|touchend|touchmove|wheel)\s*=/gi;
+const topLevelFunctionPattern = /^(?:export\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/;
+
+async function collectFiles(startPath, allowedExtensions) {
+    const pending = [startPath];
+    const files = [];
+
+    while (pending.length > 0) {
+        const currentPath = pending.pop();
+        let dirents;
+        try {
+            dirents = await fs.readdir(currentPath, { withFileTypes: true });
+        } catch (error) {
+            if (error && error.code === 'ENOENT') {
+                continue;
+            }
+            throw error;
+        }
+
+        for (const dirent of dirents) {
+            const fullPath = path.join(currentPath, dirent.name);
+            if (dirent.isDirectory()) {
+                pending.push(fullPath);
+                continue;
+            }
+            if (dirent.isFile() && allowedExtensions.has(path.extname(dirent.name))) {
+                files.push(fullPath);
+            }
+        }
+    }
+
+    files.sort();
+    return files;
+}
+
+function lineNumberAt(sourceText, index) {
+    return sourceText.slice(0, index).split('\n').length;
+}
+
+async function runNoInlineHandlerGuardrail() {
+    const jsModuleRoot = path.join(repoRoot, 'app/static/assets/js/app');
+    const files = await collectFiles(jsModuleRoot, new Set(['.js', '.mjs', '.html']));
+    const violations = [];
+
+    for (const filePath of files) {
+        const sourceText = await fs.readFile(filePath, 'utf8');
+        inlineHandlerPattern.lastIndex = 0;
+        let match = inlineHandlerPattern.exec(sourceText);
+        while (match) {
+            violations.push({
+                file: path.relative(repoRoot, filePath),
+                line: lineNumberAt(sourceText, match.index),
+                token: match[0]
+            });
+            match = inlineHandlerPattern.exec(sourceText);
+        }
+    }
+
+    if (violations.length === 0) {
+        console.log('[guardrail:no-inline-handler] ok');
+        return true;
+    }
+
+    console.error('[guardrail:no-inline-handler] inline handler attribute found:');
+    for (const violation of violations) {
+        console.error(`- ${violation.file}:${violation.line} (${violation.token})`);
+    }
+    return false;
+}
+
+async function runNoDuplicateTopLevelFunctionGuardrail() {
+    const jsRoot = path.join(repoRoot, 'app/static/assets/js');
+    const files = await collectFiles(jsRoot, new Set(['.js', '.mjs']));
+    const duplicatesByFile = [];
+
+    for (const filePath of files) {
+        const sourceText = await fs.readFile(filePath, 'utf8');
+        const lines = sourceText.split('\n');
+        const declarations = new Map();
+
+        for (let index = 0; index < lines.length; index += 1) {
+            const line = lines[index];
+            const match = line.match(topLevelFunctionPattern);
+            if (!match) {
+                continue;
+            }
+
+            const functionName = match[1];
+            const existing = declarations.get(functionName) || [];
+            existing.push(index + 1);
+            declarations.set(functionName, existing);
+        }
+
+        const duplicateFunctions = [];
+        for (const [functionName, linesByFunction] of declarations.entries()) {
+            if (linesByFunction.length > 1) {
+                duplicateFunctions.push({
+                    functionName,
+                    lines: linesByFunction
+                });
+            }
+        }
+
+        if (duplicateFunctions.length > 0) {
+            duplicatesByFile.push({
+                file: path.relative(repoRoot, filePath),
+                duplicateFunctions
+            });
+        }
+    }
+
+    if (duplicatesByFile.length === 0) {
+        console.log('[guardrail:no-duplicate-top-level-function] ok');
+        return true;
+    }
+
+    console.error('[guardrail:no-duplicate-top-level-function] duplicate top-level functions found:');
+    for (const fileDuplicates of duplicatesByFile) {
+        for (const duplicateFunction of fileDuplicates.duplicateFunctions) {
+            const lineList = duplicateFunction.lines.join(', ');
+            console.error(`- ${fileDuplicates.file} -> ${duplicateFunction.functionName} (${lineList})`);
+        }
+    }
+    return false;
+}
+
+async function main() {
+    const noInlinePasses = await runNoInlineHandlerGuardrail();
+    const noDuplicatePasses = await runNoDuplicateTopLevelFunctionGuardrail();
+
+    if (!noInlinePasses || !noDuplicatePasses) {
+        process.exitCode = 1;
+    }
+}
+
+main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+});
