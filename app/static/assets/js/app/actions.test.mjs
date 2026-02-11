@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { coerceActionValue, createActionRouter, extractActionPayload } from './actions.js';
 import { registerCallQueueAgentStatusSlices } from './slices/index.js';
+import { registerLocalizationSlice } from './slices/localization-slice.js';
 
 function testCoerceActionValue() {
     assert.equal(coerceActionValue('true'), true);
@@ -239,11 +240,74 @@ function testCallQueueAgentStatusSlices() {
     }
 }
 
+function testLocalizationSlice() {
+    const listeners = {};
+    const root = {
+        addEventListener(eventType, handler) {
+            listeners[eventType] = handler;
+        },
+        removeEventListener(eventType) {
+            delete listeners[eventType];
+        }
+    };
+
+    const router = createActionRouter({
+        root,
+        eventTypes: ['click']
+    });
+    registerLocalizationSlice(router);
+    router.install();
+
+    const registeredActions = router.getRegisteredActions();
+    assert.equal(registeredActions.includes('localization.set-locale'), true);
+
+    const previousI18n = globalThis.i18n;
+    let currentLocale = 'nl';
+    const localeSwitches = [];
+    globalThis.i18n = {
+        setLocale(locale) {
+            currentLocale = locale;
+            localeSwitches.push(locale);
+            return locale;
+        },
+        getLocale() {
+            return currentLocale;
+        },
+        availableLocales() {
+            return ['nl', 'en'];
+        },
+        t(key) {
+            return key;
+        }
+    };
+
+    try {
+        const localeElement = {
+            dataset: {
+                action: 'localization.set-locale',
+                actionEvent: 'click',
+                localeOption: 'en'
+            }
+        };
+        listeners.click(createDelegatedEvent(localeElement, 'click'));
+
+        assert.deepEqual(localeSwitches, ['en']);
+        assert.equal(globalThis.getAppLocale(), 'en');
+    } finally {
+        if (previousI18n === undefined) {
+            delete globalThis.i18n;
+        } else {
+            globalThis.i18n = previousI18n;
+        }
+    }
+}
+
 function run() {
     testCoerceActionValue();
     testExtractActionPayload();
     testRouterDispatch();
     testCallQueueAgentStatusSlices();
+    testLocalizationSlice();
     console.log('actions router tests passed');
 }
 
