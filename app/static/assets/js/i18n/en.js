@@ -271,7 +271,7 @@ const en = {
             "uitgeschakeld_668228d0": "Disabled",
             "uitkomst_15284a13": "Outcome *",
             "uitloggen_69d43fb9": "Log out",
-            "v1_0_6_eab610ea": "v1.0.6",
+            "kiwiversion": "v1.0.7",
             "verwerken_781562ac": "Process →",
             "verwerken_916c9b12": "Process",
             "volgende_88b8d391": "Next →",

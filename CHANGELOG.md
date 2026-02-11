@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.0.7]
+
 ### Added
 - Add `/api/v1/status` endpoint with API status and rate limit snapshot.
 - Add a local Docker Compose preflight check that validates `client_secrets.json` before the app starts.
