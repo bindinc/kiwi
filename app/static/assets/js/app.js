@@ -1542,6 +1542,10 @@ function normalizePhone(value = '') {
 const CUSTOMER_DETAIL_SLICE_NAMESPACE = 'kiwiCustomerDetailSlice';
 const CONTACT_HISTORY_SLICE_NAMESPACE = 'kiwiContactHistorySlice';
 const CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER = 'kiwiGetCustomerDetailSliceDependencies';
+const ORDER_SLICE_NAMESPACE = 'kiwiOrderSlice';
+const ORDER_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetOrderSliceDependencies';
+const DELIVERY_REMARKS_SLICE_NAMESPACE = 'kiwiDeliveryRemarksSlice';
+const DELIVERY_REMARKS_SLICE_DEPENDENCIES_PROVIDER = 'kiwiGetDeliveryRemarksSliceDependencies';
 
 function getSliceApi(namespace) {
     if (typeof window === 'undefined') {
@@ -1627,8 +1631,86 @@ function getCustomerDetailSliceDependencies() {
     };
 }
 
+function getOrderSliceDependencies() {
+    return {
+        getCurrentCustomer() {
+            return currentCustomer;
+        },
+        getCustomers() {
+            return customers;
+        },
+        getOrderItems() {
+            return typeof orderItems !== 'undefined' ? orderItems : [];
+        },
+        resetOrderItems() {
+            if (typeof orderItems === 'undefined') {
+                return;
+            }
+            orderItems = [];
+        },
+        async renderOrderItems() {
+            if (typeof renderOrderItems !== 'function') {
+                return;
+            }
+            await renderOrderItems();
+        },
+        async getOrderData() {
+            if (typeof getOrderData !== 'function') {
+                return null;
+            }
+            return getOrderData();
+        },
+        getApiClient() {
+            return window.kiwiApi || null;
+        },
+        getWorkflowsApiUrl() {
+            return workflowsApiUrl;
+        },
+        setBirthdayFields,
+        ensureBirthdayValue,
+        initDeliveryDatePicker,
+        closeForm,
+        showToast,
+        translate,
+        formatDate,
+        saveCustomers,
+        upsertCustomerInCache,
+        pushContactHistory,
+        showSuccessIdentificationPrompt,
+        selectCustomer
+    };
+}
+
+function getDeliveryRemarksSliceDependencies() {
+    return {
+        getCurrentCustomer() {
+            return currentCustomer;
+        },
+        getApiClient() {
+            return window.kiwiApi || null;
+        },
+        getPersonsApiUrl() {
+            return personsApiUrl;
+        },
+        getAgentName() {
+            const agentNameElement = document.getElementById('agentName');
+            if (!agentNameElement) {
+                return '';
+            }
+            return agentNameElement.textContent || '';
+        },
+        translate,
+        showToast,
+        selectCustomer,
+        pushContactHistory,
+        saveCustomers
+    };
+}
+
 if (typeof window !== 'undefined') {
     window[CUSTOMER_DETAIL_DEPENDENCIES_PROVIDER] = getCustomerDetailSliceDependencies;
+    window[ORDER_SLICE_DEPENDENCIES_PROVIDER] = getOrderSliceDependencies;
+    window[DELIVERY_REMARKS_SLICE_DEPENDENCIES_PROVIDER] = getDeliveryRemarksSliceDependencies;
 }
 
 // Select Customer
@@ -2483,543 +2565,52 @@ async function completeWinback() {
 
 // Display Articles
 function displayArticles() {
-    const articlesList = document.getElementById('articlesList');
-    
-    if (!currentCustomer || !currentCustomer.articles || currentCustomer.articles.length === 0) {
-        articlesList.innerHTML = `<p class="empty-state-small">${translate('articleOrders.none', {}, 'Geen artikelen')}</p>`;
-        return;
-    }
-
-    // Sort articles by order date (newest first)
-    const sortedArticles = [...currentCustomer.articles].sort((a, b) => 
-        new Date(b.orderDate) - new Date(a.orderDate)
-    );
-
-    let html = '<div class="articles-group">';
-    html += sortedArticles.map(order => {
-        const deliveryStatusClass = {
-            'ordered': 'status-ordered',
-            'in_transit': 'status-transit',
-            'delivered': 'status-delivered',
-            'returned': 'status-returned'
-        }[order.deliveryStatus] || 'status-ordered';
-        
-        const deliveryStatusText = {
-            'ordered': translate('articleOrders.deliveryStatusOrdered', {}, 'Besteld'),
-            'in_transit': translate('articleOrders.deliveryStatusInTransit', {}, 'Onderweg'),
-            'delivered': translate('articleOrders.deliveryStatusDelivered', {}, 'Afgeleverd'),
-            'returned': translate('articleOrders.deliveryStatusReturned', {}, 'Geretourneerd')
-        }[order.deliveryStatus] || translate('articleOrders.deliveryStatusOrdered', {}, 'Besteld');
-        
-        const paymentStatusClass = {
-            'pending': 'status-pending',
-            'paid': 'status-paid',
-            'refunded': 'status-refunded'
-        }[order.paymentStatus] || 'status-pending';
-        
-        const paymentStatusText = {
-            'pending': translate('articleOrders.paymentStatusPending', {}, 'In behandeling'),
-            'paid': translate('articleOrders.paymentStatusPaid', {}, 'Betaald'),
-            'refunded': translate('articleOrders.paymentStatusRefunded', {}, 'Terugbetaald')
-        }[order.paymentStatus] || translate('articleOrders.paymentStatusPending', {}, 'In behandeling');
-        
-        // Calculate if return is still possible
-        const returnPossible = order.returnDeadline && new Date(order.returnDeadline) > new Date();
-        
-        // Check if this is a multi-item order (new format) or single item (old format)
-        const isMultiItemOrder = order.items && Array.isArray(order.items);
-        
-        let itemsDisplay = '';
-        let priceDisplay = '';
-        
-        if (isMultiItemOrder) {
-            // New format: multiple items with discounts
-            itemsDisplay = order.items.map(item => 
-                `${item.name} (${item.quantity}x à €${item.unitPrice.toFixed(2)})`
-            ).join('<br>');
-            
-            priceDisplay = `
-                <strong>${translate('articleOrders.subtotalLabel', {}, 'Subtotaal')}:</strong> €${order.subtotal.toFixed(2)}<br>
-                ${order.totalDiscount > 0 ? `<strong>${translate('articleOrders.discountLabel', {}, 'Korting')}:</strong> <span style="color: #059669;">-€${order.totalDiscount.toFixed(2)}</span> 
-                (${order.discounts.map(d => d.type).join(', ')})<br>` : ''}
-                <strong>${translate('articleOrders.totalLabel', {}, 'Totaal')}:</strong> €${order.total.toFixed(2)}
-            `;
-        } else {
-            // Old format: single item (backward compatibility)
-            itemsDisplay = `${order.articleName || translate('articleOrders.itemFallback', {}, 'Artikel')} (${order.quantity}x)`;
-            priceDisplay = `<strong>${translate('articleOrders.priceLabel', {}, 'Prijs')}:</strong> €${order.price.toFixed(2)}`;
-        }
-        
-        return `
-            <div class="article-item">
-                <div class="article-info">
-                    <div class="article-name">${translate('articleOrders.orderNumber', { id: order.id }, `🛒 Bestelling #${order.id}`)}</div>
-                    <div class="article-details">
-                        <strong>${translate('articleOrders.itemsLabel', {}, 'Artikelen')}:</strong><br>${itemsDisplay}<br>
-                        ${priceDisplay}<br>
-                        <strong>${translate('articleOrders.orderedLabel', {}, 'Besteld')}:</strong> ${formatDate(order.orderDate)} • 
-                        <strong>${translate('articleOrders.desiredDeliveryLabel', {}, 'Gewenste levering')}:</strong> ${formatDate(order.desiredDeliveryDate)}
-                        ${order.actualDeliveryDate ? `<br><strong>${translate('articleOrders.deliveredLabel', {}, 'Geleverd')}:</strong> ${formatDate(order.actualDeliveryDate)}` : ''}
-                        ${order.trackingNumber ? `<br><strong>${translate('articleOrders.trackingLabel', {}, 'Track & Trace')}:</strong> ${order.trackingNumber}` : ''}
-                        ${order.notes ? `<br><strong>${translate('articleOrders.remarkLabel', {}, 'Opmerking')}:</strong> ${order.notes}` : ''}
-                        ${returnPossible ? `<br><strong>${translate('articleOrders.returnPossibleUntilLabel', {}, 'Retour mogelijk tot')}:</strong> ${formatDate(order.returnDeadline)}` : ''}
-                    </div>
-                </div>
-                <div class="article-actions">
-                    <span class="article-status ${deliveryStatusClass}">${deliveryStatusText}</span>
-                    <span class="article-status ${paymentStatusClass}">${paymentStatusText}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-    html += '</div>';
-
-    articlesList.innerHTML = html;
+    invokeSliceMethod(ORDER_SLICE_NAMESPACE, 'displayArticles');
 }
 
 // Show Article Sale Form
 function showArticleSale() {
-    // Prefill customer data if a customer is currently selected
-    if (currentCustomer) {
-        const salutation = currentCustomer.salutation || 'Dhr.';
-        document.querySelector(`input[name="articleSalutation"][value="${salutation}"]`).checked = true;
-        
-        document.getElementById('articleInitials').value = currentCustomer.firstName;
-        document.getElementById('articleMiddleName').value = currentCustomer.middleName || '';
-        document.getElementById('articleLastName').value = currentCustomer.lastName;
-        document.getElementById('articlePostalCode').value = currentCustomer.postalCode;
-        
-        // Handle house number
-        const houseNumberMatch = currentCustomer.houseNumber?.match(/^(\d+)(.*)$/);
-        if (houseNumberMatch) {
-            document.getElementById('articleHouseNumber').value = houseNumberMatch[1];
-            document.getElementById('articleHouseExt').value = houseNumberMatch[2] || '';
-        } else {
-            document.getElementById('articleHouseNumber').value = currentCustomer.houseNumber;
-        }
-        
-        // Extract street name from address (remove house number)
-        const streetName = currentCustomer.address.replace(/\s+\d+.*$/, '');
-        document.getElementById('articleAddress').value = streetName;
-
-        document.getElementById('articleCity').value = currentCustomer.city;
-        document.getElementById('articleEmail').value = currentCustomer.email;
-        document.getElementById('articlePhone').value = currentCustomer.phone;
-        setBirthdayFields('article', currentCustomer.birthday);
-
-        // Prefill delivery remarks from customer profile if available
-        if (currentCustomer.deliveryRemarks && currentCustomer.deliveryRemarks.default) {
-            document.getElementById('articleNotes').value = currentCustomer.deliveryRemarks.default;
-        }
-    } else {
-        // Clear form if no customer selected
-        document.getElementById('articleForm').reset();
-        setBirthdayFields('article');
-    }
-    
-    // Initialize delivery date picker with recommended date
-    initDeliveryDatePicker();
-    
-    // Clear article search and order items
-    document.getElementById('articleSearch').value = '';
-    document.getElementById('articleName').value = '';
-    document.getElementById('articlePrice').value = '€0,00';
-    orderItems = [];
-    renderOrderItems();
-    
-    document.getElementById('articleSaleForm').style.display = 'flex';
+    invokeSliceMethod(ORDER_SLICE_NAMESPACE, 'showArticleSale');
 }
 
 // Add Delivery Remark
 function addDeliveryRemark(remark) {
-    const notesField = document.getElementById('articleNotes');
-    const currentValue = notesField.value.trim();
-    
-    if (currentValue) {
-        // Append to existing notes
-        notesField.value = currentValue + '\n' + remark;
-    } else {
-        // Set as first note
-        notesField.value = remark;
-    }
-    
-    // Visual feedback
-    notesField.focus();
-    notesField.scrollTop = notesField.scrollHeight;
+    invokeSliceMethod(ORDER_SLICE_NAMESPACE, 'addDeliveryRemark', [remark]);
 }
 
 function addDeliveryRemarkByKey(key) {
-    const resolvedRemark = translate(key, {}, key);
-    addDeliveryRemark(resolvedRemark);
+    invokeSliceMethod(ORDER_SLICE_NAMESPACE, 'addDeliveryRemarkByKey', [key]);
 }
 
 // Update Article Price - handled by article-search.js
 
 // Create Article Sale
 async function createArticleSale(event) {
-    event.preventDefault();
-
-    // Check if there are items in the order
-    if (!orderItems || orderItems.length === 0) {
-        showToast(translate('articleOrders.addItem', {}, 'Voeg minimaal één artikel toe aan de bestelling'), 'error');
-        return;
-    }
-
-    const salutation = document.querySelector('input[name="articleSalutation"]:checked').value;
-    const initials = document.getElementById('articleInitials').value;
-    const middleName = document.getElementById('articleMiddleName').value;
-    const lastName = document.getElementById('articleLastName').value;
-    const houseNumber = document.getElementById('articleHouseNumber').value;
-    const houseExt = document.getElementById('articleHouseExt').value;
-    const birthday = ensureBirthdayValue('article', false);
-
-    if (birthday === null) {
-        return;
-    }
-
-    // Get order data
-    let orderData;
-    try {
-        orderData = await getOrderData();
-    } catch (error) {
-        showToast(error.message || translate('articleOrders.calculationFailed', {}, 'Bestelberekening via backend mislukt'), 'error');
-        return;
-    }
-    
-    const formData = {
-        salutation: salutation,
-        firstName: initials,
-        middleName: middleName,
-        lastName: lastName,
-        postalCode: document.getElementById('articlePostalCode').value.toUpperCase(),
-        houseNumber: houseExt ? `${houseNumber}${houseExt}` : houseNumber,
-        address: `${document.getElementById('articleAddress').value} ${houseNumber}${houseExt}`,
-        city: document.getElementById('articleCity').value,
-        email: document.getElementById('articleEmail').value,
-        phone: document.getElementById('articlePhone').value,
-        birthday: birthday,
-        desiredDeliveryDate: document.getElementById('articleDesiredDelivery').value,
-        paymentMethod: document.querySelector('input[name="articlePayment"]:checked').value,
-        notes: document.getElementById('articleNotes').value
-    };
-
-    // Generate tracking number
-    const trackingNumber = '3SABCD' + Math.random().toString().substr(2, 10) + 'NL';
-    
-    // Calculate return deadline (14 days after desired delivery)
-    const returnDeadline = new Date(formData.desiredDeliveryDate);
-    returnDeadline.setDate(returnDeadline.getDate() + 14);
-    const returnDeadlineStr = returnDeadline.toISOString().split('T')[0];
-
-    // Create order object with all items
-    const newOrder = {
-        id: Date.now(),
-        orderDate: new Date().toISOString().split('T')[0],
-        desiredDeliveryDate: formData.desiredDeliveryDate,
-        deliveryStatus: 'ordered',
-        trackingNumber: trackingNumber,
-        paymentStatus: 'paid', // Assume immediate payment via iDEAL/card
-        paymentMethod: formData.paymentMethod,
-        paymentDate: new Date().toISOString().split('T')[0],
-        actualDeliveryDate: null,
-        returnDeadline: returnDeadlineStr,
-        notes: formData.notes,
-        items: orderData.items,
-        subtotal: orderData.subtotal,
-        discounts: orderData.discounts,
-        totalDiscount: orderData.totalDiscount,
-        total: orderData.total,
-        couponCode: orderData.couponCode
-    };
-
-    // Build order description for contact history
-    const itemsDescription = orderData.items.map(item => 
-        `${item.name} (${item.quantity}x à €${item.unitPrice.toFixed(2)})`
-    ).join(', ');
-    
-    let discountDescription = '';
-    if (orderData.discounts.length > 0) {
-        const discountDetails = orderData.discounts.map(d => {
-            if (d.isCoupon) {
-                return `${d.type} "${d.description}" -€${d.amount.toFixed(2)}`;
-            }
-            return `${d.type} -€${d.amount.toFixed(2)}`;
-        }).join(', ');
-        discountDescription = ` Kortingen: ${discountDetails}.`;
-    }
-    
-    const couponNote = orderData.couponCode ? ` Kortingscode: ${orderData.couponCode}.` : '';
-    const fullLastName = middleName ? `${middleName} ${lastName}` : lastName;
-    const contactDescription = `Artikel bestelling: ${itemsDescription}. Subtotaal: €${orderData.subtotal.toFixed(2)}.${discountDescription}${couponNote} Totaal: €${orderData.total.toFixed(2)}. Gewenste levering: ${formatDate(formData.desiredDeliveryDate)}. Betaling: ${formData.paymentMethod}.${formData.notes ? ' Opmerkingen: ' + formData.notes : ''}`;
-    const hadCurrentCustomer = Boolean(currentCustomer);
-
-    if (window.kiwiApi) {
-        const orderPayload = {
-            orderDate: new Date().toISOString().split('T')[0],
-            desiredDeliveryDate: formData.desiredDeliveryDate,
-            deliveryStatus: 'ordered',
-            trackingNumber: trackingNumber,
-            paymentStatus: 'paid',
-            paymentMethod: formData.paymentMethod,
-            paymentDate: new Date().toISOString().split('T')[0],
-            actualDeliveryDate: null,
-            returnDeadline: returnDeadlineStr,
-            notes: formData.notes,
-            items: orderData.items,
-            couponCode: orderData.couponCode || null
-        };
-        const payload = {
-            order: orderPayload,
-            contactEntry: {
-                type: 'Artikel bestelling',
-                description: contactDescription
-            }
-        };
-
-        if (currentCustomer) {
-            payload.customerId = currentCustomer.id;
-        } else {
-            payload.customer = {
-                salutation: formData.salutation,
-                firstName: formData.firstName,
-                middleName: formData.middleName,
-                lastName: fullLastName,
-                birthday: formData.birthday,
-                postalCode: formData.postalCode,
-                houseNumber: formData.houseNumber,
-                address: formData.address,
-                city: formData.city,
-                email: formData.email,
-                phone: formData.phone,
-                subscriptions: [],
-                articles: [],
-                contactHistory: []
-            };
-        }
-
-        try {
-            const response = await window.kiwiApi.post(`${workflowsApiUrl}/article-order`, payload);
-            const savedCustomer = response && response.customer ? response.customer : null;
-            if (savedCustomer) {
-                upsertCustomerInCache(savedCustomer);
-            }
-
-            orderItems = [];
-            renderOrderItems();
-
-            closeForm('articleSaleForm');
-            showToast(
-                hadCurrentCustomer
-                    ? translate('articleOrders.created', {}, 'Artikel bestelling succesvol aangemaakt!')
-                    : translate('articleOrders.createdWithCustomer', {}, 'Nieuwe klant en artikel bestelling succesvol aangemaakt!'),
-                'success'
-            );
-
-            if (savedCustomer && savedCustomer.id) {
-                await selectCustomer(savedCustomer.id);
-                if (!hadCurrentCustomer) {
-                    showSuccessIdentificationPrompt(savedCustomer.id, `${savedCustomer.firstName} ${savedCustomer.lastName}`);
-                }
-            }
-        } catch (error) {
-            showToast(error.message || translate('articleOrders.createFailed', {}, 'Artikel bestelling aanmaken via backend mislukt'), 'error');
-            return;
-        }
-
-        document.getElementById('articleForm').reset();
-        return;
-    }
-    
-    // Check if this is for an existing customer
-    if (currentCustomer) {
-        // Add order to existing customer
-        if (!currentCustomer.articles) {
-            currentCustomer.articles = [];
-        }
-        currentCustomer.articles.push(newOrder);
-        currentCustomer.birthday = birthday;
-        
-        pushContactHistory(
-            currentCustomer,
-            {
-                type: 'Artikel bestelling',
-                description: contactDescription
-            },
-            { highlight: true, persist: false }
-        );
-
-        saveCustomers();
-        
-        // Clear order items
-        orderItems = [];
-        renderOrderItems();
-        
-        closeForm('articleSaleForm');
-        showToast(translate('articleOrders.created', {}, 'Artikel bestelling succesvol aangemaakt!'), 'success');
-        
-        // Refresh display
-        selectCustomer(currentCustomer.id);
-    } else {
-        // Create new customer with order
-        const newCustomer = {
-            id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
-            salutation: formData.salutation,
-            firstName: formData.firstName,
-            middleName: formData.middleName,
-            lastName: fullLastName,
-            birthday: formData.birthday,
-            postalCode: formData.postalCode,
-            houseNumber: formData.houseNumber,
-            address: formData.address,
-            city: formData.city,
-            email: formData.email,
-            phone: formData.phone,
-            subscriptions: [],
-            articles: [newOrder],
-            contactHistory: [
-                {
-                    id: 1,
-                    type: 'Artikel bestelling',
-                    date: new Date().toISOString(),
-                    description: contactDescription
-                }
-            ]
-        };
-
-        customers.push(newCustomer);
-        saveCustomers();
-        
-        // Clear order items
-        orderItems = [];
-        renderOrderItems();
-        
-        closeForm('articleSaleForm');
-        showToast(translate('articleOrders.createdWithCustomer', {}, 'Nieuwe klant en artikel bestelling succesvol aangemaakt!'), 'success');
-        
-        // Select the new customer
-        selectCustomer(newCustomer.id);
-        
-        // PHASE 4: Show identification prompt if anonymous call active
-        showSuccessIdentificationPrompt(newCustomer.id, `${formData.firstName} ${fullLastName}`);
-    }
-    
-    // Reset form
-    document.getElementById('articleForm').reset();
+    await invokeSliceMethodAsync(ORDER_SLICE_NAMESPACE, 'createArticleSale', [event]);
 }
 
 // Edit Delivery Remarks
 function editDeliveryRemarks() {
-    if (!currentCustomer) return;
-    
-    const modal = document.getElementById('editDeliveryRemarksModal');
-    const customerName = document.getElementById('editRemarksCustomerName');
-    const remarksTextarea = document.getElementById('editCustomerDeliveryRemarks');
-    
-    // Set customer name
-    const fullName = currentCustomer.middleName 
-        ? `${currentCustomer.firstName} ${currentCustomer.middleName} ${currentCustomer.lastName}`
-        : `${currentCustomer.firstName} ${currentCustomer.lastName}`;
-    customerName.textContent = fullName;
-    
-    // Set current remarks
-    remarksTextarea.value = currentCustomer.deliveryRemarks?.default || '';
-    
-    // Show modal
-    modal.style.display = 'flex';
+    invokeSliceMethod(DELIVERY_REMARKS_SLICE_NAMESPACE, 'editDeliveryRemarks');
 }
 
 // Add Delivery Remark to Modal
 function addDeliveryRemarkToModal(remark) {
-    const notesField = document.getElementById('editCustomerDeliveryRemarks');
-    const currentValue = notesField.value.trim();
-    
-    if (currentValue) {
-        // Append to existing notes
-        notesField.value = currentValue + '\n' + remark;
-    } else {
-        // Set as first note
-        notesField.value = remark;
-    }
-    
-    // Visual feedback
-    notesField.focus();
-    notesField.scrollTop = notesField.scrollHeight;
+    invokeSliceMethod(DELIVERY_REMARKS_SLICE_NAMESPACE, 'addDeliveryRemarkToModal', [remark]);
 }
 
 function addDeliveryRemarkToModalByKey(key) {
-    const resolvedRemark = translate(key, {}, key);
-    addDeliveryRemarkToModal(resolvedRemark);
+    invokeSliceMethod(DELIVERY_REMARKS_SLICE_NAMESPACE, 'addDeliveryRemarkToModalByKey', [key]);
 }
 
 // Save Delivery Remarks
 async function saveDeliveryRemarks() {
-    if (!currentCustomer) return;
-    
-    const newRemarks = document.getElementById('editCustomerDeliveryRemarks').value.trim();
-
-    if (window.kiwiApi) {
-        try {
-            const payload = await window.kiwiApi.put(`${personsApiUrl}/${currentCustomer.id}/delivery-remarks`, {
-                default: newRemarks,
-                updatedBy: document.getElementById('agentName').textContent
-            });
-            if (payload && payload.deliveryRemarks) {
-                currentCustomer.deliveryRemarks = payload.deliveryRemarks;
-            }
-            closeEditRemarksModal();
-            showToast(translate('delivery.remarksSaved', {}, 'Bezorgvoorkeuren opgeslagen!'), 'success');
-            await selectCustomer(currentCustomer.id);
-        } catch (error) {
-            showToast(error.message || translate('delivery.saveFailed', {}, 'Bezorgvoorkeuren opslaan via backend mislukt'), 'error');
-        }
-        return;
-    }
-    
-    // Initialize deliveryRemarks object if it doesn't exist
-    if (!currentCustomer.deliveryRemarks) {
-        currentCustomer.deliveryRemarks = {
-            default: '',
-            lastUpdated: null,
-            history: []
-        };
-    }
-    
-    // Save to history
-    if (currentCustomer.deliveryRemarks.default !== newRemarks) {
-        currentCustomer.deliveryRemarks.history.unshift({
-            date: new Date().toISOString(),
-            remark: newRemarks,
-            updatedBy: document.getElementById('agentName').textContent
-        });
-        
-        // Add to contact history
-        pushContactHistory(
-            currentCustomer,
-            {
-                type: 'Bezorgvoorkeuren gewijzigd',
-                description: `Bezorgvoorkeuren bijgewerkt: "${newRemarks || '(leeg)'}"`
-            },
-            { highlight: true, persist: false }
-        );
-    }
-    
-    // Update current remarks
-    currentCustomer.deliveryRemarks.default = newRemarks;
-    currentCustomer.deliveryRemarks.lastUpdated = new Date().toISOString();
-    
-    // Save to storage
-    saveCustomers();
-    
-    // Close modal
-    closeEditRemarksModal();
-    
-    showToast(translate('delivery.remarksSaved', {}, 'Bezorgvoorkeuren opgeslagen!'), 'success');
+    await invokeSliceMethodAsync(DELIVERY_REMARKS_SLICE_NAMESPACE, 'saveDeliveryRemarks');
 }
 
 // Close Edit Remarks Modal
 function closeEditRemarksModal() {
-    const modal = document.getElementById('editDeliveryRemarksModal');
-    modal.style.display = 'none';
+    invokeSliceMethod(DELIVERY_REMARKS_SLICE_NAMESPACE, 'closeEditRemarksModal');
 }
 
 // Close Form

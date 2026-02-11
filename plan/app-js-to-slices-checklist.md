@@ -42,7 +42,7 @@
 | 6 | Customer detail + subscriptions rendering + contact history UI | `codex/migrate-customer-detail-and-contact-history-to-slices` | [#44](https://github.com/bindinc/kiwi/pull/44) | `merged` | `yes` |  |
 | 7 | Subscription workflows (create/edit/customer-edit/resend/editorial) | `codex/migrate-subscription-workflows-to-subscription-workflow-slice` | [#46](https://github.com/bindinc/kiwi/pull/46) | `merged` | `yes` |  |
 | 8 | Winback + deceased + restitution transfer workflows | `TBD` | `TBD` | `not started` | `no` |  |
-| 9 | Article sales + delivery remarks modal implementation | `codex/implement-article-sales-and-delivery-remarks-modal-slices` | `TBD` | `in progress` | `no` |  |
+| 9 | Article sales + delivery remarks modal implementation | `codex/implement-article-sales-and-delivery-remarks-modal-slices` | [#49](https://github.com/bindinc/kiwi/pull/49) | `in progress` | `no` |  |
 | 10 | Article catalog search/order engine | `TBD` | `TBD` | `not started` | `no` |  |
 | 11 | Delivery date picker/calendar engine | `TBD` | `TBD` | `not started` | `no` |  |
 | 12 | App shell events + form closing + toast + keyboard/click/change globals | `TBD` | `TBD` | `not started` | `no` |  |
