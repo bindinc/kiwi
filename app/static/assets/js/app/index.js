@@ -10,6 +10,7 @@ import { registerWinbackSlice } from './slices/winback-slice.js';
 import { registerLocalizationSlice } from './slices/localization-slice.js';
 import { registerContactHistorySlice } from './slices/contact-history-slice.js';
 import { registerCustomerDetailSlice } from './slices/customer-detail-slice.js';
+import { registerDeliveryRemarksSlice } from './slices/delivery-remarks-slice.js';
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { registerCustomerSubscriptionActions } from './legacy-actions-customer-subscription.js';
 import { getSharedState } from './state.js';
@@ -30,6 +31,7 @@ const actionRouter = createActionRouter({
 });
 
 registerOrderActions(actionRouter);
+registerDeliveryRemarksSlice(actionRouter);
 registerLocalizationSlice(actionRouter);
 registerContactHistorySlice(actionRouter);
 registerCustomerDetailSlice(actionRouter);

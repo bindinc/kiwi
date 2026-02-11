@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
+- Migrate Item 9 article-sales and delivery-remarks modal logic from legacy `app.js` into `assets/js/app/slices/order.js` and new `assets/js/app/slices/delivery-remarks-slice.js`, wire legacy compatibility through slice dependency providers, and replace delivery-remarks modal inline handlers in `index.html` with delegated action-router hooks.
 - Migrate Item 8 winback/deceased/restitution-transfer workflows from legacy `app.js` into `assets/js/app/slices/winback-slice.js`, register Item 8 router actions in that slice, and remove those action mappings from the legacy customer/subscription bridge.
 - Migrate Item 7 subscription workflows (create/edit customer, resend magazine, editorial complaint, subscription edit) from legacy `app.js` into `assets/js/app/slices/subscription-workflow-slice.js`, register those actions in the new slice, and remove Item 7 handlers from the legacy customer/subscription action bridge.
 - Migrate customer detail, subscription rendering, and contact-history timeline UI from `app.js` into dedicated Item 6 slices (`assets/js/app/slices/customer-detail-slice.js`, `assets/js/app/slices/contact-history-slice.js`), with delegated action routing (`select-customer`, `toggle-timeline-item`, `change-contact-history-page`) and legacy global compatibility wrappers.
