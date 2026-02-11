@@ -250,41 +250,6 @@ function getWorkflowsApiUrl(dependencies) {
     return dependencies.getWorkflowsApiUrl() || '/api/v1/workflows';
 }
 
-function isActivationKey(event) {
-    return event && (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar');
-}
-
-function getLegacyFunction(functionName) {
-    const globalScope = getGlobalScope();
-    if (!globalScope) {
-        return null;
-    }
-
-    const candidate = globalScope[functionName];
-    if (typeof candidate !== 'function') {
-        return null;
-    }
-
-    return candidate;
-}
-
-function callLegacy(functionName, args = []) {
-    const legacyFunction = getLegacyFunction(functionName);
-    if (!legacyFunction) {
-        return undefined;
-    }
-
-    return legacyFunction(...args);
-}
-
-function callLegacyAsync(functionName, args = []) {
-    return Promise.resolve(callLegacy(functionName, args)).catch((error) => {
-        if (typeof console !== 'undefined' && typeof console.error === 'function') {
-            console.error(`[kiwi-actions] Action "${functionName}" failed.`, error);
-        }
-    });
-}
-
 function resolveDeliveryStatus(order, dependencies) {
     const statusKey = order && order.deliveryStatus ? order.deliveryStatus : 'ordered';
     const deliveryStatusClass = DELIVERY_STATUS_CLASS_BY_KEY[statusKey] || 'status-ordered';
@@ -904,35 +869,6 @@ export function registerOrderActions(actionRouter) {
                 return;
             }
             addDeliveryRemarkByKey(payload.remarkKey);
-        },
-        'select-recommended-delivery-date': (_payload, context) => {
-            void callLegacyAsync('selectRecommendedDate', [context.event]);
-        },
-        'navigate-delivery-calendar': (payload = {}, context) => {
-            const direction = Number(payload.direction);
-            if (!Number.isFinite(direction) || direction === 0) {
-                return;
-            }
-
-            void callLegacyAsync('navigateCalendar', [direction, context.event]);
-        },
-        'select-delivery-date': (payload = {}, context) => {
-            if (!payload.date) {
-                return;
-            }
-
-            const isKeyboardEvent = context && context.event && context.event.type === 'keydown';
-            if (!isKeyboardEvent) {
-                callLegacy('selectDeliveryDateByString', [payload.date, context.event]);
-                return;
-            }
-
-            if (!isActivationKey(context.event)) {
-                return;
-            }
-
-            context.event.preventDefault();
-            callLegacy('selectDeliveryDateByString', [payload.date]);
         }
     });
 }
