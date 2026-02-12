@@ -11,6 +11,7 @@ from blueprints.api.catalog import catalog_bp
 from blueprints.api.customers import customers_bp
 from blueprints.api.debug import debug_bp
 from blueprints.api.me import me_bp
+from blueprints.api.mutations import mutations_bp
 from blueprints.api.status import status_bp
 from blueprints.api.subscriptions import subscriptions_bp
 from blueprints.api.swagger import swagger_bp
@@ -29,6 +30,7 @@ def register_blueprints(app: Flask, oidc: OpenIDConnect) -> None:
     register_api_blueprint(customers_bp)
     register_api_blueprint(subscriptions_bp)
     register_api_blueprint(workflows_bp)
+    register_api_blueprint(mutations_bp)
     register_api_blueprint(call_queue_bp)
     register_api_blueprint(call_session_bp)
     register_api_blueprint(swagger_bp)
