@@ -55,7 +55,7 @@
 | 19 | Remove legacy facade wrappers that only proxy to slice methods | `codex/remove-legacy-facade-wrappers-proxying-to-slices` | [#61](https://github.com/bindinc/kiwi/pull/61) | `merged` | `yes` | Migrate remaining global function callers to router/slice entry points. |
 | 20 | Remove app-shell fallback paths + move runtime wiring out of app.js | `codex/remove-app-shell-fallbacks-and-runtime-wiring-from-app-js` | [#62](https://github.com/bindinc/kiwi/pull/62) | `merged` | `yes` | App shell and runtime wiring should live in slice/runtime modules only. |
 | 21 | Retire legacy bootstrap wrappers and script-loader dependency on app.js | `codex/retire-legacy-bootstrap-wrappers-and-app-js-loader-path` | [#63](https://github.com/bindinc/kiwi/pull/63) | `open` | `no` | Final deletion target for `app.js` legacy bootstrap role. |
-| 22 | Remove legacy customer-subscription action bridge module | `codex/migrate-customer-subscription-actions-off-legacy-wrappers` | [#64](https://github.com/bindinc/kiwi/pull/64) | `open` | `no` | Delete `legacy-actions-customer-subscription.js`; actions now owned by slices. |
+| 22 | Remove customer-subscription bridge and legacy loader module | `codex/migrate-customer-subscription-actions-off-legacy-wrappers` | [#64](https://github.com/bindinc/kiwi/pull/64) | `open` | `no` | Delete `legacy-actions-customer-subscription.js` and `legacy-loader.js`; action/script loading ownership now in slices + entrypoint. |
 
 ## 4) Full migration checklist by domain
 
@@ -212,25 +212,27 @@
   - Dependency/risk note: preserve no-customer toast UX and debug-flag behavior while moving runtime dependency injection to module bootstrap instead of legacy script tail.
 
 - [x] 21. Retire legacy bootstrap wrappers and loader dependency on app.js
-  - Target slice file(s): `app/static/assets/js/app/legacy-app-state.js` (new module), `app/static/assets/js/app/index.js`, `app/static/assets/js/app/legacy-loader.js`
+  - Target slice file(s): `app/static/assets/js/app/legacy-app-state.js` (new module), `app/static/assets/js/app/index.js`
   - Source range: entire former `app.js` (deleted)
   - Key functions/state: all state, bridge registrations, bootstrap wrappers, and utility functions moved to `legacy-app-state.js`; initialization trigger moved to `index.js`
   - Bound action names: none direct (startup/bootstrap path)
   - Changes:
     - Deleted `app/static/assets/js/app.js` — all content moved to `legacy-app-state.js` ES module.
-    - `legacy-loader.js`: renamed `ensureLegacyAppLoaded` to `ensureRuntimeScriptsLoaded`, removed `app.js` from the load chain.
+    - Runtime script loading moved from `ensureLegacyAppLoaded` to `ensureRuntimeScriptsLoaded`, removing `app.js` from the load chain.
     - `index.js`: imports `legacy-app-state.js`, installs globals on `window` via `installLegacyAppState()`, triggers bootstrap initialization directly via `bootstrapSlice.initializeKiwiApplication()` after runtime scripts load.
     - State variables shared with runtime scripts are exposed via `Object.defineProperty` getters/setters on `window`.
     - Bootstrap-slice functions (`loadBootstrapState`, `initializeData`, `saveCustomers`, `updateCustomerActionButtons`, `updateTime`) are called directly from module code instead of through legacy proxy functions.
 
-- [x] 22. Remove legacy customer-subscription action bridge module
+- [x] 22. Remove customer-subscription bridge and legacy loader module
   - Target slice file(s): `app/static/assets/js/app/index.js`, `app/static/assets/js/app/slices/app-shell-slice.js`, `app/static/assets/js/app/slices/call-session-slice.js`
-  - Source range: `app/static/assets/js/app/legacy-actions-customer-subscription.js` (deleted)
-  - Key functions/state: removed bridge-only wrappers `getLegacyFunction`, `callLegacy`, `registerCustomerSubscriptionActions`
+  - Source range: `app/static/assets/js/app/legacy-actions-customer-subscription.js` (deleted), `app/static/assets/js/app/legacy-loader.js` (deleted)
+  - Key functions/state: removed bridge-only wrappers `getLegacyFunction`, `callLegacy`, `registerCustomerSubscriptionActions`; inlined `ensureRuntimeScriptsLoaded` into `index.js`
   - Bound action names: `close-form`, `call-session.identify-current-customer`, `call-session.identify-caller`
   - Changes:
     - Deleted `app/static/assets/js/app/legacy-actions-customer-subscription.js`.
     - Removed `registerCustomerSubscriptionActions` import and registration call from `app/static/assets/js/app/index.js`.
+    - Deleted `app/static/assets/js/app/legacy-loader.js`.
+    - Inlined runtime script loading (`ensureRuntimeScriptsLoaded`) in `app/static/assets/js/app/index.js`.
     - Confirmed action ownership remains in slices: `close-form` in `app-shell-slice.js`, caller-identification actions in `call-session-slice.js`.
 
 ## 5) Recommended migration order

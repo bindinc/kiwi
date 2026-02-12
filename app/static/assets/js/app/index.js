@@ -1,8 +1,7 @@
 import { createActionRouter } from './actions.js';
 import { getDispositionCategories } from './disposition-categories.js';
-import { ensureRuntimeScriptsLoaded } from './legacy-loader.js';
 import { installLegacyAppState, applyBootstrapData, legacyState } from './legacy-app-state.js';
-import { getGlobalScope } from './services.js';
+import { getGlobalScope, loadScriptOnce, resolveScriptUrl } from './services.js';
 import { configureAppShellSliceDependencies, registerAppShellSlice, showToast } from './slices/app-shell-slice.js';
 import { configureOrderSliceDependencies, registerOrderActions } from './slices/order.js';
 import { registerArticleSearchSlice, initArticleSearch } from './slices/article-search-slice.js';
@@ -18,16 +17,49 @@ import { configureCustomerDetailSliceDependencies, registerCustomerDetailSlice, 
 import { configureDeliveryRemarksSliceDependencies, registerDeliveryRemarksSlice } from './slices/delivery-remarks-slice.js';
 import { registerDeliveryDatePickerSlice, initDeliveryDatePicker } from './slices/delivery-date-picker-slice.js';
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
-import { getSharedState } from './state.js';
+import { getSharedState, markLegacyScriptLoaded, setLegacyLoadPromise } from './state.js';
 import { installLegacySubscriptionHelpers } from './subscription-shared-helpers.js';
 
 const sharedState = getSharedState();
+const LEGACY_RUNTIME_SCRIPT_ID = 'kiwi-legacy-call-agent-runtime-script';
+const LEGACY_RUNTIME_SCRIPT_RELATIVE_URL = './call-agent-runtime.js';
+const LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_ID = 'kiwi-legacy-subscription-role-runtime-script';
+const LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_RELATIVE_URL = './subscription-role-runtime.js';
+
 installLegacySubscriptionHelpers(globalThis);
 const bootstrapSlice = installBootstrapSlice();
 
 // Install state and globals from legacy-app-state.js onto window BEFORE
 // runtime scripts load, so their function bodies can resolve bare identifiers.
 installLegacyAppState();
+
+function ensureRuntimeScriptsLoaded() {
+    if (sharedState.legacy.scriptLoaded) {
+        return Promise.resolve();
+    }
+
+    if (sharedState.legacy.loadPromise) {
+        return sharedState.legacy.loadPromise;
+    }
+
+    const runtimeUrl = resolveScriptUrl(LEGACY_RUNTIME_SCRIPT_RELATIVE_URL);
+    const roleRuntimeUrl = resolveScriptUrl(LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_RELATIVE_URL);
+
+    const loadPromise = loadScriptOnce({
+        id: LEGACY_RUNTIME_SCRIPT_ID,
+        url: runtimeUrl
+    })
+        .then(() => loadScriptOnce({
+            id: LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_ID,
+            url: roleRuntimeUrl
+        }))
+        .then(() => {
+            markLegacyScriptLoaded();
+        });
+
+    setLegacyLoadPromise(loadPromise);
+    return loadPromise;
+}
 
 const actionRouter = createActionRouter({
     eventTypes: ['click', 'change', 'submit', 'keydown', 'input'],
