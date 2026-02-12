@@ -23,7 +23,7 @@
   - [x] `debug-slice.js`
   - [x] `order.js` (bridge handlers)
   - [x] `werfsleutel.js` (bridge handlers)
-- [x] `app/static/assets/js/app/legacy-actions-customer-subscription.js` is still bridge-only and not domain-implemented.
+- [x] Legacy customer-subscription router bridge removed; `close-form` and caller-identification actions are owned by `app-shell-slice.js` and `call-session-slice.js`.
 
 ## 3) PR tracking (one PR per checklist item)
 
@@ -254,7 +254,7 @@ TMPB=$(mktemp)
 rg -o 'data-action="[^"]+"' app/templates/base/index.html app/static/assets/js/app.js \
   app/static/assets/js/app/slices/article-search-slice.js app/static/assets/js/app/slices/delivery-date-picker-slice.js \
   | sed -E 's/.*data-action="([^"]+)"/\1/' | sort -u > "$TMPA"
-rg -n "^[[:space:]]*'[^']+'" app/static/assets/js/app/legacy-actions-customer-subscription.js app/static/assets/js/app/slices/*.js \
+rg -n "^[[:space:]]*'[^']+'" app/static/assets/js/app/slices/*.js \
   | sed -E "s/.*'([^']+)'.*/\1/" | sort -u > "$TMPB"
 echo "IN_MARKUP_NOT_REGISTERED"
 comm -23 "$TMPA" "$TMPB" || true
