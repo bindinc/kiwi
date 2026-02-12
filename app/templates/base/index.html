@@ -79,6 +79,19 @@
                                 </div>
                             </div>
                         </div>
+                        <button
+                            type="button"
+                            id="mutationWorkboxToggle"
+                            class="workbox-toggle-button"
+                            data-action="mutations.toggle-panel"
+                            data-action-event="click"
+                            aria-expanded="true"
+                            aria-controls="mutationWorkboxPanel"
+                            title="Mutatie werkbak tonen of verbergen">
+                            <span class="workbox-toggle-icon" aria-hidden="true">📮</span>
+                            <span id="mutationWorkboxToggleCount" class="workbox-toggle-count" style="display: none;">0</span>
+                            <span class="sr-only">Mutatie werkbak</span>
+                        </button>
                         
                         <div class="user-info">
                             <span class="time" id="currentTime"></span>
@@ -1273,10 +1286,9 @@
                         </div>
                     </div>
                 </section>
-                <section class="card history-card mutation-workbox-card">
+                <section id="mutationWorkboxPanel" class="card history-card mutation-workbox-card">
                     <div class="mutation-workbox-header">
                         <h2>📮 Mutatie Werkbak</h2>
-                        <button class="btn btn-small btn-secondary" type="button" data-action="mutations.refresh">Vernieuwen</button>
                     </div>
                     <div id="mutationWorkboxSummary" class="mutation-workbox-summary">Mutaties worden geladen...</div>
                     <div id="mutationWorkboxList" class="mutation-workbox-list">
@@ -1425,6 +1437,53 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" data-action="disposition.cancel" data-action-event="click" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
                 <button class="btn btn-primary" data-action="disposition.save" data-action-event="click" data-i18n="indexHtml.text.opslaan_afronden_8c8cc7c2">Opslaan & Afronden</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mutationDetailsModal" class="modal">
+        <div class="modal-content mutation-details-modal">
+            <div class="modal-header">
+                <h2>📮 Mutatie details</h2>
+                <button class="modal-close" type="button" data-action="mutations.close-details" data-action-event="click">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="mutationDetailsSummary" class="mutation-details-summary"></div>
+                <div class="mutation-details-grid">
+                    <div class="mutation-details-field">
+                        <span class="mutation-details-label">Mutatie ID</span>
+                        <span id="mutationDetailsId" class="mutation-details-value">-</span>
+                    </div>
+                    <div class="mutation-details-field">
+                        <span class="mutation-details-label">Type</span>
+                        <span id="mutationDetailsCommandType" class="mutation-details-value">-</span>
+                    </div>
+                    <div class="mutation-details-field">
+                        <span class="mutation-details-label">Status</span>
+                        <span id="mutationDetailsStatus" class="mutation-details-value">-</span>
+                    </div>
+                    <div class="mutation-details-field">
+                        <span class="mutation-details-label">Pogingen</span>
+                        <span id="mutationDetailsAttempts" class="mutation-details-value">-</span>
+                    </div>
+                    <div class="mutation-details-field">
+                        <span class="mutation-details-label">Volgende poging</span>
+                        <span id="mutationDetailsNextAttempt" class="mutation-details-value">-</span>
+                    </div>
+                    <div class="mutation-details-field">
+                        <span class="mutation-details-label">Laatste fout</span>
+                        <span id="mutationDetailsLastError" class="mutation-details-value">-</span>
+                    </div>
+                </div>
+                <h3 class="mutation-details-section-title">Request overzicht</h3>
+                <pre id="mutationDetailsRequest" class="mutation-details-request">Geen request details beschikbaar</pre>
+                <h3 class="mutation-details-section-title">Retry en statusgeschiedenis</h3>
+                <div id="mutationDetailsEvents" class="mutation-details-events">
+                    <p class="empty-state-small">Geen eventgeschiedenis beschikbaar</p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" type="button" data-action="mutations.close-details" data-action-event="click">Sluiten</button>
             </div>
         </div>
     </div>

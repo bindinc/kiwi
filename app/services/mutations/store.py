@@ -97,6 +97,7 @@ def _to_envelope(row: dict[str, Any]) -> dict[str, Any]:
         "createdAt": row["created_at"].isoformat() if row.get("created_at") else None,
         "orderingKey": row["ordering_key"],
         "attemptCount": int(row.get("attempt_count") or 0),
+        "maxAttempts": int(row.get("max_attempts") or 0),
         "nextAttemptAt": row["next_attempt_at"].isoformat() if row.get("next_attempt_at") else None,
         "customerId": row.get("customer_id"),
         "subscriptionId": row.get("subscription_id"),
@@ -395,6 +396,12 @@ def get_mutation(mutation_id: str) -> dict[str, Any]:
             events = cursor.fetchall()
 
     payload = _to_envelope(row)
+    request_container = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+    payload["requestPayload"] = (
+        request_container.get("request")
+        if isinstance(request_container.get("request"), dict)
+        else {}
+    )
     payload["events"] = [
         {
             "eventType": item.get("event_type"),
