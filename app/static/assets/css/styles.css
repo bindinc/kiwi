@@ -124,22 +124,21 @@ body {
 
 .workbox-toggle-button {
     position: relative;
-    width: 42px;
-    height: 42px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(15, 23, 42, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    border-radius: 50%;
-    color: #ffffff;
+    padding: 0.35rem 0.45rem;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: rgba(255, 255, 255, 0.88);
     cursor: pointer;
-    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .workbox-toggle-button:hover {
-    transform: translateY(-1px);
-    background: rgba(30, 64, 175, 0.45);
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
 }
 
 .workbox-toggle-button:focus-visible {
@@ -148,31 +147,20 @@ body {
 }
 
 .workbox-toggle-button.is-active {
-    background: rgba(30, 64, 175, 0.75);
-    border-color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
 }
 
 .workbox-toggle-icon {
-    font-size: 1rem;
+    font-size: 1.12rem;
     line-height: 1;
 }
 
 .workbox-toggle-count {
-    position: absolute;
-    right: -5px;
-    top: -6px;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 0.2rem;
-    border-radius: 999px;
-    background: var(--danger-color);
-    color: #ffffff;
-    font-size: 0.68rem;
+    margin-left: 0.25rem;
+    color: #fef08a;
+    font-size: 0.72rem;
     font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.85);
 }
 
 .agent-profile-trigger {
@@ -1949,6 +1937,10 @@ select option {
     min-height: 220px;
 }
 
+.mutation-workbox-card[hidden] {
+    display: none !important;
+}
+
 .mutation-workbox-header {
     align-items: center;
     display: flex;
@@ -3113,8 +3105,7 @@ select option {
     }
 
     .workbox-toggle-button {
-        width: 38px;
-        height: 38px;
+        padding: 0.3rem 0.4rem;
     }
 
     .mutation-details-grid {

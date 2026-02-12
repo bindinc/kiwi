@@ -122,6 +122,30 @@ function testRegistersNewActions() {
     }
 }
 
+function testGlobalTogglePanelHidesAndShowsPanel() {
+    const harness = installDomHarness();
+    try {
+        const router = createRouter();
+        registerMutationWorkboxSlice(router);
+
+        assert.equal(typeof globalThis.kiwiMutationWorkbox?.togglePanel, 'function');
+
+        const panel = harness.elements.get('mutationWorkboxPanel');
+        assert.equal(panel.hidden, false);
+
+        globalThis.kiwiMutationWorkbox.togglePanel();
+        assert.equal(panel.hidden, true);
+        assert.equal(panel.style.display, 'none');
+
+        globalThis.kiwiMutationWorkbox.togglePanel();
+        assert.equal(panel.hidden, false);
+        assert.equal(panel.style.display, '');
+    } finally {
+        delete globalThis.kiwiMutationWorkbox;
+        harness.restore();
+    }
+}
+
 async function testRendersDetailsButtonInsteadOfRefreshButton() {
     const harness = installDomHarness();
     try {
@@ -142,6 +166,7 @@ async function testRendersDetailsButtonInsteadOfRefreshButton() {
 
 async function run() {
     testRegistersNewActions();
+    testGlobalTogglePanelHidesAndShowsPanel();
     await testRendersDetailsButtonInsteadOfRefreshButton();
     console.log('mutation workbox slice tests passed');
 }

@@ -129,8 +129,9 @@ function setPanelVisibility(nextVisible, { persistPreference = true } = {}) {
     isWorkboxVisible = Boolean(nextVisible);
 
     const workboxPanel = getElementById('mutationWorkboxPanel');
-    if (workboxPanel) {
+    if (workboxPanel && workboxPanel.style) {
         workboxPanel.hidden = !isWorkboxVisible;
+        workboxPanel.style.display = isWorkboxVisible ? '' : 'none';
     }
 
     const toggleButton = getElementById('mutationWorkboxToggle');
