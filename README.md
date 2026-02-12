@@ -138,8 +138,35 @@ Enable the full pending-first mutation flow locally:
 MUTATION_STORE_ENABLED=true MUTATION_DISPATCH_DRY_RUN=true make compose-up
 ```
 
+Or export the flag once in your shell:
+
+```bash
+export MUTATION_STORE_ENABLED=true
+make compose-up
+```
+
 With `MUTATION_DISPATCH_DRY_RUN=true`, queued mutations are marked delivered by the worker without calling an external API.  
 Set `MUTATION_DISPATCH_DRY_RUN=false` and `MUTATION_TARGET_BASE_URL=<url>` to dispatch to a real downstream API.
+
+Quick PostgreSQL checks for mutation tables:
+
+```bash
+# one-shot totals
+docker compose exec -T postgres psql -U kiwi -d kiwi -c "SELECT (SELECT COUNT(*) FROM mutation_jobs) AS jobs, (SELECT COUNT(*) FROM mutation_events) AS events;"
+
+# live status view (refresh every 2s)
+watch -n 2 'docker compose exec -T postgres psql -U kiwi -d kiwi -c "SELECT status, COUNT(*) FROM mutation_jobs GROUP BY status ORDER BY status;"'
+
+# interactive SQL CLI
+docker compose exec postgres psql -U kiwi -d kiwi
+```
+
+Inside interactive `psql`, useful starters:
+
+```sql
+\dt
+SELECT * FROM mutation_jobs ORDER BY created_at DESC LIMIT 20;
+```
 
 Fallback mode ships with deterministic test users (all with password `kiwi-local-dev-password`):
 
