@@ -90,6 +90,13 @@ def _normalize_limit(limit: int | None) -> int:
 
 
 def _to_envelope(row: dict[str, Any]) -> dict[str, Any]:
+    request_container = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+    request_payload = (
+        request_container.get("request")
+        if isinstance(request_container.get("request"), dict)
+        else {}
+    )
+
     return {
         "id": str(row["id"]),
         "commandType": row["command_type"],
@@ -107,6 +114,7 @@ def _to_envelope(row: dict[str, Any]) -> dict[str, Any]:
         "lastErrorMessage": row.get("last_error_message"),
         "createdByUser": row.get("created_by_user"),
         "createdByRoles": list(row.get("created_by_roles") or []),
+        "requestPayload": request_payload,
     }
 
 
@@ -396,12 +404,6 @@ def get_mutation(mutation_id: str) -> dict[str, Any]:
             events = cursor.fetchall()
 
     payload = _to_envelope(row)
-    request_container = row.get("payload") if isinstance(row.get("payload"), dict) else {}
-    payload["requestPayload"] = (
-        request_container.get("request")
-        if isinstance(request_container.get("request"), dict)
-        else {}
-    )
     payload["events"] = [
         {
             "eventType": item.get("event_type"),

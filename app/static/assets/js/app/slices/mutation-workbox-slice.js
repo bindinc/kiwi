@@ -6,6 +6,13 @@ const DEFAULT_API_ENDPOINTS = {
 
 const POLL_INTERVAL_MS = 15000;
 const PANEL_VISIBILITY_KEY = 'kiwi.mutations.workbox.visible';
+const PERSONAL_INFO_KEYS = new Set([
+    'firstName', 'middleName', 'lastName', 'email', 'phone',
+    'address', 'postalCode', 'houseNumber', 'houseExt', 'city'
+]);
+const SUBSCRIPTION_KEYS = new Set([
+    'magazine', 'duration', 'durationLabel', 'status', 'startDate'
+]);
 let refreshTimerId = null;
 let refreshInFlightPromise = null;
 let isWorkboxVisible = true;
@@ -28,6 +35,20 @@ function getElementById(elementId) {
     return documentRef.getElementById(elementId);
 }
 
+function translateMutation(key, params = {}, fallback = key) {
+    const globalScope = getGlobalScope();
+    if (!globalScope || !globalScope.i18n || typeof globalScope.i18n.t !== 'function') {
+        return fallback;
+    }
+
+    const translatedValue = globalScope.i18n.t(key, params);
+    if (translatedValue === undefined || translatedValue === null || translatedValue === key) {
+        return fallback;
+    }
+
+    return translatedValue;
+}
+
 function escapeHtml(value) {
     return String(value)
         .replaceAll('&', '&amp;')
@@ -47,6 +68,230 @@ function formatDateTime(rawValue) {
         return '-';
     }
     return parsedDate.toLocaleString('nl-NL');
+}
+
+function normalizeEmail(rawValue) {
+    if (typeof rawValue !== 'string') {
+        return '';
+    }
+    return rawValue.trim().toLowerCase();
+}
+
+function readAgentIdentityContext() {
+    const documentRef = getDocumentRef();
+    const rootDataset = documentRef && documentRef.documentElement
+        ? documentRef.documentElement.dataset || {}
+        : {};
+
+    const globalScope = getGlobalScope();
+    const agentTrigger = getElementById('agentProfileTrigger');
+    const avatarImage = agentTrigger && typeof agentTrigger.querySelector === 'function'
+        ? agentTrigger.querySelector('.agent-avatar img')
+        : null;
+    const avatarFallback = agentTrigger && typeof agentTrigger.querySelector === 'function'
+        ? agentTrigger.querySelector('.agent-avatar span')
+        : null;
+
+    return {
+        email: normalizeEmail(
+            rootDataset.kiwiAgentEmail
+            || (globalScope && globalScope.kiwiAgentEmail)
+            || ''
+        ),
+        photoUrl: avatarImage && avatarImage.getAttribute
+            ? String(avatarImage.getAttribute('src') || '').trim()
+            : '',
+        fallbackInitials: avatarFallback && typeof avatarFallback.textContent === 'string'
+            ? avatarFallback.textContent.trim()
+            : '',
+    };
+}
+
+function buildInitials(rawValue) {
+    const value = String(rawValue || '').trim();
+    if (!value) {
+        return '??';
+    }
+
+    const usernamePart = value.includes('@') ? value.split('@')[0] : value;
+    const normalized = usernamePart
+        .replaceAll('.', ' ')
+        .replaceAll('_', ' ')
+        .replaceAll('-', ' ')
+        .trim();
+
+    if (!normalized) {
+        return value.slice(0, 2).toUpperCase();
+    }
+
+    const tokens = normalized.split(/\s+/).filter(Boolean);
+    const initials = tokens.slice(0, 2).map((token) => token[0] || '').join('').toUpperCase();
+    return initials || value.slice(0, 2).toUpperCase();
+}
+
+function formatActorLabel(createdByUser, currentAgentContext) {
+    const normalizedCreatedBy = normalizeEmail(createdByUser);
+    if (!normalizedCreatedBy) {
+        return 'onbekend';
+    }
+
+    const usernamePart = normalizedCreatedBy.includes('@')
+        ? normalizedCreatedBy.split('@')[0]
+        : normalizedCreatedBy;
+    return usernamePart || 'onbekend';
+}
+
+function renderActorAvatar(createdByUser, currentAgentContext) {
+    const normalizedCreatedBy = normalizeEmail(createdByUser);
+    const isCurrentAgent = Boolean(
+        normalizedCreatedBy
+        && currentAgentContext.email
+        && normalizedCreatedBy === currentAgentContext.email
+    );
+    const hasCurrentPhoto = Boolean(isCurrentAgent && currentAgentContext.photoUrl);
+
+    if (hasCurrentPhoto) {
+        return `
+            <span class="mutation-workbox-avatar" aria-hidden="true">
+                <img class="mutation-workbox-avatar-image" src="${escapeHtml(currentAgentContext.photoUrl)}" alt="">
+            </span>
+        `;
+    }
+
+    const initials = buildInitials(createdByUser || currentAgentContext.fallbackInitials || '');
+    return `
+        <span class="mutation-workbox-avatar mutation-workbox-avatar-fallback" aria-hidden="true">${escapeHtml(initials)}</span>
+    `;
+}
+
+function getRequestPayload(item) {
+    if (!item || typeof item !== 'object') {
+        return {};
+    }
+
+    const requestPayload = item.requestPayload;
+    if (!requestPayload || typeof requestPayload !== 'object') {
+        return {};
+    }
+    return requestPayload;
+}
+
+function getKnownCustomers() {
+    const globalScope = getGlobalScope();
+    const customers = globalScope ? globalScope.customers : null;
+    return Array.isArray(customers) ? customers : [];
+}
+
+function findCustomerLastName(customerId) {
+    const parsedCustomerId = Number(customerId);
+    if (!Number.isFinite(parsedCustomerId)) {
+        return '';
+    }
+
+    const customers = getKnownCustomers();
+    const customer = customers.find((candidate) => Number(candidate.id) === parsedCustomerId);
+    if (!customer) {
+        return '';
+    }
+
+    return String(customer.lastName || '').trim();
+}
+
+function getLastNameFromRequestPayload(requestPayload) {
+    if (!requestPayload || typeof requestPayload !== 'object') {
+        return '';
+    }
+
+    const recipient = requestPayload.recipient && typeof requestPayload.recipient === 'object'
+        ? requestPayload.recipient
+        : null;
+    if (!recipient) {
+        return '';
+    }
+
+    const person = recipient.person && typeof recipient.person === 'object'
+        ? recipient.person
+        : null;
+    if (!person) {
+        return '';
+    }
+
+    return String(person.lastName || '').trim();
+}
+
+function resolveCustomerLastName(item) {
+    const fromCache = findCustomerLastName(item.customerId);
+    if (fromCache) {
+        return fromCache;
+    }
+
+    const requestPayload = getRequestPayload(item);
+    const fromPayload = getLastNameFromRequestPayload(requestPayload);
+    if (fromPayload) {
+        return fromPayload;
+    }
+
+    return 'Klant';
+}
+
+function resolveActionAndSubject(item) {
+    const commandType = String(item.commandType || '');
+    const requestPayload = getRequestPayload(item);
+
+    if (commandType === 'subscription.signup') {
+        const hasWerfsleutel = Boolean(requestPayload.subscription && requestPayload.subscription.werfsleutel);
+        return {
+            action: 'aangemeld',
+            subject: hasWerfsleutel ? 'werfsleutel' : 'abonnement',
+        };
+    }
+
+    if (commandType === 'subscription.update') {
+        const payloadKeys = Object.keys(requestPayload);
+        const changedPersonalInfo = payloadKeys.some((key) => PERSONAL_INFO_KEYS.has(key));
+        const changedSubscription = payloadKeys.some((key) => SUBSCRIPTION_KEYS.has(key));
+
+        if (changedPersonalInfo) {
+            return { action: 'gewijzigd', subject: 'persoonsgegevens' };
+        }
+        if (changedSubscription) {
+            return { action: 'gewijzigd', subject: 'abonnement' };
+        }
+        return { action: 'gewijzigd', subject: 'gegevens' };
+    }
+
+    if (commandType === 'subscription.cancel') {
+        const result = String(requestPayload.result || '').trim().toLowerCase();
+        if (result === 'accepted') {
+            return { action: 'behouden', subject: 'winback' };
+        }
+        return { action: 'gestopt', subject: 'abonnement' };
+    }
+
+    if (commandType === 'subscription.deceased_actions') {
+        const actions = Array.isArray(requestPayload.actions) ? requestPayload.actions : [];
+        const actionKinds = new Set(
+            actions
+                .map((actionItem) => String(actionItem && actionItem.action ? actionItem.action : '').trim().toLowerCase())
+                .filter(Boolean)
+        );
+
+        if (actionKinds.size === 1 && actionKinds.has('transfer')) {
+            return { action: 'afgehandeld', subject: 'overzetting' };
+        }
+        if (actionKinds.size === 1 && (actionKinds.has('restitution') || actionKinds.has('cancel'))) {
+            return { action: 'afgehandeld', subject: 'opzegging' };
+        }
+        return { action: 'afgehandeld', subject: 'overlijdensmutatie' };
+    }
+
+    return { action: 'verwerkt', subject: 'mutatie' };
+}
+
+function buildMutationLabel(item) {
+    const lastName = resolveCustomerLastName(item);
+    const parts = resolveActionAndSubject(item);
+    return `${lastName} ${parts.action} ${parts.subject}`.trim();
 }
 
 function getApiClient() {
@@ -208,11 +453,14 @@ function renderItems(items) {
         return;
     }
 
+    const currentAgentContext = readAgentIdentityContext();
     const rows = items.map((item) => {
         const mutationId = String(item.id || '');
         const status = String(item.status || 'onbekend');
-        const commandType = String(item.commandType || 'onbekend');
+        const mutationLabel = buildMutationLabel(item);
         const createdAt = formatDateTime(item.createdAt);
+        const actorLabel = formatActorLabel(item.createdByUser, currentAgentContext);
+        const actorAvatar = renderActorAvatar(item.createdByUser, currentAgentContext);
         const canRetry = status === 'failed' || status === 'cancelled';
         const canCancel = status === 'queued' || status === 'retry_scheduled' || status === 'dispatching';
 
@@ -233,10 +481,13 @@ function renderItems(items) {
         return `
             <div class="mutation-workbox-item">
                 <div class="mutation-workbox-main">
-                    <strong>${escapeHtml(commandType)}</strong>
+                    <div class="mutation-workbox-title">
+                        ${actorAvatar}
+                        <strong class="mutation-workbox-description">${escapeHtml(mutationLabel)}</strong>
+                    </div>
                     <span class="mutation-workbox-status">${escapeHtml(status)}</span>
                 </div>
-                <div class="mutation-workbox-meta">${escapeHtml(createdAt)}</div>
+                <div class="mutation-workbox-meta">${escapeHtml(createdAt)} • door ${escapeHtml(actorLabel)}</div>
                 ${errorText}
                 <div class="mutation-workbox-actions">
                     ${detailsButton}
@@ -257,12 +508,16 @@ function renderDetailsEvents(events) {
     }
 
     if (!Array.isArray(events) || events.length === 0) {
-        eventsElement.innerHTML = '<p class="empty-state-small">Geen eventgeschiedenis beschikbaar</p>';
+        eventsElement.innerHTML = `<p class="empty-state-small">${escapeHtml(
+            translateMutation('mutationWorkbox.detailsModal.emptyHistory', {}, 'Geen eventgeschiedenis beschikbaar')
+        )}</p>`;
         return;
     }
 
     const rows = events.map((event) => {
-        const eventType = escapeHtml(event.eventType || 'onbekend');
+        const eventType = escapeHtml(
+            event.eventType || translateMutation('mutationWorkbox.detailsModal.unknown', {}, 'onbekend')
+        );
         const createdAt = escapeHtml(formatDateTime(event.createdAt));
         const previousStatus = event.previousStatus ? escapeHtml(event.previousStatus) : '-';
         const nextStatus = event.nextStatus ? escapeHtml(event.nextStatus) : '-';
@@ -270,10 +525,14 @@ function renderDetailsEvents(events) {
 
         const errorParts = [];
         if (event.errorCode) {
-            errorParts.push(`code: ${event.errorCode}`);
+            errorParts.push(
+                translateMutation('mutationWorkbox.detailsModal.errorCode', { value: event.errorCode }, `code: ${event.errorCode}`)
+            );
         }
         if (event.errorMessage) {
-            errorParts.push(`melding: ${event.errorMessage}`);
+            errorParts.push(
+                translateMutation('mutationWorkbox.detailsModal.errorMessage', { value: event.errorMessage }, `melding: ${event.errorMessage}`)
+            );
         }
         const errorBlock = errorParts.length > 0
             ? `<div class="mutation-details-event-error">${escapeHtml(errorParts.join(' • '))}</div>`
@@ -290,7 +549,13 @@ function renderDetailsEvents(events) {
                     <span class="mutation-details-event-name">${eventType}</span>
                     <span class="mutation-details-event-date">${createdAt}</span>
                 </div>
-                <div class="mutation-details-event-meta">Status: ${previousStatus} → ${nextStatus} • Poging: ${attemptCount}</div>
+                <div class="mutation-details-event-meta">${escapeHtml(
+                    translateMutation(
+                        'mutationWorkbox.detailsModal.statusTransition',
+                        { from: previousStatus, to: nextStatus, attempt: attemptCount },
+                        `Status: ${previousStatus} → ${nextStatus} • Poging: ${attemptCount}`
+                    )
+                )}</div>
                 ${errorBlock}
                 ${metadataBlock}
             </div>
@@ -305,17 +570,33 @@ function renderMutationDetails(details) {
 
     const summaryLines = [];
     if (detailPayload.failureClass) {
-        summaryLines.push(`Failure class: ${detailPayload.failureClass}`);
+        summaryLines.push(
+            translateMutation(
+                'mutationWorkbox.detailsModal.failureClass',
+                { value: detailPayload.failureClass },
+                `Failure class: ${detailPayload.failureClass}`
+            )
+        );
     }
     if (detailPayload.lastHttpStatus) {
-        summaryLines.push(`HTTP status: ${detailPayload.lastHttpStatus}`);
+        summaryLines.push(
+            translateMutation(
+                'mutationWorkbox.detailsModal.httpStatus',
+                { value: detailPayload.lastHttpStatus },
+                `HTTP status: ${detailPayload.lastHttpStatus}`
+            )
+        );
     }
 
     const summaryElement = getElementById('mutationDetailsSummary');
     if (summaryElement) {
         summaryElement.textContent = summaryLines.length > 0
             ? summaryLines.join(' • ')
-            : 'Geen actieve foutstatus op deze mutatie.';
+            : translateMutation(
+                'mutationWorkbox.detailsModal.noActiveFailure',
+                {},
+                'Geen actieve foutstatus op deze mutatie.'
+            );
     }
 
     const fieldMap = {
@@ -350,7 +631,7 @@ function renderMutationDetails(details) {
             || Object.keys(requestOverview.request).length > 0;
         requestElement.textContent = hasRequestContent
             ? JSON.stringify(requestOverview, null, 2)
-            : 'Geen request details beschikbaar';
+            : translateMutation('mutationWorkbox.detailsModal.emptyRequest', {}, 'Geen request details beschikbaar');
     }
 
     renderDetailsEvents(detailPayload.events);
@@ -363,6 +644,12 @@ function openDetailsModal() {
     }
 
     modal.style.display = 'flex';
+    if (modal.classList && typeof modal.classList.add === 'function') {
+        modal.classList.add('show');
+    }
+    if (typeof modal.setAttribute === 'function') {
+        modal.setAttribute('aria-hidden', 'false');
+    }
 }
 
 function closeDetailsModal() {
@@ -372,6 +659,12 @@ function closeDetailsModal() {
     }
 
     modal.style.display = 'none';
+    if (modal.classList && typeof modal.classList.remove === 'function') {
+        modal.classList.remove('show');
+    }
+    if (typeof modal.setAttribute === 'function') {
+        modal.setAttribute('aria-hidden', 'true');
+    }
 }
 
 function installDetailsModalBackdropClose() {

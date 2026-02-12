@@ -85,7 +85,7 @@ services:
     image: kiwi-dev:local
     command: ["/bin/sh", "/workspace/scripts/app-entrypoint.sh"]
     environment:
-      MUTATION_STORE_ENABLED: "${MUTATION_STORE_ENABLED:-false}"
+      MUTATION_STORE_ENABLED: "${MUTATION_STORE_ENABLED:-true}"
       MUTATION_DATABASE_URL: "${MUTATION_DATABASE_URL:-postgresql://kiwi:kiwi@postgres:5432/kiwi}"
       MUTATION_TARGET_BASE_URL: "${MUTATION_TARGET_BASE_URL:-}"
       MUTATION_DISPATCH_DRY_RUN: "${MUTATION_DISPATCH_DRY_RUN:-true}"
@@ -114,7 +114,7 @@ services:
     image: kiwi-dev:local
     command: ["python", "-m", "services.mutations.worker"]
     environment:
-      MUTATION_STORE_ENABLED: "${MUTATION_STORE_ENABLED:-false}"
+      MUTATION_STORE_ENABLED: "${MUTATION_STORE_ENABLED:-true}"
       MUTATION_DATABASE_URL: "${MUTATION_DATABASE_URL:-postgresql://kiwi:kiwi@postgres:5432/kiwi}"
       MUTATION_TARGET_BASE_URL: "${MUTATION_TARGET_BASE_URL:-}"
       MUTATION_DISPATCH_DRY_RUN: "${MUTATION_DISPATCH_DRY_RUN:-true}"

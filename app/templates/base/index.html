@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="nl"
       data-kiwi-base-path="{{ request.script_root | e }}"
-      data-kiwi-agent-name="{{ user_full_name | e }}">
+      data-kiwi-agent-name="{{ user_full_name | e }}"
+      data-kiwi-agent-email="{{ user_email | e }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1444,46 +1445,47 @@
     <div id="mutationDetailsModal" class="modal">
         <div class="modal-content mutation-details-modal">
             <div class="modal-header">
-                <h2>📮 Mutatie details</h2>
+                <h2>📮 <span data-i18n="mutationWorkbox.detailsModal.title">Mutatie details</span></h2>
                 <button class="modal-close" type="button" data-action="mutations.close-details" data-action-event="click">&times;</button>
             </div>
             <div class="modal-body">
+                <h3 class="mutation-details-section-title" data-i18n="mutationWorkbox.detailsModal.requestOverviewTitle">Request overzicht</h3>
                 <div id="mutationDetailsSummary" class="mutation-details-summary"></div>
                 <div class="mutation-details-grid">
                     <div class="mutation-details-field">
-                        <span class="mutation-details-label">Mutatie ID</span>
+                        <span class="mutation-details-label" data-i18n="mutationWorkbox.detailsModal.fields.mutationId">Mutatie ID</span>
                         <span id="mutationDetailsId" class="mutation-details-value">-</span>
                     </div>
                     <div class="mutation-details-field">
-                        <span class="mutation-details-label">Type</span>
+                        <span class="mutation-details-label" data-i18n="mutationWorkbox.detailsModal.fields.type">Type</span>
                         <span id="mutationDetailsCommandType" class="mutation-details-value">-</span>
                     </div>
                     <div class="mutation-details-field">
-                        <span class="mutation-details-label">Status</span>
+                        <span class="mutation-details-label" data-i18n="mutationWorkbox.detailsModal.fields.status">Status</span>
                         <span id="mutationDetailsStatus" class="mutation-details-value">-</span>
                     </div>
                     <div class="mutation-details-field">
-                        <span class="mutation-details-label">Pogingen</span>
+                        <span class="mutation-details-label" data-i18n="mutationWorkbox.detailsModal.fields.attempts">Pogingen</span>
                         <span id="mutationDetailsAttempts" class="mutation-details-value">-</span>
                     </div>
                     <div class="mutation-details-field">
-                        <span class="mutation-details-label">Volgende poging</span>
+                        <span class="mutation-details-label" data-i18n="mutationWorkbox.detailsModal.fields.nextAttempt">Volgende poging</span>
                         <span id="mutationDetailsNextAttempt" class="mutation-details-value">-</span>
                     </div>
                     <div class="mutation-details-field">
-                        <span class="mutation-details-label">Laatste fout</span>
+                        <span class="mutation-details-label" data-i18n="mutationWorkbox.detailsModal.fields.lastError">Laatste fout</span>
                         <span id="mutationDetailsLastError" class="mutation-details-value">-</span>
                     </div>
                 </div>
-                <h3 class="mutation-details-section-title">Request overzicht</h3>
+                <h3 class="mutation-details-section-title" data-i18n="mutationWorkbox.detailsModal.requestContentTitle">Request inhoud</h3>
                 <pre id="mutationDetailsRequest" class="mutation-details-request">Geen request details beschikbaar</pre>
-                <h3 class="mutation-details-section-title">Retry en statusgeschiedenis</h3>
+                <h3 class="mutation-details-section-title" data-i18n="mutationWorkbox.detailsModal.historyTitle">Retry en statusgeschiedenis</h3>
                 <div id="mutationDetailsEvents" class="mutation-details-events">
-                    <p class="empty-state-small">Geen eventgeschiedenis beschikbaar</p>
+                    <p class="empty-state-small" data-i18n="mutationWorkbox.detailsModal.emptyHistory">Geen eventgeschiedenis beschikbaar</p>
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" type="button" data-action="mutations.close-details" data-action-event="click">Sluiten</button>
+                <button class="btn btn-secondary" type="button" data-action="mutations.close-details" data-action-event="click" data-i18n="mutationWorkbox.detailsModal.close">Sluiten</button>
             </div>
         </div>
     </div>
@@ -1616,6 +1618,7 @@
         const pageDataset = document.documentElement ? document.documentElement.dataset : {};
         window.kiwiBasePath = pageDataset.kiwiBasePath || '';
         window.kiwiAgentName = pageDataset.kiwiAgentName || '';
+        window.kiwiAgentEmail = pageDataset.kiwiAgentEmail || '';
     </script>
     <script type="module" src="{{ url_for('static', filename='assets/js/i18n/index.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/app/feature-flags.js') }}"></script>

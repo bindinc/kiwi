@@ -41,6 +41,7 @@ def create_main_blueprint(oidc: OpenIDConnect) -> Blueprint:
             user_full_name=identity["full_name"],
             user_first_name=identity["first_name"],
             user_last_name=identity["last_name"],
+            user_email=identity["email"],
             user_initials=identity["initials"],
             user_profile_image=profile_image,
             logout_url=logout_url,

@@ -47,14 +47,36 @@ function installDomHarness() {
     elements.set('mutationDetailsLastError', createElement());
     elements.set('mutationDetailsRequest', createElement());
     elements.set('mutationDetailsEvents', createElement());
+    elements.set('agentProfileTrigger', createElement({
+        querySelector(selector) {
+            if (selector === '.agent-avatar img') {
+                return {
+                    getAttribute(attribute) {
+                        if (attribute === 'src') {
+                            return 'https://example.test/avatar.jpg';
+                        }
+                        return null;
+                    }
+                };
+            }
+            return null;
+        }
+    }));
 
     const previousDocument = globalThis.document;
     const previousLocalStorage = globalThis.localStorage;
     const previousKiwiApi = globalThis.kiwiApi;
+    const previousCustomers = globalThis.customers;
+    const previousKiwiAgentEmail = globalThis.kiwiAgentEmail;
     const previousSetInterval = globalThis.setInterval;
     const previousClearInterval = globalThis.clearInterval;
 
     globalThis.document = {
+        documentElement: {
+            dataset: {
+                kiwiAgentEmail: 'kiwi-agent@example.com'
+            }
+        },
         getElementById(id) {
             return elements.get(id) || null;
         }
@@ -83,14 +105,23 @@ function installDomHarness() {
                 items: [
                     {
                         id: '9f53f0e6-8ef2-4a0e-96a4-f57167dbf9fd',
-                        commandType: 'subscription.update',
+                        commandType: 'subscription.signup',
+                        customerId: 42,
                         status: 'queued',
-                        createdAt: '2026-02-12T15:00:00Z'
+                        createdAt: '2026-02-12T15:00:00Z',
+                        createdByUser: 'kiwi-agent@example.com',
+                        requestPayload: {
+                            subscription: {
+                                werfsleutel: 'WK-123'
+                            }
+                        }
                     }
                 ]
             };
         }
     };
+    globalThis.customers = [{ id: 42, lastName: 'Jansen' }];
+    globalThis.kiwiAgentEmail = 'kiwi-agent@example.com';
 
     globalThis.setInterval = () => 1;
     globalThis.clearInterval = () => {};
@@ -101,6 +132,8 @@ function installDomHarness() {
             globalThis.document = previousDocument;
             globalThis.localStorage = previousLocalStorage;
             globalThis.kiwiApi = previousKiwiApi;
+            globalThis.customers = previousCustomers;
+            globalThis.kiwiAgentEmail = previousKiwiAgentEmail;
             globalThis.setInterval = previousSetInterval;
             globalThis.clearInterval = previousClearInterval;
         }
@@ -156,6 +189,9 @@ async function testRendersDetailsButtonInsteadOfRefreshButton() {
         const listMarkup = harness.elements.get('mutationWorkboxList').innerHTML;
         assert.equal(listMarkup.includes('Details'), true);
         assert.equal(listMarkup.includes('Vernieuwen'), false);
+        assert.equal(listMarkup.includes('subscription.signup'), false);
+        assert.equal(listMarkup.includes('Jansen aangemeld werfsleutel'), true);
+        assert.equal(listMarkup.includes('mutation-workbox-avatar-image'), true);
 
         const summaryText = harness.elements.get('mutationWorkboxSummary').textContent;
         assert.equal(summaryText.includes('Pending: 2'), true);

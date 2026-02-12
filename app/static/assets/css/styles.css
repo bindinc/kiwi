@@ -1975,9 +1975,55 @@ select option {
 }
 
 .mutation-workbox-main {
+    align-items: flex-start;
     display: flex;
-    justify-content: space-between;
     gap: 0.5rem;
+    justify-content: space-between;
+}
+
+.mutation-workbox-title {
+    align-items: center;
+    display: flex;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.mutation-workbox-description {
+    color: var(--text-primary);
+    display: block;
+    font-size: 0.94rem;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.mutation-workbox-avatar {
+    align-items: center;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    border-radius: 50%;
+    display: inline-flex;
+    flex: 0 0 20px;
+    height: 20px;
+    justify-content: center;
+    overflow: hidden;
+    width: 20px;
+}
+
+.mutation-workbox-avatar-image {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.mutation-workbox-avatar-fallback {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+    color: #1e3a8a;
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
 .mutation-workbox-status {
@@ -1992,7 +2038,8 @@ select option {
 .mutation-workbox-meta {
     color: var(--text-secondary);
     font-size: 0.75rem;
-    margin-top: 0.25rem;
+    margin-top: 0.3rem;
+    padding-left: 1.65rem;
 }
 
 .mutation-workbox-error {
@@ -3299,31 +3346,44 @@ select option {
 }
 
 .mutation-details-modal {
-    max-width: 760px;
+    max-width: 960px;
+    width: min(960px, 96vw);
 }
 
 .mutation-details-modal .modal-header {
     background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
 }
 
+.mutation-details-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
 .mutation-details-summary {
     font-size: 0.9rem;
     color: var(--text-secondary);
-    margin-bottom: 1rem;
+    margin-bottom: 0;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    padding: 0.6rem 0.75rem;
+    line-height: 1.4;
 }
 
 .mutation-details-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 0;
 }
 
 .mutation-details-field {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     background: var(--bg-primary);
-    padding: 0.55rem 0.65rem;
+    padding: 0.6rem 0.7rem;
+    min-width: 0;
 }
 
 .mutation-details-label {
@@ -3336,25 +3396,27 @@ select option {
 .mutation-details-value {
     display: block;
     color: var(--text-primary);
-    font-size: 0.86rem;
+    font-size: 0.9rem;
     font-weight: 600;
     overflow-wrap: anywhere;
+    line-height: 1.35;
 }
 
 .mutation-details-section-title {
-    margin: 0.75rem 0 0.45rem;
+    margin: 0.25rem 0 0;
     font-size: 0.95rem;
 }
 
 .mutation-details-request {
     background: #0f172a;
     color: #e2e8f0;
+    border: 1px solid #1e293b;
     border-radius: var(--radius-sm);
     padding: 0.75rem;
     margin: 0;
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     line-height: 1.35;
-    max-height: 220px;
+    max-height: 280px;
     overflow: auto;
 }
 
@@ -3362,8 +3424,12 @@ select option {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
-    max-height: 260px;
+    max-height: 300px;
     overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    padding: 0.6rem;
 }
 
 .mutation-details-event {
@@ -3376,7 +3442,8 @@ select option {
 .mutation-details-event-main {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 0.5rem;
     font-size: 0.82rem;
 }
