@@ -325,6 +325,7 @@
                                     <span id="customerEmail"></span> • 
                                     <span id="customerPhone"></span>
                                 </p>
+                                <p id="customerMutationStatus" class="customer-mutation-status" style="display: none;"></p>
                             </div>
                             <div class="customer-actions">
                                 <!-- PHASE 4: Identify Caller Button (only visible during anonymous call) -->
@@ -1270,6 +1271,16 @@
                         <div class="empty-state-small">
                             <p data-i18n="indexHtml.text.selecteer_een_klant_om_geschiedenis_te_zien_85c985bb">Selecteer een klant om geschiedenis te zien</p>
                         </div>
+                    </div>
+                </section>
+                <section class="card history-card mutation-workbox-card">
+                    <div class="mutation-workbox-header">
+                        <h2>📮 Mutatie Werkbak</h2>
+                        <button class="btn btn-small btn-secondary" type="button" data-action="mutations.refresh">Vernieuwen</button>
+                    </div>
+                    <div id="mutationWorkboxSummary" class="mutation-workbox-summary">Mutaties worden geladen...</div>
+                    <div id="mutationWorkboxList" class="mutation-workbox-list">
+                        <p class="empty-state-small">Geen mutaties beschikbaar</p>
                     </div>
                 </section>
             </aside>

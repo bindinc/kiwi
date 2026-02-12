@@ -1556,6 +1556,17 @@ select option {
     font-size: 0.9rem;
 }
 
+.customer-mutation-status {
+    margin-top: 0.25rem;
+    color: #92400e;
+    background-color: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+}
+
 .customer-actions {
     display: flex;
     gap: 0.5rem;
@@ -1878,6 +1889,77 @@ select option {
     height: 100%;
     display: flex;
     flex-direction: column;
+}
+
+.mutation-workbox-card {
+    margin-top: 1rem;
+    min-height: 220px;
+}
+
+.mutation-workbox-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.mutation-workbox-header h2 {
+    margin: 0;
+}
+
+.mutation-workbox-summary {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+.mutation-workbox-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.65rem;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.mutation-workbox-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem;
+}
+
+.mutation-workbox-main {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.mutation-workbox-status {
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 999px;
+    color: #1d4ed8;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.5rem;
+    text-transform: lowercase;
+}
+
+.mutation-workbox-meta {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.mutation-workbox-error {
+    color: #b91c1c;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.mutation-workbox-actions {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
 }
 
 .contact-history {

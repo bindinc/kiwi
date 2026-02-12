@@ -116,6 +116,31 @@ Docker Compose now supports two local OIDC modes:
    - https://bdc.rtvmedia.org.local/kiwi-preview
    - https://bdc.rtvmedia.org.local/kiwi-oidc/realms/kiwi-local/.well-known/openid-configuration
 
+### Local mutation outbox mode
+
+Docker Compose now includes:
+
+- `postgres` for mutation queue storage
+- `mutation-worker` for background dispatch/retry processing
+
+Feature flags and defaults:
+
+```bash
+MUTATION_STORE_ENABLED=false
+MUTATION_DATABASE_URL=postgresql://kiwi:kiwi@postgres:5432/kiwi
+MUTATION_TARGET_BASE_URL=
+MUTATION_DISPATCH_DRY_RUN=true
+```
+
+Enable the full pending-first mutation flow locally:
+
+```bash
+MUTATION_STORE_ENABLED=true MUTATION_DISPATCH_DRY_RUN=true make compose-up
+```
+
+With `MUTATION_DISPATCH_DRY_RUN=true`, queued mutations are marked delivered by the worker without calling an external API.  
+Set `MUTATION_DISPATCH_DRY_RUN=false` and `MUTATION_TARGET_BASE_URL=<url>` to dispatch to a real downstream API.
+
 Fallback mode ships with deterministic test users (all with password `kiwi-local-dev-password`):
 
 | Username | Role |

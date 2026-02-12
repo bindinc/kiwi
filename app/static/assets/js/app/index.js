@@ -16,6 +16,7 @@ import { addContactMoment, configureContactHistorySliceDependencies, registerCon
 import { configureCustomerDetailSliceDependencies, registerCustomerDetailSlice, selectCustomer } from './slices/customer-detail-slice.js';
 import { configureDeliveryRemarksSliceDependencies, registerDeliveryRemarksSlice } from './slices/delivery-remarks-slice.js';
 import { registerDeliveryDatePickerSlice, initDeliveryDatePicker } from './slices/delivery-date-picker-slice.js';
+import { registerMutationWorkboxSlice } from './slices/mutation-workbox-slice.js';
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { getSharedState, markLegacyScriptLoaded, setLegacyLoadPromise } from './state.js';
 import { installLegacySubscriptionHelpers } from './subscription-shared-helpers.js';
@@ -119,6 +120,7 @@ registerCustomerSearchSlice(actionRouter);
 registerSubscriptionRoleSlice(actionRouter);
 registerSubscriptionWorkflowSlice(actionRouter);
 registerWinbackSlice(actionRouter);
+registerMutationWorkboxSlice(actionRouter);
 actionRouter.install();
 
 function wireCallAgentRuntimeDependencies() {

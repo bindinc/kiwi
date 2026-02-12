@@ -22,6 +22,7 @@ const API_ENDPOINTS = Object.freeze({
     personsApiUrl: '/api/v1/persons',
     subscriptionsApiUrl: '/api/v1/subscriptions',
     workflowsApiUrl: '/api/v1/workflows',
+    mutationsApiUrl: '/api/v1/mutations',
     callQueueApiUrl: '/api/v1/call-queue',
     callSessionApiUrl: '/api/v1/call-session',
     debugResetApiUrl: '/api/v1/debug/reset-poc-state',
