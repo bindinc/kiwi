@@ -302,7 +302,7 @@ rg -n "^const\\s+[A-Za-z0-9_]+\\s*=\\s*\\([^)]*\\)\\s*=>" app/static/assets/js/a
 ## 8) Test cases and scenarios (for this planning-doc change)
 
 1. Confirm `plan/app-js-to-slices-checklist.md` exists.
-2. Confirm domains `1-13` are marked completed and domains `14-21` are present as unchecked follow-up work.
+2. Confirm domain completion status in section `4` matches the PR tracking table in section `3`.
 3. Confirm baseline-completed section exists and marks current extracted slices/runtime as done.
 4. Confirm line references are present for every domain item (`app.js`, `article-search.js`, `delivery-date-picker.js` sources).
 5. Confirm migration order and verification commands sections are present.
@@ -314,3 +314,38 @@ rg -n "^const\\s+[A-Za-z0-9_]+\\s*=\\s*\\([^)]*\\)\\s*=>" app/static/assets/js/a
 - Primary inventory scope includes `app/static/assets/js/app.js`, `app/static/assets/js/app/slices/article-search-slice.js`, and `app/static/assets/js/app/slices/delivery-date-picker-slice.js`.
 - Template coupling notes are kept for tracking residual dependencies and compatibility bridges.
 - Line references are based on the current snapshot and may drift after later edits.
+
+## 10) Slice classification audit (`app/static/assets/js`)
+
+- Audit date: `2026-02-12`
+- Canonical slice directory: `app/static/assets/js/app/slices`
+- Decision: no files outside `app/static/assets/js/app/slices` should be moved into slices at this time.
+
+### Evidence
+
+1. `app/static/assets/js/app/index.js` imports slice modules from `./slices/*` and keeps runtime/bootstrap composition in sibling modules.
+2. Runtime scripts are intentionally loaded from sibling paths (`./call-agent-runtime.js`, `./subscription-role-runtime.js`) in `app/static/assets/js/app/index.js`.
+3. Runtime files self-identify as legacy/classic runtime modules in header comments:
+   - `app/static/assets/js/app/call-agent-runtime.js`
+   - `app/static/assets/js/app/subscription-role-runtime.js`
+4. Template script includes use non-slice module paths:
+   - `app/templates/base/index.html` loads `assets/js/app/feature-flags.js`
+   - `app/templates/base/index.html` loads `assets/js/api-client.js`
+   - `app/templates/base/index.html` loads `assets/js/app/index.js`
+5. No non-slice JS modules export `register*Slice` or `install*Slice` symbols.
+
+### File-by-file outcome (keep in current location)
+
+- `app/static/assets/js/api-client.js`
+- `app/static/assets/js/i18n/index.js`
+- `app/static/assets/js/i18n/static-page-i18n.js`
+- `app/static/assets/js/app/actions.js`
+- `app/static/assets/js/app/services.js`
+- `app/static/assets/js/app/state.js`
+- `app/static/assets/js/app/legacy-app-state.js`
+- `app/static/assets/js/app/call-agent-runtime.js`
+- `app/static/assets/js/app/subscription-role-runtime.js`
+- `app/static/assets/js/app/disposition-categories.js`
+- `app/static/assets/js/app/subscription-shared-helpers.js`
+- `app/static/assets/js/app/feature-flags.js`
+- `app/static/assets/js/app/index.js`
