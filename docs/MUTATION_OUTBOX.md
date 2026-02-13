@@ -20,6 +20,20 @@ Kiwi supports a pending-first mutation mode for subscription changes.
 - `MUTATION_TARGET_BASE_URL`
 - `MUTATION_DISPATCH_DRY_RUN`
 
+## Local Docker Compose defaults
+
+- Compose file: `docker-compose.yaml`
+- Local PostgreSQL service: `postgres` (`postgres:16-alpine`)
+- Local mutation worker service: `mutation-worker`
+- Default local `MUTATION_STORE_ENABLED`: `true`
+- Default local `MUTATION_DATABASE_URL`: `postgresql://kiwi:kiwi@postgres:5432/kiwi`
+
+To recreate the local PostgreSQL volume from scratch:
+
+```bash
+make compose-reset-db
+```
+
 ## Worker
 
 Run once:

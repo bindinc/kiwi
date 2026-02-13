@@ -126,27 +126,34 @@ Docker Compose now includes:
 Feature flags and defaults:
 
 ```bash
-MUTATION_STORE_ENABLED=false
+MUTATION_STORE_ENABLED=true
 MUTATION_DATABASE_URL=postgresql://kiwi:kiwi@postgres:5432/kiwi
 MUTATION_TARGET_BASE_URL=
 MUTATION_DISPATCH_DRY_RUN=true
 ```
 
-Enable the full pending-first mutation flow locally:
+`make compose-up` already starts the full pending-first mutation flow locally.
+With `MUTATION_DISPATCH_DRY_RUN=true`, queued mutations are marked delivered by the worker without calling an external API.
+
+Disable outbox mode locally when needed:
 
 ```bash
-MUTATION_STORE_ENABLED=true MUTATION_DISPATCH_DRY_RUN=true make compose-up
+MUTATION_STORE_ENABLED=false make compose-up
 ```
 
-Or export the flag once in your shell:
+Dispatch to a real downstream API:
+
+```bash
+MUTATION_DISPATCH_DRY_RUN=false MUTATION_TARGET_BASE_URL=<url> make compose-up
+```
+
+Or export values once in your shell:
 
 ```bash
 export MUTATION_STORE_ENABLED=true
+export MUTATION_DISPATCH_DRY_RUN=true
 make compose-up
 ```
-
-With `MUTATION_DISPATCH_DRY_RUN=true`, queued mutations are marked delivered by the worker without calling an external API.  
-Set `MUTATION_DISPATCH_DRY_RUN=false` and `MUTATION_TARGET_BASE_URL=<url>` to dispatch to a real downstream API.
 
 Quick PostgreSQL checks for mutation tables:
 
@@ -166,6 +173,12 @@ Inside interactive `psql`, useful starters:
 ```sql
 \dt
 SELECT * FROM mutation_jobs ORDER BY created_at DESC LIMIT 20;
+```
+
+Recreate local PostgreSQL data (drop and rebuild the `postgres-data` volume):
+
+```bash
+make compose-reset-db
 ```
 
 Fallback mode ships with deterministic test users (all with password `kiwi-local-dev-password`):
