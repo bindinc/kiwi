@@ -2,11 +2,12 @@ SHELL := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev-certs compose-preflight compose-up compose-down compose-logs compose-build compose-smoke-oidc image-build
+.PHONY: help dev-certs compose-preflight compose-up compose-down compose-reset-db compose-logs compose-build compose-smoke-oidc image-build
 
 help:
 	@echo "Usage: make compose-up"
 	@echo "       make compose-down"
+	@echo "       make compose-reset-db"
 	@echo "       make compose-logs"
 	@echo "       make compose-build"
 	@echo "       make compose-smoke-oidc"
@@ -27,6 +28,10 @@ compose-up: compose-preflight
 
 compose-down:
 	docker compose down
+
+compose-reset-db: compose-preflight
+	docker compose down -v
+	docker compose up --build
 
 compose-logs:
 	docker compose logs -f

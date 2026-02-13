@@ -1,4 +1,5 @@
 import os
+import logging
 
 from flask import Flask, request
 from flask_oidc import OpenIDConnect
@@ -7,6 +8,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
 from blueprints.registry import register_blueprints
+from services.mutations import ensure_mutation_schema_if_enabled
 
 
 class PrefixMiddleware:
@@ -100,6 +102,12 @@ def create_app() -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
     configure_app(app)
     Session(app)
+
+    try:
+        ensure_mutation_schema_if_enabled()
+    except Exception:  # noqa: BLE001
+        logging.exception("Failed to initialize mutation schema")
+        raise
 
     prefix = os.environ.get("APPLICATION_PREFIX", "")
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
