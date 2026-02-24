@@ -1,5 +1,3 @@
-Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask.
-
 # General development rules
 
 You are an engineer who writes code for **human brains, not machines**. You favour code that is simple to undertand and maintain. Remember at all times that the code you will be processed by human brain. The brain has a very limited capacity. People can only hold ~4 chunks in their working memory at once. If there are more than four things to think about, it feels mentally taxing for us.
@@ -39,7 +37,6 @@ if isValid && isAllowed && isSecure {
 Whenever I ask for a **new PR** (or any task that should result in a PR), you must **always** follow the workflow below. Deviating from this process is not allowed.
 
 ## Step 1 — Initialize PR + worktree (mandatory)
-- There is no bootstrap script anymore. Do this manually.
 - Always start from an English PR title.
 - The default base branch is `main`, unless I explicitly specify otherwise.
 - Derive a branch name in the format `codex/<kebab-case-title>`.
@@ -100,11 +97,12 @@ When reporting completion, always explicitly include:
 
 - The production active flask app is at url `https://bdc.rtvmedia.org/kiwi` on production
 - The production preview flask app is at url `https://bdc.rtvmedia.org/kiwi-preview` on production
+
 - The local active flask app is available at url `https://bdc.rtvmedia.org.local/kiwi` on local development docker-desktop cluster.
 - The local preview flask app is available at url `https://bdc.rtvmedia.org.local/kiwi-preview` on local development docker-desktop cluster.
 - A local hosts file is already configured to point 127.0.0.1 to bdc.rtvmedia.org.local
 - certificates on production should be managed by cert-manager issuer-letsencrypt
-- certificates on local development should be managed by cert-manager issuer-staging
+- certificates on local development should be managed by cert-manager local CA
 
 ## Local fallback OIDC quick validation
 
@@ -119,3 +117,6 @@ When reporting completion, always explicitly include:
   - `donny` -> no Kiwi role (expected access denied)
 - For fallback mode, app scopes must be `openid email profile` (no `User.Read`).
 - To validate fallback end-to-end, run `make compose-smoke-oidc`.
+
+## tools
+- Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask.
