@@ -116,6 +116,71 @@ Docker Compose now supports two local OIDC modes:
    - https://bdc.rtvmedia.org.local/kiwi-preview
    - https://bdc.rtvmedia.org.local/kiwi-oidc/realms/kiwi-local/.well-known/openid-configuration
 
+### Local mutation outbox mode
+
+Docker Compose now includes:
+
+- `postgres` for mutation queue storage
+- `mutation-worker` for background dispatch/retry processing
+
+Feature flags and defaults:
+
+```bash
+MUTATION_STORE_ENABLED=true
+MUTATION_DATABASE_URL=postgresql://kiwi:kiwi@postgres:5432/kiwi
+MUTATION_TARGET_BASE_URL=
+MUTATION_DISPATCH_DRY_RUN=true
+```
+
+`make compose-up` already starts the full pending-first mutation flow locally.
+With `MUTATION_DISPATCH_DRY_RUN=true`, queued mutations are marked delivered by the worker without calling an external API.
+
+Disable outbox mode locally when needed:
+
+```bash
+MUTATION_STORE_ENABLED=false make compose-up
+```
+
+Dispatch to a real downstream API:
+
+```bash
+MUTATION_DISPATCH_DRY_RUN=false MUTATION_TARGET_BASE_URL=<url> make compose-up
+```
+
+Or export values once in your shell:
+
+```bash
+export MUTATION_STORE_ENABLED=true
+export MUTATION_DISPATCH_DRY_RUN=true
+make compose-up
+```
+
+Quick PostgreSQL checks for mutation tables:
+
+```bash
+# one-shot totals
+docker compose exec -T postgres psql -U kiwi -d kiwi -c "SELECT (SELECT COUNT(*) FROM mutation_jobs) AS jobs, (SELECT COUNT(*) FROM mutation_events) AS events;"
+
+# live status view (refresh every 2s)
+watch -n 2 'docker compose exec -T postgres psql -U kiwi -d kiwi -c "SELECT status, COUNT(*) FROM mutation_jobs GROUP BY status ORDER BY status;"'
+
+# interactive SQL CLI
+docker compose exec postgres psql -U kiwi -d kiwi
+```
+
+Inside interactive `psql`, useful starters:
+
+```sql
+\dt
+SELECT * FROM mutation_jobs ORDER BY created_at DESC LIMIT 20;
+```
+
+Recreate local PostgreSQL data (drop and rebuild the `postgres-data` volume):
+
+```bash
+make compose-reset-db
+```
+
 Fallback mode ships with deterministic test users (all with password `kiwi-local-dev-password`):
 
 | Username | Role |

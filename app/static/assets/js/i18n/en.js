@@ -720,6 +720,32 @@ const en = {
         "tabNcrvgids": "Ncrvgids",
         "emptyState": "No articles found"
     },
+    "mutationWorkbox": {
+        "detailsModal": {
+            "title": "Mutation details",
+            "requestOverviewTitle": "Request overview",
+            "requestContentTitle": "Request content",
+            "historyTitle": "Retry and status history",
+            "close": "Close",
+            "emptyHistory": "No event history available",
+            "emptyRequest": "No request details available",
+            "noActiveFailure": "No active failure state for this mutation.",
+            "failureClass": "Failure class: {value}",
+            "httpStatus": "HTTP status: {value}",
+            "unknown": "unknown",
+            "statusTransition": "Status: {from} → {to} • Attempt: {attempt}",
+            "errorCode": "code: {value}",
+            "errorMessage": "message: {value}",
+            "fields": {
+                "mutationId": "Mutation ID",
+                "type": "Type",
+                "status": "Status",
+                "attempts": "Attempts",
+                "nextAttempt": "Next attempt",
+                "lastError": "Last error"
+            }
+        }
+    },
     "storage": {
         "cleared": "Local storage cleared. Page is reloading...",
         "resetConfirm": "⚠️ This will clear all session data and reload the page. Are you sure?",
