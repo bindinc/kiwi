@@ -83,7 +83,7 @@ const nl = {
             "artikel_verkoop_d7a4b513": "Artikel Verkoop",
             "artikelen_170a4739": "🛒 Artikelen",
             "artikelgegevens_7dec9fbd": "Artikelgegevens",
-            "automatisch_incasso_fd971b7d": "Automatisch incasso",
+            "automatisch_incasso_fd971b7d": "Automatische incasso",
             "avrobode_3f526f55": "Avrobode",
             "avrobode_service_6d7c87d2": "AVROBODE SERVICE",
             "avrobode_service_dd733f72": "Avrobode Service",
