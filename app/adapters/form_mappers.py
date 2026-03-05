@@ -92,7 +92,7 @@ def map_form_to_subscription_data(user_id, form_data, offer):
     start_date = offer.get('subscription_start_date')
     
     # Determine payment method
-    payment_method = 'B'  # Default to Automatisch incasso
+    payment_method = 'B'  # Default to Automatische incasso
     if form_data.get('payment_method') == 'automatisch':
         payment_method = 'B'  # Set to Incasso for automatisch
     elif form_data.get('payment_method') == 'iDEAL':
