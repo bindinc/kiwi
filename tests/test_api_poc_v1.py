@@ -14,6 +14,7 @@ from blueprints.api.catalog import catalog_bp  # noqa: E402
 from blueprints.api.customers import customers_bp  # noqa: E402
 from blueprints.api.debug import debug_bp  # noqa: E402
 from blueprints.api.me import me_bp  # noqa: E402
+from blueprints.api.mutations import mutations_bp  # noqa: E402
 from blueprints.api.status import status_bp  # noqa: E402
 from blueprints.api.subscriptions import subscriptions_bp  # noqa: E402
 from blueprints.api.swagger import swagger_bp  # noqa: E402
@@ -28,6 +29,7 @@ register_api_blueprint(catalog_bp)
 register_api_blueprint(customers_bp)
 register_api_blueprint(subscriptions_bp)
 register_api_blueprint(workflows_bp)
+register_api_blueprint(mutations_bp)
 register_api_blueprint(call_queue_bp)
 register_api_blueprint(call_session_bp)
 register_api_blueprint(swagger_bp)

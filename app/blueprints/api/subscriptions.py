@@ -2,13 +2,60 @@ from __future__ import annotations
 
 from flask import Blueprint, request, session
 
-from blueprints.api.common import api_error, parse_int_value
+from blueprints.api.common import api_error, get_current_user_context, parse_int_value
 from services import poc_state
+from services.mutations import enqueue_mutation
+from services.mutations.settings import is_mutation_store_enabled
 
 BLUEPRINT_NAME = "subscriptions_api"
 URL_PREFIX = "/subscriptions"
 
 subscriptions_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=URL_PREFIX)
+
+
+def _extract_actor_context() -> tuple[str | None, list[str]]:
+    user_context = get_current_user_context()
+    identity = user_context.get("identity") if isinstance(user_context.get("identity"), dict) else {}
+    roles = user_context.get("roles") if isinstance(user_context.get("roles"), list) else []
+
+    actor_email = identity.get("email")
+    if isinstance(actor_email, str):
+        actor_email = actor_email.strip().lower() or None
+    else:
+        actor_email = None
+
+    actor_roles = [str(role) for role in roles]
+    return actor_email, actor_roles
+
+
+def _extract_client_request_id() -> str | None:
+    raw_value = request.headers.get("Idempotency-Key")
+    if not isinstance(raw_value, str):
+        return None
+    value = raw_value.strip()
+    return value or None
+
+
+def _enqueue_subscription_mutation(
+    *,
+    command_type: str,
+    ordering_key: str,
+    customer_id: int | None,
+    subscription_id: int | None,
+    request_payload: dict,
+) -> tuple[dict, int]:
+    actor_email, actor_roles = _extract_actor_context()
+    mutation = enqueue_mutation(
+        command_type=command_type,
+        ordering_key=ordering_key,
+        request_payload=request_payload,
+        customer_id=customer_id,
+        subscription_id=subscription_id,
+        created_by_user=actor_email,
+        created_by_roles=actor_roles,
+        client_request_id=_extract_client_request_id(),
+    )
+    return {"mutation": mutation}, 202
 
 
 def _find_subscription(customer: dict, subscription_id: int) -> dict | None:
@@ -32,6 +79,15 @@ def update_subscription(customer_id: int, subscription_id: int) -> tuple[dict, i
     subscription = _find_subscription(customer, subscription_id)
     if subscription is None:
         return api_error(404, "subscription_not_found", "Subscription not found")
+
+    if is_mutation_store_enabled():
+        return _enqueue_subscription_mutation(
+            command_type="subscription.update",
+            ordering_key=f"subscription:{subscription_id}",
+            customer_id=customer_id,
+            subscription_id=subscription_id,
+            request_payload=payload,
+        )
 
     for key, value in payload.items():
         subscription[key] = value
@@ -95,6 +151,18 @@ def complete_winback(customer_id: int, subscription_id: int) -> tuple[dict, int]
     if subscription is None:
         return api_error(404, "subscription_not_found", "Subscription not found")
 
+    if is_mutation_store_enabled():
+        return _enqueue_subscription_mutation(
+            command_type="subscription.cancel",
+            ordering_key=f"subscription:{subscription_id}",
+            customer_id=customer_id,
+            subscription_id=subscription_id,
+            request_payload={
+                "result": result,
+                "offer": offer,
+            },
+        )
+
     if result == "accepted":
         entry = poc_state.append_contact_history(
             state,
@@ -135,6 +203,15 @@ def process_deceased_actions(customer_id: int) -> tuple[dict, int]:
     customer = poc_state.find_customer(state, customer_id)
     if customer is None:
         return api_error(404, "customer_not_found", "Customer not found")
+
+    if is_mutation_store_enabled():
+        return _enqueue_subscription_mutation(
+            command_type="subscription.deceased_actions",
+            ordering_key=f"customer:{customer_id}",
+            customer_id=customer_id,
+            subscription_id=None,
+            request_payload={"actions": actions},
+        )
 
     processed: list[dict] = []
     for action in actions:

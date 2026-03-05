@@ -4,13 +4,60 @@ import copy
 
 from flask import Blueprint, request, session
 
-from blueprints.api.common import api_error, parse_int_value
+from blueprints.api.common import api_error, get_current_user_context, parse_int_value
 from services import poc_catalog, poc_state
+from services.mutations import build_signup_ordering_key, enqueue_mutation
+from services.mutations.settings import is_mutation_store_enabled
 
 BLUEPRINT_NAME = "workflows_api"
 URL_PREFIX = "/workflows"
 
 workflows_bp = Blueprint(BLUEPRINT_NAME, __name__, url_prefix=URL_PREFIX)
+
+
+def _extract_actor_context() -> tuple[str | None, list[str]]:
+    user_context = get_current_user_context()
+    identity = user_context.get("identity") if isinstance(user_context.get("identity"), dict) else {}
+    roles = user_context.get("roles") if isinstance(user_context.get("roles"), list) else []
+
+    actor_email = identity.get("email")
+    if isinstance(actor_email, str):
+        actor_email = actor_email.strip().lower() or None
+    else:
+        actor_email = None
+
+    actor_roles = [str(role) for role in roles]
+    return actor_email, actor_roles
+
+
+def _extract_client_request_id() -> str | None:
+    raw_value = request.headers.get("Idempotency-Key")
+    if not isinstance(raw_value, str):
+        return None
+    value = raw_value.strip()
+    return value or None
+
+
+def _enqueue_workflow_mutation(
+    *,
+    command_type: str,
+    ordering_key: str,
+    request_payload: dict,
+    customer_id: int | None,
+    subscription_id: int | None,
+) -> tuple[dict, int]:
+    actor_email, actor_roles = _extract_actor_context()
+    mutation = enqueue_mutation(
+        command_type=command_type,
+        ordering_key=ordering_key,
+        request_payload=request_payload,
+        customer_id=customer_id,
+        subscription_id=subscription_id,
+        created_by_user=actor_email,
+        created_by_roles=actor_roles,
+        client_request_id=_extract_client_request_id(),
+    )
+    return {"mutation": mutation}, 202
 
 
 def _build_subscription(state: dict, payload: dict, recipient_person_id: int, requester_person_id: int) -> dict:
@@ -157,6 +204,23 @@ def create_subscription_signup() -> tuple[dict, int]:
         requester, requester_error = _resolve_existing_role_person(state, requester_spec, role_name="requester")
     if requester_error:
         return requester_error
+
+    if is_mutation_store_enabled():
+        signup_request_payload = {
+            "recipient": recipient_raw,
+            "requester": requester_raw,
+            "subscription": subscription_payload,
+            "contactEntry": contact_entry,
+        }
+        recipient_customer_id = int(recipient["id"]) if recipient else None
+        ordering_key = build_signup_ordering_key(signup_request_payload)
+        return _enqueue_workflow_mutation(
+            command_type="subscription.signup",
+            ordering_key=ordering_key,
+            request_payload=signup_request_payload,
+            customer_id=recipient_customer_id,
+            subscription_id=None,
+        )
 
     created_recipient = False
     if recipient is None:

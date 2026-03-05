@@ -122,6 +122,47 @@ body {
     border-right: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.workbox-toggle-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.45rem;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: rgba(255, 255, 255, 0.88);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.workbox-toggle-button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+}
+
+.workbox-toggle-button:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+.workbox-toggle-button.is-active {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}
+
+.workbox-toggle-icon {
+    font-size: 1.12rem;
+    line-height: 1;
+}
+
+.workbox-toggle-count {
+    margin-left: 0.25rem;
+    color: #fef08a;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
 .agent-profile-trigger {
     position: relative;
     display: flex;
@@ -1556,6 +1597,17 @@ select option {
     font-size: 0.9rem;
 }
 
+.customer-mutation-status {
+    margin-top: 0.25rem;
+    color: #92400e;
+    background-color: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+}
+
 .customer-actions {
     display: flex;
     gap: 0.5rem;
@@ -1878,6 +1930,129 @@ select option {
     height: 100%;
     display: flex;
     flex-direction: column;
+}
+
+.mutation-workbox-card {
+    margin-top: 1rem;
+    min-height: 220px;
+}
+
+.mutation-workbox-card[hidden] {
+    display: none !important;
+}
+
+.mutation-workbox-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.mutation-workbox-header h2 {
+    margin: 0;
+}
+
+.mutation-workbox-summary {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+.mutation-workbox-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.65rem;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.mutation-workbox-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem;
+}
+
+.mutation-workbox-main {
+    align-items: flex-start;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+}
+
+.mutation-workbox-title {
+    align-items: center;
+    display: flex;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.mutation-workbox-description {
+    color: var(--text-primary);
+    display: block;
+    font-size: 0.94rem;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.mutation-workbox-avatar {
+    align-items: center;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    border-radius: 50%;
+    display: inline-flex;
+    flex: 0 0 20px;
+    height: 20px;
+    justify-content: center;
+    overflow: hidden;
+    width: 20px;
+}
+
+.mutation-workbox-avatar-image {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.mutation-workbox-avatar-fallback {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+    color: #1e3a8a;
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.mutation-workbox-status {
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 999px;
+    color: #1d4ed8;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.5rem;
+    text-transform: lowercase;
+}
+
+.mutation-workbox-meta {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-top: 0.3rem;
+    padding-left: 1.65rem;
+}
+
+.mutation-workbox-error {
+    color: #b91c1c;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.mutation-workbox-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
 }
 
 .contact-history {
@@ -2975,6 +3150,14 @@ select option {
     .onepager-container .form-actions button {
         width: 100%;
     }
+
+    .workbox-toggle-button {
+        padding: 0.3rem 0.4rem;
+    }
+
+    .mutation-details-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Debug Modal */
@@ -3160,6 +3343,142 @@ select option {
     margin-top: 1.5rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border-color);
+}
+
+.mutation-details-modal {
+    max-width: 960px;
+    width: min(960px, 96vw);
+}
+
+.mutation-details-modal .modal-header {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+}
+
+.mutation-details-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.mutation-details-summary {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    padding: 0.6rem 0.75rem;
+    line-height: 1.4;
+}
+
+.mutation-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 0;
+}
+
+.mutation-details-field {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    padding: 0.6rem 0.7rem;
+    min-width: 0;
+}
+
+.mutation-details-label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-bottom: 0.2rem;
+}
+
+.mutation-details-value {
+    display: block;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+}
+
+.mutation-details-section-title {
+    margin: 0.25rem 0 0;
+    font-size: 0.95rem;
+}
+
+.mutation-details-request {
+    background: #0f172a;
+    color: #e2e8f0;
+    border: 1px solid #1e293b;
+    border-radius: var(--radius-sm);
+    padding: 0.75rem;
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    max-height: 280px;
+    overflow: auto;
+}
+
+.mutation-details-events {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    padding: 0.6rem;
+}
+
+.mutation-details-event {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    padding: 0.55rem 0.65rem;
+}
+
+.mutation-details-event-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+}
+
+.mutation-details-event-name {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.mutation-details-event-date {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.mutation-details-event-meta {
+    margin-top: 0.25rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.mutation-details-event-error {
+    margin-top: 0.25rem;
+    color: #b91c1c;
+    font-size: 0.77rem;
+}
+
+.mutation-details-event-metadata {
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+    color: #1f2937;
+    background: #e2e8f0;
+    border-radius: 4px;
+    padding: 0.35rem 0.45rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 .debug-section {

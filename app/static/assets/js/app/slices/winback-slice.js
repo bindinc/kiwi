@@ -1068,9 +1068,23 @@ export async function completeAllDeceasedActions() {
         const { subscriptionsApiUrl } = getApiEndpoints();
 
         try {
-            await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/deceased-actions`, {
+            const response = await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/deceased-actions`, {
                 actions: actionsPayload
             });
+            if (response && response.mutation) {
+                closeForm('winbackFlow');
+                showToast(
+                    translateKey('subscription.pendingQueued', {}, 'Mutatie in wachtrij geplaatst. Deze wordt automatisch opnieuw geprobeerd.'),
+                    'info'
+                );
+                const globalScope = getGlobalScope();
+                const mutationWorkbox = globalScope && globalScope.kiwiMutationWorkbox;
+                if (mutationWorkbox && typeof mutationWorkbox.refresh === 'function') {
+                    void Promise.resolve(mutationWorkbox.refresh()).catch(() => {});
+                }
+                winbackState.deceasedSubscriptionActions = null;
+                return;
+            }
         } catch (error) {
             showToast(error.message || translateKey('subscription.deceasedProcessFailed', {}, 'Verwerken overlijden via backend mislukt'), 'error');
             return;
@@ -1144,10 +1158,27 @@ export async function completeWinback() {
         const { subscriptionsApiUrl } = getApiEndpoints();
 
         try {
-            await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, {
+            const response = await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, {
                 result: resultValue,
                 offer: winbackState.selectedOffer
             });
+            if (response && response.mutation) {
+                closeForm('winbackFlow');
+                showToast(
+                    translateKey('subscription.pendingQueued', {}, 'Mutatie in wachtrij geplaatst. Deze wordt automatisch opnieuw geprobeerd.'),
+                    'info'
+                );
+                const globalScope = getGlobalScope();
+                const mutationWorkbox = globalScope && globalScope.kiwiMutationWorkbox;
+                if (mutationWorkbox && typeof mutationWorkbox.refresh === 'function') {
+                    void Promise.resolve(mutationWorkbox.refresh()).catch(() => {});
+                }
+
+                winbackState.selectedOffer = null;
+                winbackState.cancellingSubscriptionId = null;
+                winbackState.isWinbackForEndedSub = false;
+                return;
+            }
         } catch (error) {
             showToast(error.message || translateKey('winback.saveFailed', {}, 'Winback opslaan via backend mislukt'), 'error');
             return;

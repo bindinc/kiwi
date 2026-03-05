@@ -720,6 +720,32 @@ const nl = {
         "tabNcrvgids": "Ncrvgids",
         "emptyState": "Geen artikelen gevonden"
     },
+    "mutationWorkbox": {
+        "detailsModal": {
+            "title": "Mutatie details",
+            "requestOverviewTitle": "Request overzicht",
+            "requestContentTitle": "Request inhoud",
+            "historyTitle": "Retry en statusgeschiedenis",
+            "close": "Sluiten",
+            "emptyHistory": "Geen eventgeschiedenis beschikbaar",
+            "emptyRequest": "Geen request details beschikbaar",
+            "noActiveFailure": "Geen actieve foutstatus op deze mutatie.",
+            "failureClass": "Failure class: {value}",
+            "httpStatus": "HTTP status: {value}",
+            "unknown": "onbekend",
+            "statusTransition": "Status: {from} → {to} • Poging: {attempt}",
+            "errorCode": "code: {value}",
+            "errorMessage": "melding: {value}",
+            "fields": {
+                "mutationId": "Mutatie ID",
+                "type": "Type",
+                "status": "Status",
+                "attempts": "Pogingen",
+                "nextAttempt": "Volgende poging",
+                "lastError": "Laatste fout"
+            }
+        }
+    },
     "storage": {
         "cleared": "Lokale opslag gewist. Pagina wordt herladen...",
         "resetConfirm": "⚠️ Dit zal alle sessiedata wissen en de pagina herladen. Weet je het zeker?",

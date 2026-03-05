@@ -5,10 +5,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Add a PostgreSQL-backed mutation outbox implementation under `app/services/mutations` with schema bootstrap, retry classification, downstream dispatcher, and a dedicated worker entrypoint (`python -m services.mutations.worker`).
+- Add authenticated mutation workbox APIs under `/api/v1/mutations` for listing, summary, detail, retry, and cancel operations.
+- Add local Docker Compose services for `postgres` and `mutation-worker`, including mutation outbox environment wiring.
+- Add in-app mutation workbox UI elements in the right panel and customer-level pending/failed mutation status badges.
+- Add mutation outbox documentation in `docs/MUTATION_OUTBOX.md` and local enablement notes in `README.md`.
+- Add unit tests for mutation classifier behavior and feature-flagged async enqueue responses.
+- Add `make compose-reset-db` for rebuilding local PostgreSQL state (`docker compose down -v` + up).
+
 ### Changed
 - Document the `app/static/assets/js` slice-classification audit in `plan/app-js-to-slices-checklist.md`, confirming `app/static/assets/js/app/slices` as the canonical slice directory and recording a no-move decision for non-slice JS modules.
 - Remove the legacy customer-subscription action bridge module (`app/static/assets/js/app/legacy-actions-customer-subscription.js`) by deleting `getLegacyFunction`, `callLegacy`, and `registerCustomerSubscriptionActions`; `app/static/assets/js/app/index.js` now relies on slice-owned handlers (`close-form` in app-shell and caller-identification actions in call-session).
 - Remove `app/static/assets/js/app/legacy-loader.js` by inlining `ensureRuntimeScriptsLoaded` into `app/static/assets/js/app/index.js`, so runtime script loading now lives in the entrypoint that owns bootstrap orchestration.
+- Convert subscription phase-1 mutation routes (`/api/v1/workflows/subscription-signup`, `/api/v1/subscriptions/<...>`, and `/api/v1/subscriptions/<customer_id>/deceased-actions`) to return async `202` mutation envelopes when `MUTATION_STORE_ENABLED=true`.
+- Align mutation outbox docs with Compose runtime defaults (`MUTATION_STORE_ENABLED=true` and local `postgres` volume persistence).
 
 ## [v1.0.7]
 

@@ -576,6 +576,21 @@ export async function createSubscription(event) {
 
     try {
         const response = await apiClient.post(`${workflowsApiUrl}/subscription-signup`, payload);
+        const queuedMutation = response && response.mutation ? response.mutation : null;
+        if (queuedMutation) {
+            closeForm('newSubscriptionForm');
+            showToast(
+                translateKey('subscription.pendingQueued', {}, 'Mutatie in wachtrij geplaatst. Deze wordt automatisch opnieuw geprobeerd.'),
+                'info'
+            );
+            const globalScope = getGlobalScope();
+            const mutationWorkbox = globalScope && globalScope.kiwiMutationWorkbox;
+            if (mutationWorkbox && typeof mutationWorkbox.refresh === 'function') {
+                void Promise.resolve(mutationWorkbox.refresh()).catch(() => {});
+            }
+            return;
+        }
+
         const savedRecipient = response && response.recipient ? response.recipient : null;
         const savedRequester = response && response.requester ? response.requester : null;
         const createdRecipient = Boolean(response && response.createdRecipient);
@@ -1029,7 +1044,21 @@ export async function saveSubscriptionEdit(event) {
     const apiClient = getApiClient();
     if (apiClient && typeof apiClient.patch === 'function' && typeof apiClient.post === 'function') {
         try {
-            await apiClient.patch(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, updates);
+            const patchResponse = await apiClient.patch(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, updates);
+            if (patchResponse && patchResponse.mutation) {
+                closeForm('editSubscriptionForm');
+                showToast(
+                    translateKey('subscription.pendingQueued', {}, 'Mutatie in wachtrij geplaatst. Deze wordt automatisch opnieuw geprobeerd.'),
+                    'info'
+                );
+                const globalScope = getGlobalScope();
+                const mutationWorkbox = globalScope && globalScope.kiwiMutationWorkbox;
+                if (mutationWorkbox && typeof mutationWorkbox.refresh === 'function') {
+                    void Promise.resolve(mutationWorkbox.refresh()).catch(() => {});
+                }
+                return;
+            }
+
             await apiClient.post(`${personsApiUrl}/${currentCustomer.id}/contact-history`, {
                 type: 'Abonnement gewijzigd',
                 description: `Abonnement bewerkt. ${descriptionText}.`
