@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- Add a raw-`psycopg` PostgreSQL session backend for Flask-Session and wire Docker Compose plus Kubernetes to use PostgreSQL-backed OIDC sessions.
+- Switch the app container base image from Alpine to Debian slim so Python OIDC and Graph requests in Kubernetes no longer fail on IPv6-only address selection.
 - Document the `app/static/assets/js` slice-classification audit in `plan/app-js-to-slices-checklist.md`, confirming `app/static/assets/js/app/slices` as the canonical slice directory and recording a no-move decision for non-slice JS modules.
 - Remove the legacy customer-subscription action bridge module (`app/static/assets/js/app/legacy-actions-customer-subscription.js`) by deleting `getLegacyFunction`, `callLegacy`, and `registerCustomerSubscriptionActions`; `app/static/assets/js/app/index.js` now relies on slice-owned handlers (`close-form` in app-shell and caller-identification actions in call-session).
 - Remove `app/static/assets/js/app/legacy-loader.js` by inlining `ensureRuntimeScriptsLoaded` into `app/static/assets/js/app/index.js`, so runtime script loading now lives in the entrypoint that owns bootstrap orchestration.

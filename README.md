@@ -99,7 +99,7 @@ Docker Compose now supports two local OIDC modes:
    ```
    Compose will load `infra/docker/oidc/client_secrets.fallback.json` automatically.
 
-3. Start the local stack (it will generate local TLS certs on first run):
+3. Start the local stack (it will generate local TLS certs on first run and start a local PostgreSQL 18.2 session store):
 
    ```bash
    make compose-up
@@ -172,6 +172,27 @@ Stop the stack with:
 ```bash
 make compose-down
 ```
+
+## PostgreSQL session store
+
+Kiwi can use PostgreSQL-backed server-side sessions by setting:
+
+- `SESSION_TYPE=postgresql`
+- `SESSION_DB_HOST`
+- `SESSION_DB_PORT`
+- `SESSION_DB_NAME`
+- `SESSION_DB_USER`
+- `SESSION_DB_PASSWORD`
+- `SESSION_DB_SSLMODE`
+- `FLASK_SECRET_KEY`
+
+The PostgreSQL backend stores OIDC and application session state in
+`public.kiwi_http_sessions` and is intended for replica-safe usage behind `/kiwi` and
+`/kiwi-preview`.
+
+`docker-compose.yaml` now starts a local `postgres:18.2-alpine` service and configures
+Kiwi to use PostgreSQL sessions there as well. Kubernetes keeps using its cluster-level
+PostgreSQL consumer secret instead.
 
 ## Repository Layout
 

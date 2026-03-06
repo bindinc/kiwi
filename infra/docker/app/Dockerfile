@@ -1,22 +1,34 @@
-ARG BASE_IMAGE=python:3.12-alpine
+ARG BASE_IMAGE=python:3.12-slim-bookworm
 FROM ${BASE_IMAGE}
 
 USER root
-RUN id -u app >/dev/null 2>&1 || (addgroup -S app && adduser -S app -G app)
-RUN apk add --no-cache curl ca-certificates libffi openssl
+RUN getent group app >/dev/null 2>&1 || groupadd --system app \
+    && id -u app >/dev/null 2>&1 || useradd --system --gid app --create-home --home-dir /home/app app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        libffi8 \
+    && rm -rf /var/lib/apt/lists/*
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
 RUN sh /uv-installer.sh && rm /uv-installer.sh
 ENV PATH="/root/.local/bin:$PATH"
 
 WORKDIR /app
 COPY pyproject.toml /app/pyproject.toml
-RUN apk add --no-cache --virtual .build-deps \
-    build-base \
-    libffi-dev \
-    openssl-dev \
-    cargo \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        libffi-dev \
+        libssl-dev \
+        cargo \
     && uv pip install --system -r pyproject.toml \
-    && apk del .build-deps
+    && apt-get purge -y --auto-remove \
+        build-essential \
+        libffi-dev \
+        libssl-dev \
+        cargo \
+    && rm -rf /var/lib/apt/lists/*
 COPY app/ /app
 
 EXPOSE 8000

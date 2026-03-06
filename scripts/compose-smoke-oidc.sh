@@ -89,6 +89,16 @@ if [[ "${login_redirect_ready}" != "1" ]]; then
   exit 1
 fi
 
+session_rows="$(docker compose -f "${compose_file}" exec -T postgres psql -U kiwi -d kiwi -tA \
+  -c "SELECT count(*) FROM public.kiwi_http_sessions;")"
+
+if [[ ! "${session_rows}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[compose-smoke-oidc] Expected PostgreSQL-backed session rows after /kiwi/login, got: ${session_rows}"
+  exit 1
+fi
+
+echo "[compose-smoke-oidc] PostgreSQL-backed session rows detected: ${session_rows}."
+
 assert_role() {
   local username="$1"
   local expected_role="$2"

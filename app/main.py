@@ -7,6 +7,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
 from blueprints.registry import register_blueprints
+from postgresql_session import PostgreSQLSessionInterface, build_session_db_conninfo
 
 
 class PrefixMiddleware:
@@ -31,6 +32,9 @@ class PrefixMiddleware:
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CLIENT_SECRETS = os.path.join(APP_DIR, "client_secrets.json")
 DEFAULT_OIDC_SCOPES = "openid email profile User.Read Presence.Read Presence.ReadWrite"
+DEFAULT_FLASK_SECRET_KEY = "development-secret-key-change-in-production"
+DEFAULT_SESSION_ID_LENGTH = 32
+DEFAULT_SESSION_SERIALIZATION_FORMAT = "msgpack"
 
 
 def parse_bool_env(name: str, default: bool) -> bool:
@@ -52,14 +56,19 @@ def configure_app(app: Flask) -> None:
     explicit_redirect_uri = os.environ.get("OIDC_REDIRECT_URI")
     fallback_redirect_uri = auth.get_redirect_uri_from_secrets(client_secrets_path)
     callback_route = auth.get_callback_route(explicit_redirect_uri or fallback_redirect_uri)
-    session_type = os.environ.get("SESSION_TYPE", "filesystem")
+    session_type = os.environ.get("SESSION_TYPE", "filesystem").strip().lower()
     session_dir = os.environ.get("SESSION_FILE_DIR", "/tmp/flask_session")
     oidc_scopes = os.environ.get("OIDC_SCOPES", DEFAULT_OIDC_SCOPES)
+    flask_secret_key = os.environ.get("FLASK_SECRET_KEY")
+
+    if session_type == "postgresql" and not flask_secret_key:
+        raise RuntimeError("FLASK_SECRET_KEY is required when SESSION_TYPE=postgresql")
+
+    if not flask_secret_key:
+        flask_secret_key = DEFAULT_FLASK_SECRET_KEY
 
     app.config.update(
-        SECRET_KEY=os.environ.get(
-            "FLASK_SECRET_KEY", "development-secret-key-change-in-production"
-        ),
+        SECRET_KEY=flask_secret_key,
         OIDC_CLIENT_SECRETS=client_secrets_path,
         OIDC_SCOPES=oidc_scopes,
         OIDC_USER_INFO_ENABLED=True,
@@ -78,6 +87,31 @@ def configure_app(app: Flask) -> None:
 
     if session_type == "filesystem":
         os.makedirs(session_dir, exist_ok=True)
+
+
+def configure_session(app: Flask) -> None:
+    session_type = app.config["SESSION_TYPE"]
+
+    if session_type == "filesystem":
+        Session(app)
+        return
+
+    if session_type != "postgresql":
+        raise RuntimeError(f"Unsupported session backend: {session_type}")
+
+    app.session_interface = PostgreSQLSessionInterface(
+        app,
+        conninfo=build_session_db_conninfo(),
+        key_prefix=app.config.get("SESSION_KEY_PREFIX", "session:"),
+        use_signer=app.config["SESSION_USE_SIGNER"],
+        permanent=app.config["SESSION_PERMANENT"],
+        sid_length=app.config.get("SESSION_ID_LENGTH", DEFAULT_SESSION_ID_LENGTH),
+        serialization_format=app.config.get(
+            "SESSION_SERIALIZATION_FORMAT",
+            DEFAULT_SESSION_SERIALIZATION_FORMAT,
+        ),
+        cleanup_n_requests=app.config.get("SESSION_CLEANUP_N_REQUESTS"),
+    )
 
 
 def configure_oidc(app: Flask, prefix: str) -> OpenIDConnect:
@@ -99,7 +133,7 @@ def configure_oidc(app: Flask, prefix: str) -> OpenIDConnect:
 def create_app() -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
     configure_app(app)
-    Session(app)
+    configure_session(app)
 
     prefix = os.environ.get("APPLICATION_PREFIX", "")
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
