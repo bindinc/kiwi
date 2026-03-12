@@ -1,7 +1,15 @@
 #!/usr/bin/env sh
 set -eu
 
-resolved="$("/workspace/scripts/resolve-oidc-mode.sh")"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+app_root="$(cd "$script_dir/.." && pwd)"
+
+if [ -d "/workspace" ] && [ -x "/workspace/scripts/resolve-oidc-mode.sh" ]; then
+  resolved="$(COMPOSE_PROJECT_ROOT="/workspace" /workspace/scripts/resolve-oidc-mode.sh)"
+else
+  resolved="$(COMPOSE_PROJECT_ROOT="$app_root" "$script_dir/resolve-oidc-mode.sh")"
+fi
+
 eval "$resolved"
 
 export OIDC_CLIENT_SECRETS="$OIDC_CLIENT_SECRETS_PATH"
@@ -40,4 +48,6 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-exec gunicorn -b 0.0.0.0:8000 --reload main:app
+mkdir -p /tmp/kiwi-sessions
+
+exec frankenphp run --config /etc/caddy/Caddyfile

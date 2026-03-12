@@ -64,7 +64,6 @@ services:
       context: .
       dockerfile: infra/docker/app/Dockerfile
     image: kiwi-dev:local
-    command: ["/bin/sh", "/workspace/scripts/app-entrypoint.sh"]
     depends_on:
       preflight:
         condition: service_completed_successfully
@@ -79,7 +78,6 @@ services:
       retries: 60
       start_period: 2s
     volumes:
-      - ./app:/app
       - ./:/workspace:ro
     expose:
       - "8000"
