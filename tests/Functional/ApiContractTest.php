@@ -1,0 +1,199 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Functional;
+
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+
+final class ApiContractTest extends WebTestCase
+{
+    use AuthenticatedClientTrait;
+
+    public function testStatusIsPublicAndBootstrapRequiresAuthentication(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/api/v1/status');
+        self::assertResponseIsSuccessful();
+        $payload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame('ok', $payload['status']);
+        self::assertArrayHasKey('rate_limit', $payload);
+
+        $client->request('GET', '/api/v1/bootstrap');
+        self::assertResponseStatusCodeSame(401);
+        $payload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame('unauthorized', $payload['error']['code']);
+    }
+
+    public function testMeAndBootstrapReturnAuthenticatedContext(): void
+    {
+        $client = $this->createAuthenticatedClient();
+
+        $client->request('GET', '/api/v1/me');
+        self::assertResponseIsSuccessful();
+        $payload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame('test@example.org', $payload['identity']['email']);
+
+        $client->request('GET', '/api/v1/bootstrap');
+        self::assertResponseIsSuccessful();
+        $payload = json_decode($client->getResponse()->getContent(), true);
+        self::assertArrayHasKey('customers', $payload);
+        self::assertArrayHasKey('call_queue', $payload);
+        self::assertArrayHasKey('catalog', $payload);
+        self::assertGreaterThanOrEqual(1, count($payload['customers']));
+    }
+
+    public function testCustomerWorkflowAndMutationFlow(): void
+    {
+        $client = $this->createAuthenticatedClient();
+
+        $client->request('GET', '/api/v1/persons');
+        self::assertResponseIsSuccessful();
+        $existingCustomers = json_decode($client->getResponse()->getContent(), true);
+        $recipientId = $existingCustomers['items'][0]['id'];
+        $requesterId = $existingCustomers['items'][1]['id'];
+
+        $client->request('POST', '/api/v1/workflows/subscription-signup', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'recipient' => ['personId' => $recipientId],
+            'requester' => ['personId' => $requesterId],
+            'subscription' => [
+                'magazine' => 'Avrobode',
+                'duration' => '1-jaar',
+                'durationLabel' => '1 jaar (52 nummers)',
+                'startDate' => '2026-01-10',
+                'status' => 'active',
+            ],
+            'contactEntry' => [
+                'type' => 'Extra abonnement',
+                'description' => 'Test: extra abonnement toegevoegd.',
+            ],
+        ], JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(201);
+        $payload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame($recipientId, $payload['recipient']['id']);
+        self::assertSame($requesterId, $payload['requester']['id']);
+        self::assertSame('Avrobode', $payload['subscription']['magazine']);
+
+        $client->request('PATCH', sprintf('/api/v1/persons/%d', $recipientId), server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'city' => 'Zwolle',
+        ], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        self::assertSame('Zwolle', json_decode($client->getResponse()->getContent(), true)['city']);
+
+        $client->request('PUT', sprintf('/api/v1/persons/%d/delivery-remarks', $recipientId), server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'default' => 'Test opmerking',
+            'updatedBy' => 'Unit Test',
+        ], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        self::assertSame('Test opmerking', json_decode($client->getResponse()->getContent(), true)['deliveryRemarks']['default']);
+    }
+
+    public function testCatalogOrderAndCallFlow(): void
+    {
+        $client = $this->createAuthenticatedClient();
+
+        $client->request('GET', '/api/v1/catalog/articles?popular=true&limit=1');
+        self::assertResponseIsSuccessful();
+        $article = json_decode($client->getResponse()->getContent(), true)['items'][0];
+
+        $client->request('POST', '/api/v1/workflows/article-order', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'customer' => [
+                'salutation' => 'Mevr.',
+                'firstName' => 'Order',
+                'middleName' => '',
+                'lastName' => 'Tester',
+                'birthday' => '1980-01-01',
+                'postalCode' => '1234AB',
+                'houseNumber' => '10',
+                'address' => 'Teststraat 10',
+                'city' => 'Teststad',
+                'email' => 'order@test.example',
+                'phone' => '0612345678',
+            ],
+            'order' => [
+                'desiredDeliveryDate' => '2026-02-20',
+                'paymentMethod' => 'iDEAL',
+                'items' => [
+                    ['articleId' => $article['id'], 'quantity' => 2],
+                ],
+            ],
+            'contactEntry' => [
+                'type' => 'Artikel bestelling',
+                'description' => 'Test order geplaatst',
+            ],
+        ], JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(201);
+        $payload = json_decode($client->getResponse()->getContent(), true);
+        self::assertTrue($payload['createdCustomer']);
+        self::assertSame($article['id'], $payload['order']['items'][0]['articleId']);
+
+        $client->request('POST', '/api/v1/call-queue/debug-generate', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'queueSize' => 2,
+            'queueMix' => 'all_known',
+        ], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        self::assertCount(2, json_decode($client->getResponse()->getContent(), true)['queue']);
+
+        $client->request('POST', '/api/v1/call-queue/accept-next', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        $accepted = json_decode($client->getResponse()->getContent(), true)['accepted'];
+        self::assertNotNull($accepted['customerId']);
+
+        $client->request('POST', '/api/v1/call-session/hold', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        self::assertTrue(json_decode($client->getResponse()->getContent(), true)['onHold']);
+
+        $client->request('POST', '/api/v1/call-session/resume', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        self::assertFalse(json_decode($client->getResponse()->getContent(), true)['onHold']);
+
+        $client->request('POST', '/api/v1/call-session/end', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'forcedByCustomer' => true,
+        ], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        $lastCall = json_decode($client->getResponse()->getContent(), true)['last_call_session'];
+        self::assertSame($accepted['customerId'], $lastCall['customerId']);
+
+        $client->request('POST', '/api/v1/call-session/disposition', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'category' => 'general',
+            'outcome' => 'info_provided',
+            'notes' => 'Handled in test',
+        ], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        self::assertSame('saved', json_decode($client->getResponse()->getContent(), true)['status']);
+    }
+
+    public function testCatalogAndSubscriptionEndpoints(): void
+    {
+        $client = $this->createAuthenticatedClient();
+
+        $client->request('GET', '/api/v1/catalog/offers?type=werfsleutels&query=avro&limit=5');
+        self::assertResponseIsSuccessful();
+        $offersPayload = json_decode($client->getResponse()->getContent(), true);
+        self::assertGreaterThan(0, count($offersPayload['items']));
+
+        $barcode = $offersPayload['items'][0]['barcode'];
+        $client->request('GET', sprintf('/api/v1/catalog/offers?type=werfsleutels&barcode=%s&limit=5', $barcode));
+        self::assertResponseIsSuccessful();
+        self::assertGreaterThanOrEqual(1, json_decode($client->getResponse()->getContent(), true)['total']);
+
+        $client->request('GET', '/api/v1/catalog/delivery-calendar?year=2026&month=2');
+        self::assertResponseIsSuccessful();
+        $calendar = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame(2, $calendar['month']);
+        self::assertArrayHasKey('recommendedDate', $calendar);
+
+        $client->request('PATCH', '/api/v1/subscriptions/1/1', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'status' => 'active',
+            'duration' => '2-jaar',
+        ], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        self::assertSame('2-jaar', json_decode($client->getResponse()->getContent(), true)['subscription']['duration']);
+
+        $client->request('POST', '/api/v1/subscriptions/1/1/complaint', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'reason' => 'damaged',
+        ], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        self::assertArrayHasKey('entry', json_decode($client->getResponse()->getContent(), true));
+    }
+}
