@@ -54,3 +54,16 @@ dmypy.json
 .uv/
 uv.lock
 
+# PHP / Symfony
+/vendor/
+/.phpunit/
+/.env.local
+/.env.*.local
+/var/cache/
+/var/log/
+
+
+###> symfony/phpunit-bridge ###
+.phpunit.result.cache
+/phpunit.xml
+###< symfony/phpunit-bridge ###

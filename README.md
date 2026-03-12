@@ -62,8 +62,10 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Installation & Usage
 
-- Renders `app/templates/base/index.html` through Flask (Jinja2) so `url_for('static', ...)` resolves.
-- Static assets live under `app/static/assets`.
+- Runs as a Symfony 6.4 LTS application on FrankenPHP.
+- Twig templates live under `templates/`.
+- Public assets live under `public/assets`.
+- The migration contract is documented in `docs/SYMFONY_MIGRATION_CONTRACT_MATRIX.md`.
 
 ## Local OIDC dev (Docker Compose)
 
@@ -175,8 +177,11 @@ make compose-down
 
 ## Repository Layout
 
-- `app/` is the Flask app root (blueprints, services, templates, static assets).
-- `infra/docker/` contains Dockerfiles for the base and app images.
+- `src/` contains Symfony controllers, security, and services.
+- `templates/` contains Twig templates for the web shell and auth pages.
+- `public/assets/` contains the static frontend assets served by Symfony/FrankenPHP.
+- `fixtures/` contains extracted contract fixtures used by the Symfony POC services.
+- `app/` is retained temporarily as legacy migration reference material while the Symfony contract is stabilized.
 - `scripts/` provides local dev helpers.
 
 ## Frontend Action Router Checks
@@ -253,7 +258,8 @@ make image-build
 - **HTML5**: Semantic structure
 - **CSS3**: Modern styling with CSS variables
 - **Vanilla JavaScript**: No frameworks, pure JS
-- **Flask**: Flask with OIDC-Flask plug-in enabled
+- **Symfony 6.4 LTS**: Security-based OIDC integration and controller/runtime layer
+- **FrankenPHP**: Single-container HTTP runtime on port `8000`
 
 ### Browser Compatibility
 - Chrome/Edge (latest 2 versions)
