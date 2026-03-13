@@ -22,8 +22,10 @@ import { installLegacySubscriptionHelpers } from './subscription-shared-helpers.
 
 const sharedState = getSharedState();
 const LEGACY_RUNTIME_SCRIPT_ID = 'kiwi-legacy-call-agent-runtime-script';
+const LEGACY_RUNTIME_SCRIPT_ASSET_KEY = 'callAgentRuntime';
 const LEGACY_RUNTIME_SCRIPT_RELATIVE_URL = './call-agent-runtime.js';
 const LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_ID = 'kiwi-legacy-subscription-role-runtime-script';
+const LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_ASSET_KEY = 'subscriptionRoleRuntime';
 const LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_RELATIVE_URL = './subscription-role-runtime.js';
 
 installLegacySubscriptionHelpers(globalThis);
@@ -42,8 +44,14 @@ function ensureRuntimeScriptsLoaded() {
         return sharedState.legacy.loadPromise;
     }
 
-    const runtimeUrl = resolveScriptUrl(LEGACY_RUNTIME_SCRIPT_RELATIVE_URL);
-    const roleRuntimeUrl = resolveScriptUrl(LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_RELATIVE_URL);
+    const runtimeUrl = resolveScriptUrl({
+        assetKey: LEGACY_RUNTIME_SCRIPT_ASSET_KEY,
+        relativePath: LEGACY_RUNTIME_SCRIPT_RELATIVE_URL
+    });
+    const roleRuntimeUrl = resolveScriptUrl({
+        assetKey: LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_ASSET_KEY,
+        relativePath: LEGACY_SUBSCRIPTION_ROLE_RUNTIME_SCRIPT_RELATIVE_URL
+    });
 
     const loadPromise = loadScriptOnce({
         id: LEGACY_RUNTIME_SCRIPT_ID,

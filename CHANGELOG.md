@@ -19,6 +19,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Make the OIDC runtime resolver accept both the documented secret file mount and the existing Flux-mounted file path so local Compose and cluster deployments keep working through the same entrypoint flow.
 - Adopt Symfony AssetMapper with `assets/` as the only frontend source directory, compile production assets during the Docker prod build, move Node tests to `tests/frontend/`, and stop tracking `public/assets/` plus `app/static/assets/` as hand-managed source trees.
 
+### Fixed
+- Load the main and static-page ES module entrypoints through Symfony importmaps and expose hashed legacy runtime script URLs from Twig so nested frontend assets keep resolving behind `/kiwi` and `/kiwi-preview`.
+
 ## [v1.0.7]
 
 ### Added

@@ -31,8 +31,11 @@ final class HomeControllerTest extends WebTestCase
         $client->request('GET', '/');
 
         self::assertResponseStatusCodeSame(403);
-        self::assertStringContainsString('Geen toegang tot Kiwi', $client->getResponse()->getContent());
-        self::assertStringContainsString('no.access.role', $client->getResponse()->getContent());
+        $content = (string) $client->getResponse()->getContent();
+        self::assertStringContainsString('Geen toegang tot Kiwi', $content);
+        self::assertStringContainsString('no.access.role', $content);
+        self::assertStringContainsString('type="importmap"', $content);
+        self::assertStringContainsString('static-page-i18n', $content);
     }
 
     public function testLogoutRedirectsToProviderLogoutAndClearsSession(): void
@@ -75,6 +78,11 @@ final class HomeControllerTest extends WebTestCase
         $content = $client->getResponse()->getContent();
         self::assertStringContainsString('data-kiwi-base-path="/kiwi-preview"', $content);
         self::assertMatchesRegularExpression('#/kiwi-preview/assets/css/styles(?:-[A-Za-z0-9]+)?\.css#', $content);
+        self::assertStringContainsString('type="importmap"', $content);
+        self::assertStringContainsString('"app"', $content);
+        self::assertStringContainsString('window.kiwiAssetPaths', $content);
+        self::assertStringContainsString('callAgentRuntime:', $content);
+        self::assertStringContainsString('subscriptionRoleRuntime:', $content);
 
         self::ensureKernelShutdown();
         $client = static::createClient();

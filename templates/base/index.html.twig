@@ -1546,10 +1546,13 @@
         const pageDataset = document.documentElement ? document.documentElement.dataset : {};
         window.kiwiBasePath = pageDataset.kiwiBasePath || '';
         window.kiwiAgentName = pageDataset.kiwiAgentName || '';
+        window.kiwiAssetPaths = {
+            callAgentRuntime: '{{ asset('js/app/call-agent-runtime.js')|e('js') }}',
+            subscriptionRoleRuntime: '{{ asset('js/app/subscription-role-runtime.js')|e('js') }}'
+        };
     </script>
-    <script type="module" src="{{ asset('js/i18n/index.js') }}"></script>
     <script src="{{ asset('js/app/feature-flags.js') }}"></script>
     <script src="{{ asset('js/api-client.js') }}"></script>
-    <script type="module" src="{{ asset('js/app/index.js') }}"></script>
+    {{ importmap('app') }}
 </body>
 </html>

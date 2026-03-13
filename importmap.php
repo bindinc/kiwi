@@ -16,4 +16,8 @@ return [
         'path' => './assets/app.js',
         'entrypoint' => true,
     ],
+    'static-page-i18n' => [
+        'path' => './assets/static-page-i18n.js',
+        'entrypoint' => true,
+    ],
 ];
