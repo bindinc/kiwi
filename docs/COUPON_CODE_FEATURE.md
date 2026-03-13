@@ -92,20 +92,20 @@ Enhanced the article sales order system with improved discount visualization and
    - Updated discount display structure
    - Replaced single discount row with detailed breakdown
 
-2. **app/static/assets/css/article-search.css**
+2. **assets/css/article-search.css**
    - Coupon section styling
    - Discount breakdown styling
    - Badge and icon styles
    - Mobile responsive adjustments
 
-3. **app/static/assets/js/app/slices/article-search-slice.js**
+3. **assets/js/app/slices/article-search-slice.js**
    - Coupon validation logic
    - Apply/remove coupon functions
    - Enhanced calculateDiscounts()
    - Updated renderOrderItems()
    - Modified getOrderData()
 
-4. **app/static/assets/js/app.js**
+4. **assets/js/app/index.js**
    - Updated order storage to include coupon
    - Enhanced contact history descriptions
    - Added coupon to order object

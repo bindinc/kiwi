@@ -1,6 +1,6 @@
 # Action Router Conventions
 
-This document defines the frontend event-wiring rules for the modular `app/static/assets/js/app/` surface.
+This document defines the frontend event-wiring rules for the modular `assets/js/app/` surface.
 
 ## Core Rules
 
@@ -26,7 +26,7 @@ script/check
 
 The guardrails enforce:
 
-- `no-inline-handler`: no inline handler attributes inside `app/static/assets/js/app/`.
-- `no-duplicate-top-level-function`: no duplicate top-level `function` declarations in `app/static/assets/js/**/*.js`.
+- `no-inline-handler`: no inline handler attributes inside `assets/js/app/`.
+- `no-duplicate-top-level-function`: no duplicate top-level `function` declarations in `assets/js/**/*.js`.
 
 The no-inline guardrail is intentionally scoped to the module surface while legacy migration remains in progress outside this folder.

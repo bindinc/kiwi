@@ -44,7 +44,7 @@ function lineNumberAt(sourceText, index) {
 }
 
 async function runNoInlineHandlerGuardrail() {
-    const jsModuleRoot = path.join(repoRoot, 'app/static/assets/js/app');
+    const jsModuleRoot = path.join(repoRoot, 'assets/js/app');
     const files = await collectFiles(jsModuleRoot, new Set(['.js', '.mjs', '.html']));
     const violations = [];
 
@@ -75,7 +75,7 @@ async function runNoInlineHandlerGuardrail() {
 }
 
 async function runNoDuplicateTopLevelFunctionGuardrail() {
-    const jsRoot = path.join(repoRoot, 'app/static/assets/js');
+    const jsRoot = path.join(repoRoot, 'assets/js');
     const files = await collectFiles(jsRoot, new Set(['.js', '.mjs']));
     const duplicatesByFile = [];
 

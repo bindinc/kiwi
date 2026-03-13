@@ -64,7 +64,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 - Runs as a Symfony 6.4 LTS application on FrankenPHP.
 - Twig templates live under `templates/`.
-- Public assets live under `public/assets`.
+- Frontend source assets live under `assets/`.
 - The migration contract is documented in `docs/SYMFONY_MIGRATION_CONTRACT_MATRIX.md`.
 - `.env` is the committed default configuration for local development.
 - `.env.local` is the local-only override file.
@@ -197,10 +197,12 @@ make guardrail
 ## Repository Layout
 
 - `src/` contains Symfony controllers, security, and services.
+- `assets/` contains the frontend source assets managed by Symfony AssetMapper.
 - `templates/` contains Twig templates for the web shell and auth pages.
-- `public/assets/` contains the static frontend assets served by Symfony/FrankenPHP.
+- `public/` remains the webroot and receives compiled assets in production builds.
 - `fixtures/` contains extracted contract fixtures used by the Symfony POC services.
 - `app/` is retained temporarily as legacy migration reference material while the Symfony contract is stabilized.
+- `tests/frontend/` contains the Node-based frontend tests.
 - `scripts/` provides local dev helpers.
 
 ## Frontend Action Router Checks

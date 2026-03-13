@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Commit `.env` as the default Symfony dev configuration, keep `.env.local` as the local-only override, and retain `.env.test` for the PHPUnit environment.
 - Normalize Docker Compose around a dev-first Symfony container at `/app`, add explicit `dev` and `prod` Docker targets, keep Composer inside the dev image, and make release builds explicitly target the production runtime.
 - Make the OIDC runtime resolver accept both the documented secret file mount and the existing Flux-mounted file path so local Compose and cluster deployments keep working through the same entrypoint flow.
+- Adopt Symfony AssetMapper with `assets/` as the only frontend source directory, compile production assets during the Docker prod build, move Node tests to `tests/frontend/`, and stop tracking `public/assets/` plus `app/static/assets/` as hand-managed source trees.
 
 ## [v1.0.7]
 

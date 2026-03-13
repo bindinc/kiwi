@@ -64,3 +64,8 @@ dmypy.json
 # uv
 .uv/
 uv.lock
+
+###> symfony/asset-mapper ###
+/public/assets/
+/assets/vendor/
+###< symfony/asset-mapper ###
