@@ -189,6 +189,7 @@ Kiwi now stores server-side Symfony sessions in PostgreSQL.
 
 - `APP_SECRET` signs the session cookie and must stay stable across replicas.
 - `SESSION_DB_HOST`, `SESSION_DB_PORT`, `SESSION_DB_NAME`, `SESSION_DB_USER`, `SESSION_DB_PASSWORD`, and `SESSION_DB_SSLMODE` configure the shared PostgreSQL session store.
+- Local `docker compose up` bootstraps the session table automatically through `SESSION_BOOTSTRAP_ON_START=1`.
 - `php bin/console app:sessions:bootstrap` prepares `public.kiwi_http_sessions` and transparently archives a legacy Flask table before creating the Symfony schema.
 - `php bin/console app:sessions:cleanup` prunes expired rows through Symfony's configured session handler.
 
