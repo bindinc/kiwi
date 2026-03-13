@@ -3,6 +3,18 @@ infra/docker/nginx/certs/*.crt
 infra/docker/nginx/certs/*.key
 client_secrets.json
 
+# Symfony local config and runtime output
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+/phpunit.xml
+/.phpunit/
+.phpunit.result.cache
+
 # Python
 __pycache__/
 *.py[cod]
@@ -19,7 +31,6 @@ lib/
 lib64/
 parts/
 sdist/
-var/
 wheels/
 pip-wheel-metadata/
 share/python-wheels/
@@ -53,17 +64,3 @@ dmypy.json
 # uv
 .uv/
 uv.lock
-
-# PHP / Symfony
-/vendor/
-/.phpunit/
-/.env.local
-/.env.*.local
-/var/cache/
-/var/log/
-
-
-###> symfony/phpunit-bridge ###
-.phpunit.result.cache
-/phpunit.xml
-###< symfony/phpunit-bridge ###

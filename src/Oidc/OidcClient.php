@@ -120,6 +120,11 @@ class OidcClient
         ]);
     }
 
+    public function getAuthorizationScope(): string
+    {
+        return implode(' ', $this->getScopes());
+    }
+
     public function buildRedirectUri(Request $request): string
     {
         $explicit = trim((string) (getenv('OIDC_REDIRECT_URI') ?: ''));

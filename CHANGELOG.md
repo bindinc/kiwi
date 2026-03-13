@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Document the `app/static/assets/js` slice-classification audit in `plan/app-js-to-slices-checklist.md`, confirming `app/static/assets/js/app/slices` as the canonical slice directory and recording a no-move decision for non-slice JS modules.
 - Remove the legacy customer-subscription action bridge module (`app/static/assets/js/app/legacy-actions-customer-subscription.js`) by deleting `getLegacyFunction`, `callLegacy`, and `registerCustomerSubscriptionActions`; `app/static/assets/js/app/index.js` now relies on slice-owned handlers (`close-form` in app-shell and caller-identification actions in call-session).
 - Remove `app/static/assets/js/app/legacy-loader.js` by inlining `ensureRuntimeScriptsLoaded` into `app/static/assets/js/app/index.js`, so runtime script loading now lives in the entrypoint that owns bootstrap orchestration.
+- Keep the Symfony OIDC browser flow compatible with fallback Keycloak by sending space-delimited scopes in the authorization redirect and registering a dedicated `OidcUser` provider so authenticated sessions survive the post-callback page load.
+- Rotate the local Symfony `APP_SECRET`, stop tracking `.env`, and add `.env.example` as the committed template for local/test defaults.
 
 ## [v1.0.7]
 

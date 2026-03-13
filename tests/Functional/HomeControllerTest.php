@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Oidc\OidcClient;
+use App\Security\OidcUser;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -88,5 +89,28 @@ final class HomeControllerTest extends WebTestCase
         self::assertNotNull($location);
         self::assertStringContainsString('redirect_uri=https%3A%2F%2Fbdc.rtvmedia.org.local%2Fkiwi-preview%2Fauth%2Fcallback', $location);
         self::assertStringNotContainsString('User.Read', $location);
+
+        $query = [];
+        parse_str((string) parse_url($location, \PHP_URL_QUERY), $query);
+        self::assertSame('openid email profile', $query['scope'] ?? null);
+    }
+
+    public function testSessionAuthenticatedUserCanRenderHome(): void
+    {
+        $client = static::createClient();
+        $client->loginUser(
+            OidcUser::fromProfile([
+                'given_name' => 'Kiwi',
+                'family_name' => 'User',
+                'preferred_username' => 'kiwi-user',
+                'roles' => ['bink8s.app.kiwi.user'],
+            ], ['bink8s.app.kiwi.user']),
+            'main',
+        );
+
+        $client->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Kiwi User', (string) $client->getResponse()->getContent());
     }
 }

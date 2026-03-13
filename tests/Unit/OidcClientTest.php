@@ -24,6 +24,13 @@ final class OidcClientTest extends TestCase
         self::assertSame('https://example.org/auth/callback', $client->buildRedirectUri($request));
     }
 
+    public function testBuildAuthorizationScopeUsesSpaces(): void
+    {
+        $client = $this->createClient();
+
+        self::assertSame('openid email profile', $client->getAuthorizationScope());
+    }
+
     public function testBuildUserIdentity(): void
     {
         $client = $this->createClient();

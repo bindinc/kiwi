@@ -21,8 +21,9 @@ final class AuthController extends AbstractController
     public function login(Request $request): RedirectResponse
     {
         $provider = $this->oidcClient->createProvider($request);
+        $authorizationScope = $this->oidcClient->getAuthorizationScope();
         $authorizationUrl = $provider->getAuthorizationUrl([
-            'scope' => $this->oidcClient->getScopes(),
+            'scope' => $authorizationScope,
         ]);
 
         $session = $request->getSession();

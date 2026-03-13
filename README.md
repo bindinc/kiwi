@@ -66,6 +66,10 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Twig templates live under `templates/`.
 - Public assets live under `public/assets`.
 - The migration contract is documented in `docs/SYMFONY_MIGRATION_CONTRACT_MATRIX.md`.
+- `.env` is local-only and ignored by git. Start from:
+  ```bash
+  cp .env.example .env
+  ```
 
 ## Local OIDC dev (Docker Compose)
 
