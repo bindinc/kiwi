@@ -197,14 +197,9 @@ Kiwi now stores server-side Symfony sessions in PostgreSQL.
 
 ## Cluster follow-up
 
-This repository now documents, but does not apply, the cluster work still needed to complete the production side of `sc-187732`:
+The cluster-side follow-up for `sc-187732` now lives in [docs/CLUSTER_FOLLOW_UP.md](docs/CLUSTER_FOLLOW_UP.md).
 
-- inject `APP_SECRET` into both Kiwi tracks from a stable Kubernetes secret
-- inject `SESSION_DB_*` from the existing `kiwi-db-rw` consumer secret
-- set `sessionAffinity: None` on both Kiwi services
-- run `php bin/console app:sessions:bootstrap` once per environment before the cutover
-- keep `prod` on 3 replicas per active and preview track during the acceptance rollout
-- add a scheduled `php bin/console app:sessions:cleanup` job in the cluster config repo
+That document captures the remaining GitOps work, including the requirement to validate and roll out with 3 replicas per active and preview track.
 
 Useful dev commands:
 
