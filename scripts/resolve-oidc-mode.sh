@@ -1,6 +1,14 @@
 #!/usr/bin/env sh
 set -eu
 
+mounted_secrets="/etc/kiwi/oidc-client-secrets/client_secrets.json"
+
+if [ -f "$mounted_secrets" ] && [ -s "$mounted_secrets" ]; then
+  printf 'OIDC_MODE=external\n'
+  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$mounted_secrets"
+  exit 0
+fi
+
 if [ -n "${COMPOSE_PROJECT_ROOT:-}" ]; then
   project_root="$COMPOSE_PROJECT_ROOT"
 else

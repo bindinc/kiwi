@@ -1,0 +1,13 @@
+security:
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        main:
+            lazy: true
+            custom_authenticators:
+                - App\Security\OidcAuthenticator
+            entry_point: App\Security\OidcAuthenticator
+
+when@test:
+    security: ~
