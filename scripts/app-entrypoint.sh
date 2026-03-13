@@ -43,7 +43,7 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-mkdir -p "$app_root/var/cache" "$app_root/var/log" /tmp/kiwi-sessions
+mkdir -p "$app_root/var/cache" "$app_root/var/log"
 
 vendor_autoload="$app_root/vendor/autoload.php"
 composer_lock="$app_root/composer.lock"

@@ -1,0 +1,15 @@
+doctrine:
+    dbal:
+        driver: 'pdo_pgsql'
+        host: '%env(SESSION_DB_HOST)%'
+        port: '%env(int:SESSION_DB_PORT)%'
+        dbname: '%env(SESSION_DB_NAME)%'
+        user: '%env(SESSION_DB_USER)%'
+        password: '%env(SESSION_DB_PASSWORD)%'
+        server_version: '18'
+        charset: utf8
+        sslmode: '%env(SESSION_DB_SSLMODE)%'
+        profiling_collect_backtrace: '%kernel.debug%'
+
+    orm:
+        auto_mapping: false

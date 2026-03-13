@@ -13,7 +13,7 @@ This matrix records the HTTP and runtime contract that the Symfony runtime must 
 | OIDC callback | `/auth/callback` under both prefixes |
 | OIDC secret mount | `/etc/kiwi/oidc-client-secrets/client_secrets.json` |
 | Local fallback OIDC | `/kiwi-oidc` |
-| Session model | Native file-backed PHP sessions in `/tmp/kiwi-sessions` |
+| Session model | PostgreSQL-backed PHP sessions in `public.kiwi_http_sessions` |
 
 ## Page routes
 

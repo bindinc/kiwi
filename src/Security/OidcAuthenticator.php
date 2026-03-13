@@ -77,20 +77,6 @@ final class OidcAuthenticator extends AbstractAuthenticator implements Authentic
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
-        $session = $request->getSession();
-
-        $profile = $request->attributes->get('oidc_auth_profile');
-        $tokenData = $request->attributes->get('oidc_auth_token');
-
-        if (\is_array($profile)) {
-            $session->set('oidc_auth_profile', $profile);
-        }
-
-        if (\is_array($tokenData)) {
-            $session->set('oidc_auth_token', $tokenData);
-        }
-
-        $session->remove('oidc_auth_state');
         $targetPath = $this->resolveTargetPath($request);
 
         return new RedirectResponse($targetPath);
@@ -116,7 +102,6 @@ final class OidcAuthenticator extends AbstractAuthenticator implements Authentic
     {
         $session = $request->getSession();
         $targetPath = $session->get('oidc_auth_target_path');
-        $session->remove('oidc_auth_target_path');
 
         if (\is_string($targetPath) && '' !== trim($targetPath)) {
             if (str_starts_with($targetPath, '/')) {
