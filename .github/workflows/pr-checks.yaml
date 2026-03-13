@@ -1,0 +1,39 @@
+name: pr-checks
+
+on:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run PHPUnit
+        run: php bin/phpunit
+
+      - name: Run frontend tests
+        run: node --test $(find tests/frontend -name '*.test.mjs' -print | sort)
+
+      - name: Run guardrails
+        run: node script/check
+
+      - name: Build production image
+        run: docker build -f infra/docker/app/Dockerfile --target prod .

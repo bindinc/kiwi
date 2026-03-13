@@ -104,42 +104,37 @@ assert_role() {
     --data-urlencode "scope=openid profile email" \
     "${token_url}")"
 
-  TOKEN_RESPONSE="${token_response}" python - "${expected_role}" "${username}" <<'PY'
-import base64
-import json
-import os
-import sys
+  TOKEN_RESPONSE="${token_response}" node - "${expected_role}" "${username}" <<'NODE'
+const expectedRole = process.argv[2];
+const username = process.argv[3];
+const response = JSON.parse(process.env.TOKEN_RESPONSE ?? '{}');
+const idToken = response.id_token;
 
-expected_role = sys.argv[1]
-username = sys.argv[2]
-response = json.loads(os.environ["TOKEN_RESPONSE"])
-id_token = response.get("id_token")
+if (!idToken) {
+  console.log(`[compose-smoke-oidc] Missing id_token for user ${username}.`);
+  process.exit(1);
+}
 
-if not id_token:
-    print(f"[compose-smoke-oidc] Missing id_token for user {username}.")
-    sys.exit(1)
+const parts = idToken.split('.');
+if (parts.length !== 3) {
+  console.log(`[compose-smoke-oidc] Invalid id_token format for user ${username}.`);
+  process.exit(1);
+}
 
-parts = id_token.split(".")
-if len(parts) != 3:
-    print(f"[compose-smoke-oidc] Invalid id_token format for user {username}.")
-    sys.exit(1)
+const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+const roles = Array.isArray(claims.roles)
+  ? claims.roles
+  : (claims.roles ? [claims.roles] : []);
 
-payload = parts[1]
-payload += "=" * (-len(payload) % 4)
-claims = json.loads(base64.urlsafe_b64decode(payload.encode("utf-8")))
-roles = claims.get("roles") or []
-if isinstance(roles, str):
-    roles = [roles]
+if (!roles.includes(expectedRole)) {
+  console.log(
+    `[compose-smoke-oidc] User ${username} is missing role ${expectedRole}. Token roles: ${JSON.stringify(roles)}`
+  );
+  process.exit(1);
+}
 
-if expected_role not in roles:
-    print(
-        f"[compose-smoke-oidc] User {username} is missing role {expected_role}. "
-        f"Token roles: {roles}"
-    )
-    sys.exit(1)
-
-print(f"[compose-smoke-oidc] User {username} includes role {expected_role}.")
-PY
+console.log(`[compose-smoke-oidc] User ${username} includes role ${expectedRole}.`);
+NODE
 }
 
 assert_role "kiwi-admin" "bink8s.app.kiwi.admin"
