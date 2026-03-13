@@ -3,12 +3,7 @@ set -eu
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 app_root="$(cd "$script_dir/.." && pwd)"
-
-if [ -d "/workspace" ] && [ -x "/workspace/scripts/resolve-oidc-mode.sh" ]; then
-  resolved="$(COMPOSE_PROJECT_ROOT="/workspace" /workspace/scripts/resolve-oidc-mode.sh)"
-else
-  resolved="$(COMPOSE_PROJECT_ROOT="$app_root" "$script_dir/resolve-oidc-mode.sh")"
-fi
+resolved="$(COMPOSE_PROJECT_ROOT="$app_root" "$script_dir/resolve-oidc-mode.sh")"
 
 eval "$resolved"
 
@@ -48,6 +43,21 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-mkdir -p /tmp/kiwi-sessions
+mkdir -p "$app_root/var/cache" "$app_root/var/log" /tmp/kiwi-sessions
+
+vendor_autoload="$app_root/vendor/autoload.php"
+composer_lock="$app_root/composer.lock"
+vendor_missing=0
+
+if [ ! -f "$vendor_autoload" ]; then
+  vendor_missing=1
+elif [ -f "$composer_lock" ] && [ "$composer_lock" -nt "$vendor_autoload" ]; then
+  vendor_missing=1
+fi
+
+if [ "${APP_ENV:-dev}" = "dev" ] && [ "$vendor_missing" -eq 1 ]; then
+  printf '[app-entrypoint] Installing Composer dependencies for the mounted dev workspace.\n'
+  composer install --prefer-dist --no-interaction
+fi
 
 exec frankenphp run --config /etc/caddy/Caddyfile

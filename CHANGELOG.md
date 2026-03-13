@@ -14,7 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove the legacy customer-subscription action bridge module (`app/static/assets/js/app/legacy-actions-customer-subscription.js`) by deleting `getLegacyFunction`, `callLegacy`, and `registerCustomerSubscriptionActions`; `app/static/assets/js/app/index.js` now relies on slice-owned handlers (`close-form` in app-shell and caller-identification actions in call-session).
 - Remove `app/static/assets/js/app/legacy-loader.js` by inlining `ensureRuntimeScriptsLoaded` into `app/static/assets/js/app/index.js`, so runtime script loading now lives in the entrypoint that owns bootstrap orchestration.
 - Keep the Symfony OIDC browser flow compatible with fallback Keycloak by sending space-delimited scopes in the authorization redirect and registering a dedicated `OidcUser` provider so authenticated sessions survive the post-callback page load.
-- Rotate the local Symfony `APP_SECRET`, stop tracking `.env`, and add `.env.example` as the committed template for local/test defaults.
+- Commit `.env` as the default Symfony dev configuration, keep `.env.local` as the local-only override, and retain `.env.test` for the PHPUnit environment.
+- Normalize Docker Compose around a dev-first Symfony container at `/app`, add explicit `dev` and `prod` Docker targets, keep Composer inside the dev image, and make release builds explicitly target the production runtime.
+- Make the OIDC runtime resolver accept both the documented secret file mount and the existing Flux-mounted file path so local Compose and cluster deployments keep working through the same entrypoint flow.
 
 ## [v1.0.7]
 

@@ -66,10 +66,8 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Twig templates live under `templates/`.
 - Public assets live under `public/assets`.
 - The migration contract is documented in `docs/SYMFONY_MIGRATION_CONTRACT_MATRIX.md`.
-- `.env` is local-only and ignored by git. Start from:
-  ```bash
-  cp .env.example .env
-  ```
+- `.env` is the committed default configuration for local development.
+- `.env.local` is the local-only override file.
 
 ## Local OIDC dev (Docker Compose)
 
@@ -110,6 +108,12 @@ Docker Compose now supports two local OIDC modes:
    ```bash
    make compose-up
    ```
+
+   The `app` service is the primary Symfony dev container:
+   - project root is mounted at `/app`
+   - Composer dependencies live in a named Docker volume at `/app/vendor`
+   - runtime cache/log data lives in a named Docker volume at `/app/var`
+   - regular PHP and Twig edits do not require a rebuild
 
    Startup runs a preflight check with this behavior:
    - missing `client_secrets.json` -> fallback OIDC mode
@@ -179,6 +183,17 @@ Stop the stack with:
 make compose-down
 ```
 
+Useful dev commands:
+
+```bash
+make shell
+make console ARGS='about'
+make composer ARGS='install'
+make phpunit
+make js-test
+make guardrail
+```
+
 ## Repository Layout
 
 - `src/` contains Symfony controllers, security, and services.
@@ -216,6 +231,8 @@ local overlay in the cluster config repo:
 ```bash
 make image-build
 ```
+
+The local image build uses the Dockerfile `prod` target so it matches the release runtime shape.
 
 ## Data Storage
 
