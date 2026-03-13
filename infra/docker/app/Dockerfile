@@ -22,7 +22,7 @@ RUN composer install \
     --no-scripts \
     --optimize-autoloader
 
-FROM dunglas/frankenphp:1-php8.3-alpine AS runtime-base
+FROM dunglas/frankenphp:1-php8.4-alpine AS runtime-base
 
 RUN apk add --no-cache bash curl git unzip \
     && mkdir -p /tmp/kiwi-sessions /app/var/cache /app/var/log

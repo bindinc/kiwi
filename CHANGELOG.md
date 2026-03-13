@@ -6,7 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
-- Replace the Flask runtime with a Symfony 6.4 LTS application on FrankenPHP while keeping the existing GHCR image contract, port `8000`, `/kiwi` and `/kiwi-preview` reverse-proxy prefixes, `/auth/callback` callback path, and the local fallback OIDC flow intact.
+- Replace the Flask runtime with a Symfony 7.4 LTS application on FrankenPHP while keeping the existing GHCR image contract, port `8000`, `/kiwi` and `/kiwi-preview` reverse-proxy prefixes, `/auth/callback` callback path, and the local fallback OIDC flow intact.
+- Upgrade the KIWI runtime baseline to PHP 8.4 and Symfony 7.4 LTS across Composer constraints, Docker runtime, CI validation, and developer documentation.
 - Port the existing page/API contract to Symfony controllers and services, including session-backed POC state, catalog/workflow endpoints, Teams presence sync, prefix-aware asset/login/logout URL generation, and provider logout fallback to `/logged-out`.
 - Keep local Docker Compose and image publishing contracts stable while switching the app container to a Composer-built FrankenPHP image and preserving `make compose-smoke-oidc` as the required OIDC regression check.
 - Add a Symfony migration contract matrix and PHPUnit coverage for public/protected route behavior, OIDC helper logic, forwarded-prefix handling, and core API workflows.

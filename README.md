@@ -62,7 +62,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Installation & Usage
 
-- Runs as a Symfony 6.4 LTS application on FrankenPHP.
+- Runs as a Symfony 7.4 LTS application on FrankenPHP with PHP 8.4.
 - Twig templates live under `templates/`.
 - Frontend source assets live under `assets/`.
 - The migration contract is documented in `docs/SYMFONY_MIGRATION_CONTRACT_MATRIX.md`.
@@ -281,7 +281,7 @@ The local image build uses the Dockerfile `prod` target so it matches the releas
 - **HTML5**: Semantic structure
 - **CSS3**: Modern styling with CSS variables
 - **Vanilla JavaScript**: No frameworks, pure JS
-- **Symfony 6.4 LTS**: Security-based OIDC integration and controller/runtime layer
+- **Symfony 7.4 LTS on PHP 8.4**: Security-based OIDC integration and controller/runtime layer
 - **FrankenPHP**: Single-container HTTP runtime on port `8000`
 
 ### Browser Compatibility

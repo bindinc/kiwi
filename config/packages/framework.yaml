@@ -6,6 +6,8 @@ framework:
     handle_all_throwables: true
     trusted_proxies: '127.0.0.1,REMOTE_ADDR'
     trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-prefix']
+    property_info:
+        with_constructor_extractor: false
 
     session:
         handler_id: null
