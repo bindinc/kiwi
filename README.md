@@ -201,9 +201,9 @@ make guardrail
 - `templates/` contains Twig templates for the web shell and auth pages.
 - `public/` remains the webroot and receives compiled assets in production builds.
 - `fixtures/` contains extracted contract fixtures used by the Symfony POC services.
-- `app/` is retained temporarily as legacy migration reference material while the Symfony contract is stabilized.
 - `tests/frontend/` contains the Node-based frontend tests.
 - `scripts/` provides local dev helpers.
+- The archived Flask runtime is preserved on the `archive/kiwi-flask-runtime` branch.
 
 ## Frontend Action Router Checks
 

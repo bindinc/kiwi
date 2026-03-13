@@ -87,7 +87,7 @@ Enhanced the article sales order system with improved discount visualization and
 ## Technical Implementation
 
 ### Files Modified
-1. **app/templates/base/index.html**
+1. **templates/base/index.html.twig**
    - Added coupon code input section
    - Updated discount display structure
    - Replaced single discount row with detailed breakdown
