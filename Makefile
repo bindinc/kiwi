@@ -50,7 +50,7 @@ phpunit:
 	docker compose exec app php bin/phpunit $(ARGS)
 
 js-test:
-	node --test $$(find public/assets/js -name '*.test.mjs' -print | sort)
+	node --test $$(find tests/frontend -name '*.test.mjs' -print | sort)
 
 guardrail:
 	node script/check

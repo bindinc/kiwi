@@ -45,10 +45,12 @@ COPY --from=vendor-dev /app/vendor /app/vendor
 
 COPY .env ./
 COPY .env.test ./
+COPY assets ./assets
 COPY bin ./bin
 COPY composer.json composer.lock symfony.lock ./
 COPY config ./config
 COPY fixtures ./fixtures
+COPY importmap.php ./
 COPY phpunit.xml.dist ./
 COPY public ./public
 COPY scripts ./scripts
@@ -66,10 +68,12 @@ COPY --from=vendor-prod /app/vendor /app/vendor
 
 COPY .env ./
 COPY .env.test ./
+COPY assets ./assets
 COPY bin ./bin
 COPY composer.json composer.lock symfony.lock ./
 COPY config ./config
 COPY fixtures ./fixtures
+COPY importmap.php ./
 COPY phpunit.xml.dist ./
 COPY public ./public
 COPY scripts ./scripts
@@ -80,6 +84,7 @@ RUN composer dump-autoload \
     --classmap-authoritative \
     --no-dev \
     --no-interaction \
+    && php bin/console asset-map:compile \
     && php bin/console cache:clear
 
 FROM runtime-base AS prod
