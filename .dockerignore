@@ -4,4 +4,10 @@ docs
 plan
 infra/k8s
 infra/helm
-app/**/*.test.js
+app
+tests
+vendor
+var
+infra/docker/nginx/certs
+*.pyc
+__pycache__

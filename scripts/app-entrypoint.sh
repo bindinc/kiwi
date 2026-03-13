@@ -1,7 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
-resolved="$("/workspace/scripts/resolve-oidc-mode.sh")"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+app_root="$(cd "$script_dir/.." && pwd)"
+resolved="$(COMPOSE_PROJECT_ROOT="$app_root" "$script_dir/resolve-oidc-mode.sh")"
+
 eval "$resolved"
 
 export OIDC_CLIENT_SECRETS="$OIDC_CLIENT_SECRETS_PATH"
@@ -40,4 +43,21 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-exec gunicorn -b 0.0.0.0:8000 --reload main:app
+mkdir -p "$app_root/var/cache" "$app_root/var/log" /tmp/kiwi-sessions
+
+vendor_autoload="$app_root/vendor/autoload.php"
+composer_lock="$app_root/composer.lock"
+vendor_missing=0
+
+if [ ! -f "$vendor_autoload" ]; then
+  vendor_missing=1
+elif [ -f "$composer_lock" ] && [ "$composer_lock" -nt "$vendor_autoload" ]; then
+  vendor_missing=1
+fi
+
+if [ "${APP_ENV:-dev}" = "dev" ] && [ "$vendor_missing" -eq 1 ]; then
+  printf '[app-entrypoint] Installing Composer dependencies for the mounted dev workspace.\n'
+  composer install --prefer-dist --no-interaction
+fi
+
+exec frankenphp run --config /etc/caddy/Caddyfile

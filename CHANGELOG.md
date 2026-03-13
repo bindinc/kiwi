@@ -6,9 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- Replace the Flask runtime with a Symfony 6.4 LTS application on FrankenPHP while keeping the existing GHCR image contract, port `8000`, `/kiwi` and `/kiwi-preview` reverse-proxy prefixes, `/auth/callback` callback path, and the local fallback OIDC flow intact.
+- Port the existing page/API contract to Symfony controllers and services, including session-backed POC state, catalog/workflow endpoints, Teams presence sync, prefix-aware asset/login/logout URL generation, and provider logout fallback to `/logged-out`.
+- Keep local Docker Compose and image publishing contracts stable while switching the app container to a Composer-built FrankenPHP image and preserving `make compose-smoke-oidc` as the required OIDC regression check.
+- Add a Symfony migration contract matrix and PHPUnit coverage for public/protected route behavior, OIDC helper logic, forwarded-prefix handling, and core API workflows.
 - Document the `app/static/assets/js` slice-classification audit in `plan/app-js-to-slices-checklist.md`, confirming `app/static/assets/js/app/slices` as the canonical slice directory and recording a no-move decision for non-slice JS modules.
 - Remove the legacy customer-subscription action bridge module (`app/static/assets/js/app/legacy-actions-customer-subscription.js`) by deleting `getLegacyFunction`, `callLegacy`, and `registerCustomerSubscriptionActions`; `app/static/assets/js/app/index.js` now relies on slice-owned handlers (`close-form` in app-shell and caller-identification actions in call-session).
 - Remove `app/static/assets/js/app/legacy-loader.js` by inlining `ensureRuntimeScriptsLoaded` into `app/static/assets/js/app/index.js`, so runtime script loading now lives in the entrypoint that owns bootstrap orchestration.
+- Keep the Symfony OIDC browser flow compatible with fallback Keycloak by sending space-delimited scopes in the authorization redirect and registering a dedicated `OidcUser` provider so authenticated sessions survive the post-callback page load.
+- Commit `.env` as the default Symfony dev configuration, keep `.env.local` as the local-only override, and retain `.env.test` for the PHPUnit environment.
+- Normalize Docker Compose around a dev-first Symfony container at `/app`, add explicit `dev` and `prod` Docker targets, keep Composer inside the dev image, and make release builds explicitly target the production runtime.
+- Make the OIDC runtime resolver accept both the documented secret file mount and the existing Flux-mounted file path so local Compose and cluster deployments keep working through the same entrypoint flow.
 
 ## [v1.0.7]
 

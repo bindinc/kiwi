@@ -1,0 +1,17 @@
+security:
+    providers:
+        app_oidc_user_provider:
+            id: App\Security\OidcUserProvider
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        main:
+            lazy: true
+            provider: app_oidc_user_provider
+            custom_authenticators:
+                - App\Security\OidcAuthenticator
+            entry_point: App\Security\OidcAuthenticator
+
+when@test:
+    security: ~

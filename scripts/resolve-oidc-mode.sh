@@ -1,6 +1,15 @@
 #!/usr/bin/env sh
 set -eu
 
+mounted_secrets="/etc/kiwi/oidc-client-secrets/client_secrets.json"
+mounted_legacy_secrets="/etc/kiwi/oidc-client-secrets"
+
+if [ -f "$mounted_secrets" ] && [ -s "$mounted_secrets" ]; then
+  printf 'OIDC_MODE=external\n'
+  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$mounted_secrets"
+  exit 0
+fi
+
 if [ -n "${COMPOSE_PROJECT_ROOT:-}" ]; then
   project_root="$COMPOSE_PROJECT_ROOT"
 else
@@ -16,20 +25,57 @@ fail() {
   exit 1
 }
 
-if [ -d "$external_secrets" ]; then
-  fail "Expected a file but found a directory at $external_secrets."
+resolve_existing_secrets_file() {
+  candidate="$1"
+
+  if [ -z "$candidate" ]; then
+    return 1
+  fi
+
+  if [ -d "$candidate" ]; then
+    fail "Expected a file but found a directory at $candidate."
+  fi
+
+  if [ ! -e "$candidate" ]; then
+    return 1
+  fi
+
+  if [ ! -f "$candidate" ]; then
+    fail "Expected a regular file: $candidate."
+  fi
+
+  if [ ! -s "$candidate" ]; then
+    fail "File is empty: $candidate."
+  fi
+
+  printf '%s\n' "$candidate"
+}
+
+explicit_secrets="$(resolve_existing_secrets_file "${OIDC_CLIENT_SECRETS:-}" || true)"
+if [ -n "$explicit_secrets" ]; then
+  printf 'OIDC_MODE=external\n'
+  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$explicit_secrets"
+  exit 0
 fi
 
-if [ -e "$external_secrets" ]; then
-  if [ ! -f "$external_secrets" ]; then
-    fail "Expected a regular file: $external_secrets."
-  fi
-  if [ ! -s "$external_secrets" ]; then
-    fail "File is empty: $external_secrets."
-  fi
-
+mounted_file="$(resolve_existing_secrets_file "$mounted_secrets" || true)"
+if [ -n "$mounted_file" ]; then
   printf 'OIDC_MODE=external\n'
-  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$external_secrets"
+  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$mounted_file"
+  exit 0
+fi
+
+mounted_legacy_file="$(resolve_existing_secrets_file "$mounted_legacy_secrets" || true)"
+if [ -n "$mounted_legacy_file" ]; then
+  printf 'OIDC_MODE=external\n'
+  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$mounted_legacy_file"
+  exit 0
+fi
+
+external_file="$(resolve_existing_secrets_file "$external_secrets" || true)"
+if [ -n "$external_file" ]; then
+  printf 'OIDC_MODE=external\n'
+  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$external_file"
   exit 0
 fi
 
