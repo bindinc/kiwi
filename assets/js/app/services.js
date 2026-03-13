@@ -10,8 +10,33 @@ export function getGlobalScope() {
     return undefined;
 }
 
-export function resolveScriptUrl(relativePath) {
-    return new URL(relativePath, import.meta.url).toString();
+function getMappedAssetUrl(assetKey) {
+    const globalScope = getGlobalScope();
+    const assetPaths = globalScope && typeof globalScope.kiwiAssetPaths === 'object'
+        ? globalScope.kiwiAssetPaths
+        : null;
+    const mappedUrl = assetPaths ? assetPaths[assetKey] : null;
+
+    return typeof mappedUrl === 'string' && mappedUrl !== '' ? mappedUrl : null;
+}
+
+export function resolveScriptUrl(options = {}) {
+    const normalizedOptions = typeof options === 'string'
+        ? { relativePath: options }
+        : options;
+    const mappedUrl = normalizedOptions.assetKey
+        ? getMappedAssetUrl(normalizedOptions.assetKey)
+        : null;
+
+    if (mappedUrl) {
+        return mappedUrl;
+    }
+
+    if (!normalizedOptions.relativePath) {
+        return null;
+    }
+
+    return new URL(normalizedOptions.relativePath, import.meta.url).toString();
 }
 
 export function loadScriptOnce(options = {}) {
