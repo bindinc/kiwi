@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Adopt Symfony AssetMapper with `assets/` as the only frontend source directory, compile production assets during the Docker prod build, move Node tests to `tests/frontend/`, and stop tracking `public/assets/` plus `app/static/assets/` as hand-managed source trees.
 - Archive the last Flask-only runtime on `archive/kiwi-flask-runtime`, remove the legacy Flask source tree plus Python tests from the active repo, replace the fallback OIDC smoke check's Python dependency with Node, and add a pull-request workflow that validates the production build, PHPUnit, Node tests, and `script/check`.
 
+### Fixed
+- Load the main and static-page ES module entrypoints through Symfony importmaps and expose hashed legacy runtime script URLs from Twig so nested frontend assets keep resolving behind `/kiwi` and `/kiwi-preview`.
+
 ## [v1.0.7]
 
 ### Added

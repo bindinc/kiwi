@@ -16,6 +16,6 @@
             <a class="btn btn-primary" href="{{ login_url }}" data-i18n="loggedOutPage.loginCta">Opnieuw inloggen</a>
         </div>
     </div>
-    <script type="module" src="{{ asset('js/i18n/static-page-i18n.js') }}"></script>
+    {{ importmap('static-page-i18n') }}
 </body>
 </html>
