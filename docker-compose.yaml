@@ -59,6 +59,23 @@ services:
       timeout: 1s
       retries: 10
 
+  postgres:
+    image: postgres:18.2-alpine
+    environment:
+      POSTGRES_DB: kiwi
+      POSTGRES_USER: kiwi
+      POSTGRES_PASSWORD: kiwi
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U kiwi -d kiwi
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 2s
+    volumes:
+      - kiwi_postgres_data:/var/lib/postgresql/data
+
   app:
     build:
       context: .
@@ -71,9 +88,19 @@ services:
         condition: service_completed_successfully
       fallback-oidc:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     environment:
       APP_ENV: dev
       APP_DEBUG: 1
+      APP_SECRET: kiwi-local-compose-session-secret
+      SESSION_DB_HOST: postgres
+      SESSION_DB_PORT: "5432"
+      SESSION_DB_NAME: kiwi
+      SESSION_DB_USER: kiwi
+      SESSION_DB_PASSWORD: kiwi
+      SESSION_DB_SSLMODE: disable
+      SESSION_BOOTSTRAP_ON_START: "1"
     working_dir: /app
     healthcheck:
       test:
@@ -108,3 +135,4 @@ services:
 volumes:
   kiwi_var:
   kiwi_vendor:
+  kiwi_postgres_data:

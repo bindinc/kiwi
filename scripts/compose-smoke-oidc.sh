@@ -61,6 +61,22 @@ for attempt in $(seq 1 60); do
   sleep 1
 done
 
+bootstrap_ready=0
+for attempt in $(seq 1 60); do
+  if docker compose -f "${compose_file}" exec -T app php bin/console app:sessions:bootstrap >/dev/null 2>&1; then
+    echo "[compose-smoke-oidc] PostgreSQL session bootstrap succeeded."
+    bootstrap_ready=1
+    break
+  fi
+
+  sleep 1
+done
+
+if [[ "${bootstrap_ready}" != "1" ]]; then
+  echo "[compose-smoke-oidc] PostgreSQL session bootstrap did not become ready."
+  exit 1
+fi
+
 login_redirect_ready=0
 for attempt in $(seq 1 60); do
   login_redirect="$(curl -kis "${gateway_base_url}/kiwi/login" | awk 'BEGIN{IGNORECASE=1} /^location:/{print $2; exit}' | tr -d '\r')"
@@ -88,6 +104,16 @@ if [[ "${login_redirect_ready}" != "1" ]]; then
   echo "[compose-smoke-oidc] Fallback login redirect did not become available."
   exit 1
 fi
+
+session_rows="$(docker compose -f "${compose_file}" exec -T postgres psql -U kiwi -d kiwi -tA \
+  -c "SELECT count(*) FROM public.kiwi_http_sessions;")"
+
+if [[ ! "${session_rows}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[compose-smoke-oidc] Expected PostgreSQL-backed session rows after /kiwi/login, got: ${session_rows}"
+  exit 1
+fi
+
+echo "[compose-smoke-oidc] PostgreSQL-backed session rows detected: ${session_rows}."
 
 assert_role() {
   local username="$1"

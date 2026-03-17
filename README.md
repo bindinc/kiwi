@@ -103,7 +103,7 @@ Docker Compose now supports two local OIDC modes:
    ```
    Compose will load `infra/docker/oidc/client_secrets.fallback.json` automatically.
 
-3. Start the local stack (it will generate local TLS certs on first run):
+3. Start the local stack (it will generate local TLS certs on first run and start a local PostgreSQL 18.2 session store):
 
    ```bash
    make compose-up
@@ -183,6 +183,24 @@ Stop the stack with:
 make compose-down
 ```
 
+## PostgreSQL session store
+
+Kiwi now stores server-side Symfony sessions in PostgreSQL.
+
+- `APP_SECRET` signs the session cookie and must stay stable across replicas.
+- `SESSION_DB_HOST`, `SESSION_DB_PORT`, `SESSION_DB_NAME`, `SESSION_DB_USER`, `SESSION_DB_PASSWORD`, and `SESSION_DB_SSLMODE` configure the shared PostgreSQL session store.
+- Local `docker compose up` bootstraps the session table automatically through `SESSION_BOOTSTRAP_ON_START=1`.
+- `php bin/console app:sessions:bootstrap` prepares `public.kiwi_http_sessions` and transparently archives a legacy Flask table before creating the Symfony schema.
+- `php bin/console app:sessions:cleanup` prunes expired rows through Symfony's configured session handler.
+
+`make compose-smoke-oidc` now boots the local PostgreSQL service, runs `app:sessions:bootstrap`, hits `/kiwi/login`, and verifies that `public.kiwi_http_sessions` receives session rows.
+
+## Cluster follow-up
+
+The cluster-side follow-up for `sc-187732` now lives in [docs/CLUSTER_FOLLOW_UP.md](docs/CLUSTER_FOLLOW_UP.md).
+
+That document captures the remaining GitOps work, including the requirement to validate and roll out with 3 replicas per active and preview track.
+
 Useful dev commands:
 
 ```bash
@@ -238,9 +256,9 @@ The local image build uses the Dockerfile `prod` target so it matches the releas
 
 ## Data Storage
 
-- **LocalStorage**: All data is stored locally in the browser
-- **Demo Data**: Demo data loads automatically on first use
-- **Persistence**: Changes are preserved between sessions
+- **Session store**: OIDC state, authenticated user context, `kiwi_poc_state`, and agent status live in the shared PostgreSQL-backed Symfony session.
+- **Demo fixtures**: Initial customer and catalog data still come from the extracted fixtures in this repository.
+- **Persistence model**: Session-backed workflow data now survives replica switches, but remains session-scoped rather than becoming shared domain data.
 
 ### Demo Customers
 1. **Jan de Vries** - Amsterdam (1012AB, nr. 42)

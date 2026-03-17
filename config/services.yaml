@@ -4,6 +4,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    app.session.table_name: 'kiwi_http_sessions'
+    app.session.ttl_seconds: 43200
 
 services:
     # default configuration for services in *this* file
@@ -20,5 +22,24 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
+    App\Session\DoctrinePdoSessionHandlerFactory: ~
+
+    App\Session\PostgreSqlSessionTableManager:
+        arguments:
+            $tableName: '%app.session.table_name%'
+
+    App\Command\CleanupSessionsCommand:
+        arguments:
+            $sessionTtlSeconds: '%app.session.ttl_seconds%'
+
+    Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler:
+        factory: ['@App\Session\DoctrinePdoSessionHandlerFactory', 'create']
+        arguments:
+            -
+                db_table: '%app.session.table_name%'
+                db_id_col: 'sess_id'
+                db_data_col: 'sess_data'
+                db_lifetime_col: 'sess_lifetime'
+                db_time_col: 'sess_time'
+                ttl: '%app.session.ttl_seconds%'
+                lock_mode: !php/const Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler::LOCK_ADVISORY

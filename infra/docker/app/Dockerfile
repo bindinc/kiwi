@@ -7,6 +7,7 @@ RUN composer install \
     --prefer-dist \
     --no-interaction \
     --no-progress \
+    --ignore-platform-req=ext-pdo_pgsql \
     --no-scripts
 
 FROM composer:2 AS vendor-prod
@@ -19,13 +20,15 @@ RUN composer install \
     --prefer-dist \
     --no-interaction \
     --no-progress \
+    --ignore-platform-req=ext-pdo_pgsql \
     --no-scripts \
     --optimize-autoloader
 
 FROM dunglas/frankenphp:1-php8.4-alpine AS runtime-base
 
 RUN apk add --no-cache bash curl git unzip \
-    && mkdir -p /tmp/kiwi-sessions /app/var/cache /app/var/log
+    && install-php-extensions pdo_pgsql \
+    && mkdir -p /app/var/cache /app/var/log
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
@@ -93,7 +96,7 @@ ENV APP_ENV=prod \
     APP_DEBUG=0
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
-    && chown -R www-data:www-data /tmp/kiwi-sessions /app
+    && chown -R www-data:www-data /app
 
 COPY --from=prod-build --chown=www-data:www-data /app /app
 

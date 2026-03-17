@@ -43,7 +43,7 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-mkdir -p "$app_root/var/cache" "$app_root/var/log" /tmp/kiwi-sessions
+mkdir -p "$app_root/var/cache" "$app_root/var/log"
 
 vendor_autoload="$app_root/vendor/autoload.php"
 composer_lock="$app_root/composer.lock"
@@ -58,6 +58,12 @@ fi
 if [ "${APP_ENV:-dev}" = "dev" ] && [ "$vendor_missing" -eq 1 ]; then
   printf '[app-entrypoint] Installing Composer dependencies for the mounted dev workspace.\n'
   composer install --prefer-dist --no-interaction
+fi
+
+should_bootstrap_sessions="${SESSION_BOOTSTRAP_ON_START:-0}"
+if [ "$should_bootstrap_sessions" = "1" ]; then
+  printf '[app-entrypoint] Bootstrapping the PostgreSQL session table.\n'
+  php bin/console app:sessions:bootstrap --no-interaction
 fi
 
 exec frankenphp run --config /etc/caddy/Caddyfile
