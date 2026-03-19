@@ -34,6 +34,12 @@ final class SwaggerController extends AbstractApiController
     {
         $this->requireApiAccess($request);
 
+        $swaggerUiCss = $this->buildAssetPath($request, 'vendor/swagger-ui-dist/swagger-ui.css');
+        $swaggerUiBundle = $this->buildAssetPath($request, 'vendor/swagger-ui-dist/swagger-ui-bundle.js');
+        $swaggerUiStandalonePreset = $this->buildAssetPath($request, 'vendor/swagger-ui-dist/swagger-ui-standalone-preset.js');
+        $swaggerUiFavicon32 = $this->buildAssetPath($request, 'vendor/swagger-ui-dist/favicon-32x32.png');
+        $swaggerUiFavicon16 = $this->buildAssetPath($request, 'vendor/swagger-ui-dist/favicon-16x16.png');
+
         $html = <<<'HTML'
 <!doctype html>
 <html lang="en">
@@ -41,7 +47,9 @@ final class SwaggerController extends AbstractApiController
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kiwi API Swagger</title>
-    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+    <link rel="icon" type="image/png" href="%s" sizes="32x32" />
+    <link rel="icon" type="image/png" href="%s" sizes="16x16" />
+    <link rel="stylesheet" href="%s" />
     <style>
       body { margin: 0; background: #f8fafc; }
       #swagger-ui { max-width: 1200px; margin: 0 auto; }
@@ -49,19 +57,35 @@ final class SwaggerController extends AbstractApiController
   </head>
   <body>
     <div id="swagger-ui"></div>
-    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="%s"></script>
+    <script src="%s"></script>
     <script>
       window.ui = SwaggerUIBundle({
         url: "./swagger.json",
         dom_id: "#swagger-ui",
         deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset,
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl,
+        ],
+        layout: "StandaloneLayout",
       });
     </script>
   </body>
 </html>
 HTML;
 
-        return new Response($html, 200, ['Content-Type' => 'text/html']);
+        return new Response(sprintf(
+            $html,
+            htmlspecialchars($swaggerUiFavicon32, \ENT_QUOTES),
+            htmlspecialchars($swaggerUiFavicon16, \ENT_QUOTES),
+            htmlspecialchars($swaggerUiCss, \ENT_QUOTES),
+            htmlspecialchars($swaggerUiBundle, \ENT_QUOTES),
+            htmlspecialchars($swaggerUiStandalonePreset, \ENT_QUOTES),
+        ), 200, ['Content-Type' => 'text/html']);
     }
 
     /**
@@ -159,5 +183,12 @@ HTML;
         $parts = array_values(array_filter(explode('/', $path)));
 
         return $parts[2] ?? 'api';
+    }
+
+    private function buildAssetPath(Request $request, string $asset): string
+    {
+        $basePath = rtrim($request->getBasePath(), '/');
+
+        return ('' !== $basePath ? $basePath : '').'/'.$asset;
     }
 }

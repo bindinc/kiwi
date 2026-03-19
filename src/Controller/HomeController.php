@@ -12,13 +12,18 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Csrf\CsrfToken;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 final class HomeController extends AbstractController
 {
+    private const LOGOUT_CSRF_TOKEN_ID = 'app_logout';
+
     public function __construct(
         private readonly OidcClient $oidcClient,
         private readonly TokenStorageInterface $tokenStorage,
+        private readonly CsrfTokenManagerInterface $csrfTokenManager,
     ) {
     }
 
@@ -61,9 +66,14 @@ final class HomeController extends AbstractController
         ]);
     }
 
-    #[Route('/app-logout', name: 'app_logout', methods: ['GET'])]
+    #[Route('/app-logout', name: 'app_logout', methods: ['POST'])]
     public function logout(Request $request): RedirectResponse
     {
+        $submittedToken = trim((string) $request->request->get('_csrf_token', ''));
+        if (!$this->csrfTokenManager->isTokenValid(new CsrfToken(self::LOGOUT_CSRF_TOKEN_ID, $submittedToken))) {
+            throw $this->createAccessDeniedException('Invalid logout CSRF token.');
+        }
+
         $session = $request->getSession();
         $sessionData = $this->getSessionData($request);
         $idTokenHint = $this->oidcClient->getIdToken($sessionData);

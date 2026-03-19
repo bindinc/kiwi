@@ -64,7 +64,10 @@
                                 </div>
                                 <div class="profile-menu-section">
                                     <div class="profile-menu-header" data-i18n="indexHtml.text.account_59f8a2fc">Account</div>
-                                    <a class="status-menu-item status-menu-item-danger" href="{{ logout_url }}" data-i18n="indexHtml.text.uitloggen_69d43fb9">Uitloggen</a>
+                                    <form method="post" action="{{ logout_url }}">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('app_logout') }}">
+                                        <button class="status-menu-item status-menu-item-danger" type="submit" data-i18n="indexHtml.text.uitloggen_69d43fb9">Uitloggen</button>
+                                    </form>
                                 </div>
                                 <div class="profile-menu-section profile-menu-info">
                                     <div class="profile-menu-header" data-i18n="indexHtml.text.werkdag_e1c5e04e">Werkdag</div>
