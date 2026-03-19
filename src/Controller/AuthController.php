@@ -12,6 +12,10 @@ use Symfony\Component\Routing\Annotation\Route;
 
 final class AuthController extends AbstractController
 {
+    private const AUTH_STATE_KEY = 'oidc_auth_state';
+    private const AUTH_TARGET_PATH_KEY = 'oidc_auth_target_path';
+    private const AUTH_NONCE_KEY = 'oidc_auth_nonce';
+
     public function __construct(
         private readonly OidcClient $oidcClient,
     ) {
@@ -22,13 +26,16 @@ final class AuthController extends AbstractController
     {
         $provider = $this->oidcClient->createProvider($request);
         $authorizationScope = $this->oidcClient->getAuthorizationScope();
+        $nonce = bin2hex(random_bytes(16));
         $authorizationUrl = $provider->getAuthorizationUrl([
             'scope' => $authorizationScope,
+            'nonce' => $nonce,
         ]);
 
         $session = $request->getSession();
-        $session->set('oidc_auth_state', $provider->getState());
-        $session->set('oidc_auth_target_path', $this->sanitizeNextTarget($request));
+        $session->set(self::AUTH_STATE_KEY, $provider->getState());
+        $session->set(self::AUTH_NONCE_KEY, $nonce);
+        $session->set(self::AUTH_TARGET_PATH_KEY, $this->sanitizeNextTarget($request));
 
         return new RedirectResponse($authorizationUrl);
     }
@@ -48,24 +55,19 @@ final class AuthController extends AbstractController
         }
 
         $next = trim($next);
-        if (str_starts_with($next, '/')) {
+        if ($this->isSafeRelativeTarget($next)) {
             return $next;
         }
 
-        $parts = parse_url($next);
-        if (!\is_array($parts)) {
-            return $fallback;
-        }
+        return $fallback;
+    }
 
-        $currentHost = $request->getHost();
-        $currentScheme = $request->getScheme();
-        if (($parts['host'] ?? null) !== $currentHost || ($parts['scheme'] ?? null) !== $currentScheme) {
-            return $fallback;
-        }
-
-        $path = (string) ($parts['path'] ?? '/');
-        $query = isset($parts['query']) ? '?'.$parts['query'] : '';
-
-        return $path.$query;
+    private function isSafeRelativeTarget(string $target): bool
+    {
+        return str_starts_with($target, '/')
+            && !str_starts_with($target, '//')
+            && !str_contains($target, "\r")
+            && !str_contains($target, "\n")
+            && !str_contains($target, '\\');
     }
 }
