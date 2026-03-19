@@ -16,7 +16,10 @@
         </p>
 
         <div class="access-denied-actions">
-            <a class="btn btn-primary" href="{{ logout_url }}" data-i18n="accessDeniedPage.logoutCta">Uitloggen</a>
+            <form method="post" action="{{ logout_url }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('app_logout') }}">
+                <button class="btn btn-primary" type="submit" data-i18n="accessDeniedPage.logoutCta">Uitloggen</button>
+            </form>
         </div>
 
         <div class="access-denied-roles">

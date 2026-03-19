@@ -34,11 +34,13 @@ final class HomeControllerTest extends WebTestCase
         $content = (string) $client->getResponse()->getContent();
         self::assertStringContainsString('Geen toegang tot Kiwi', $content);
         self::assertStringContainsString('no.access.role', $content);
+        self::assertStringContainsString('method="post"', $content);
+        self::assertStringContainsString('name="_csrf_token"', $content);
         self::assertStringContainsString('type="importmap"', $content);
         self::assertStringContainsString('static-page-i18n', $content);
     }
 
-    public function testLogoutRedirectsToProviderLogoutAndClearsSession(): void
+    public function testLogoutRedirectsToLoggedOutPageWithCsrfToken(): void
     {
         $client = $this->createAuthenticatedClient(
             ['bink8s.app.kiwi.user'],
@@ -46,19 +48,29 @@ final class HomeControllerTest extends WebTestCase
             ['id_token' => 'id-token-value'],
         );
 
-        /** @var OidcClient&MockObject $oidcClient */
-        $oidcClient = $this->createMock(OidcClient::class);
-        $oidcClient->method('getIdToken')->willReturn('id-token-value');
-        $oidcClient->method('buildLoggedOutUri')->willReturn('https://example.org/logged-out');
-        $oidcClient->method('getRedirectUrisFromSecrets')->willReturn(['https://example.org/logged-out']);
-        $oidcClient->method('getEndSessionEndpoint')->willReturn('https://issuer.example/logout');
-        $oidcClient->method('getConfig')->willReturn(['client_id' => 'kiwi-local-dev']);
-        $oidcClient->method('buildEndSessionLogoutUrl')->willReturn('https://issuer.example/logout?post_logout_redirect_uri=https://example.org/logged-out');
-        static::getContainer()->set(OidcClient::class, $oidcClient);
+        $client->request('GET', '/');
+        $content = (string) $client->getResponse()->getContent();
+        self::assertSame(1, preg_match('/name="_csrf_token" value="([^"]+)"/', $content, $matches));
+        $csrfToken = $matches[1];
+
+        $client->request('POST', '/app-logout', [
+            '_csrf_token' => $csrfToken,
+        ]);
+
+        self::assertResponseRedirects('/logged-out');
+    }
+
+    public function testLogoutDoesNotAllowGetRequests(): void
+    {
+        $client = $this->createAuthenticatedClient(
+            ['bink8s.app.kiwi.user'],
+            ['name' => 'Kiwi User'],
+            ['id_token' => 'id-token-value'],
+        );
 
         $client->request('GET', '/app-logout');
 
-        self::assertResponseRedirects('https://issuer.example/logout?post_logout_redirect_uri=https://example.org/logged-out');
+        self::assertResponseStatusCodeSame(405);
     }
 
     public function testLoginAndAssetsUseForwardedPrefix(): void
