@@ -153,18 +153,19 @@ class OidcClient
     public function getScopes(): array
     {
         $raw = trim((string) (getenv('OIDC_SCOPES') ?: ''));
-        if ('' === $raw) {
-            $raw = $this->isFallbackSecretsConfig()
-                ? 'openid email profile'
-                : 'openid email profile User.Read Presence.Read Presence.ReadWrite';
+        $scopes = '' !== $raw
+            ? preg_split('/\s+/', $raw) ?: []
+            : $this->buildDefaultScopes();
+
+        $scopes = $this->normalizeScopes($scopes);
+        if (!$this->isPresenceSyncEnabled()) {
+            $scopes = array_values(array_filter(
+                $scopes,
+                static fn (string $scope): bool => !self::isPresenceScope($scope),
+            ));
         }
 
-        return array_values(
-            array_filter(
-                preg_split('/\s+/', $raw) ?: [],
-                static fn (string $scope): bool => '' !== $scope,
-            ),
-        );
+        return $scopes;
     }
 
     private function isFallbackSecretsConfig(): bool
@@ -177,6 +178,57 @@ class OidcClient
         $issuer = trim((string) ($this->getConfig()['issuer'] ?? ''));
 
         return str_contains($issuer, '/kiwi-oidc/');
+    }
+
+    /**
+     * @return string[]
+     */
+    private function buildDefaultScopes(): array
+    {
+        $scopes = ['openid', 'email', 'profile'];
+
+        if (!$this->isFallbackSecretsConfig()) {
+            $scopes[] = 'User.Read';
+
+            if ($this->isPresenceSyncEnabled()) {
+                $scopes[] = 'Presence.Read';
+                $scopes[] = 'Presence.ReadWrite';
+            }
+        }
+
+        return $scopes;
+    }
+
+    /**
+     * @param string[] $scopes
+     * @return string[]
+     */
+    private function normalizeScopes(array $scopes): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map(
+                static fn (mixed $scope): string => \is_string($scope) ? trim($scope) : '',
+                $scopes,
+            ),
+            static fn (string $scope): bool => '' !== $scope,
+        )));
+    }
+
+    private function isPresenceSyncEnabled(): bool
+    {
+        $raw = strtolower(trim((string) (getenv('TEAMS_PRESENCE_SYNC_ENABLED') ?: '')));
+
+        return \in_array($raw, ['1', 'true', 'yes', 'on'], true);
+    }
+
+    private static function isPresenceScope(string $scope): bool
+    {
+        return \in_array($scope, [
+            'Presence.Read',
+            'Presence.Read.All',
+            'Presence.ReadWrite',
+            'Presence.ReadWrite.All',
+        ], true);
     }
 
     /**
@@ -211,7 +263,6 @@ class OidcClient
 
         return [
             'access_token' => $token->getToken(),
-            'refresh_token' => $token->getRefreshToken(),
             'expires' => $token->getExpires(),
             'scope' => $values['scope'] ?? null,
             'id_token' => $values['id_token'] ?? null,
@@ -226,6 +277,10 @@ class OidcClient
      */
     public function getUserRoles(array $sessionData): array
     {
+        if (!$this->hasFreshSessionToken($sessionData)) {
+            return [];
+        }
+
         $roles = [];
 
         $tokenData = $sessionData['oidc_auth_token'] ?? null;
@@ -348,6 +403,10 @@ class OidcClient
      */
     public function getProfileImage(array &$sessionData): ?string
     {
+        if (!$this->hasFreshSessionToken($sessionData)) {
+            return null;
+        }
+
         $cached = $sessionData['oidc_profile_photo'] ?? null;
         if (\is_string($cached) && '' !== $cached) {
             return $cached;
@@ -429,6 +488,10 @@ class OidcClient
      */
     public function getTokenScopes(array $sessionData): array
     {
+        if (!$this->hasFreshSessionToken($sessionData)) {
+            return [];
+        }
+
         $scopes = [];
 
         $tokenData = $sessionData['oidc_auth_token'] ?? null;
@@ -589,6 +652,10 @@ class OidcClient
      */
     public function getAccessToken(array $sessionData): ?string
     {
+        if (!$this->hasFreshSessionToken($sessionData)) {
+            return null;
+        }
+
         $tokenData = $sessionData['oidc_auth_token'] ?? null;
         if (!\is_array($tokenData)) {
             return null;
@@ -604,6 +671,10 @@ class OidcClient
      */
     public function getIdToken(array $sessionData): ?string
     {
+        if (!$this->hasFreshSessionToken($sessionData)) {
+            return null;
+        }
+
         $tokenData = $sessionData['oidc_auth_token'] ?? null;
         if (!\is_array($tokenData)) {
             return null;
@@ -634,6 +705,32 @@ class OidcClient
         $accessToken = $this->getAccessToken($sessionData);
 
         return null !== $accessToken ? $this->decodeJwtPayload($accessToken) : null;
+    }
+
+    /**
+     * @param array<string, mixed> $sessionData
+     */
+    public function hasFreshSessionToken(array $sessionData): bool
+    {
+        $tokenData = $sessionData['oidc_auth_token'] ?? null;
+        if (!\is_array($tokenData) || [] === $tokenData) {
+            return false;
+        }
+
+        $expires = $tokenData['expires'] ?? null;
+        if (null === $expires || '' === $expires) {
+            return false;
+        }
+
+        if (\is_string($expires) && is_numeric($expires)) {
+            $expires = (int) $expires;
+        }
+
+        if (!\is_int($expires)) {
+            return false;
+        }
+
+        return $expires > time();
     }
 
     /**

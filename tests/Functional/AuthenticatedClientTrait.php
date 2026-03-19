@@ -20,13 +20,19 @@ trait AuthenticatedClientTrait
         array $profile = [],
         array $token = [],
     ): KernelBrowser {
+        $defaultToken = [
+            'access_token' => 'test-access-token',
+            'id_token' => 'test-id-token',
+            'expires' => time() + 3600,
+        ];
+
         return $this->createClientWithSession(array_filter([
             'oidc_auth_profile' => array_merge([
                 'name' => 'Test User',
                 'email' => 'test@example.org',
                 'roles' => $roles,
             ], $profile),
-            'oidc_auth_token' => [] !== $token ? $token : null,
+            'oidc_auth_token' => array_merge($defaultToken, $token),
         ], static fn (mixed $value): bool => null !== $value));
     }
 

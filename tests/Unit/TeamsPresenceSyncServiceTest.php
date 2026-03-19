@@ -20,11 +20,29 @@ final class TeamsPresenceSyncServiceTest extends TestCase
         );
     }
 
+    public function testCapabilityIsDisabledByDefault(): void
+    {
+        $service = $this->createService();
+        $capability = $service->getSyncCapability([
+            'oidc_auth_token' => [
+                'expires' => time() + 60,
+                'id_token' => $this->makeJwt(['iss' => 'https://login.microsoftonline.com/example/v2.0']),
+                'access_token' => $this->makeJwt(['scp' => 'Presence.ReadWrite']),
+            ],
+        ], []);
+
+        self::assertFalse($capability['enabled']);
+        self::assertFalse($capability['can_read']);
+        self::assertFalse($capability['can_write']);
+        self::assertSame('feature_disabled', $capability['reason']);
+    }
+
     public function testCapabilityRejectsNonMicrosoftIssuer(): void
     {
         $service = $this->createService();
         $capability = $service->getSyncCapability([
             'oidc_auth_token' => [
+                'expires' => time() + 60,
                 'id_token' => $this->makeJwt(['iss' => 'https://bdc.rtvmedia.org.local/kiwi-oidc/realms/kiwi-local']),
                 'access_token' => $this->makeJwt(['scp' => 'Presence.ReadWrite']),
             ],
@@ -40,6 +58,7 @@ final class TeamsPresenceSyncServiceTest extends TestCase
         $service = $this->createService();
         $capability = $service->getSyncCapability([
             'oidc_auth_token' => [
+                'expires' => time() + 60,
                 'id_token' => $this->makeJwt(['iss' => 'https://login.microsoftonline.com/example/v2.0']),
                 'access_token' => $this->makeJwt(['scp' => 'User.Read']),
             ],
@@ -60,6 +79,7 @@ final class TeamsPresenceSyncServiceTest extends TestCase
 
         $result = $service->fetchTeamsPresenceStatus([
             'oidc_auth_token' => [
+                'expires' => time() + 60,
                 'id_token' => $this->makeJwt(['iss' => 'https://login.microsoftonline.com/example/v2.0']),
                 'access_token' => $this->makeJwt(['scp' => 'Presence.Read']),
             ],
@@ -80,6 +100,7 @@ final class TeamsPresenceSyncServiceTest extends TestCase
 
         $result = $service->syncKiwiStatusToTeams('in_call', [
             'oidc_auth_token' => [
+                'expires' => time() + 60,
                 'id_token' => $this->makeJwt([
                     'iss' => 'https://login.microsoftonline.com/example/v2.0',
                     'oid' => '11111111-1111-1111-1111-111111111111',

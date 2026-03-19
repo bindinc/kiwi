@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Validate OIDC ID tokens against provider JWKS before trusting nonce, issuer, audience, expiry, or roles, and harden login redirect targets to safe relative paths only.
+- Default Teams presence sync off unless explicitly enabled, keep presence scopes out of the default authorization request, drop refresh-token storage from the persisted session token, and reject expired session tokens in the auth and API readers.
 - Load the main and static-page ES module entrypoints through Symfony importmaps and expose hashed legacy runtime script URLs from Twig so nested frontend assets keep resolving behind `/kiwi` and `/kiwi-preview`.
 - Harden logout to require a POST request with CSRF validation and serve Swagger UI from local vendored `public/vendor/swagger-ui-dist` assets instead of an unpinned remote CDN.
 

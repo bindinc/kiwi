@@ -109,6 +109,7 @@ final class OidcAuthenticatorTest extends WebTestCase
             'token' => [
                 'id_token' => 'signed-token',
                 'access_token' => 'access-token',
+                'expires' => time() + 3600,
             ],
         ]);
         $oidcClient->method('getUserRoles')->willReturn(['bink8s.app.kiwi.user']);

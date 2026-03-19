@@ -62,7 +62,7 @@ final class TeamsPresenceSyncService
      */
     public function isPresenceSyncEnabled(array $appConfig): bool
     {
-        $rawValue = $appConfig['TEAMS_PRESENCE_SYNC_ENABLED'] ?? true;
+        $rawValue = $appConfig['TEAMS_PRESENCE_SYNC_ENABLED'] ?? false;
 
         if (\is_bool($rawValue)) {
             return $rawValue;

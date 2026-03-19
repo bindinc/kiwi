@@ -43,6 +43,28 @@ final class ApiContractTest extends WebTestCase
         self::assertGreaterThanOrEqual(1, count($payload['customers']));
     }
 
+    public function testExpiredSessionTokenIsRejectedByApiEndpoints(): void
+    {
+        $client = $this->createClientWithSession([
+            'oidc_auth_profile' => [
+                'name' => 'Expired User',
+                'email' => 'expired@example.org',
+                'roles' => ['bink8s.app.kiwi.user'],
+            ],
+            'oidc_auth_token' => [
+                'access_token' => 'expired-access-token',
+                'id_token' => 'expired-id-token',
+                'expires' => time() - 60,
+            ],
+        ]);
+
+        $client->request('GET', '/api/v1/me');
+
+        self::assertResponseStatusCodeSame(401);
+        $payload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame('unauthorized', $payload['error']['code']);
+    }
+
     public function testCustomerWorkflowAndMutationFlow(): void
     {
         $client = $this->createAuthenticatedClient();

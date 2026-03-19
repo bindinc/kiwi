@@ -22,6 +22,10 @@ final class OidcUserProvider implements UserProviderInterface
     public function loadUserByIdentifier(string $identifier): UserInterface
     {
         $sessionData = $this->readSessionData();
+        if ([] === $sessionData) {
+            throw $this->createUserNotFoundException($identifier);
+        }
+
         $profile = \is_array($sessionData['oidc_auth_profile'] ?? null) ? $sessionData['oidc_auth_profile'] : [];
         $roles = $this->resolveRoles($sessionData);
         $user = OidcUser::fromProfile($profile, $roles);
@@ -30,10 +34,7 @@ final class OidcUserProvider implements UserProviderInterface
             return $user;
         }
 
-        $exception = new UserNotFoundException(sprintf('OIDC user "%s" is not available in the current session.', $identifier));
-        $exception->setUserIdentifier($identifier);
-
-        throw $exception;
+        throw $this->createUserNotFoundException($identifier);
     }
 
     public function refreshUser(UserInterface $user): UserInterface
@@ -43,6 +44,10 @@ final class OidcUserProvider implements UserProviderInterface
         }
 
         $sessionData = $this->readSessionData();
+        if ([] === $sessionData) {
+            throw $this->createUserNotFoundException($user->getUserIdentifier());
+        }
+
         $profile = \is_array($sessionData['oidc_auth_profile'] ?? null) ? $sessionData['oidc_auth_profile'] : $user->getProfile();
         $roles = $this->resolveRoles($sessionData, $user);
 
@@ -91,6 +96,18 @@ final class OidcUserProvider implements UserProviderInterface
             $sessionData['oidc_auth_token'] = $token;
         }
 
+        if (!$this->oidcClient->hasFreshSessionToken($sessionData)) {
+            return [];
+        }
+
         return $sessionData;
+    }
+
+    private function createUserNotFoundException(string $identifier): UserNotFoundException
+    {
+        $exception = new UserNotFoundException(sprintf('OIDC user "%s" is not available in the current session.', $identifier));
+        $exception->setUserIdentifier($identifier);
+
+        return $exception;
     }
 }
