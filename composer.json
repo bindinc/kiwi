@@ -10,6 +10,7 @@
         "ext-pdo_pgsql": "*",
         "doctrine/doctrine-bundle": "^3.2",
         "doctrine/orm": "^3.6",
+        "firebase/php-jwt": "^6.11",
         "league/oauth2-client": "^2.8",
         "symfony/asset": "7.4.*",
         "symfony/asset-mapper": "7.4.*",

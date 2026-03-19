@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Oidc;
 
+use Firebase\JWT\JWK;
+use Firebase\JWT\JWT;
 use League\OAuth2\Client\Provider\GenericProvider;
 use League\OAuth2\Client\Token\AccessTokenInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -39,6 +41,11 @@ class OidcClient
      * @var array<string, mixed>|null
      */
     private ?array $config = null;
+
+    /**
+     * @var array<string, mixed>|null
+     */
+    private ?array $serverMetadata = null;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -448,19 +455,8 @@ class OidcClient
 
     public function getEndSessionEndpoint(): ?string
     {
-        $metadataUrl = $this->getServerMetadataUrl();
-        if (null === $metadataUrl) {
-            return null;
-        }
-
-        try {
-            $response = $this->httpClient->request('GET', $metadataUrl, ['timeout' => 5]);
-            if (200 !== $response->getStatusCode()) {
-                return null;
-            }
-
-            $metadata = $response->toArray(false);
-        } catch (\Throwable) {
+        $metadata = $this->getServerMetadata();
+        if (!\is_array($metadata)) {
             return null;
         }
 
@@ -497,6 +493,46 @@ class OidcClient
         }
 
         return $normalized;
+    }
+
+    /**
+     * @param array<string, mixed> $sessionData
+     *
+     * @throws \UnexpectedValueException
+     */
+    public function validateIdToken(array $sessionData, string $expectedNonce): void
+    {
+        $idToken = $sessionData['oidc_auth_token']['id_token'] ?? null;
+        if (!\is_string($idToken) || '' === trim($idToken)) {
+            throw new \UnexpectedValueException('Missing OIDC ID token.');
+        }
+
+        $clientId = trim((string) ($this->getConfig()['client_id'] ?? ''));
+        if ('' === $clientId) {
+            throw new \UnexpectedValueException('Missing OIDC client ID.');
+        }
+
+        $decoded = JWT::decode($idToken, $this->getValidationKeys());
+        $claims = json_decode((string) json_encode($decoded, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        if (!\is_array($claims)) {
+            throw new \UnexpectedValueException('OIDC ID token claims could not be normalized.');
+        }
+
+        $tokenIssuer = trim((string) ($claims['iss'] ?? ''));
+        $expectedIssuer = trim((string) ($this->getExpectedIssuer() ?? ''));
+        if ('' === $tokenIssuer || '' === $expectedIssuer || !hash_equals($expectedIssuer, $tokenIssuer)) {
+            throw new \UnexpectedValueException('Invalid OIDC issuer.');
+        }
+
+        if (!$this->audienceMatchesClientId($claims['aud'] ?? null, $clientId)) {
+            throw new \UnexpectedValueException('Invalid OIDC audience.');
+        }
+
+        $receivedNonce = trim((string) ($claims['nonce'] ?? ''));
+        $normalizedExpectedNonce = trim($expectedNonce);
+        if ('' === $normalizedExpectedNonce || '' === $receivedNonce || !hash_equals($normalizedExpectedNonce, $receivedNonce)) {
+            throw new \UnexpectedValueException('Invalid OIDC nonce.');
+        }
     }
 
     public function buildEndSessionLogoutUrl(
@@ -598,6 +634,101 @@ class OidcClient
         $accessToken = $this->getAccessToken($sessionData);
 
         return null !== $accessToken ? $this->decodeJwtPayload($accessToken) : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function getServerMetadata(): ?array
+    {
+        if (null !== $this->serverMetadata) {
+            return $this->serverMetadata;
+        }
+
+        $metadataUrl = $this->getServerMetadataUrl();
+        if (null === $metadataUrl) {
+            return null;
+        }
+
+        try {
+            $response = $this->httpClient->request('GET', $metadataUrl, ['timeout' => 5]);
+            if (200 !== $response->getStatusCode()) {
+                return null;
+            }
+
+            $metadata = $response->toArray(false);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (!\is_array($metadata)) {
+            return null;
+        }
+
+        $this->serverMetadata = $metadata;
+
+        return $this->serverMetadata;
+    }
+
+    /**
+     * @return array<string, \Firebase\JWT\Key>
+     */
+    private function getValidationKeys(): array
+    {
+        $metadata = $this->getServerMetadata();
+        $jwksUri = \is_array($metadata) ? ($metadata['jwks_uri'] ?? null) : null;
+        if (!\is_string($jwksUri) || '' === trim($jwksUri)) {
+            throw new \UnexpectedValueException('OIDC JWKS URI is missing.');
+        }
+
+        $response = $this->httpClient->request('GET', trim($jwksUri), ['timeout' => 5]);
+        if (200 !== $response->getStatusCode()) {
+            throw new \UnexpectedValueException('OIDC JWKS could not be loaded.');
+        }
+
+        $jwks = $response->toArray(false);
+        if (!\is_array($jwks)) {
+            throw new \UnexpectedValueException('OIDC JWKS payload is invalid.');
+        }
+
+        return JWK::parseKeySet($jwks);
+    }
+
+    private function getExpectedIssuer(): ?string
+    {
+        $metadata = $this->getServerMetadata();
+        $metadataIssuer = \is_array($metadata) ? ($metadata['issuer'] ?? null) : null;
+        if (\is_string($metadataIssuer) && '' !== trim($metadataIssuer)) {
+            return trim($metadataIssuer);
+        }
+
+        $configuredIssuer = trim((string) ($this->getConfig()['issuer'] ?? ''));
+
+        return '' !== $configuredIssuer ? $configuredIssuer : null;
+    }
+
+    /**
+     * @param mixed $audience
+     */
+    private function audienceMatchesClientId(mixed $audience, string $clientId): bool
+    {
+        if (\is_string($audience)) {
+            $normalizedAudience = trim($audience);
+
+            return '' !== $normalizedAudience && hash_equals($clientId, $normalizedAudience);
+        }
+
+        if (!\is_array($audience)) {
+            return false;
+        }
+
+        foreach ($audience as $value) {
+            if (\is_string($value) && '' !== trim($value) && hash_equals($clientId, trim($value))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
