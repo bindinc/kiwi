@@ -62,8 +62,8 @@ final class OidcAuthenticator extends AbstractAuthenticator implements Authentic
                 'oidc_auth_profile' => \is_array($profile) ? $profile : [],
                 'oidc_auth_token' => \is_array($token) ? $token : [],
             ];
-
-            $this->validateIdTokenClaims($sessionData, $session);
+            $expectedNonce = (string) $session->get(self::AUTH_NONCE_KEY, '');
+            $this->oidcClient->validateIdToken($sessionData, $expectedNonce);
 
             $roles = $this->oidcClient->getUserRoles($sessionData);
             $user = OidcUser::fromProfile($sessionData['oidc_auth_profile'], $roles);
@@ -122,74 +122,11 @@ final class OidcAuthenticator extends AbstractAuthenticator implements Authentic
         return $this->urlGenerator->generate('app_home');
     }
 
-    /**
-     * @param array<string, mixed> $sessionData
-     */
-    private function validateIdTokenClaims(array $sessionData, SessionInterface $session): void
-    {
-        $claims = $this->oidcClient->getIdTokenClaims($sessionData);
-        if (!\is_array($claims)) {
-            throw new CustomUserMessageAuthenticationException('Invalid OIDC ID token');
-        }
-
-        $expectedNonce = trim((string) $session->get(self::AUTH_NONCE_KEY, ''));
-        $receivedNonce = trim((string) ($claims['nonce'] ?? ''));
-        if ('' === $expectedNonce || '' === $receivedNonce || !hash_equals($expectedNonce, $receivedNonce)) {
-            throw new CustomUserMessageAuthenticationException('Invalid OIDC nonce');
-        }
-
-        $config = $this->oidcClient->getConfig();
-        $issuer = $this->normalizeIssuer((string) ($config['issuer'] ?? ''));
-        $tokenIssuer = $this->normalizeIssuer((string) ($claims['iss'] ?? ''));
-        if ('' === $issuer || '' === $tokenIssuer || !hash_equals($issuer, $tokenIssuer)) {
-            throw new CustomUserMessageAuthenticationException('Invalid OIDC issuer');
-        }
-
-        $clientId = trim((string) ($config['client_id'] ?? ''));
-        if ('' === $clientId || !$this->isAudienceAllowed($claims['aud'] ?? null, $clientId)) {
-            throw new CustomUserMessageAuthenticationException('Invalid OIDC audience');
-        }
-
-        $expiresAt = $claims['exp'] ?? null;
-        if (!\is_numeric($expiresAt) || (int) $expiresAt <= time()) {
-            throw new CustomUserMessageAuthenticationException('Expired OIDC ID token');
-        }
-    }
-
     private function clearPendingAuthMarkers(SessionInterface $session): void
     {
         $session->remove(self::AUTH_STATE_KEY);
         $session->remove(self::AUTH_TARGET_PATH_KEY);
         $session->remove(self::AUTH_NONCE_KEY);
-    }
-
-    private function normalizeIssuer(string $issuer): string
-    {
-        return rtrim(trim($issuer), '/');
-    }
-
-    /**
-     * @param mixed $audience
-     */
-    private function isAudienceAllowed(mixed $audience, string $clientId): bool
-    {
-        if (\is_string($audience)) {
-            $normalizedAudience = trim($audience);
-
-            return '' !== $normalizedAudience && hash_equals($clientId, $normalizedAudience);
-        }
-
-        if (!\is_array($audience)) {
-            return false;
-        }
-
-        foreach ($audience as $value) {
-            if (\is_string($value) && hash_equals($clientId, trim($value))) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private function isSafeRelativeTarget(string $target): bool

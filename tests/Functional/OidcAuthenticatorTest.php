@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use App\Oidc\OidcClient;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
 
 final class OidcAuthenticatorTest extends WebTestCase
 {
@@ -73,16 +74,8 @@ final class OidcAuthenticatorTest extends WebTestCase
                 'access_token' => 'access-token',
             ],
         ]);
-        $oidcClient->method('getIdTokenClaims')->willReturn([
-            'iss' => 'https://login.microsoftonline.com/example/v2.0',
-            'aud' => 'kiwi-local-dev',
-            'exp' => time() + 3600,
-            'nonce' => 'different-nonce',
-        ]);
-        $oidcClient->method('getConfig')->willReturn([
-            'issuer' => 'https://login.microsoftonline.com/example/v2.0',
-            'client_id' => 'kiwi-local-dev',
-        ]);
+        $oidcClient->method('validateIdToken')
+            ->willThrowException(new CustomUserMessageAuthenticationException('Invalid OIDC nonce'));
         static::getContainer()->set(OidcClient::class, $oidcClient);
 
         $client->request('GET', '/auth/callback?code=test-code&state=expected-state');
@@ -117,16 +110,6 @@ final class OidcAuthenticatorTest extends WebTestCase
                 'id_token' => 'signed-token',
                 'access_token' => 'access-token',
             ],
-        ]);
-        $oidcClient->method('getIdTokenClaims')->willReturn([
-            'iss' => 'https://login.microsoftonline.com/example/v2.0',
-            'aud' => 'kiwi-local-dev',
-            'exp' => time() + 3600,
-            'nonce' => 'expected-nonce',
-        ]);
-        $oidcClient->method('getConfig')->willReturn([
-            'issuer' => 'https://login.microsoftonline.com/example/v2.0',
-            'client_id' => 'kiwi-local-dev',
         ]);
         $oidcClient->method('getUserRoles')->willReturn(['bink8s.app.kiwi.user']);
         $oidcClient->method('buildUserIdentity')->willReturn([
