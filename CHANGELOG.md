@@ -3,30 +3,41 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [v1.0.9]
 
-### Changed
-- Replace the Flask runtime with a Symfony 7.4 LTS application on FrankenPHP while keeping the existing GHCR image contract, port `8000`, `/kiwi` and `/kiwi-preview` reverse-proxy prefixes, `/auth/callback` callback path, and the local fallback OIDC flow intact.
-- Upgrade the KIWI runtime baseline to PHP 8.4 and Symfony 7.4 LTS across Composer constraints, Docker runtime, CI validation, and developer documentation.
-- Port the existing page/API contract to Symfony controllers and services, including session-backed POC state, catalog/workflow endpoints, Teams presence sync, prefix-aware asset/login/logout URL generation, and provider logout fallback to `/logged-out`.
-- Keep local Docker Compose and image publishing contracts stable while switching the app container to a Composer-built FrankenPHP image and preserving `make compose-smoke-oidc` as the required OIDC regression check.
-- Add a Symfony migration contract matrix and PHPUnit coverage for public/protected route behavior, OIDC helper logic, forwarded-prefix handling, and core API workflows.
-- Document the `app/static/assets/js` slice-classification audit in `plan/app-js-to-slices-checklist.md`, confirming `app/static/assets/js/app/slices` as the canonical slice directory and recording a no-move decision for non-slice JS modules.
-- Remove the legacy customer-subscription action bridge module (`app/static/assets/js/app/legacy-actions-customer-subscription.js`) by deleting `getLegacyFunction`, `callLegacy`, and `registerCustomerSubscriptionActions`; `app/static/assets/js/app/index.js` now relies on slice-owned handlers (`close-form` in app-shell and caller-identification actions in call-session).
-- Remove `app/static/assets/js/app/legacy-loader.js` by inlining `ensureRuntimeScriptsLoaded` into `app/static/assets/js/app/index.js`, so runtime script loading now lives in the entrypoint that owns bootstrap orchestration.
-- Keep the Symfony OIDC browser flow compatible with fallback Keycloak by sending space-delimited scopes in the authorization redirect and registering a dedicated `OidcUser` provider so authenticated sessions survive the post-callback page load.
-- Restore PostgreSQL-backed Symfony sessions for `sc-187732` by wiring Doctrine DBAL/ORM, a PDO session handler, bootstrap/cleanup console commands, local Compose PostgreSQL, and callback regression coverage while documenting the remaining cluster follow-up for 3-replica rollout in a dedicated document.
-- Commit `.env` as the default Symfony dev configuration, keep `.env.local` as the local-only override, and retain `.env.test` for the PHPUnit environment.
-- Normalize Docker Compose around a dev-first Symfony container at `/app`, add explicit `dev` and `prod` Docker targets, keep Composer inside the dev image, and make release builds explicitly target the production runtime.
-- Make the OIDC runtime resolver accept both the documented secret file mount and the existing Flux-mounted file path so local Compose and cluster deployments keep working through the same entrypoint flow.
-- Adopt Symfony AssetMapper with `assets/` as the only frontend source directory, compile production assets during the Docker prod build, move Node tests to `tests/frontend/`, and stop tracking `public/assets/` plus `app/static/assets/` as hand-managed source trees.
-- Archive the last Flask-only runtime on `archive/kiwi-flask-runtime`, remove the legacy Flask source tree plus Python tests from the active repo, replace the fallback OIDC smoke check's Python dependency with Node, and add a pull-request workflow that validates the production build, PHPUnit, Node tests, and `script/check`.
+### Removed
+- Remove the obsolete werfsleutel barcode reference docs from `assets/` and `docs/` now that barcode generation and management no longer live in the active Symfony runtime.
 
 ### Fixed
 - Validate OIDC ID tokens against provider JWKS before trusting nonce, issuer, audience, expiry, or roles, and harden login redirect targets to safe relative paths only.
 - Default Teams presence sync off unless explicitly enabled, keep presence scopes out of the default authorization request, drop refresh-token storage from the persisted session token, and reject expired session tokens in the auth and API readers.
-- Load the main and static-page ES module entrypoints through Symfony importmaps and expose hashed legacy runtime script URLs from Twig so nested frontend assets keep resolving behind `/kiwi` and `/kiwi-preview`.
 - Harden logout to require a POST request with CSRF validation and serve Swagger UI from local vendored `public/vendor/swagger-ui-dist` assets instead of an unpinned remote CDN.
+
+## [v1.0.8]
+
+### Added
+- Add a Symfony migration contract matrix and PHPUnit coverage for public/protected route behavior, OIDC helper logic, forwarded-prefix handling, and core API workflows.
+- Add PostgreSQL-backed Symfony sessions for `sc-187732` by wiring Doctrine DBAL/ORM, a PDO session handler, bootstrap/cleanup console commands, local Compose PostgreSQL, and callback regression coverage while documenting the remaining cluster follow-up for a future 3-replica rollout.
+- Add a pull-request workflow that validates the production build, PHPUnit, Node tests, and `script/check` for the Symfony-first runtime.
+
+### Changed
+- Replace the Flask runtime with a Symfony 7.4 LTS application on FrankenPHP while keeping the existing GHCR image contract, port `8000`, `/kiwi` and `/kiwi-preview` reverse-proxy prefixes, `/auth/callback` callback path, and the local fallback OIDC flow intact.
+- Upgrade the KIWI runtime baseline to PHP 8.4 and Symfony 7.4 LTS across Composer constraints, Docker runtime, CI validation, and developer documentation.
+- Port the existing page/API contract to Symfony controllers and services, including session-backed POC state, catalog and workflow endpoints, Teams presence sync, prefix-aware asset/login/logout URL generation, and provider logout fallback to `/logged-out`.
+- Keep local Docker Compose and image publishing contracts stable while switching the app container to a Composer-built FrankenPHP image and preserving `make compose-smoke-oidc` as the required OIDC regression check.
+- Commit `.env` as the default Symfony dev configuration, keep `.env.local` as the local-only override, retain `.env.test` for PHPUnit, and normalize Docker Compose around a dev-first Symfony container at `/app` with explicit `dev` and `prod` Docker targets.
+- Make the OIDC runtime resolver accept both the documented secret file mount and the existing Flux-mounted file path so local Compose and cluster deployments keep working through the same entrypoint flow.
+- Adopt Symfony AssetMapper with `assets/` as the only frontend source directory, compile production assets during the Docker prod build, move Node tests to `tests/frontend/`, and stop tracking `public/assets/` plus `app/static/assets/` as hand-managed source trees.
+- Record the `app/static/assets/js` slice-classification audit and no-move decision for non-slice JS modules in `plan/app-js-to-slices-checklist.md`.
+
+### Removed
+- Remove the legacy customer-subscription action bridge module by deleting `getLegacyFunction`, `callLegacy`, and `registerCustomerSubscriptionActions`, so `app/static/assets/js/app/index.js` now relies on slice-owned handlers.
+- Remove `app/static/assets/js/app/legacy-loader.js` by inlining `ensureRuntimeScriptsLoaded` into the app entrypoint that owns bootstrap orchestration.
+- Archive the last Flask-only runtime on `archive/kiwi-flask-runtime`, remove the legacy Flask source tree plus Python tests from the active repo, and replace the fallback OIDC smoke check's Python dependency with Node.
+
+### Fixed
+- Keep the Symfony OIDC browser flow compatible with fallback Keycloak by sending space-delimited scopes in the authorization redirect and registering a dedicated `OidcUser` provider so authenticated sessions survive the post-callback page load.
+- Load the main and static-page ES module entrypoints through Symfony importmaps and expose hashed legacy runtime script URLs from Twig so nested frontend assets keep resolving behind `/kiwi` and `/kiwi-preview`.
 
 ## [v1.0.7]
 
