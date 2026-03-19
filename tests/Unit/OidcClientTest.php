@@ -173,6 +173,117 @@ final class OidcClientTest extends TestCase
         self::assertTrue(true);
     }
 
+    public function testValidateIdTokenAcceptsMicrosoftTenantPlaceholderIssuer(): void
+    {
+        [$privateKey, $jwks] = $this->createSigningMaterial('tenant-key');
+        $tokenIssuer = 'https://login.microsoftonline.com/0c9debd2-7a4b-4383-9608-99e5238f646c/v2.0';
+        $nonce = 'expected-nonce';
+        $client = $this->createConfiguredClient(
+            [
+                new MockResponse((string) json_encode([
+                    'issuer' => 'https://login.microsoftonline.com/{tenantid}/v2.0',
+                    'jwks_uri' => 'https://login.microsoftonline.com/common/discovery/v2.0/keys',
+                ], JSON_THROW_ON_ERROR)),
+                new MockResponse((string) json_encode($jwks, JSON_THROW_ON_ERROR)),
+            ],
+            [
+                'client_id' => 'kiwi-client',
+                'issuer' => 'https://login.microsoftonline.com/common/v2.0',
+            ],
+        );
+
+        $token = JWT::encode([
+            'iss' => $tokenIssuer,
+            'aud' => 'kiwi-client',
+            'nonce' => $nonce,
+            'exp' => time() + 300,
+        ], $privateKey, 'RS256', 'tenant-key');
+
+        $client->validateIdToken([
+            'oidc_auth_token' => [
+                'id_token' => $token,
+            ],
+        ], $nonce);
+
+        self::assertTrue(true);
+    }
+
+    public function testValidateIdTokenAcceptsJwksWithoutAlgWhenTokenHeaderProvidesIt(): void
+    {
+        [$privateKey, $jwks] = $this->createSigningMaterial('alg-less-key');
+        unset($jwks['keys'][0]['alg']);
+
+        $issuer = 'https://issuer.example';
+        $nonce = 'expected-nonce';
+        $client = $this->createConfiguredClient(
+            [
+                new MockResponse((string) json_encode([
+                    'issuer' => $issuer,
+                    'jwks_uri' => 'https://issuer.example/.well-known/jwks.json',
+                ], JSON_THROW_ON_ERROR)),
+                new MockResponse((string) json_encode($jwks, JSON_THROW_ON_ERROR)),
+            ],
+            [
+                'client_id' => 'kiwi-client',
+                'issuer' => $issuer,
+            ],
+        );
+
+        $token = JWT::encode([
+            'iss' => $issuer,
+            'aud' => 'kiwi-client',
+            'nonce' => $nonce,
+            'exp' => time() + 300,
+        ], $privateKey, 'RS256', 'alg-less-key');
+
+        $client->validateIdToken([
+            'oidc_auth_token' => [
+                'id_token' => $token,
+            ],
+        ], $nonce);
+
+        self::assertTrue(true);
+    }
+
+    public function testValidateIdTokenRejectsAlgorithmOutsideMetadataAllowlist(): void
+    {
+        [, $jwks] = $this->createSigningMaterial('alg-less-key');
+        unset($jwks['keys'][0]['alg']);
+
+        $issuer = 'https://issuer.example';
+        $nonce = 'expected-nonce';
+        $client = $this->createConfiguredClient(
+            [
+                new MockResponse((string) json_encode([
+                    'issuer' => $issuer,
+                    'jwks_uri' => 'https://issuer.example/.well-known/jwks.json',
+                    'id_token_signing_alg_values_supported' => ['RS256'],
+                ], JSON_THROW_ON_ERROR)),
+                new MockResponse((string) json_encode($jwks, JSON_THROW_ON_ERROR)),
+            ],
+            [
+                'client_id' => 'kiwi-client',
+                'issuer' => $issuer,
+            ],
+        );
+
+        $token = JWT::encode([
+            'iss' => $issuer,
+            'aud' => 'kiwi-client',
+            'nonce' => $nonce,
+            'exp' => time() + 300,
+        ], 'shared-secret', 'HS256', 'alg-less-key');
+
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage('Unsupported OIDC signing algorithm.');
+
+        $client->validateIdToken([
+            'oidc_auth_token' => [
+                'id_token' => $token,
+            ],
+        ], $nonce);
+    }
+
     public function testValidateIdTokenRejectsInvalidSignature(): void
     {
         [$validPrivateKey, $validJwks] = $this->createSigningMaterial('valid-key');

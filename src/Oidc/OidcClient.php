@@ -38,6 +38,22 @@ class OidcClient
     ];
 
     /**
+     * @var string[]
+     */
+    private const SAFE_JWKS_ALGORITHMS = [
+        'RS256',
+        'RS384',
+        'RS512',
+        'PS256',
+        'PS384',
+        'PS512',
+        'ES256',
+        'ES256K',
+        'ES384',
+        'EdDSA',
+    ];
+
+    /**
      * @var array<string, mixed>|null
      */
     private ?array $config = null;
@@ -575,7 +591,7 @@ class OidcClient
             throw new \UnexpectedValueException('Missing OIDC client ID.');
         }
 
-        $decoded = JWT::decode($idToken, $this->getValidationKeys());
+        $decoded = JWT::decode($idToken, $this->getValidationKeys($idToken));
         $claims = json_decode((string) json_encode($decoded, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
         if (!\is_array($claims)) {
             throw new \UnexpectedValueException('OIDC ID token claims could not be normalized.');
@@ -583,7 +599,7 @@ class OidcClient
 
         $tokenIssuer = trim((string) ($claims['iss'] ?? ''));
         $expectedIssuer = trim((string) ($this->getExpectedIssuer() ?? ''));
-        if ('' === $tokenIssuer || '' === $expectedIssuer || !hash_equals($expectedIssuer, $tokenIssuer)) {
+        if (!$this->issuerMatchesExpected($expectedIssuer, $tokenIssuer)) {
             throw new \UnexpectedValueException('Invalid OIDC issuer.');
         }
 
@@ -770,7 +786,7 @@ class OidcClient
     /**
      * @return array<string, \Firebase\JWT\Key>
      */
-    private function getValidationKeys(): array
+    private function getValidationKeys(string $idToken): array
     {
         $metadata = $this->getServerMetadata();
         $jwksUri = \is_array($metadata) ? ($metadata['jwks_uri'] ?? null) : null;
@@ -788,7 +804,70 @@ class OidcClient
             throw new \UnexpectedValueException('OIDC JWKS payload is invalid.');
         }
 
-        return JWK::parseKeySet($jwks);
+        $defaultAlg = $this->resolveJwksDefaultAlgorithm($idToken);
+
+        return JWK::parseKeySet($jwks, $defaultAlg);
+    }
+
+    private function resolveJwksDefaultAlgorithm(string $idToken): ?string
+    {
+        $header = $this->decodeJwtHeader($idToken);
+        $headerAlg = \is_array($header) ? trim((string) ($header['alg'] ?? '')) : '';
+        if ('' === $headerAlg) {
+            return null;
+        }
+
+        $supportedAlgorithms = $this->getSupportedSigningAlgorithmsFromMetadata();
+        if ([] !== $supportedAlgorithms) {
+            if (\in_array($headerAlg, $supportedAlgorithms, true)) {
+                return $headerAlg;
+            }
+
+            throw new \UnexpectedValueException('Unsupported OIDC signing algorithm.');
+        }
+
+        $expectedIssuer = $this->getExpectedIssuer();
+        if (\is_string($expectedIssuer) && '' !== trim($expectedIssuer) && $this->isMicrosoftIssuer($expectedIssuer)) {
+            if ('RS256' === $headerAlg) {
+                return $headerAlg;
+            }
+
+            throw new \UnexpectedValueException('Unsupported OIDC signing algorithm.');
+        }
+
+        if (\in_array($headerAlg, self::SAFE_JWKS_ALGORITHMS, true)) {
+            return $headerAlg;
+        }
+
+        throw new \UnexpectedValueException('Unsupported OIDC signing algorithm.');
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getSupportedSigningAlgorithmsFromMetadata(): array
+    {
+        $metadata = $this->getServerMetadata();
+        $rawAlgorithms = \is_array($metadata) ? ($metadata['id_token_signing_alg_values_supported'] ?? null) : null;
+        if (!\is_array($rawAlgorithms)) {
+            return [];
+        }
+
+        $supportedAlgorithms = [];
+        foreach ($rawAlgorithms as $algorithm) {
+            if (!\is_string($algorithm)) {
+                continue;
+            }
+
+            $normalized = trim($algorithm);
+            if ('' === $normalized || !\in_array($normalized, self::SAFE_JWKS_ALGORITHMS, true)) {
+                continue;
+            }
+
+            $supportedAlgorithms[] = $normalized;
+        }
+
+        return array_values(array_unique($supportedAlgorithms));
     }
 
     private function getExpectedIssuer(): ?string
@@ -802,6 +881,28 @@ class OidcClient
         $configuredIssuer = trim((string) ($this->getConfig()['issuer'] ?? ''));
 
         return '' !== $configuredIssuer ? $configuredIssuer : null;
+    }
+
+    private function issuerMatchesExpected(string $expectedIssuer, string $tokenIssuer): bool
+    {
+        $normalizedExpected = rtrim(trim($expectedIssuer), '/');
+        $normalizedToken = rtrim(trim($tokenIssuer), '/');
+        if ('' === $normalizedExpected || '' === $normalizedToken) {
+            return false;
+        }
+
+        if (hash_equals($normalizedExpected, $normalizedToken)) {
+            return true;
+        }
+
+        if (!str_contains($normalizedExpected, '{tenantid}')) {
+            return false;
+        }
+
+        $pattern = preg_quote($normalizedExpected, '#');
+        $pattern = str_replace('\{tenantid\}', '[^/]+', $pattern);
+
+        return 1 === preg_match('#^'.$pattern.'$#', $normalizedToken);
     }
 
     /**
@@ -833,18 +934,38 @@ class OidcClient
      */
     private function decodeJwtPayload(string $token): ?array
     {
+        return $this->decodeJwtSegment($token, 1);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function decodeJwtHeader(string $token): ?array
+    {
+        return $this->decodeJwtSegment($token, 0);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function decodeJwtSegment(string $token, int $index): ?array
+    {
         $parts = explode('.', $token);
         if (3 !== count($parts)) {
             return null;
         }
 
-        $payload = $parts[1];
-        $padding = strlen($payload) % 4;
-        if (0 !== $padding) {
-            $payload .= str_repeat('=', 4 - $padding);
+        if (!isset($parts[$index])) {
+            return null;
         }
 
-        $decoded = base64_decode(strtr($payload, '-_', '+/'), true);
+        $segment = $parts[$index];
+        $padding = strlen($segment) % 4;
+        if (0 !== $padding) {
+            $segment .= str_repeat('=', 4 - $padding);
+        }
+
+        $decoded = base64_decode(strtr($segment, '-_', '+/'), true);
         if (false === $decoded) {
             return null;
         }

@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v1.0.10]
+
+### Fixed
+- Accept Microsoft Entra issuer metadata that uses the documented `{tenantid}` placeholder so valid tenant-specific ID tokens are no longer rejected during callback validation.
+- Keep OIDC ID token validation compatible with providers that publish JWKS keys without an `alg`, while only allowing safe signing algorithms from provider metadata, Microsoft Entra `RS256`, or a narrow asymmetric fallback allowlist.
+
 ## [v1.0.9]
 
 ### Removed
