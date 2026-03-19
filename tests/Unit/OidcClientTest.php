@@ -6,6 +6,7 @@ namespace App\Tests\Unit;
 
 use App\Oidc\OidcClient;
 use Firebase\JWT\JWT;
+use League\OAuth2\Client\Token\AccessToken;
 use PHPUnit\Framework\Attributes\After;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -41,6 +42,42 @@ final class OidcClientTest extends TestCase
         self::assertSame('openid email profile', $client->getAuthorizationScope());
     }
 
+    public function testBuildAuthorizationScopeKeepsPresenceScopesOutByDefault(): void
+    {
+        $client = $this->createClient();
+        $secretsFile = $this->createTemporarySecretsFile();
+
+        try {
+            $scope = $this->withEnvironment([
+                'OIDC_CLIENT_SECRETS' => $secretsFile,
+                'OIDC_SCOPES' => null,
+                'TEAMS_PRESENCE_SYNC_ENABLED' => null,
+            ], static fn () => $client->getAuthorizationScope());
+        } finally {
+            @unlink($secretsFile);
+        }
+
+        self::assertSame('openid email profile User.Read', $scope);
+    }
+
+    public function testBuildAuthorizationScopeAddsPresenceScopesOnlyWhenEnabled(): void
+    {
+        $client = $this->createClient();
+        $secretsFile = $this->createTemporarySecretsFile();
+
+        try {
+            $scope = $this->withEnvironment([
+                'OIDC_CLIENT_SECRETS' => $secretsFile,
+                'OIDC_SCOPES' => null,
+                'TEAMS_PRESENCE_SYNC_ENABLED' => 'true',
+            ], static fn () => $client->getAuthorizationScope());
+        } finally {
+            @unlink($secretsFile);
+        }
+
+        self::assertSame('openid email profile User.Read Presence.Read Presence.ReadWrite', $scope);
+    }
+
     public function testBuildUserIdentity(): void
     {
         $client = $this->createClient();
@@ -63,8 +100,27 @@ final class OidcClientTest extends TestCase
         $token = $this->makeJwt(['roles' => ['bink8s.app.kiwi.user']]);
 
         self::assertSame(['bink8s.app.kiwi.user'], $client->getUserRoles([
-            'oidc_auth_token' => ['id_token' => $token],
+            'oidc_auth_token' => [
+                'id_token' => $token,
+                'expires' => time() + 60,
+            ],
         ]));
+    }
+
+    public function testExpiredSessionTokenIsRejected(): void
+    {
+        $client = $this->createClient();
+        $sessionData = [
+            'oidc_auth_token' => [
+                'access_token' => 'expired-access-token',
+                'id_token' => $this->makeJwt(['roles' => ['bink8s.app.kiwi.user']]),
+                'expires' => time() - 60,
+            ],
+        ];
+
+        self::assertFalse($client->hasFreshSessionToken($sessionData));
+        self::assertSame([], $client->getUserRoles($sessionData));
+        self::assertNull($client->getAccessToken($sessionData));
     }
 
     public function testBuildEndSessionLogoutUrl(): void
@@ -153,6 +209,28 @@ final class OidcClientTest extends TestCase
         ], $nonce);
     }
 
+    public function testNormalizeTokenDataOmitsRefreshToken(): void
+    {
+        $client = $this->createClient();
+        $expires = time() + 3600;
+        $token = new AccessToken([
+            'access_token' => 'access-token',
+            'refresh_token' => 'refresh-token',
+            'expires' => $expires,
+            'id_token' => 'id-token',
+            'scope' => 'openid email profile',
+            'token_type' => 'Bearer',
+            'roles' => ['bink8s.app.kiwi.user'],
+        ]);
+
+        $normalized = $client->normalizeTokenData($token);
+
+        self::assertArrayNotHasKey('refresh_token', $normalized);
+        self::assertSame('access-token', $normalized['access_token']);
+        self::assertSame($expires, $normalized['expires']);
+        self::assertSame('id-token', $normalized['id_token']);
+    }
+
     #[After]
     public function restoreClientSecretsEnvironment(): void
     {
@@ -238,5 +316,61 @@ final class OidcClientTest extends TestCase
         };
 
         return sprintf('%s.%s.', $encode($header), $encode($payload));
+    }
+
+    /**
+     * @param array<string, string|null> $values
+     * @return mixed
+     */
+    private function withEnvironment(array $values, callable $callback): mixed
+    {
+        $previousValues = [];
+        foreach ($values as $name => $value) {
+            $previousValues[$name] = getenv($name);
+            if (null === $value) {
+                putenv($name);
+            } else {
+                putenv(sprintf('%s=%s', $name, $value));
+            }
+        }
+
+        try {
+            return $callback();
+        } finally {
+            foreach ($previousValues as $name => $value) {
+                if (false === $value) {
+                    putenv($name);
+                    continue;
+                }
+
+                putenv(sprintf('%s=%s', $name, $value));
+            }
+        }
+    }
+
+    private function createTemporarySecretsFile(): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'kiwi-');
+        if (false === $path) {
+            throw new \RuntimeException('Unable to create a temporary secrets file.');
+        }
+
+        $payload = json_encode([
+            'web' => [
+                'client_id' => 'kiwi-client',
+                'client_secret' => 'kiwi-secret',
+                'auth_uri' => 'https://issuer.example/auth',
+                'token_uri' => 'https://issuer.example/token',
+                'userinfo_uri' => 'https://issuer.example/userinfo',
+                'issuer' => 'https://issuer.example',
+                'redirect_uris' => ['https://example.org/auth/callback'],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        if (false === file_put_contents($path, $payload)) {
+            throw new \RuntimeException(sprintf('Unable to write the temporary secrets file "%s".', $path));
+        }
+
+        return $path;
     }
 }

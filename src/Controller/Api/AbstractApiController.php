@@ -143,7 +143,7 @@ abstract class AbstractApiController extends AbstractController
     protected function getAppConfig(): array
     {
         return [
-            'TEAMS_PRESENCE_SYNC_ENABLED' => getenv('TEAMS_PRESENCE_SYNC_ENABLED') ?: true,
+            'TEAMS_PRESENCE_SYNC_ENABLED' => getenv('TEAMS_PRESENCE_SYNC_ENABLED') ?: false,
             'TEAMS_PRESENCE_SESSION_ID' => getenv('TEAMS_PRESENCE_SESSION_ID') ?: null,
             'OIDC_CLIENT_ID' => $this->oidcClient->getConfig()['client_id'] ?? null,
         ];
@@ -151,11 +151,14 @@ abstract class AbstractApiController extends AbstractController
 
     private function isApiAuthenticated(Request $request): bool
     {
+        $sessionData = $this->getSessionData($request);
+        if (!$this->oidcClient->hasFreshSessionToken($sessionData)) {
+            return false;
+        }
+
         if ($this->getUser() instanceof OidcUser) {
             return true;
         }
-
-        $sessionData = $this->getSessionData($request);
 
         return isset($sessionData['oidc_auth_profile']) || isset($sessionData['oidc_auth_token']);
     }

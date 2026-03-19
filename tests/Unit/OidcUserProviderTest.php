@@ -25,6 +25,7 @@ final class OidcUserProviderTest extends TestCase
                 'name' => 'Kiwi User',
             ],
             'oidc_auth_token' => [
+                'expires' => time() + 60,
                 'roles' => ['bink8s.app.kiwi.user'],
             ],
         ]);
@@ -44,6 +45,28 @@ final class OidcUserProviderTest extends TestCase
         $provider->loadUserByIdentifier('kiwi-user');
     }
 
+    public function testExpiredSessionDoesNotRefreshUser(): void
+    {
+        $provider = $this->createProvider([
+            'oidc_auth_profile' => [
+                'preferred_username' => 'kiwi-user',
+                'name' => 'Kiwi User',
+            ],
+            'oidc_auth_token' => [
+                'expires' => time() - 60,
+                'roles' => ['bink8s.app.kiwi.admin'],
+            ],
+        ]);
+
+        $this->expectException(UserNotFoundException::class);
+        $provider->refreshUser(
+            OidcUser::fromProfile(
+                ['preferred_username' => 'stale-user', 'name' => 'Stale User'],
+                ['bink8s.app.kiwi.user'],
+            ),
+        );
+    }
+
     public function testRefreshUserUsesSessionDataWhenAvailable(): void
     {
         $provider = $this->createProvider([
@@ -52,6 +75,7 @@ final class OidcUserProviderTest extends TestCase
                 'name' => 'Kiwi User',
             ],
             'oidc_auth_token' => [
+                'expires' => time() + 60,
                 'roles' => ['bink8s.app.kiwi.admin'],
             ],
         ]);
