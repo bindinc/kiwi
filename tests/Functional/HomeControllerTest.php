@@ -117,7 +117,15 @@ final class HomeControllerTest extends WebTestCase
 
     public function testSessionAuthenticatedUserCanRenderHome(): void
     {
-        $client = static::createClient();
+        $client = $this->createAuthenticatedClient(
+            ['bink8s.app.kiwi.user'],
+            [
+                'given_name' => 'Kiwi',
+                'family_name' => 'User',
+                'preferred_username' => 'kiwi-user',
+                'roles' => ['bink8s.app.kiwi.user'],
+            ],
+        );
         $client->loginUser(
             OidcUser::fromProfile([
                 'given_name' => 'Kiwi',
