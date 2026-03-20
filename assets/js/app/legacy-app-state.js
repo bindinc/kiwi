@@ -143,7 +143,7 @@ const SUBSCRIPTION_DUPLICATE_INPUT_FIELDS = [
 // ---------------------------------------------------------------------------
 
 const bootstrapApiUrl = '/api/v1/bootstrap';
-const offersApiUrl = '/api/v1/catalog/offers';
+const offersApiUrl = '/api/v1/webabo/offers';
 const personsStateApiUrl = '/api/v1/persons/state';
 const personsApiUrl = '/api/v1/persons';
 const subscriptionsApiUrl = '/api/v1/subscriptions';

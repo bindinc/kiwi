@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Entity\WebaboOffer;
+use App\Webabo\WebaboOfferCacheSchemaManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class ApiContractTest extends WebTestCase
@@ -188,14 +191,15 @@ final class ApiContractTest extends WebTestCase
     public function testCatalogAndSubscriptionEndpoints(): void
     {
         $client = $this->createAuthenticatedClient();
+        $this->seedWebaboOfferCache();
 
-        $client->request('GET', '/api/v1/catalog/offers?type=werfsleutels&query=avro&limit=5');
+        $client->request('GET', '/api/v1/webabo/offers?query=avro&limit=5');
         self::assertResponseIsSuccessful();
         $offersPayload = json_decode($client->getResponse()->getContent(), true);
         self::assertGreaterThan(0, count($offersPayload['items']));
 
         $barcode = $offersPayload['items'][0]['barcode'];
-        $client->request('GET', sprintf('/api/v1/catalog/offers?type=werfsleutels&barcode=%s&limit=5', $barcode));
+        $client->request('GET', sprintf('/api/v1/webabo/offers?barcode=%s&limit=5', $barcode));
         self::assertResponseIsSuccessful();
         self::assertGreaterThanOrEqual(1, json_decode($client->getResponse()->getContent(), true)['total']);
 
@@ -217,5 +221,39 @@ final class ApiContractTest extends WebTestCase
         ], JSON_THROW_ON_ERROR));
         self::assertResponseIsSuccessful();
         self::assertArrayHasKey('entry', json_decode($client->getResponse()->getContent(), true));
+    }
+
+    private function seedWebaboOfferCache(): void
+    {
+        /** @var WebaboOfferCacheSchemaManager $schemaManager */
+        $schemaManager = static::getContainer()->get(WebaboOfferCacheSchemaManager::class);
+        $schemaManager->ensureSchema();
+
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->getConnection()->executeStatement('DELETE FROM webabo_offers_cache');
+
+        $offer = new WebaboOffer('AVRV519');
+        $offer->refreshFromWebaboPayload([
+            'offerId' => 12,
+            'orderChoiceKey' => 34,
+            'salesCode' => 'AVRV519',
+            'title' => '1 jaar Avrobode voor maar EUR52',
+            'offerPrice' => [
+                'price' => 52.0,
+                'priceCode' => 'std',
+            ],
+            'offerDelivery' => [
+                'validDate' => [
+                    'validFrom' => '2026-01-01T00:00:00+00:00',
+                    'validUntil' => '2027-01-01T00:00:00+00:00',
+                ],
+            ],
+            'barcode' => '8712345678901',
+        ], new \DateTimeImmutable('2026-03-20T12:00:00+00:00'));
+
+        $entityManager->persist($offer);
+        $entityManager->flush();
+        $entityManager->clear();
     }
 }

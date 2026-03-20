@@ -3,7 +3,7 @@ import { getGlobalScope } from '../services.js';
 const WINBACK_SLICE_NAMESPACE = 'kiwiWinbackSlice';
 
 const DEFAULT_API_ENDPOINTS = {
-    offersApiUrl: '/api/v1/catalog/offers',
+    offersApiUrl: '/api/v1/webabo/offers',
     subscriptionsApiUrl: '/api/v1/subscriptions'
 };
 
@@ -534,8 +534,7 @@ export async function generateWinbackOffers(reason) {
 
     try {
         const query = new URLSearchParams({
-            type: 'winback',
-            reason: reason || 'other'
+            limit: '20'
         }).toString();
         const payload = await apiClient.get(`${offersApiUrl}?${query}`);
         relevantOffers = payload && Array.isArray(payload.items) ? payload.items : [];
@@ -548,14 +547,16 @@ export async function generateWinbackOffers(reason) {
     }
 
     if (!relevantOffers.length) {
-        showToast(translateKey('winback.offersNoneForReason', {}, 'Geen winback-aanbiedingen beschikbaar voor deze reden'), 'warning');
+        showToast(translateKey('winback.offersNoneAvailable', {}, 'Geen aanbiedingen beschikbaar'), 'warning');
     }
 
     const offersMarkup = relevantOffers.map((offer) => {
-        const safeOfferId = escapeHtml(String(offer.id ?? ''));
+        const safeOfferId = escapeHtml(String(offer.offerId ?? offer.salesCode ?? ''));
         const safeTitle = escapeHtml(String(offer.title || ''));
-        const safeDescription = escapeHtml(String(offer.description || ''));
-        const safeDiscount = escapeHtml(String(offer.discount || ''));
+        const safeDescription = escapeHtml(String(offer.description || offer.webDescription || offer.additionalDescription || ''));
+        const safeDiscount = offer.price !== undefined && offer.price !== null
+            ? escapeHtml(`EUR ${String(offer.price)}`)
+            : '';
 
         return `
         <div class="offer-card" data-action="select-offer" data-arg-offer-id="${safeOfferId}" data-arg-title="${safeTitle}" data-arg-description="${safeDescription}">

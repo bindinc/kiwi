@@ -1,4 +1,4 @@
-const OFFERS_API_URL = '/api/v1/catalog/offers';
+const OFFERS_API_URL = '/api/v1/webabo/offers';
 const WERFSLEUTEL_SEARCH_LIMIT = 5;
 const WERFSLEUTEL_FULL_SYNC_LIMIT = 250;
 const WERFSLEUTEL_SEARCH_DEBOUNCE_MS = 180;
@@ -283,7 +283,6 @@ async function syncWerfsleutelsCatalog(options = {}) {
     }
 
     const query = new URLSearchParams({
-        type: 'werfsleutels',
         limit: String(WERFSLEUTEL_FULL_SYNC_LIMIT)
     }).toString();
 
@@ -333,7 +332,6 @@ async function searchWerfsleutelsViaApi(query) {
     }
 
     const queryParams = new URLSearchParams({
-        type: 'werfsleutels',
         limit: String(WERFSLEUTEL_SEARCH_LIMIT)
     });
 

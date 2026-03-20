@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Webabo;
 
-use App\Entity\WerfsleutelOffer;
-use App\Repository\WerfsleutelOfferRepository;
+use App\Entity\WebaboOffer;
+use App\Repository\WebaboOfferRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class WebaboOfferSynchronizer
 {
     public function __construct(
         private readonly WebaboOfferClient $offerClient,
-        private readonly WerfsleutelOfferRepository $repository,
+        private readonly WebaboOfferRepository $repository,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -42,7 +42,7 @@ final class WebaboOfferSynchronizer
 
             $entity = $existingBySalesCode[$salesCode] ?? null;
             if (null === $entity) {
-                $entity = new WerfsleutelOffer((string) $offer['salesCode']);
+                $entity = new WebaboOffer((string) $offer['salesCode']);
                 ++$inserted;
                 $this->entityManager->persist($entity);
             } else {

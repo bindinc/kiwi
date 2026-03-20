@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Repository\WerfsleutelOfferRepository;
+use App\Repository\WebaboOfferRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: WerfsleutelOfferRepository::class)]
-#[ORM\Table(name: 'werfsleutel_offer_cache')]
-#[ORM\UniqueConstraint(name: 'uniq_werfsleutel_offer_sales_code', columns: ['sales_code'])]
-#[ORM\Index(name: 'idx_werfsleutel_offer_offer_id', columns: ['offer_id'])]
-#[ORM\Index(name: 'idx_werfsleutel_offer_valid_until', columns: ['valid_until'])]
-final class WerfsleutelOffer
+#[ORM\Entity(repositoryClass: WebaboOfferRepository::class)]
+#[ORM\Table(name: 'webabo_offers_cache')]
+#[ORM\UniqueConstraint(name: 'uniq_webabo_offer_sales_code', columns: ['sales_code'])]
+#[ORM\Index(name: 'idx_webabo_offer_offer_id', columns: ['offer_id'])]
+#[ORM\Index(name: 'idx_webabo_offer_valid_until', columns: ['valid_until'])]
+final class WebaboOffer
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -113,6 +113,21 @@ final class WerfsleutelOffer
     public function getTitle(): string
     {
         return $this->title;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function getAdditionalDescription(): ?string
+    {
+        return $this->additionalDescription;
+    }
+
+    public function getWebDescription(): ?string
+    {
+        return $this->webDescription;
     }
 
     public function getSubscriptionCode(): ?string

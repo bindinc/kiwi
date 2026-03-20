@@ -637,6 +637,7 @@ const en = {
         "offersUnavailable": "Winback offers via backend are unavailable",
         "offersLoadFailed": "Loading winback offers failed",
         "offersNoneForReason": "No winback offers are available for this reason",
+        "offersNoneAvailable": "No offers are available",
         "offerScriptTitle": "Offer presentation script:",
         "offerScriptIntro": "I understand you want to cancel your subscription. We highly value you as a customer and would like you to stay. That is why I would like to offer you a special deal:",
         "offerScriptQuestion": "Would this help you keep the subscription?",

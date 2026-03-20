@@ -5,18 +5,22 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Webabo\WebaboOfferSynchronizer;
-use App\Webabo\WerfsleutelCatalogSchemaManager;
+use App\Webabo\WebaboOfferCacheSchemaManager;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'app:webabo:sync-werfsleutels', description: 'Synchroniseer Webabo werfsleutels naar de PostgreSQL cache.')]
-final class SyncWerfsleutelsCommand extends Command
+#[AsCommand(
+    name: 'app:webabo:sync-offers',
+    description: 'Synchronize Webabo offers into the PostgreSQL table webabo_offers_cache.',
+    aliases: ['app:webabo:sync-werfsleutels'],
+)]
+final class SyncWebaboOffersCommand extends Command
 {
     public function __construct(
-        private readonly WerfsleutelCatalogSchemaManager $schemaManager,
+        private readonly WebaboOfferCacheSchemaManager $schemaManager,
         private readonly WebaboOfferSynchronizer $synchronizer,
     ) {
         parent::__construct();
@@ -28,9 +32,9 @@ final class SyncWerfsleutelsCommand extends Command
         $schemaResult = $this->schemaManager->ensureSchema();
 
         if ('created' === $schemaResult['status']) {
-            $io->note('De PostgreSQL cachetabel voor werfsleutels is aangemaakt.');
+            $io->note('The PostgreSQL table webabo_offers_cache was created.');
         } elseif ('updated' === $schemaResult['status']) {
-            $io->note('De PostgreSQL cachetabel voor werfsleutels is bijgewerkt.');
+            $io->note('The PostgreSQL table webabo_offers_cache was updated.');
         }
 
         try {
@@ -42,7 +46,7 @@ final class SyncWerfsleutelsCommand extends Command
         }
 
         $io->success(sprintf(
-            'Webabo werfsleutels gesynchroniseerd: %d opgehaald, %d toegevoegd, %d bijgewerkt, %d verwijderd.',
+            'Webabo offers synchronized: %d fetched, %d inserted, %d updated, %d removed.',
             $result['fetched'],
             $result['inserted'],
             $result['updated'],

@@ -119,9 +119,9 @@ Docker Compose now supports two local OIDC modes:
    - missing `client_secrets.json` -> fallback OIDC mode
    - empty `client_secrets.json` -> fail fast
 
-## Webabo werfsleutel sync
+## Webabo offer sync
 
-Kiwi can now cache the available Webabo werfsleutels in PostgreSQL so the
+Kiwi can now cache the available Webabo offers in PostgreSQL so the
 frontend suggestions flow reads from the local API/database path instead of
 hitting the external HUP/Webabo API during normal typing and selection.
 
@@ -139,13 +139,14 @@ to another client registration, you can override that with `client_id`,
 `client_basic_auth`, `scope`, and `refresh_token` inside the `hup` section.
 
 ```bash
-make console ARGS='app:webabo:sync-werfsleutels'
+make console ARGS='app:webabo:sync-offers'
 ```
 
-After a successful sync, `/api/v1/catalog/offers?type=werfsleutels` prefers the
+The legacy alias `app:webabo:sync-werfsleutels` remains available for existing scripts.
+
+After a successful sync, `/api/v1/webabo/offers` prefers the
 PostgreSQL cache. If the cache table does not exist yet, or has not been filled
-yet, Kiwi falls back to the existing fixture catalog so development and tests
-can keep running safely.
+yet, Kiwi now returns an empty result until the Webabo sync succeeds.
    - `client_secrets.json` is a directory -> fail fast
 
 4. Trust the generated cert in your OS/browser (located at `infra/docker/nginx/certs`).
@@ -220,6 +221,7 @@ Kiwi now stores server-side Symfony sessions in PostgreSQL.
 - `APP_SECRET` signs the session cookie and must stay stable across replicas.
 - `SESSION_DB_HOST`, `SESSION_DB_PORT`, `SESSION_DB_NAME`, `SESSION_DB_USER`, `SESSION_DB_PASSWORD`, and `SESSION_DB_SSLMODE` configure the shared PostgreSQL session store.
 - Local `docker compose up` bootstraps the session table automatically through `SESSION_BOOTSTRAP_ON_START=1`.
+- Local `docker compose up` also warms the Webabo offer cache automatically through `WEBABO_OFFER_SYNC_ON_START=1` when external `client_secrets.json` credentials are available.
 - `php bin/console app:sessions:bootstrap` prepares `public.kiwi_http_sessions` and transparently archives a legacy Flask table before creating the Symfony schema.
 - `php bin/console app:sessions:cleanup` prunes expired rows through Symfony's configured session handler.
 

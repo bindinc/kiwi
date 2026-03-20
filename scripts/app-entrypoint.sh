@@ -73,4 +73,16 @@ if [ "$should_bootstrap_sessions" = "1" ]; then
   php bin/console app:sessions:bootstrap --no-interaction
 fi
 
+should_sync_webabo_offers="${WEBABO_OFFER_SYNC_ON_START:-${WERFSLEUTEL_SYNC_ON_START:-0}}"
+if [ "$should_sync_webabo_offers" = "1" ]; then
+  if [ "$OIDC_MODE" = "fallback" ]; then
+    printf '[app-entrypoint] Skipping Webabo offer sync on start because fallback OIDC mode does not provide live Webabo credentials.\n'
+  else
+    printf '[app-entrypoint] Synchronizing Webabo offers into webabo_offers_cache.\n'
+    if ! php bin/console app:webabo:sync-offers --no-interaction; then
+      printf '[app-entrypoint] Webabo offer sync failed. The app will continue to start, but the Nieuw Abonnement search may stay empty until the sync succeeds.\n' >&2
+    fi
+  fi
+fi
+
 exec frankenphp run --config /etc/caddy/Caddyfile

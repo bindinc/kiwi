@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\WerfsleutelOffer;
+use App\Entity\WebaboOffer;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<WerfsleutelOffer>
+ * @extends ServiceEntityRepository<WebaboOffer>
  */
-final class WerfsleutelOfferRepository extends ServiceEntityRepository
+final class WebaboOfferRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, WerfsleutelOffer::class);
+        parent::__construct($registry, WebaboOffer::class);
     }
 
     /**
-     * @return array<string, WerfsleutelOffer>
+     * @return array<string, WebaboOffer>
      */
     public function findAllIndexedBySalesCode(): array
     {
@@ -33,7 +33,7 @@ final class WerfsleutelOfferRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return list<WerfsleutelOffer>
+        * @return list<WebaboOffer>
      */
     public function searchSuggestions(string $query, int $limit): array
     {
@@ -81,7 +81,7 @@ final class WerfsleutelOfferRepository extends ServiceEntityRepository
         return array_values($qb->getQuery()->getResult());
     }
 
-    public function findOneBySalesCode(string $salesCode): ?WerfsleutelOffer
+    public function findOneBySalesCode(string $salesCode): ?WebaboOffer
     {
         $normalizedSalesCode = strtolower(trim($salesCode));
         if ('' === $normalizedSalesCode) {
@@ -94,5 +94,21 @@ final class WerfsleutelOfferRepository extends ServiceEntityRepository
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+        * @return list<WebaboOffer>
+     */
+    public function findAllActive(?\DateTimeImmutable $reference = null): array
+    {
+        $now = $reference ?? new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+
+        return array_values($this->createQueryBuilder('offer')
+            ->andWhere('(offer.validFrom IS NULL OR offer.validFrom <= :now)')
+            ->andWhere('(offer.validUntil IS NULL OR offer.validUntil >= :now)')
+            ->setParameter('now', $now)
+            ->orderBy('offer.salesCode', 'ASC')
+            ->getQuery()
+            ->getResult());
     }
 }
