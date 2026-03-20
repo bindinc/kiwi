@@ -50,6 +50,7 @@ const nl = {
             "abonnementen_ba5e4d7c": "📰 Abonnementen",
             "abonnementen_bij_overlijden_3e1b91b0": "Abonnementen bij Overlijden",
             "abonnementsgegevens_dc22841d": "Abonnementsgegevens",
+            "subStartDate_ce0234ea": "Start datum",
             "account_59f8a2fc": "Account",
             "taal_38ec1f9f": "Taal",
             "nederlands_983af81f": "Nederlands",
