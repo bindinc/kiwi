@@ -1,37 +1,46 @@
 # General development rules
 
-You are an engineer who writes code for **human brains, not machines**. You favour code that is simple to undertand and maintain. Remember at all times that the code you will be processed by human brain. The brain has a very limited capacity. People can only hold ~4 chunks in their working memory at once. If there are more than four things to think about, it feels mentally taxing for us.
+You are an engineer who writes code for **human brains, not machines**. Prefer code that is easy to understand, verify, and maintain. Human working memory is limited: readers can only hold a few facts in their head at once. When code forces them to track too many conditions, abstractions, or hidden assumptions, it becomes tiring to read and easy to break.
 
-Here's an example that's hard for people to understand:
-```
-if val > someConstant // (one fact in human memory)
-    && (condition2 || condition3) // (three facts in human memory), prev cond should be true, one of c2 or c3 has be true
-    && (condition4 && !condition5) { // (human memory overload), we are messed up by this point
-    ...
-}
-```
+These rules apply everywhere, especially in new code and meaningful refactors. For trivial edits, generated code, or vendor code, follow them where practical and do not create churn by forcing broad rewrites.
 
-A good example, introducing intermediate variables with meaningful names:
+Prefer code like this:
 ```
 isValid = val > someConstant
 isAllowed = condition2 || condition3
-isSecure = condition4 && !condition5 
-// (human working memory is clean), we don't need to remember the conditions, there are descriptive variables
+isSecure = condition4 && !condition5
+
 if isValid && isAllowed && isSecure {
     ...
 }
 ```
 
-- Don't write useless "WHAT" comments, especially the ones that duplicate the line of the following code. "WHAT" comments only allowed if they give a bird's eye overview, a description on a higher level of abstraction that the following block of code. Also, write "WHY" comments, that explain the motivation behind the code (why is it done in that specific way?), explain an especially complex or tricky part of the code.
-- Make conditionals readable, extract complex expressions into intermediate variables with meaningful names.
-- Prefer early returns over nested ifs, free working memory by letting the reader focus only on the happy path only.
-- Prefer composition over deep inheritance, don’t force readers to chase behavior across multiple classes.
-- Don't write shallow methods/classes/modules (complex interface, simple functionality). An example of shallow class: `MetricsProviderFactoryFactory`. The names and interfaces of such classes tend to be more mentally taxing than their entire implementations. Having too many shallow modules can make it difficult to understand the project. Not only do we have to keep in mind each module responsibilities, but also all their interactions.
-- Prefer deep method/classes/modules (simple interface, complex functionality) over many shallow ones. 
-- Don't overuse language featuress, stick to the minimal subset. Readers shouldn't need an in-depth knowledge of the language to understand the code.
-- Use self-descriptive values, avoid custom mappings that require memorization.
-- Don't abuse DRY, a little duplication is better than unnecessary dependencies.
-- Avoid unnecessary layers of abstractions, jumping between layers of abstractions (like many small methods/classes/modules) is mentally exhausting, linear thinking is more natural to humans.
+### Readability and flow
+- Make conditionals readable. Extract dense expressions into intermediate variables with meaningful names.
+- Prefer early returns over nested conditionals so readers can focus on the happy path.
+- Stick to the smallest useful subset of the language. Readers should not need advanced language trivia to follow the code.
+- Avoid unnecessary abstraction layers. A straight line of thought is usually easier to follow than jumping across many tiny wrappers.
+- Prefer composition over deep inheritance. Do not force readers to chase behavior across multiple classes.
+- Do not over-apply DRY. A little duplication is often cheaper than unnecessary shared dependencies.
+- Use self-descriptive values and avoid custom mappings that require memorization.
+
+### Functions
+- Prefer small semantic functions with explicit inputs and explicit outputs. A function should do what its name says and nothing extra.
+- Keep side effects out of semantic functions unless the side effect is the explicit purpose of the function.
+- If a well-defined flow appears in multiple places, capture it in a clearly named function instead of re-explaining it with comments.
+- Avoid shallow methods, classes, or modules with complex interfaces and trivial behavior. Prefer deeper units with simple interfaces and meaningful internal work.
+
+### Orchestration
+- Use pragmatic functions to orchestrate workflows, integrate side effects, and connect several semantic functions into one process.
+- Pragmatic functions may contain more complex control flow, but they should stay readable and should not turn into vague utility buckets.
+- Add doc comments only when they explain non-obvious behavior, constraints, failure modes, or important tradeoffs.
+- Do not write "WHAT" comments that merely restate the next line of code. Use comments for "WHY", caveats, or a bird's-eye view of a block.
+
+### Models
+- Model data so that invalid states are difficult or impossible to represent.
+- Use precise names and types. If a field does not clearly belong to the model's name, the model is probably too broad.
+- Be suspicious of growing piles of optional fields. Split broad models into smaller concepts instead of turning them into loose bags of data.
+- Prefer domain-specific types when identical shapes represent different concepts.
 
 ## Mandatory default
 Whenever I ask for a **new PR** (or any task that should result in a PR), you must **always** follow the workflow below. Deviating from this process is not allowed.
