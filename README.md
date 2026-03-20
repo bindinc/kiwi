@@ -118,6 +118,34 @@ Docker Compose now supports two local OIDC modes:
    Startup runs a preflight check with this behavior:
    - missing `client_secrets.json` -> fallback OIDC mode
    - empty `client_secrets.json` -> fail fast
+
+## Webabo werfsleutel sync
+
+Kiwi can now cache the available Webabo werfsleutels in PostgreSQL so the
+frontend suggestions flow reads from the local API/database path instead of
+hitting the external HUP/Webabo API during normal typing and selection.
+
+Use the same `client_secrets.json` structure as `client_secrets.example.json`
+for the `hup` section. The sync command reads the configured HUP token URL and
+`webabo_base_url`, ensures the cache table exists, fetches `GET /offers`, and
+upserts the cached offers into PostgreSQL.
+
+HUP behaves as a confidential OIDC client for this flow. Kiwi therefore sends
+client authentication on the token request before it calls Webabo. The default
+setup matches the existing HUP/Webabo integration by using
+`client_auth_method=basic` with `client_basic_auth=PPA:`. If HUP ever switches
+to another client registration, you can override that with `client_id`,
+`client_secret`, `client_auth_method` (`basic`, `post`, or `none`),
+`client_basic_auth`, `scope`, and `refresh_token` inside the `hup` section.
+
+```bash
+make console ARGS='app:webabo:sync-werfsleutels'
+```
+
+After a successful sync, `/api/v1/catalog/offers?type=werfsleutels` prefers the
+PostgreSQL cache. If the cache table does not exist yet, or has not been filled
+yet, Kiwi falls back to the existing fixture catalog so development and tests
+can keep running safely.
    - `client_secrets.json` is a directory -> fail fast
 
 4. Trust the generated cert in your OS/browser (located at `infra/docker/nginx/certs`).

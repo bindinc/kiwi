@@ -3,6 +3,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- Add a Webabo-backed werfsleutel cache flow with a dedicated HUP token provider, Doctrine cache entity/repository, and the `app:webabo:sync-werfsleutels` console command so Kiwi can import available offers into PostgreSQL instead of querying the external API during each user interaction.
+
+### Changed
+- Route `/api/v1/catalog/offers?type=werfsleutels` through the PostgreSQL cache when available, while keeping the existing fixture catalog as a safe fallback until the cache has been synchronized.
+- Keep the werfsleutel suggestions picker querying the internal catalog API for typed searches beyond the locally seeded list, and fall back to all configured channels when upstream offer metadata does not yet expose channel restrictions.
+- Align the HUP token flow with the live Webabo integration by using confidential-client authentication on the token request, including the legacy `PPA:` Basic credential fallback and corrected `PARADISE` realm example URLs.
+
+### Fixed
+- Repair the JSON formatting in `client_secrets.example.json` so local tooling can safely parse the HUP/Webabo example structure.
+
 ## [v1.0.10]
 
 ### Fixed

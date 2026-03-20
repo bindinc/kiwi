@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Http\ApiProblemException;
 use App\Oidc\OidcClient;
 use App\Service\PocCatalogService;
+use App\Service\WerfsleutelCatalogService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -17,6 +18,7 @@ final class CatalogController extends AbstractApiController
     public function __construct(
         OidcClient $oidcClient,
         private readonly PocCatalogService $catalog,
+        private readonly WerfsleutelCatalogService $werfsleutelCatalog,
     ) {
         parent::__construct($oidcClient);
     }
@@ -29,7 +31,7 @@ final class CatalogController extends AbstractApiController
         $offerType = strtolower(trim((string) $request->query->get('type', 'werfsleutels')));
         if ('werfsleutels' === $offerType) {
             $limit = $this->parseQueryInt($request, 'limit', 20, 1, 250) ?? 20;
-            $items = $this->catalog->searchWerfsleutels(
+            $items = $this->werfsleutelCatalog->search(
                 (string) $request->query->get('query', ''),
                 (string) $request->query->get('barcode', ''),
                 $limit,
