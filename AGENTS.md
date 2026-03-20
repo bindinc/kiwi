@@ -132,7 +132,7 @@ When reporting completion, always explicitly include:
 - Kiwi must be tested and approved using a flux bootstrapped bink8s-cluster-management repo on a kind 3 node docker-desktop local cluster.
 - Kiwi will be deployed on the flux bootstrapped bink8s-cluster-management repo (prod) on the 3 master node + reverse proxy bink8s cluster
 - for local/prod k8s: we have 3 master nodes and require that kiwi is replicated on each master node. 
-- for local/prod k8s: We use `sessionAffinity: None`, since the reverse proxy uses round robin to access each master node. This means that we need to take into account that each https:// call could reach a different replica of the kiwi app pod.
+- for local/prod k8s: We use `sessionAffinity: None`, since ------the reverse proxy uses round robin to access each master node. This means that we need to take into account that each https:// call could reach a different replica of the kiwi app pod.
 
 ## tools
 - Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask.
