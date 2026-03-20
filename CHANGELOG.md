@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.0.11]
+
 ### Added
 - Add a Webabo-backed offer cache flow with a dedicated HUP token provider, Doctrine cache entity/repository, and the `app:webabo:sync-offers` console command so Kiwi can import available offers into PostgreSQL instead of querying the external API during each user interaction.
 
