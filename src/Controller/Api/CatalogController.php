@@ -21,43 +21,6 @@ final class CatalogController extends AbstractApiController
         parent::__construct($oidcClient);
     }
 
-    #[Route('/offers', name: 'api_catalog_offers', methods: ['GET'])]
-    public function offers(Request $request): JsonResponse
-    {
-        $this->requireApiAccess($request);
-
-        $offerType = strtolower(trim((string) $request->query->get('type', 'werfsleutels')));
-        if ('werfsleutels' === $offerType) {
-            $limit = $this->parseQueryInt($request, 'limit', 20, 1, 250) ?? 20;
-            $items = $this->catalog->searchWerfsleutels(
-                (string) $request->query->get('query', ''),
-                (string) $request->query->get('barcode', ''),
-                $limit,
-            );
-
-            return $this->json([
-                'type' => $offerType,
-                'items' => $items,
-                'total' => count($items),
-            ]);
-        }
-
-        if ('winback' === $offerType) {
-            $reason = $request->query->get('reason');
-            $reason = \is_string($reason) ? $reason : null;
-            $items = $this->catalog->getWinbackOffers($reason);
-
-            return $this->json([
-                'type' => $offerType,
-                'reason' => $reason ?? 'other',
-                'items' => $items,
-                'total' => count($items),
-            ]);
-        }
-
-        throw new ApiProblemException(400, 'invalid_query_parameter', 'type must be one of: werfsleutels, winback');
-    }
-
     #[Route('/articles', name: 'api_catalog_articles', methods: ['GET'])]
     public function articles(Request $request): JsonResponse
     {

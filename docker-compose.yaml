@@ -101,6 +101,7 @@ services:
       SESSION_DB_PASSWORD: kiwi
       SESSION_DB_SSLMODE: disable
       SESSION_BOOTSTRAP_ON_START: "1"
+      WEBABO_OFFER_SYNC_ON_START: "1"
     working_dir: /app
     healthcheck:
       test:

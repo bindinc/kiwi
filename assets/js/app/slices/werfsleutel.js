@@ -1,4 +1,4 @@
-const OFFERS_API_URL = '/api/v1/catalog/offers';
+const OFFERS_API_URL = '/api/v1/webabo/offers';
 const WERFSLEUTEL_SEARCH_LIMIT = 5;
 const WERFSLEUTEL_FULL_SYNC_LIMIT = 250;
 const WERFSLEUTEL_SEARCH_DEBOUNCE_MS = 180;
@@ -283,7 +283,6 @@ async function syncWerfsleutelsCatalog(options = {}) {
     }
 
     const query = new URLSearchParams({
-        type: 'werfsleutels',
         limit: String(WERFSLEUTEL_FULL_SYNC_LIMIT)
     }).toString();
 
@@ -333,7 +332,6 @@ async function searchWerfsleutelsViaApi(query) {
     }
 
     const queryParams = new URLSearchParams({
-        type: 'werfsleutels',
         limit: String(WERFSLEUTEL_SEARCH_LIMIT)
     });
 
@@ -544,9 +542,11 @@ function renderWerfsleutelChannelOptions() {
     const allowedChannels = Array.isArray(selectedKey.allowedChannels)
         ? selectedKey.allowedChannels
         : [];
-    const channelEntries = allowedChannels
-        .filter((channelCode) => werfsleutelSliceState.channels[channelCode])
-        .map((channelCode) => [channelCode, werfsleutelSliceState.channels[channelCode]]);
+    const channelEntries = allowedChannels.length > 0
+        ? allowedChannels
+            .filter((channelCode) => werfsleutelSliceState.channels[channelCode])
+            .map((channelCode) => [channelCode, werfsleutelSliceState.channels[channelCode]])
+        : Object.entries(werfsleutelSliceState.channels);
 
     if (channelEntries.length === 0) {
         werfsleutelSliceState.selectedChannel = null;
@@ -723,7 +723,11 @@ function handleWerfsleutelQuery(rawValue) {
     const localMatches = filterWerfsleutelCatalog(query);
     renderWerfsleutelSuggestions(localMatches);
 
-    if (!isWerfsleutelBarcodeQuery(query) || findWerfsleutelByBarcode(query)) {
+    const isBarcodeLookup = isWerfsleutelBarcodeQuery(query);
+    const localBarcodeMatch = isBarcodeLookup ? findWerfsleutelByBarcode(query) : null;
+    const shouldSearchViaApi = query.length >= 2 || isBarcodeLookup;
+
+    if (!shouldSearchViaApi || (isBarcodeLookup && localBarcodeMatch)) {
         return;
     }
 
@@ -737,7 +741,7 @@ function handleWerfsleutelQuery(rawValue) {
         try {
             await searchWerfsleutelsViaApi(lookupQuery);
         } catch (error) {
-            console.warn('Werfsleutel barcode lookup via API mislukt.', error);
+            console.warn('Werfsleutel lookup via API mislukt.', error);
             return;
         }
 

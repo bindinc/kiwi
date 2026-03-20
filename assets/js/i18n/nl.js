@@ -637,6 +637,7 @@ const nl = {
         "offersUnavailable": "Winback-aanbiedingen via backend zijn niet beschikbaar",
         "offersLoadFailed": "Winback-aanbiedingen laden mislukt",
         "offersNoneForReason": "Geen winback-aanbiedingen beschikbaar voor deze reden",
+        "offersNoneAvailable": "Geen aanbiedingen beschikbaar",
         "offerScriptTitle": "Script voor aanbod presentatie:",
         "offerScriptIntro": "Ik begrijp dat u het abonnement wilt opzeggen. We waarderen u als klant enorm en willen graag dat u blijft. Daarom wil ik u een speciaal aanbod doen:",
         "offerScriptQuestion": "Zou dit u helpen om het abonnement aan te houden?",

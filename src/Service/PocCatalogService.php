@@ -308,7 +308,7 @@ final class PocCatalogService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function getWerfsleutels(): array
+    public function getWerfsleutels(): array
     {
         $items = $this->getFixtureValue('werfsleutels', []);
 

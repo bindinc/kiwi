@@ -3,6 +3,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- Add a Webabo-backed offer cache flow with a dedicated HUP token provider, Doctrine cache entity/repository, and the `app:webabo:sync-offers` console command so Kiwi can import available offers into PostgreSQL instead of querying the external API during each user interaction.
+
+### Changed
+- Route `/api/v1/webabo/offers` is now the single backend offer endpoint for both subscription signup and winback contexts, backed by the same Webabo PostgreSQL offer cache and warmed automatically during local Compose startup when external credentials are available.
+- Keep the werfsleutel suggestions picker querying the internal catalog API for typed searches beyond the locally seeded list, and fall back to all configured channels when upstream offer metadata does not yet expose channel restrictions.
+- Align the HUP token flow with the live Webabo integration by using confidential-client authentication on the token request, including the legacy `PPA:` Basic credential fallback and corrected `PARADISE` realm example URLs.
+
+### Fixed
+- Repair the JSON formatting in `client_secrets.example.json` so local tooling can safely parse the HUP/Webabo example structure.
+
 ## [v1.0.10]
 
 ### Fixed
@@ -71,7 +84,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Updated agent status UX/backend behavior: avatar-style status menu, persistent backend status updates, Teams sync guardrails, expanded status set, and call-transition-based auto status changes.
 - Shifted frontend data flows away from mock/localStorage behavior to authenticated `/api/v1` endpoints, while reducing duplicated frontend domain state in favor of bootstrap/API sources of truth.
 - Tightened API platform consistency by validating numeric inputs with structured `400` responses, standardizing server-generated IDs/timestamps, and clarifying route boundaries for persons/subscriptions/workflow actions.
-- Consolidated offer/workflow behavior: unified offer retrieval under `/api/v1/catalog/offers`, improved werfsleutel search/picker UX, and redesigned subscription signup around explicit `recipient`/`requester` roles with duplicate-detection safeguards.
+- Consolidated offer/workflow behavior: unified offer retrieval under `/api/v1/webabo/offers`, improved werfsleutel search/picker UX, and redesigned subscription signup around explicit `recipient`/`requester` roles with duplicate-detection safeguards.
 
 ### Fixed
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.

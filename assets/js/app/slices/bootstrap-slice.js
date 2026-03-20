@@ -17,7 +17,7 @@ const DEFAULT_CONTACT_HISTORY_STATE = Object.freeze({
 
 const API_ENDPOINTS = Object.freeze({
     bootstrapApiUrl: '/api/v1/bootstrap',
-    offersApiUrl: '/api/v1/catalog/offers',
+    offersApiUrl: '/api/v1/webabo/offers',
     personsStateApiUrl: '/api/v1/persons/state',
     personsApiUrl: '/api/v1/persons',
     subscriptionsApiUrl: '/api/v1/subscriptions',
