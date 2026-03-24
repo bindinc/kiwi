@@ -1098,6 +1098,99 @@ select option {
     font-size: 1rem;
 }
 
+.subscription-queue-card {
+    margin-bottom: 1rem;
+    border: 1px solid #c7d7ea;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+}
+
+.subscription-queue-toggle {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.95rem 1.1rem;
+    cursor: pointer;
+    text-align: left;
+}
+
+.subscription-queue-toggle:hover {
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.subscription-queue-toggle-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.subscription-queue-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.subscription-queue-meta {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.subscription-queue-chevron {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+}
+
+.subscription-queue-toggle[aria-expanded="true"] .subscription-queue-chevron {
+    transform: rotate(180deg);
+}
+
+.subscription-queue-body[hidden] {
+    display: none;
+}
+
+.subscription-queue-body {
+    border-top: 1px solid rgba(148, 163, 184, 0.3);
+    padding: 0.9rem 1.1rem 1rem;
+}
+
+.subscription-queue-empty {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    font-style: italic;
+}
+
+.subscription-queue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.subscription-queue-item {
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.88);
+    padding: 0.75rem 0.85rem;
+}
+
+.subscription-queue-line {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--text-primary);
+}
+
+.subscription-queue-subline {
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
 .btn-link {
     background: none;
     border: none;

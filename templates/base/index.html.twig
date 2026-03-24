@@ -278,6 +278,26 @@
                     </div>
                 </div>
 
+                <div id="subscriptionQueueCard" class="subscription-queue-card" style="display: none;">
+                    <button
+                        id="subscriptionQueueToggle"
+                        class="subscription-queue-toggle"
+                        type="button"
+                        data-action="toggle-subscription-queue-info"
+                        aria-expanded="false"
+                        aria-controls="subscriptionQueueBody">
+                        <span class="subscription-queue-toggle-copy">
+                            <span class="subscription-queue-title">Aanvraagqueue</span>
+                            <span id="subscriptionQueueMeta" class="subscription-queue-meta">Nog geen aanvragen in beeld</span>
+                        </span>
+                        <span class="subscription-queue-chevron" aria-hidden="true">▾</span>
+                    </button>
+                    <div id="subscriptionQueueBody" class="subscription-queue-body" hidden>
+                        <div id="subscriptionQueueEmpty" class="subscription-queue-empty">Nog geen aanvragen in de wachtrij.</div>
+                        <div id="subscriptionQueueList" class="subscription-queue-list"></div>
+                    </div>
+                </div>
+
                 <!-- Search Results View (shows paginated results) -->
                 <div id="searchResultsView" class="search-results-view" style="display: none;">
                     <div class="card">
@@ -370,6 +390,7 @@
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="newSubscriptionForm">✕</button>
                         </div>
                         <form id="subscriptionForm" class="form-section" data-action="create-subscription" data-action-event="submit" data-action-prevent-default="true">
+                            <input type="hidden" id="subscriptionSubmissionId">
                             <div class="werfsleutel-fieldset">
                                 <div class="fieldset-heading">
                                     <label for="werfsleutelInput" data-i18n="indexHtml.text.werfsleutel_c5732867">Werfsleutel *</label>

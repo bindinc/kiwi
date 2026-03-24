@@ -25,6 +25,7 @@ function testRegistersItemSevenActions() {
     const expectedActionNames = [
         'show-new-subscription',
         'create-subscription',
+        'toggle-subscription-queue-info',
         'edit-customer',
         'save-customer-edit',
         'show-resend-magazine',
@@ -109,6 +110,19 @@ function testSubscriptionHelperFunctions() {
         'Duur gewijzigd van 1 jaar - Jaarlijks betaald naar 2 jaar - Jaarlijks betaald (5% korting)',
         'Status gewijzigd van Actief naar Gepauzeerd'
     ]);
+
+    assert.equal(
+        __subscriptionWorkflowTestUtils.formatQueueStatusLabel({ status: 'queued' }),
+        'in behandeling'
+    );
+    assert.equal(
+        __subscriptionWorkflowTestUtils.formatQueueStatusLabel({ status: 'retrying', attemptCount: 3 }),
+        'poging 03'
+    );
+    assert.equal(
+        __subscriptionWorkflowTestUtils.formatQueueStatusLabel({ status: 'failed' }),
+        'mislukt'
+    );
 }
 
 function run() {
