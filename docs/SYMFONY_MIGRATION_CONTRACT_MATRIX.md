@@ -35,7 +35,7 @@ This matrix records the HTTP and runtime contract that the Symfony runtime must 
 | `/api/v1/bootstrap` | Required | Returns `customers`, `call_queue`, `call_session`, `last_call_session`, and `catalog`. |
 | `/api/v1/agent-status` | Required | Persists Kiwi agent status in session and optionally synchronizes to Microsoft Teams when issuer/scope checks allow it. |
 | `/api/v1/persons*` | Required | Keeps existing customer read/write, contact history, delivery remarks, complaint, and article-order payload shapes. |
-| `/api/v1/workflows*` | Required | Keeps subscription-signup and article-order flow payload shapes and status codes. |
+| `/api/v1/workflows*` | Required | Keeps article-order behavior and now exposes queue-first subscription ordering via `POST/GET /api/v1/workflows/subscription`, with legacy `POST /api/v1/workflows/subscription-signup` retained as an alias to the queued flow. |
 | `/api/v1/catalog*` | Required | Keeps offer, article, quote, delivery-calendar, disposition, and service-number payload shapes. |
 | `/api/v1/call-queue*` and `/api/v1/call-session*` | Required | Keeps queue/session workflow semantics and status codes. |
 | `/api/v1/subscriptions*` | Required | Keeps subscription mutation, complaint, winback, deceased-actions, and restitution-transfer behavior. |

@@ -8,9 +8,23 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: kiwi_test
+          POSTGRES_USER: kiwi
+          POSTGRES_PASSWORD: kiwi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kiwi -d kiwi_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -19,7 +33,7 @@ jobs:
           tools: composer:v2
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 

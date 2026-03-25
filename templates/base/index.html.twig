@@ -82,7 +82,20 @@
                                 </div>
                             </div>
                         </div>
-                        
+                        <button
+                            type="button"
+                            id="subscriptionQueueToggle"
+                            class="workbox-toggle-button"
+                            data-action="toggle-subscription-queue-info"
+                            data-action-event="click"
+                            aria-expanded="false"
+                            aria-controls="subscriptionQueuePanel"
+                            title="Aanvraagqueue tonen of verbergen">
+                            <span class="workbox-toggle-icon" aria-hidden="true">📮</span>
+                            <span id="subscriptionQueueToggleCount" class="workbox-toggle-count" style="display: none;">0</span>
+                            <span class="sr-only">Aanvraagqueue</span>
+                        </button>
+
                         <div class="user-info">
                             <span class="time" id="currentTime"></span>
                         </div>
@@ -370,6 +383,7 @@
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="newSubscriptionForm">✕</button>
                         </div>
                         <form id="subscriptionForm" class="form-section" data-action="create-subscription" data-action-event="submit" data-action-prevent-default="true">
+                            <input type="hidden" id="subscriptionSubmissionId">
                             <div class="werfsleutel-fieldset">
                                 <div class="fieldset-heading">
                                     <label for="werfsleutelInput" data-i18n="indexHtml.text.werfsleutel_c5732867">Werfsleutel *</label>
@@ -1275,6 +1289,14 @@
                             <p data-i18n="indexHtml.text.selecteer_een_klant_om_geschiedenis_te_zien_85c985bb">Selecteer een klant om geschiedenis te zien</p>
                         </div>
                     </div>
+                </section>
+                <section id="subscriptionQueuePanel" class="card history-card subscription-queue-panel" hidden>
+                    <div class="subscription-queue-header">
+                        <h2 data-i18n="indexHtml.text.outbox_4d30835f">📮 Outbox</h2>
+                    </div>
+                    <div id="subscriptionQueueMeta" class="subscription-queue-summary">Nog geen aanvragen in beeld</div>
+                    <div id="subscriptionQueueEmpty" class="empty-state-small subscription-queue-empty">Nog geen aanvragen in de wachtrij.</div>
+                    <div id="subscriptionQueueList" class="subscription-queue-list"></div>
                 </section>
             </aside>
         </div>

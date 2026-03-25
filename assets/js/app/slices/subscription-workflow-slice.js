@@ -22,6 +22,10 @@ const STATUS_NAME_BY_KEY = {
 };
 
 let compatibilityExportsInstalled = false;
+const subscriptionQueueState = {
+    items: [],
+    isOpen: false
+};
 
 function getDocumentRef() {
     if (typeof document === 'undefined') {
@@ -228,6 +232,163 @@ function closeForm(formId) {
 function parseNumericValue(rawValue) {
     const value = Number(rawValue);
     return Number.isFinite(value) ? value : null;
+}
+
+function generateSubmissionId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    return `sub-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function ensureSubscriptionSubmissionId(forceNew = false) {
+    const input = getElementById('subscriptionSubmissionId');
+    if (!input || !('value' in input)) {
+        return generateSubmissionId();
+    }
+
+    if (forceNew || !input.value) {
+        input.value = generateSubmissionId();
+    }
+
+    return String(input.value);
+}
+
+function getSubscriptionQueueWidgetElements() {
+    return {
+        panel: getElementById('subscriptionQueuePanel'),
+        toggle: getElementById('subscriptionQueueToggle'),
+        toggleCount: getElementById('subscriptionQueueToggleCount'),
+        meta: getElementById('subscriptionQueueMeta'),
+        empty: getElementById('subscriptionQueueEmpty'),
+        list: getElementById('subscriptionQueueList')
+    };
+}
+
+function setSubscriptionQueueExpanded(isOpen) {
+    subscriptionQueueState.isOpen = Boolean(isOpen);
+
+    const elements = getSubscriptionQueueWidgetElements();
+    if (elements.panel) {
+        elements.panel.hidden = !subscriptionQueueState.isOpen;
+        if (elements.panel.style) {
+            elements.panel.style.display = subscriptionQueueState.isOpen ? '' : 'none';
+        }
+    }
+
+    if (elements.toggle) {
+        elements.toggle.setAttribute('aria-expanded', subscriptionQueueState.isOpen ? 'true' : 'false');
+        if (elements.toggle.classList && typeof elements.toggle.classList.toggle === 'function') {
+            elements.toggle.classList.toggle('is-active', subscriptionQueueState.isOpen);
+        }
+    }
+}
+
+function toggleSubscriptionQueueInfo() {
+    const shouldOpen = !subscriptionQueueState.isOpen;
+    if (shouldOpen && subscriptionQueueState.items.length === 0) {
+        void loadSubscriptionQueueItems();
+    }
+
+    setSubscriptionQueueExpanded(shouldOpen);
+}
+
+function showSubscriptionQueueCard() {
+    setSubscriptionQueueExpanded(true);
+}
+
+function setSubscriptionQueueToggleCount(itemCount) {
+    const { toggleCount } = getSubscriptionQueueWidgetElements();
+    if (!toggleCount || !toggleCount.style) {
+        return;
+    }
+
+    const normalizedCount = Number(itemCount || 0);
+    if (normalizedCount > 0) {
+        toggleCount.textContent = String(normalizedCount);
+        toggleCount.style.display = 'inline-flex';
+        return;
+    }
+
+    toggleCount.textContent = '';
+    toggleCount.style.display = 'none';
+}
+
+function getQueueDisplay(order = {}) {
+    const display = order.display && typeof order.display === 'object' ? order.display : {};
+
+    return {
+        agentBadge: typeof display.agentBadge === 'string' ? display.agentBadge : '',
+        line: typeof display.line === 'string' ? display.line : ''
+    };
+}
+
+function renderSubscriptionQueueItems(items = []) {
+    const documentRef = getDocumentRef();
+    const elements = getSubscriptionQueueWidgetElements();
+    if (!documentRef || !elements.list || !elements.empty || !elements.meta) {
+        return;
+    }
+
+    subscriptionQueueState.items = Array.isArray(items) ? items.slice() : [];
+    elements.list.innerHTML = '';
+
+    if (subscriptionQueueState.items.length === 0) {
+        elements.empty.style.display = 'block';
+        elements.meta.textContent = 'Nog geen aanvragen in beeld';
+        setSubscriptionQueueToggleCount(0);
+        return;
+    }
+
+    elements.empty.style.display = 'none';
+    elements.meta.textContent = `Laatste ${subscriptionQueueState.items.length} aanvragen`;
+    setSubscriptionQueueToggleCount(subscriptionQueueState.items.length);
+
+    for (const order of subscriptionQueueState.items) {
+        const display = getQueueDisplay(order);
+        const item = documentRef.createElement('div');
+        item.className = 'subscription-queue-item';
+
+        const main = documentRef.createElement('div');
+        main.className = 'subscription-queue-main';
+
+        const avatar = documentRef.createElement('div');
+        avatar.className = 'subscription-queue-avatar';
+        avatar.textContent = display.agentBadge;
+        main.appendChild(avatar);
+
+        const content = documentRef.createElement('div');
+        content.className = 'subscription-queue-content';
+
+        const line = documentRef.createElement('div');
+        line.className = 'subscription-queue-line';
+        line.textContent = display.line;
+        content.appendChild(line);
+        main.appendChild(content);
+        item.appendChild(main);
+
+        elements.list.appendChild(item);
+    }
+}
+
+async function loadSubscriptionQueueItems(options = {}) {
+    const apiClient = getApiClient();
+    if (!apiClient || typeof apiClient.get !== 'function') {
+        return [];
+    }
+
+    try {
+        const response = await apiClient.get(`${getApiEndpoints().workflowsApiUrl}/subscription?limit=6`);
+        const items = Array.isArray(response && response.items) ? response.items : [];
+        renderSubscriptionQueueItems(items);
+        return items;
+    } catch (error) {
+        if (options.showErrors === true) {
+            showToast(error.message || 'Aanvraagqueue laden mislukt', 'error');
+        }
+        return [];
+    }
 }
 
 function parsePersonIdFromPayload(payload) {
@@ -450,11 +611,14 @@ export function showNewSubscription() {
 
     const today = new Date().toISOString().split('T')[0];
     setInputValue('subStartDate', today);
+    ensureSubscriptionSubmissionId(true);
 
     resetWerfsleutelPickerState();
     refreshWerfsleutelCatalogIfStale();
 
     initializeSubscriptionRolesForForm();
+    showSubscriptionQueueCard();
+    void loadSubscriptionQueueItems();
     showElement('newSubscriptionForm', 'flex');
 }
 
@@ -494,6 +658,7 @@ export async function createSubscription(event) {
         werfsleutelChannel: selectedWerfsleutelChannel,
         werfsleutelChannelLabel: werfsleutelSelection.selectedChannelMeta?.label || ''
     };
+    const submissionId = ensureSubscriptionSubmissionId();
 
     const optinData = {
         optinEmail: formData.optinEmail,
@@ -546,8 +711,6 @@ export async function createSubscription(event) {
         return;
     }
 
-    const currentCustomer = readCurrentCustomer();
-    const hadCurrentCustomer = Boolean(currentCustomer);
     const subscriptionPayload = {
         magazine: formData.magazine,
         duration: formData.duration,
@@ -566,42 +729,29 @@ export async function createSubscription(event) {
     };
 
     const payload = {
+        submissionId,
         recipient: recipientPayload,
         requester: requesterPayload,
         subscription: subscriptionPayload,
+        offer: {
+            salesCode: formData.werfsleutel,
+            title: formData.werfsleutelTitle,
+            price: formData.werfsleutelPrice,
+            channel: formData.werfsleutelChannel,
+            channelLabel: werfsleutelChannelLabel
+        },
         contactEntry
     };
 
     const { workflowsApiUrl } = getApiEndpoints();
 
     try {
-        const response = await apiClient.post(`${workflowsApiUrl}/subscription-signup`, payload);
-        const savedRecipient = response && response.recipient ? response.recipient : null;
-        const savedRequester = response && response.requester ? response.requester : null;
-        const createdRecipient = Boolean(response && response.createdRecipient);
-
-        if (savedRecipient) {
-            upsertCustomerInCache(savedRecipient);
-        }
-
-        if (savedRequester) {
-            upsertCustomerInCache(savedRequester);
-        }
-
+        await apiClient.post(`${workflowsApiUrl}/subscription`, payload);
+        showSubscriptionQueueCard();
+        await loadSubscriptionQueueItems();
+        setSubscriptionQueueExpanded(true);
         closeForm('newSubscriptionForm');
-        showToast(
-            createdRecipient
-                ? translateKey('subscription.created', {}, 'Nieuw abonnement succesvol aangemaakt!')
-                : translateKey('subscription.extraAdded', {}, 'Extra abonnement succesvol toegevoegd!'),
-            'success'
-        );
-
-        if (savedRecipient && savedRecipient.id) {
-            await selectCustomer(savedRecipient.id);
-            if (createdRecipient && !hadCurrentCustomer) {
-                showSuccessIdentificationPrompt(savedRecipient.id, `${savedRecipient.firstName} ${savedRecipient.lastName}`);
-            }
-        }
+        showToast(translateKey('subscription.queued', {}, 'Aanvraag in wachtrij geplaatst!'), 'success');
     } catch (error) {
         showToast(error.message || translateKey('subscription.createFailed', {}, 'Abonnement aanmaken via backend mislukt'), 'error');
         return;
@@ -614,6 +764,7 @@ export async function createSubscription(event) {
 
     resetWerfsleutelPickerState();
     initializeSubscriptionRolesForForm();
+    ensureSubscriptionSubmissionId(true);
 }
 
 export function getSubscriptionRequesterMetaLine(subscription) {
@@ -1099,6 +1250,9 @@ export function registerSubscriptionWorkflowSlice(actionRouter) {
         'create-subscription': (_payload, context) => {
             void createSubscription(context.event);
         },
+        'toggle-subscription-queue-info': () => {
+            toggleSubscriptionQueueInfo();
+        },
         'edit-customer': () => {
             editCustomer();
         },
@@ -1132,5 +1286,8 @@ export function registerSubscriptionWorkflowSlice(actionRouter) {
 
 export const __subscriptionWorkflowTestUtils = {
     getSubscriptionChanges,
-    getSubscriptionDurationDescription
+    getSubscriptionDurationDescription,
+    setSubscriptionQueueExpanded,
+    toggleSubscriptionQueueInfo,
+    renderSubscriptionQueueItems
 };

@@ -89,7 +89,7 @@ final class HomeControllerTest extends WebTestCase
 
         $content = $client->getResponse()->getContent();
         self::assertStringContainsString('data-kiwi-base-path="/kiwi-preview"', $content);
-        self::assertMatchesRegularExpression('#/kiwi-preview/assets/css/styles(?:-[A-Za-z0-9]+)?\.css#', $content);
+        self::assertMatchesRegularExpression('#/kiwi-preview/assets/css/styles(?:-[A-Za-z0-9_-]+)?\.css#', $content);
         self::assertStringContainsString('type="importmap"', $content);
         self::assertStringContainsString('"app"', $content);
         self::assertStringContainsString('window.kiwiAssetPaths', $content);

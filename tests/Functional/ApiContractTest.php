@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Entity\WebaboOffer;
+use App\Outbox\SubscriptionQueueSchemaManager;
 use App\Webabo\WebaboOfferCacheSchemaManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -71,14 +72,16 @@ final class ApiContractTest extends WebTestCase
     public function testCustomerWorkflowAndMutationFlow(): void
     {
         $client = $this->createAuthenticatedClient();
+        $this->resetSubscriptionQueueStorage();
 
         $client->request('GET', '/api/v1/persons');
         self::assertResponseIsSuccessful();
         $existingCustomers = json_decode($client->getResponse()->getContent(), true);
         $recipientId = $existingCustomers['items'][0]['id'];
         $requesterId = $existingCustomers['items'][1]['id'];
-
-        $client->request('POST', '/api/v1/workflows/subscription-signup', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+        $submissionId = 'sc-187755-functional-submission';
+        $requestPayload = [
+            'submissionId' => $submissionId,
             'recipient' => ['personId' => $recipientId],
             'requester' => ['personId' => $requesterId],
             'subscription' => [
@@ -88,16 +91,66 @@ final class ApiContractTest extends WebTestCase
                 'startDate' => '2026-01-10',
                 'status' => 'active',
             ],
+            'offer' => [
+                'salesCode' => 'AVRV519',
+                'title' => '1 jaar Avrobode voor maar EUR52',
+                'price' => 52.0,
+                'channel' => 'telemarketing',
+                'channelLabel' => 'Telemarketing',
+            ],
             'contactEntry' => [
                 'type' => 'Extra abonnement',
                 'description' => 'Test: extra abonnement toegevoegd.',
             ],
-        ], JSON_THROW_ON_ERROR));
-        self::assertResponseStatusCodeSame(201);
+        ];
+
+        $client->request('POST', '/api/v1/workflows/subscription', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($requestPayload, JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(202);
         $payload = json_decode($client->getResponse()->getContent(), true);
-        self::assertSame($recipientId, $payload['recipient']['id']);
-        self::assertSame($requesterId, $payload['requester']['id']);
-        self::assertSame('Avrobode', $payload['subscription']['magazine']);
+        self::assertSame($submissionId, $payload['submissionId']);
+        self::assertSame('queued', $payload['status']);
+        self::assertSame($recipientId, $payload['summary']['recipient']['personId']);
+        self::assertSame('AVRV519', $payload['summary']['offer']['salesCode']);
+        self::assertSame('Aanvraag', $payload['summary']['typeLabel']);
+        self::assertSame('pending', $payload['event']['status']);
+        self::assertSame('Aanvraag', $payload['display']['typeLabel']);
+        self::assertSame('TU', $payload['display']['agentBadge']);
+        self::assertSame('in behandeling', $payload['display']['statusLabel']);
+        self::assertStringNotContainsString('T. User', $payload['display']['line']);
+        self::assertStringContainsString("Aanvraag '1 jaar Avrobode voor maar EUR52' (AVRV519)", $payload['display']['line']);
+        $orderId = $payload['orderId'];
+
+        $client->request('POST', '/api/v1/workflows/subscription', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($requestPayload, JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(202);
+        $duplicatePayload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame($orderId, $duplicatePayload['orderId']);
+        self::assertSame($submissionId, $duplicatePayload['submissionId']);
+        self::assertSame($payload['display'], $duplicatePayload['display']);
+
+        $client->request('GET', sprintf('/api/v1/workflows/subscription/%d', $orderId));
+        self::assertResponseIsSuccessful();
+        $statusPayload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame($submissionId, $statusPayload['submissionId']);
+        self::assertSame('queued', $statusPayload['status']);
+        self::assertSame($payload['display'], $statusPayload['display']);
+
+        $client->request('GET', '/api/v1/workflows/subscription?limit=5');
+        self::assertResponseIsSuccessful();
+        $listPayload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame($submissionId, $listPayload['items'][0]['submissionId']);
+        self::assertSame($payload['display'], $listPayload['items'][0]['display']);
+
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $connection = $entityManager->getConnection();
+        self::assertSame(1, (int) $connection->fetchOne(
+            'SELECT COUNT(*) FROM subscription_orders WHERE submission_id = ?',
+            [$submissionId],
+        ));
+        self::assertSame(1, (int) $connection->fetchOne(
+            'SELECT COUNT(*) FROM outbox_events WHERE order_id = ?',
+            [$orderId],
+        ));
 
         $client->request('PATCH', sprintf('/api/v1/persons/%d', $recipientId), server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'city' => 'Zwolle',
@@ -254,6 +307,20 @@ final class ApiContractTest extends WebTestCase
 
         $entityManager->persist($offer);
         $entityManager->flush();
+        $entityManager->clear();
+    }
+
+    private function resetSubscriptionQueueStorage(): void
+    {
+        /** @var SubscriptionQueueSchemaManager $schemaManager */
+        $schemaManager = static::getContainer()->get(SubscriptionQueueSchemaManager::class);
+        $schemaManager->ensureSchema();
+
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $connection = $entityManager->getConnection();
+        $connection->executeStatement('DELETE FROM outbox_events');
+        $connection->executeStatement('DELETE FROM subscription_orders');
         $entityManager->clear();
     }
 }
