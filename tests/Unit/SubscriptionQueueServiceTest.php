@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Unit;
 
 use App\Entity\SubscriptionOrder;
+use App\Entity\WebaboOffer;
 use App\Outbox\SubscriptionQueueSchemaManager;
 use App\Repository\SubscriptionOrderRepository;
+use App\Repository\WebaboOfferRepository;
 use App\Service\PocCatalogService;
 use App\Service\PocStateService;
 use App\Service\SubscriptionQueueDisplayFormatter;
 use App\Service\SubscriptionQueueService;
+use App\Webabo\WebaboOfferCacheSchemaManager;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
@@ -32,6 +35,8 @@ final class SubscriptionQueueServiceTest extends TestCase
             try {
                 $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS outbox_events');
                 $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS subscription_orders');
+                $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS webabo_offers_cache');
+                $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS werfsleutel_offer_cache');
             } catch (\Throwable) {
             }
 
@@ -45,7 +50,33 @@ final class SubscriptionQueueServiceTest extends TestCase
 
     public function testQueueSubscriptionIsIdempotentAndReadable(): void
     {
-        [$service] = $this->createQueueServiceWithDependencies();
+        [$service, $entityManager, , $offerSchemaManager] = $this->createQueueServiceWithDependencies();
+        $offerSchemaManager->ensureSchema();
+
+        $offer = new WebaboOffer('AVRV519');
+        $offer->refreshFromWebaboPayload([
+            'offerId' => 12,
+            'orderChoiceKey' => 34,
+            'salesCode' => 'AVRV519',
+            'title' => '1 jaar Avrobode voor maar EUR52',
+            'credentialKey' => 'avrotros',
+            'subscriptionCode' => 'SUB-AVRO-1',
+            'productCode' => 'PROD-AVRO-1',
+            'offerPrice' => [
+                'price' => 52.0,
+                'priceCode' => 'std',
+            ],
+            'offerDelivery' => [
+                'validDate' => [
+                    'validFrom' => '2026-01-01T00:00:00+00:00',
+                    'validUntil' => '2027-01-01T00:00:00+00:00',
+                ],
+            ],
+        ], new \DateTimeImmutable('2026-03-20T12:00:00+00:00'));
+        $entityManager->persist($offer);
+        $entityManager->flush();
+        $entityManager->clear();
+
         $session = new Session(new MockArraySessionStorage());
         $payload = [
             'submissionId' => 'unit-test-submission-id',
@@ -105,6 +136,11 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('pending', $firstResponse['event']['status']);
         self::assertSame('unit-test-submission-id', $firstResponse['submissionId']);
         self::assertSame('AVRV519', $firstResponse['summary']['offer']['salesCode']);
+        self::assertSame(12, $firstResponse['summary']['offer']['offerId']);
+        self::assertSame(34, $firstResponse['summary']['offer']['orderChoiceKey']);
+        self::assertSame('SUB-AVRO-1', $firstResponse['summary']['offer']['subscriptionCode']);
+        self::assertSame('PROD-AVRO-1', $firstResponse['summary']['offer']['productCode']);
+        self::assertSame('avrotros', $firstResponse['summary']['offer']['credentialKey']);
         self::assertTrue($firstResponse['summary']['requester']['sameAsRecipient']);
         self::assertSame('B. Example', $firstResponse['summary']['agent']['shortName']);
         self::assertSame('Aanvraag', $firstResponse['summary']['typeLabel']);
@@ -130,7 +166,7 @@ final class SubscriptionQueueServiceTest extends TestCase
     }
 
     /**
-     * @return array{0: SubscriptionQueueService, 1: EntityManager, 2: SubscriptionQueueSchemaManager}
+     * @return array{0: SubscriptionQueueService, 1: EntityManager, 2: SubscriptionQueueSchemaManager, 3: WebaboOfferCacheSchemaManager}
      */
     private function createQueueServiceWithDependencies(): array
     {
@@ -150,10 +186,17 @@ final class SubscriptionQueueServiceTest extends TestCase
         $this->entityManagers[] = $entityManager;
 
         $registry = $this->createStub(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->with(SubscriptionOrder::class)->willReturn($entityManager);
+        $registry->method('getManagerForClass')->willReturnCallback(static function (string $className) use ($entityManager): ?EntityManager {
+            return match ($className) {
+                SubscriptionOrder::class, WebaboOffer::class => $entityManager,
+                default => null,
+            };
+        });
 
         $repository = new SubscriptionOrderRepository($registry);
         $schemaManager = new SubscriptionQueueSchemaManager($connection, $entityManager);
+        $webaboOfferRepository = new WebaboOfferRepository($registry);
+        $webaboOfferSchemaManager = new WebaboOfferCacheSchemaManager($connection, $entityManager);
         $stateService = new PocStateService(new PocCatalogService($projectDir), $projectDir);
 
         return [
@@ -164,9 +207,12 @@ final class SubscriptionQueueServiceTest extends TestCase
                 $connection,
                 $stateService,
                 new SubscriptionQueueDisplayFormatter(),
+                $webaboOfferSchemaManager,
+                $webaboOfferRepository,
             ),
             $entityManager,
             $schemaManager,
+            $webaboOfferSchemaManager,
         ];
     }
 

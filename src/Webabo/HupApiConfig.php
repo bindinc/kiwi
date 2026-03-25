@@ -8,30 +8,47 @@ final readonly class HupApiConfig
 {
     private const DEFAULT_LEGACY_BASIC_CLIENT_CREDENTIAL = 'PPA:';
 
+    /**
+     * @param array<string, HupApiCredential> $credentials
+     */
     public function __construct(
         public string $webaboBaseUrl,
+        public ?string $ppaBaseUrl,
         public string $tokenUrl,
         public string $authorizationUrl,
-        public ?string $username,
-        public ?string $password,
+        public array $credentials,
         public ?string $clientAuthMethod,
         public ?string $clientBasicAuth,
         public ?string $clientId,
         public ?string $clientSecret,
-        public ?string $refreshToken,
         public ?string $scope,
     ) {
     }
 
-    public function hasPasswordCredentials(): bool
+    /**
+     * @return array<string, HupApiCredential>
+     */
+    public function getCredentials(): array
     {
-        return null !== $this->username && '' !== $this->username
-            && null !== $this->password && '' !== $this->password;
+        return $this->credentials;
     }
 
-    public function hasRefreshToken(): bool
+    public function getCredential(?string $credentialName = null): HupApiCredential
     {
-        return null !== $this->refreshToken && '' !== $this->refreshToken;
+        if (null === $credentialName || '' === trim($credentialName)) {
+            foreach ($this->credentials as $primaryCredential) {
+                return $primaryCredential;
+            }
+
+            throw new \RuntimeException('HUP client secrets configuratie bevat geen bruikbare credentials.');
+        }
+
+        $credential = $this->credentials[$credentialName] ?? null;
+        if ($credential instanceof HupApiCredential) {
+            return $credential;
+        }
+
+        throw new \RuntimeException(sprintf('HUP credential "%s" ontbreekt in de client secrets configuratie.', $credentialName));
     }
 
     public function hasClientCredentials(): bool

@@ -90,6 +90,7 @@ final class WebaboOfferCatalogService
             'allowedChannels' => $allowedChannels,
             'subscriptionCode' => $offer->getSubscriptionCode(),
             'productCode' => $offer->getProductCode(),
+            'credentialKey' => $offer->getCredentialKey(),
             'validFrom' => $offer->getValidFrom()?->format(\DateTimeInterface::ATOM),
             'validUntil' => $offer->getValidUntil()?->format(\DateTimeInterface::ATOM),
             'syncedAt' => $offer->getSyncedAt()->format(\DateTimeInterface::ATOM),

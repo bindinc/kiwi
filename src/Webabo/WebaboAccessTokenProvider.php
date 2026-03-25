@@ -11,9 +11,10 @@ final class WebaboAccessTokenProvider
 {
     private const TOKEN_EXPIRY_SKEW_SECONDS = 30;
 
-    private ?string $accessToken = null;
-    private ?int $accessTokenExpiresAt = null;
-    private ?string $refreshToken = null;
+    /**
+     * @var array<string, array{accessToken: ?string, expiresAt: ?int, refreshToken: ?string}>
+     */
+    private array $tokenStateByCredential = [];
 
     public function __construct(
         private readonly HupApiConfigProvider $configProvider,
@@ -21,50 +22,59 @@ final class WebaboAccessTokenProvider
     ) {
     }
 
-    public function getAccessToken(): string
+    public function getAccessToken(?string $credentialName = null): string
     {
-        if ($this->hasUsableAccessToken()) {
-            return $this->accessToken ?? '';
+        $config = $this->configProvider->getConfig();
+        $credential = $config->getCredential($credentialName);
+        $tokenState = $this->getTokenState($credential->name, $credential);
+
+        if ($this->hasUsableAccessToken($tokenState)) {
+            return $tokenState['accessToken'] ?? '';
         }
 
-        $config = $this->configProvider->getConfig();
-        $refreshToken = $this->refreshToken ?? $config->refreshToken;
+        $refreshToken = $tokenState['refreshToken'] ?? $credential->refreshToken;
 
         if (null !== $refreshToken) {
             try {
-                return $this->storeTokenData($this->requestToken([
+                return $this->storeTokenData($credential->name, $this->requestToken($credential, [
                     'grant_type' => 'refresh_token',
                     'refresh_token' => $refreshToken,
                 ]));
             } catch (\RuntimeException $exception) {
-                if (!$config->hasPasswordCredentials()) {
+                if (!$credential->hasPasswordCredentials()) {
                     throw $exception;
                 }
             }
         }
 
-        if (!$config->hasPasswordCredentials()) {
-            throw new \RuntimeException('HUP authenticatie mist een bruikbare refresh token of username/password combinatie.');
+        if (!$credential->hasPasswordCredentials()) {
+            throw new \RuntimeException(sprintf(
+                'HUP authenticatie voor credential "%s" mist een bruikbare refresh token of username/password combinatie.',
+                $credential->name,
+            ));
         }
 
-        return $this->storeTokenData($this->requestToken([
+        return $this->storeTokenData($credential->name, $this->requestToken($credential, [
             'grant_type' => 'password',
-            'username' => $config->username,
-            'password' => $config->password,
+            'username' => $credential->username,
+            'password' => $credential->password,
         ]));
     }
 
-    public function invalidateCachedToken(): void
+    public function invalidateCachedToken(?string $credentialName = null): void
     {
-        $this->accessToken = null;
-        $this->accessTokenExpiresAt = null;
+        $credential = $this->configProvider->getConfig()->getCredential($credentialName);
+        $tokenState = $this->getTokenState($credential->name, $credential);
+        $tokenState['accessToken'] = null;
+        $tokenState['expiresAt'] = null;
+        $this->tokenStateByCredential[$credential->name] = $tokenState;
     }
 
     /**
      * @param array<string, string|null> $grantParameters
      * @return array<string, mixed>
      */
-    private function requestToken(array $grantParameters): array
+    private function requestToken(HupApiCredential $credential, array $grantParameters): array
     {
         $config = $this->configProvider->getConfig();
         $headers = [
@@ -102,27 +112,37 @@ final class WebaboAccessTokenProvider
                 'timeout' => 10.0,
             ]);
         } catch (TransportExceptionInterface $exception) {
-            throw new \RuntimeException('HUP tokenaanvraag mislukte door een transportfout.', 0, $exception);
+            throw new \RuntimeException(sprintf(
+                'HUP tokenaanvraag voor credential "%s" mislukte door een transportfout.',
+                $credential->name,
+            ), 0, $exception);
         }
 
         $statusCode = $response->getStatusCode();
         $payload = json_decode($response->getContent(false), true);
         if (404 === $statusCode) {
-            throw new \RuntimeException('HUP token endpoint reageerde met HTTP 404. Controleer de token-URL en de realmnaam/casing.');
+            throw new \RuntimeException(sprintf(
+                'HUP token endpoint voor credential "%s" reageerde met HTTP 404. Controleer de token-URL en de realmnaam/casing.',
+                $credential->name,
+            ));
         }
 
         if (200 !== $statusCode || !\is_array($payload)) {
             $details = $this->describeTokenError($payload);
 
             throw new \RuntimeException(sprintf(
-                'HUP tokenaanvraag gaf een onbruikbaar antwoord terug (HTTP %d%s).',
+                'HUP tokenaanvraag voor credential "%s" gaf een onbruikbaar antwoord terug (HTTP %d%s).',
+                $credential->name,
                 $statusCode,
                 '' !== $details ? sprintf(': %s', $details) : '',
             ));
         }
 
         if (!\is_string($payload['access_token'] ?? null) || '' === trim($payload['access_token'])) {
-            throw new \RuntimeException('HUP tokenaanvraag leverde geen access token op.');
+            throw new \RuntimeException(sprintf(
+                'HUP tokenaanvraag voor credential "%s" leverde geen access token op.',
+                $credential->name,
+            ));
         }
 
         return $payload;
@@ -144,25 +164,48 @@ final class WebaboAccessTokenProvider
     /**
      * @param array<string, mixed> $tokenPayload
      */
-    private function storeTokenData(array $tokenPayload): string
+    private function storeTokenData(string $credentialName, array $tokenPayload): string
     {
-        $this->accessToken = trim((string) ($tokenPayload['access_token'] ?? ''));
+        $tokenState = $this->tokenStateByCredential[$credentialName] ?? [
+            'accessToken' => null,
+            'expiresAt' => null,
+            'refreshToken' => null,
+        ];
+
+        $tokenState['accessToken'] = trim((string) ($tokenPayload['access_token'] ?? ''));
         $expiresIn = max(0, (int) ($tokenPayload['expires_in'] ?? 300));
-        $this->accessTokenExpiresAt = time() + $expiresIn;
+        $tokenState['expiresAt'] = time() + $expiresIn;
 
         if (\is_string($tokenPayload['refresh_token'] ?? null) && '' !== trim($tokenPayload['refresh_token'])) {
-            $this->refreshToken = trim($tokenPayload['refresh_token']);
+            $tokenState['refreshToken'] = trim($tokenPayload['refresh_token']);
         }
 
-        return $this->accessToken;
+        $this->tokenStateByCredential[$credentialName] = $tokenState;
+
+        return $tokenState['accessToken'] ?? '';
     }
 
-    private function hasUsableAccessToken(): bool
+    /**
+     * @param array{accessToken: ?string, expiresAt: ?int, refreshToken: ?string} $tokenState
+     */
+    private function hasUsableAccessToken(array $tokenState): bool
     {
-        if (null === $this->accessToken || null === $this->accessTokenExpiresAt) {
+        if (null === $tokenState['accessToken'] || null === $tokenState['expiresAt']) {
             return false;
         }
 
-        return $this->accessTokenExpiresAt > time() + self::TOKEN_EXPIRY_SKEW_SECONDS;
+        return $tokenState['expiresAt'] > time() + self::TOKEN_EXPIRY_SKEW_SECONDS;
+    }
+
+    /**
+     * @return array{accessToken: ?string, expiresAt: ?int, refreshToken: ?string}
+     */
+    private function getTokenState(string $credentialName, HupApiCredential $credential): array
+    {
+        return $this->tokenStateByCredential[$credentialName] ?? [
+            'accessToken' => null,
+            'expiresAt' => null,
+            'refreshToken' => $credential->refreshToken,
+        ];
     }
 }

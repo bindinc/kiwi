@@ -655,6 +655,11 @@ export async function createSubscription(event) {
         werfsleutel: selectedWerfsleutelKey.salesCode,
         werfsleutelTitle: selectedWerfsleutelKey.title,
         werfsleutelPrice: selectedWerfsleutelKey.price,
+        werfsleutelOfferId: selectedWerfsleutelKey.offerId,
+        werfsleutelOrderChoiceKey: selectedWerfsleutelKey.orderChoiceKey,
+        werfsleutelSubscriptionCode: selectedWerfsleutelKey.subscriptionCode,
+        werfsleutelProductCode: selectedWerfsleutelKey.productCode,
+        werfsleutelCredentialKey: selectedWerfsleutelKey.credentialKey,
         werfsleutelChannel: selectedWerfsleutelChannel,
         werfsleutelChannelLabel: werfsleutelSelection.selectedChannelMeta?.label || ''
     };
@@ -734,9 +739,14 @@ export async function createSubscription(event) {
         requester: requesterPayload,
         subscription: subscriptionPayload,
         offer: {
+            offerId: formData.werfsleutelOfferId,
+            orderChoiceKey: formData.werfsleutelOrderChoiceKey,
             salesCode: formData.werfsleutel,
             title: formData.werfsleutelTitle,
             price: formData.werfsleutelPrice,
+            subscriptionCode: formData.werfsleutelSubscriptionCode,
+            productCode: formData.werfsleutelProductCode,
+            credentialKey: formData.werfsleutelCredentialKey,
             channel: formData.werfsleutelChannel,
             channelLabel: werfsleutelChannelLabel
         },

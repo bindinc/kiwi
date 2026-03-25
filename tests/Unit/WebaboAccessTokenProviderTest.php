@@ -130,6 +130,49 @@ final class WebaboAccessTokenProviderTest extends TestCase
         self::assertArrayNotHasKey('authorization', $requests[0]['options']['normalized_headers'] ?? []);
     }
 
+    public function testNamedCredentialsKeepSeparateTokenCaches(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFileWithNamedCredentials([
+            'mkg' => [
+                'username' => 'mkg-user',
+                'password' => 'mkg-password',
+            ],
+            'tvz' => [
+                'username' => 'tvz-user',
+                'password' => 'tvz-password',
+            ],
+        ]);
+        $requests = [];
+        $responses = [
+            new MockResponse((string) json_encode([
+                'access_token' => 'mkg-token',
+                'expires_in' => 3600,
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+            new MockResponse((string) json_encode([
+                'access_token' => 'tvz-token',
+                'expires_in' => 3600,
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+        ];
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests, &$responses) {
+            $requests[] = compact('method', 'url', 'options');
+
+            return array_shift($responses);
+        });
+
+        $provider = $this->createProvider($httpClient, dirname($clientSecretsPath));
+
+        self::assertSame('mkg-token', $provider->getAccessToken('mkg'));
+        self::assertSame('mkg-token', $provider->getAccessToken('mkg'));
+        self::assertSame('tvz-token', $provider->getAccessToken('tvz'));
+        self::assertCount(2, $requests);
+
+        $firstBody = $this->parseRequestBody($requests[0]['options']['body']);
+        $secondBody = $this->parseRequestBody($requests[1]['options']['body']);
+
+        self::assertSame('mkg-user', $firstBody['username'] ?? null);
+        self::assertSame('tvz-user', $secondBody['username'] ?? null);
+    }
+
     private function createProvider(MockHttpClient $httpClient, string $projectDir): WebaboAccessTokenProvider
     {
         return new WebaboAccessTokenProvider(
@@ -153,7 +196,7 @@ final class WebaboAccessTokenProviderTest extends TestCase
     }
 
     /**
-     * @param array<string, string> $overrides
+     * @param array<string, mixed> $overrides
      */
     private function writeClientSecretsFile(array $overrides = []): string
     {
@@ -174,5 +217,15 @@ final class WebaboAccessTokenProviderTest extends TestCase
         putenv(sprintf('KIWI_CLIENT_SECRETS_PATH=%s', $path));
 
         return $path;
+    }
+
+    /**
+     * @param array<string, array<string, string>> $credentials
+     */
+    private function writeClientSecretsFileWithNamedCredentials(array $credentials): string
+    {
+        return $this->writeClientSecretsFile([
+            'credentials' => $credentials,
+        ]);
     }
 }

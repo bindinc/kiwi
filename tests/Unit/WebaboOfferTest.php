@@ -17,6 +17,7 @@ final class WebaboOfferTest extends TestCase
             'orderChoiceKey' => 34,
             'salesCode' => 'AVRV519',
             'title' => '1 jaar Avrobode voor maar EUR52',
+            'credentialKey' => 'avrotros',
             'offerPrice' => [
                 'price' => 52.0,
                 'priceCode' => 'std',
@@ -34,6 +35,7 @@ final class WebaboOfferTest extends TestCase
 
         self::assertSame('AVRV519', $offer->getSalesCode());
         self::assertSame('1 jaar Avrobode voor maar EUR52', $offer->getTitle());
+        self::assertSame('avrotros', $offer->getCredentialKey());
         self::assertSame(52.0, $offer->getPrice());
         self::assertTrue($offer->isCurrentlyActive(new \DateTimeImmutable('2026-06-01T00:00:00+00:00')));
         self::assertFalse($offer->isCurrentlyActive(new \DateTimeImmutable('2027-01-01T00:00:00+00:00')));

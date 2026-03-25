@@ -46,6 +46,9 @@ final class WebaboOffer
     #[ORM\Column(name: 'product_code', length: 64, nullable: true)]
     private ?string $productCode = null;
 
+    #[ORM\Column(name: 'credential_key', length: 64, nullable: true)]
+    private ?string $credentialKey = null;
+
     #[ORM\Column(name: 'price_in_cents')]
     private int $priceInCents = 0;
 
@@ -94,6 +97,7 @@ final class WebaboOffer
         $this->webDescription = $this->normalizeString($payload['webDescription'] ?? null);
         $this->subscriptionCode = $this->normalizeString($payload['subscriptionCode'] ?? null);
         $this->productCode = $this->normalizeString($payload['productCode'] ?? null);
+        $this->credentialKey = $this->normalizeString($payload['credentialKey'] ?? null);
         $this->priceCode = $this->normalizeString($payload['offerPrice']['priceCode'] ?? null);
         $this->priceInCents = $this->normalizePriceInCents($payload['offerPrice']['price'] ?? null);
         $this->duration = $this->normalizeInt($payload['offerDelivery']['duration'] ?? null);
@@ -138,6 +142,11 @@ final class WebaboOffer
     public function getProductCode(): ?string
     {
         return $this->productCode;
+    }
+
+    public function getCredentialKey(): ?string
+    {
+        return $this->credentialKey;
     }
 
     public function getPrice(): float

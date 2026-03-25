@@ -127,8 +127,11 @@ hitting the external HUP/Webabo API during normal typing and selection.
 
 Use the same `client_secrets.json` structure as `client_secrets.example.json`
 for the `hup` section. The sync command reads the configured HUP token URL and
-`webabo_base_url`, ensures the cache table exists, fetches `GET /offers`, and
-upserts the cached offers into PostgreSQL.
+`webabo_base_url`, ensures the cache table exists, fetches `GET /offers` for
+every configured entry under `hup.credentials`, merges the returned offer sets,
+and upserts the cached offers into PostgreSQL. Each cached offer now keeps the
+origin `credentialKey`, and queued subscription requests carry that key forward
+so downstream PPA processing can authenticate with the matching credential set.
 
 HUP behaves as a confidential OIDC client for this flow. Kiwi therefore sends
 client authentication on the token request before it calls Webabo. The default
@@ -136,11 +139,17 @@ setup matches the existing HUP/Webabo integration by using
 `client_auth_method=basic` with `client_basic_auth=PPA:`. If HUP ever switches
 to another client registration, you can override that with `client_id`,
 `client_secret`, `client_auth_method` (`basic`, `post`, or `none`),
-`client_basic_auth`, `scope`, and `refresh_token` inside the `hup` section.
+`client_basic_auth`, and `scope` inside the `hup` section. Each named
+credential may define its own `username`, `password`, and optional
+`refresh_token`. The legacy top-level `username` / `password` fields remain
+supported as a backward-compatible fallback for single-credential setups.
 
 ```bash
 make console ARGS='app:webabo:sync-offers'
 ```
+
+Run this sync once after deploying the multi-credential change so existing
+cached offers are refreshed with their `credentialKey`.
 
 The legacy alias `app:webabo:sync-werfsleutels` remains available for existing scripts.
 

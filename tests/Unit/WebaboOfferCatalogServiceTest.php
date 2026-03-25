@@ -58,6 +58,7 @@ final class WebaboOfferCatalogServiceTest extends TestCase
             'orderChoiceKey' => 34,
             'salesCode' => 'AVRV519',
             'title' => '1 jaar Avrobode voor maar EUR52',
+            'credentialKey' => 'avrotros',
             'offerPrice' => [
                 'price' => 52.0,
                 'priceCode' => 'std',
@@ -78,6 +79,7 @@ final class WebaboOfferCatalogServiceTest extends TestCase
         self::assertCount(1, $queryMatches);
         self::assertSame('AVRV519', $queryMatches[0]['salesCode']);
         self::assertSame('8712345678901', $queryMatches[0]['barcode']);
+        self::assertSame('avrotros', $queryMatches[0]['credentialKey']);
         self::assertSame('webabo-cache', $queryMatches[0]['source']);
 
         $barcodeMatches = $service->search('', '8712345678901', 5);

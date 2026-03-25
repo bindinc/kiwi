@@ -73,6 +73,7 @@ final class WebaboOfferClientTest extends TestCase
 
         self::assertCount(1, $offers);
         self::assertSame('AVRV519', $offers[0]['salesCode']);
+        self::assertSame('default', $offers[0]['credentialKey']);
         self::assertCount(4, $requests);
         $passwordBody = $this->parseRequestBody($requests[0]['options']['body']);
         $refreshBody = $this->parseRequestBody($requests[2]['options']['body']);
@@ -93,6 +94,73 @@ final class WebaboOfferClientTest extends TestCase
         );
         self::assertStringContainsString(
             'Bearer second-token',
+            $requests[3]['options']['normalized_headers']['authorization'][0] ?? ''
+        );
+    }
+
+    public function testFetchOffersLoopsOverAllConfiguredCredentials(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFileWithNamedCredentials([
+            'mkg' => [
+                'username' => 'mkg-user',
+                'password' => 'mkg-password',
+            ],
+            'tvz' => [
+                'username' => 'tvz-user',
+                'password' => 'tvz-password',
+            ],
+        ]);
+        $requests = [];
+        $responses = [
+            new MockResponse((string) json_encode([
+                'access_token' => 'mkg-token',
+                'expires_in' => 3600,
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+            new MockResponse((string) json_encode([
+                [
+                    'salesCode' => 'AVRV519',
+                    'title' => 'Avrobode',
+                ],
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+            new MockResponse((string) json_encode([
+                'access_token' => 'tvz-token',
+                'expires_in' => 3600,
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+            new MockResponse((string) json_encode([
+                [
+                    'salesCode' => 'TVZ100',
+                    'title' => 'TVZ',
+                ],
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+        ];
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests, &$responses) {
+            $requests[] = compact('method', 'url', 'options');
+
+            return array_shift($responses);
+        });
+
+        $configProvider = new HupApiConfigProvider(new ClientSecretsLoader(dirname($clientSecretsPath)));
+        $tokenProvider = new WebaboAccessTokenProvider($configProvider, $httpClient);
+        $client = new WebaboOfferClient($configProvider, $tokenProvider, $httpClient);
+
+        $offers = $client->fetchOffers();
+
+        self::assertCount(2, $offers);
+        self::assertSame(['AVRV519', 'TVZ100'], array_column($offers, 'salesCode'));
+        self::assertSame(['mkg', 'tvz'], array_column($offers, 'credentialKey'));
+        self::assertCount(4, $requests);
+
+        $firstTokenBody = $this->parseRequestBody($requests[0]['options']['body']);
+        $secondTokenBody = $this->parseRequestBody($requests[2]['options']['body']);
+
+        self::assertSame('mkg-user', $firstTokenBody['username'] ?? null);
+        self::assertSame('tvz-user', $secondTokenBody['username'] ?? null);
+        self::assertStringContainsString(
+            'Bearer mkg-token',
+            $requests[1]['options']['normalized_headers']['authorization'][0] ?? ''
+        );
+        self::assertStringContainsString(
+            'Bearer tvz-token',
             $requests[3]['options']['normalized_headers']['authorization'][0] ?? ''
         );
     }
@@ -122,6 +190,31 @@ final class WebaboOfferClientTest extends TestCase
             'hup' => [
                 'username' => 'demo-user',
                 'password' => 'demo-password',
+                'hup_oidc_auth' => 'https://example.invalid/auth',
+                'hup_oidc_token' => 'https://example.invalid/token',
+                'webabo_base_url' => 'https://example.invalid/webabo-rest',
+            ],
+        ];
+
+        file_put_contents($path, (string) json_encode($payload, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
+        putenv(sprintf('KIWI_CLIENT_SECRETS_PATH=%s', $path));
+
+        return $path;
+    }
+
+    /**
+     * @param array<string, array<string, string>> $credentials
+     */
+    private function writeClientSecretsFileWithNamedCredentials(array $credentials): string
+    {
+        $this->previousClientSecretsPath = getenv('KIWI_CLIENT_SECRETS_PATH') ?: null;
+        $this->tempDir = sys_get_temp_dir().'/kiwi-webabo-offers-'.bin2hex(random_bytes(4));
+        mkdir($this->tempDir, 0777, true);
+
+        $path = $this->tempDir.'/client_secrets.json';
+        $payload = [
+            'hup' => [
+                'credentials' => $credentials,
                 'hup_oidc_auth' => 'https://example.invalid/auth',
                 'hup_oidc_token' => 'https://example.invalid/token',
                 'webabo_base_url' => 'https://example.invalid/webabo-rest',

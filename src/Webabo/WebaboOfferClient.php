@@ -21,16 +21,25 @@ final class WebaboOfferClient
      */
     public function fetchOffers(): array
     {
-        return $this->requestOffers(false);
+        $offers = [];
+
+        foreach ($this->configProvider->getConfig()->getCredentials() as $credential) {
+            foreach ($this->requestOffers($credential->name, false) as $offer) {
+                $offer['credentialKey'] = $credential->name;
+                $offers[] = $offer;
+            }
+        }
+
+        return $offers;
     }
 
     /**
      * @return list<array<string, mixed>>
      */
-    private function requestOffers(bool $isRetry): array
+    private function requestOffers(string $credentialName, bool $isRetry): array
     {
         $config = $this->configProvider->getConfig();
-        $accessToken = $this->accessTokenProvider->getAccessToken();
+        $accessToken = $this->accessTokenProvider->getAccessToken($credentialName);
         $url = rtrim($config->webaboBaseUrl, '/').'/offers';
 
         try {
@@ -42,19 +51,26 @@ final class WebaboOfferClient
                 'timeout' => 15.0,
             ]);
         } catch (TransportExceptionInterface $exception) {
-            throw new \RuntimeException('Webabo offers ophalen mislukte door een transportfout.', 0, $exception);
+            throw new \RuntimeException(sprintf(
+                'Webabo offers ophalen voor credential "%s" mislukte door een transportfout.',
+                $credentialName,
+            ), 0, $exception);
         }
 
         $statusCode = $response->getStatusCode();
         if (401 === $statusCode && !$isRetry) {
-            $this->accessTokenProvider->invalidateCachedToken();
+            $this->accessTokenProvider->invalidateCachedToken($credentialName);
 
-            return $this->requestOffers(true);
+            return $this->requestOffers($credentialName, true);
         }
 
         $payload = json_decode($response->getContent(false), true);
         if (200 !== $statusCode || !\is_array($payload)) {
-            throw new \RuntimeException(sprintf('Webabo offers endpoint gaf een onbruikbaar antwoord terug (HTTP %d).', $statusCode));
+            throw new \RuntimeException(sprintf(
+                'Webabo offers endpoint voor credential "%s" gaf een onbruikbaar antwoord terug (HTTP %d).',
+                $credentialName,
+                $statusCode,
+            ));
         }
 
         $offers = array_values(array_filter(

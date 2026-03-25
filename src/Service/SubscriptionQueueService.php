@@ -6,9 +6,12 @@ namespace App\Service;
 
 use App\Entity\OutboxEvent;
 use App\Entity\SubscriptionOrder;
+use App\Entity\WebaboOffer;
 use App\Http\ApiProblemException;
 use App\Outbox\SubscriptionQueueSchemaManager;
 use App\Repository\SubscriptionOrderRepository;
+use App\Repository\WebaboOfferRepository;
+use App\Webabo\WebaboOfferCacheSchemaManager;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,6 +26,8 @@ final class SubscriptionQueueService
         private readonly Connection $connection,
         private readonly PocStateService $stateService,
         private readonly SubscriptionQueueDisplayFormatter $displayFormatter,
+        private readonly WebaboOfferCacheSchemaManager $webaboOfferCacheSchemaManager,
+        private readonly WebaboOfferRepository $webaboOfferRepository,
     ) {
     }
 
@@ -342,13 +347,32 @@ final class SubscriptionQueueService
             throw new ApiProblemException(400, 'invalid_payload', 'offer.salesCode and offer.title are required');
         }
 
-        return [
+        $normalizedOffer = [
             'salesCode' => $salesCode,
             'title' => $title,
             'price' => is_numeric($offerPayload['price'] ?? null) ? (float) $offerPayload['price'] : null,
             'channel' => $this->normalizeNullableString($offerPayload['channel'] ?? null),
             'channelLabel' => $this->normalizeNullableString($offerPayload['channelLabel'] ?? null),
+            'offerId' => $this->normalizeNullableInt($offerPayload['offerId'] ?? null),
+            'orderChoiceKey' => $this->normalizeNullableInt($offerPayload['orderChoiceKey'] ?? null),
+            'subscriptionCode' => $this->normalizeNullableString($offerPayload['subscriptionCode'] ?? null),
+            'productCode' => $this->normalizeNullableString($offerPayload['productCode'] ?? null),
+            'credentialKey' => $this->normalizeNullableString($offerPayload['credentialKey'] ?? null),
         ];
+
+        $cachedOffer = $this->findCachedOffer($salesCode);
+        if (null === $cachedOffer) {
+            return $normalizedOffer;
+        }
+
+        $rawPayload = $cachedOffer->getRawPayload();
+        $normalizedOffer['offerId'] = $this->normalizeNullableInt($rawPayload['offerId'] ?? null) ?? $normalizedOffer['offerId'];
+        $normalizedOffer['orderChoiceKey'] = $this->normalizeNullableInt($rawPayload['orderChoiceKey'] ?? null) ?? $normalizedOffer['orderChoiceKey'];
+        $normalizedOffer['subscriptionCode'] = $cachedOffer->getSubscriptionCode() ?? $normalizedOffer['subscriptionCode'];
+        $normalizedOffer['productCode'] = $cachedOffer->getProductCode() ?? $normalizedOffer['productCode'];
+        $normalizedOffer['credentialKey'] = $cachedOffer->getCredentialKey() ?? $normalizedOffer['credentialKey'];
+
+        return $normalizedOffer;
     }
 
     /**
@@ -379,6 +403,11 @@ final class SubscriptionQueueService
         $normalized = trim((string) $value);
 
         return '' !== $normalized ? $normalized : null;
+    }
+
+    private function normalizeNullableInt(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
     }
 
     /**
@@ -503,6 +532,19 @@ final class SubscriptionQueueService
             'subscription_queue_unavailable',
             'De abonnementsaanvraag kan tijdelijk niet in de wachtrij worden geplaatst.',
         );
+    }
+
+    private function findCachedOffer(string $salesCode): ?WebaboOffer
+    {
+        if (!$this->webaboOfferCacheSchemaManager->hasCacheTable()) {
+            return null;
+        }
+
+        try {
+            return $this->webaboOfferRepository->findOneBySalesCode($salesCode);
+        } catch (\Throwable $exception) {
+            throw $this->buildQueueUnavailableException($exception);
+        }
     }
 
     /**

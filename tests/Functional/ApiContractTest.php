@@ -95,6 +95,7 @@ final class ApiContractTest extends WebTestCase
                 'salesCode' => 'AVRV519',
                 'title' => '1 jaar Avrobode voor maar EUR52',
                 'price' => 52.0,
+                'credentialKey' => 'avrotros',
                 'channel' => 'telemarketing',
                 'channelLabel' => 'Telemarketing',
             ],
@@ -111,6 +112,7 @@ final class ApiContractTest extends WebTestCase
         self::assertSame('queued', $payload['status']);
         self::assertSame($recipientId, $payload['summary']['recipient']['personId']);
         self::assertSame('AVRV519', $payload['summary']['offer']['salesCode']);
+        self::assertSame('avrotros', $payload['summary']['offer']['credentialKey']);
         self::assertSame('Aanvraag', $payload['summary']['typeLabel']);
         self::assertSame('pending', $payload['event']['status']);
         self::assertSame('Aanvraag', $payload['display']['typeLabel']);
@@ -250,6 +252,7 @@ final class ApiContractTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $offersPayload = json_decode($client->getResponse()->getContent(), true);
         self::assertGreaterThan(0, count($offersPayload['items']));
+        self::assertSame('avrotros', $offersPayload['items'][0]['credentialKey']);
 
         $barcode = $offersPayload['items'][0]['barcode'];
         $client->request('GET', sprintf('/api/v1/webabo/offers?barcode=%s&limit=5', $barcode));
@@ -292,6 +295,7 @@ final class ApiContractTest extends WebTestCase
             'orderChoiceKey' => 34,
             'salesCode' => 'AVRV519',
             'title' => '1 jaar Avrobode voor maar EUR52',
+            'credentialKey' => 'avrotros',
             'offerPrice' => [
                 'price' => 52.0,
                 'priceCode' => 'std',
