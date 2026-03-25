@@ -273,7 +273,7 @@ const nl = {
             "uitgeschakeld_668228d0": "Uitgeschakeld",
             "uitkomst_15284a13": "Uitkomst *",
             "uitloggen_69d43fb9": "Uitloggen",
-            "kiwiversion": "v1.0.12",
+            "kiwiversion": "v1.0.13",
             "verwerken_781562ac": "Verwerken →",
             "verwerken_916c9b12": "Verwerken",
             "volgende_88b8d391": "Volgende →",
