@@ -242,7 +242,9 @@ function testSummaryHeaderStatesAndCardTerminology() {
     assert.equal(elements.werfsleutelSummary.innerHTML.includes('1/1 compleet'), true);
     assert.equal(elements.werfsleutelSummary.innerHTML.includes('Alle kanaalcombinaties zijn gekozen.'), true);
     assert.equal(elements.werfsleutelSummary.innerHTML.includes('Alle producten zijn compleet ingesteld.'), true);
-    assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('>Compleet<'), true);
+    assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('>Compleet<'), false);
+    assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('subscription-offer-channel-code'), true);
+    assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('>Open<'), false);
 }
 
 function testPluralSummaryAndFirstIncompleteStaysExpanded() {
