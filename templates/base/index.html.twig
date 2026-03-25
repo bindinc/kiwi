@@ -387,13 +387,13 @@
                             <div class="werfsleutel-fieldset">
                                 <div class="fieldset-heading">
                                     <label for="werfsleutelInput" data-i18n="indexHtml.text.werfsleutel_c5732867">Werfsleutel *</label>
-                                    <p class="helper-text" id="werfsleutelInputHint" data-i18n="indexHtml.text.zoek_op_salescode_of_titel_en_kies_het_kanaal_83ec4db3">Zoek op salescode of titel en kies het kanaal</p>
+                                    <p class="helper-text" id="werfsleutelInputHint" data-i18n="indexHtml.text.zoek_op_salescode_of_titel_en_kies_het_kanaal_83ec4db3">Zoek op salescode of titel, voeg een of meer producten toe en kies per product het kanaal</p>
                                 </div>
                                 <div class="werfsleutel-search-row">
                                     <input type="search"
                                            class="form-control"
                                            id="werfsleutelInput"
-                                           placeholder="Typ werfsleutel of scan barcode (bijv. AVRV525 of 8712345...)"
+                                           placeholder="Typ werfsleutel, producttitel of scan barcode om toe te voegen..."
                                            autocomplete="off"
                                            role="combobox"
                                            aria-autocomplete="list"
@@ -411,39 +411,10 @@
                                             data-i18n="indexHtml.text.wissen_82491d2c">Wissen</button>
                                 </div>
                                 <div class="werfsleutel-suggestions" id="werfsleutelSuggestions" role="listbox"></div>
-                                <div class="werfsleutel-summary" id="werfsleutelSummary"></div>
-                                <div class="channel-picker">
-                                    <div class="fieldset-heading compact">
-                                        <label for="werfsleutelChannels" data-i18n="indexHtml.text.kanaal_bb8f5e13">Kanaal *</label>
-                                        <p class="helper-text" data-i18n="indexHtml.text.kanaal_bepaalt_vervolgcommunicatie_6b21e3db">Kanaal bepaalt vervolgcommunicatie</p>
-                                    </div>
-                                    <div class="channel-options" id="werfsleutelChannels"></div>
-                                </div>
+                                <div class="werfsleutel-summary" id="werfsleutelSummary" role="status" aria-live="polite" aria-atomic="true"></div>
+                                <div class="subscription-offer-list" id="subscriptionOfferSelections"></div>
                             </div>
                             
-                            <h3 class="form-subtitle" data-i18n="indexHtml.text.betaalmethode_5e503508">Betaalmethode *</h3>
-                            <div class="form-row">
-                                <div class="payment-methods">
-                                    <div class="payment-option">
-                                        <input type="radio" id="subPaymentAuto" name="subPayment" value="automatisch" checked>
-                                        <label for="subPaymentAuto">
-                                            <span class="payment-icon">
-                                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none">
-                                                    <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="2"/>
-                                                    <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
-                                                </svg>
-                                            </span>
-                                            <span class="payment-text" data-i18n="indexHtml.text.automatisch_incasso_fd971b7d">Automatische incasso</span>
-                                        </label>
-                                        <div class="additional-input">
-                                            <input type="text" id="subIBAN" placeholder="IBAN rekeningnummer" 
-                                                pattern="^(NL[0-9]{2}[A-Z]{4}[0-9]{10}|BE[0-9]{2}[0-9]{12})$" 
-                                                title="Vul hier een geldig IBAN nummer in. Alleen Nederlandse (NL) en Belgische (BE) rekeningen worden ondersteund." data-i18n-placeholder="indexHtml.placeholder.iban_rekeningnummer_f6244ddc" data-i18n-title="indexHtml.title.vul_hier_een_geldig_iban_nummer_in_alleen_nederlandse_nl_en_belgische_be_5e253df9">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.ontvanger_abonnement_2faa4a44">Ontvanger abonnement</h3>
                             <div class="party-role-panel" id="recipientRolePanel">
                                 <div class="party-mode-toggle">
@@ -495,6 +466,29 @@
                                 </div>
                             </div>
                             
+                            <h3 class="form-subtitle" data-i18n="indexHtml.text.betaalmethode_5e503508">Betaalmethode *</h3>
+                            <div class="form-row">
+                                <div class="payment-methods">
+                                    <div class="payment-option">
+                                        <input type="radio" id="subPaymentAuto" name="subPayment" value="automatisch" checked>
+                                        <label for="subPaymentAuto">
+                                            <span class="payment-icon">
+                                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none">
+                                                    <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="2"/>
+                                                    <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                                                </svg>
+                                            </span>
+                                            <span class="payment-text" data-i18n="indexHtml.text.automatisch_incasso_fd971b7d">Automatische incasso</span>
+                                        </label>
+                                        <div class="additional-input">
+                                            <input type="text" id="subIBAN" placeholder="IBAN rekeningnummer" 
+                                                pattern="^(NL[0-9]{2}[A-Z]{4}[0-9]{10}|BE[0-9]{2}[0-9]{12})$" 
+                                                title="Vul hier een geldig IBAN nummer in. Alleen Nederlandse (NL) en Belgische (BE) rekeningen worden ondersteund." data-i18n-placeholder="indexHtml.placeholder.iban_rekeningnummer_f6244ddc" data-i18n-title="indexHtml.title.vul_hier_een_geldig_iban_nummer_in_alleen_nederlandse_nl_en_belgische_be_5e253df9">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.abonnementsgegevens_dc22841d">Abonnementsgegevens</h3>
                                 <label class="datepicker-label" data-i18n="indexHtml.text.subStartDate_ce0234ea">Start:</label>
                                 <div class="form-row">

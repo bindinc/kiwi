@@ -3665,12 +3665,11 @@ select option {
 
 .werfsleutel-summary {
     margin-top: 12px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #14532d;
-    font-size: 0.92rem;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #dbe4ef;
+    color: #1f2937;
     display: none;
 }
 
@@ -3678,13 +3677,230 @@ select option {
     display: block;
 }
 
+.werfsleutel-summary.is-pending {
+    background: #fbfdff;
+    border-color: #dbe4ef;
+}
+
+.werfsleutel-summary.is-complete {
+    background: #f8fafc;
+    border-color: #d6dee8;
+}
+
+.werfsleutel-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.werfsleutel-summary-count {
+    color: #111827;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.werfsleutel-summary-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.werfsleutel-summary-badge.is-open {
+    border-color: #fcd34d;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.werfsleutel-summary-badge.is-complete {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+}
+
+.werfsleutel-summary-copy {
+    margin: 6px 0 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: #475569;
+}
+
+.werfsleutel-summary-lead {
+    color: #334155;
+    font-weight: 600;
+}
+
+.werfsleutel-summary-hint {
+    color: #64748b;
+}
+
+.werfsleutel-summary-copy span + span {
+    margin-left: 0.3rem;
+}
+
 .werfsleutel-summary-status {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 6px;
     font-size: 0.85rem;
+    color: #475569;
+}
+
+.subscription-offer-list {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+}
+
+.subscription-offer-card {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #dfe6ef;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.subscription-offer-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+}
+
+.subscription-offer-toggle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.subscription-offer-toggle-main {
+    min-width: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.subscription-offer-toggle-side {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+.subscription-offer-card.is-expanded {
+    border-color: #bfdbfe;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.subscription-offer-card.is-collapsed {
+    background: #fbfdff;
+}
+
+.subscription-offer-title-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.subscription-offer-title {
+    color: #111827;
+    font-size: 0.98rem;
+    line-height: 1.35;
+    min-width: 0;
+}
+
+.subscription-offer-price {
+    color: #0f172a;
+    font-size: 0.98rem;
+    font-weight: 700;
+    white-space: nowrap;
+    justify-self: end;
+}
+
+.subscription-offer-code {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.subscription-offer-channel-code {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid #bbf7d0;
+    background: #f0fdf4;
     color: #166534;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.subscription-offer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.subscription-offer-meta-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+.subscription-offer-warning {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #fed7aa;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 0.88rem;
+}
+
+.subscription-offer-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.9rem;
+    line-height: 1;
 }
 
 .status-pill {
@@ -3722,18 +3938,18 @@ select option {
 
 .channel-options {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 8px;
 }
 
 .channel-chip {
     border: 1px solid #d1d5db;
     border-radius: 12px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     background: #fff;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     cursor: pointer;
     transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
     text-align: left;
@@ -3763,8 +3979,18 @@ select option {
     color: #4b5563;
 }
 
+.channel-chip .channel-detail {
+    font-size: 0.72rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
 .channel-chip.selected .channel-label {
     color: #1d4ed8;
+}
+
+.channel-chip.selected .channel-detail {
+    color: #4338ca;
 }
 
 .channel-options .empty-state-small {
@@ -3772,6 +3998,58 @@ select option {
     padding: 8px 10px;
     border: 1px dashed #cbd5e1;
     border-radius: 8px;
+}
+
+@media (max-width: 720px) {
+    .werfsleutel-search-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .werfsleutel-search-row .btn {
+        width: 100%;
+    }
+
+    .subscription-offer-header {
+        grid-template-columns: 1fr;
+    }
+
+    .subscription-offer-toggle {
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    .subscription-offer-header .btn {
+        width: 100%;
+    }
+
+    .subscription-offer-toggle-side {
+        justify-content: flex-start;
+    }
+
+    .subscription-offer-title-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .subscription-offer-price {
+        justify-self: start;
+    }
+
+    .werfsleutel-summary-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .werfsleutel-summary-copy span + span {
+        display: inline;
+        margin-left: 0;
+    }
+
+    .channel-options {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ============================================================================

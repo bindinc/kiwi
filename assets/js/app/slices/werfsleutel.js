@@ -3,6 +3,7 @@ const WERFSLEUTEL_SEARCH_LIMIT = 5;
 const WERFSLEUTEL_FULL_SYNC_LIMIT = 250;
 const WERFSLEUTEL_SEARCH_DEBOUNCE_MS = 180;
 const WERFSLEUTEL_CACHE_TTL_MS = 15 * 60 * 1000;
+const SALES_CODE_COMBINATION_ENDPOINT_SUFFIX = '/salescodecombinations';
 const FALLBACK_APP_LOCALE = 'nl';
 const DATE_LOCALE_BY_APP_LOCALE = {
     nl: 'nl-NL',
@@ -16,6 +17,26 @@ const SUBSCRIPTION_DURATION_DESCRIPTION_BY_KEY = {
     '2-jaar-maandelijks': '2 jaar - Maandelijks betaald',
     '3-jaar-maandelijks': '3 jaar - Maandelijks betaald'
 };
+const CHANNEL_DETAIL_BY_CODE = {
+    EM: 'E-mail',
+    ET: 'Eigen titels',
+    IB: 'Inbound',
+    IN: 'Inbound',
+    IS: 'Interne sites',
+    OL: 'Online',
+    OU: 'Outbound',
+    PR: 'Print',
+    TM: 'Telemarketing'
+};
+const CHANNEL_FAMILY_BY_CODE = {
+    EM: { label: 'E-mail', icon: 'mail' },
+    OL: { label: 'Online', icon: 'web' },
+    PR: { label: 'Print', icon: 'print' },
+    TM: { label: 'Telemarketing', icon: 'phone' }
+};
+const CHANNEL_PREFIX_ALIASES = {
+    'TM/IN': 'TM/IB'
+};
 
 const euroFormattersByLocale = {};
 
@@ -26,8 +47,7 @@ const werfsleutelSliceState = {
     searchDebounceTimer: null,
     catalogSyncPromise: null,
     catalogSyncedAt: 0,
-    selectedKey: null,
-    selectedChannel: null,
+    selectedOffers: [],
     visibleMatches: [],
     activeIndex: -1,
     latestQuery: ''
@@ -413,6 +433,196 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+function normalizeCombinationCodes(rawCodes) {
+    const normalizedCodes = Array.isArray(rawCodes)
+        ? rawCodes
+            .map((value) => String(value || '').trim().toUpperCase())
+            .filter(Boolean)
+        : [];
+
+    return Array.from(new Set(normalizedCodes));
+}
+
+function resolveCombinationPresentation(codes) {
+    const combinationKey = normalizeCombinationCodes(codes).join('/');
+    const exactMeta = werfsleutelSliceState.channels[combinationKey];
+    if (exactMeta) {
+        return {
+            label: String(exactMeta.label || translate('werfsleutel.defaultCombinationLabel', 'Kanaalcombinatie')),
+            icon: String(exactMeta.icon || 'route')
+        };
+    }
+
+    const prefixKey = combinationKey
+        .split('/')
+        .slice(0, 2)
+        .join('/');
+    const prefixMeta = werfsleutelSliceState.channels[prefixKey]
+        || werfsleutelSliceState.channels[CHANNEL_PREFIX_ALIASES[prefixKey] || ''];
+    if (prefixMeta) {
+        return {
+            label: String(prefixMeta.label || translate('werfsleutel.defaultCombinationLabel', 'Kanaalcombinatie')),
+            icon: String(prefixMeta.icon || 'route')
+        };
+    }
+
+    const familyCode = normalizeCombinationCodes(codes)[0] || '';
+    const familyMeta = CHANNEL_FAMILY_BY_CODE[familyCode];
+    if (familyMeta) {
+        return familyMeta;
+    }
+
+    return {
+        label: translate('werfsleutel.defaultCombinationLabel', 'Kanaalcombinatie'),
+        icon: 'route'
+    };
+}
+
+function normalizeCombinationOption(item, fallbackSource = 'offer-fallback') {
+    if (!item) {
+        return null;
+    }
+
+    const rawCodes = Array.isArray(item.codes)
+        ? item.codes
+        : typeof item === 'string'
+            ? item.split('/')
+            : [];
+    const codes = normalizeCombinationCodes(rawCodes);
+    if (codes.length === 0) {
+        return null;
+    }
+
+    const key = String(item.key || codes.join('/'));
+    const presentation = resolveCombinationPresentation(codes);
+    const detail = item.detail
+        ? String(item.detail)
+        : codes.map((code) => CHANNEL_DETAIL_BY_CODE[code] || code).join(' / ');
+
+    return {
+        key,
+        codes,
+        displayCode: String(item.displayCode || codes.join(' / ')),
+        label: String(item.label || presentation.label),
+        icon: String(item.icon || presentation.icon),
+        detail,
+        description: String(item.description || ''),
+        source: String(item.source || fallbackSource)
+    };
+}
+
+function buildFallbackCombinationOptions(offer) {
+    const allowedChannels = Array.isArray(offer && offer.allowedChannels)
+        ? offer.allowedChannels
+        : [];
+
+    return allowedChannels
+        .map((allowedChannel) => normalizeCombinationOption(allowedChannel, 'offer-fallback'))
+        .filter(Boolean);
+}
+
+function buildSalesCodeCombinationUrl(salesCode) {
+    return `${OFFERS_API_URL}/${encodeURIComponent(String(salesCode || '').trim())}${SALES_CODE_COMBINATION_ENDPOINT_SUFFIX}`;
+}
+
+function findSelectedOfferEntryIndex(salesCode) {
+    const normalizedSalesCode = String(salesCode || '').trim().toLowerCase();
+    return werfsleutelSliceState.selectedOffers.findIndex(
+        (entry) => String(entry.offer && entry.offer.salesCode || '').trim().toLowerCase() === normalizedSalesCode
+    );
+}
+
+function findSelectedOfferEntry(salesCode) {
+    const entryIndex = findSelectedOfferEntryIndex(salesCode);
+    return entryIndex >= 0 ? werfsleutelSliceState.selectedOffers[entryIndex] : null;
+}
+
+function getSelectedCombinationCount() {
+    return werfsleutelSliceState.selectedOffers.filter((entry) => Boolean(entry.selectedCombinationKey)).length;
+}
+
+function getFirstIncompleteOfferIndex() {
+    return werfsleutelSliceState.selectedOffers.findIndex((entry) => !entry.selectedCombinationKey);
+}
+
+function ensureFirstIncompleteOfferExpanded() {
+    const firstIncompleteIndex = getFirstIncompleteOfferIndex();
+    if (firstIncompleteIndex < 0) {
+        return;
+    }
+
+    const firstIncompleteEntry = werfsleutelSliceState.selectedOffers[firstIncompleteIndex];
+    if (!firstIncompleteEntry || firstIncompleteEntry.isExpanded !== false) {
+        return;
+    }
+
+    werfsleutelSliceState.selectedOffers[firstIncompleteIndex] = {
+        ...firstIncompleteEntry,
+        isExpanded: true
+    };
+}
+
+function getSelectionCountLabel(count) {
+    if (count === 1) {
+        return translate('werfsleutel.selectionCountSingle', '1 product toegevoegd');
+    }
+
+    return translate('werfsleutel.selectionCountMultiple', '{count} producten toegevoegd')
+        .replace('{count}', String(count));
+}
+
+function getSummaryStatusLabel(offerCount, openCount) {
+    if (openCount === 0) {
+        return translate('werfsleutel.summaryStatusComplete', '{count}/{total} compleet')
+            .replace('{count}', String(offerCount))
+            .replace('{total}', String(offerCount));
+    }
+
+    return translate('werfsleutel.summaryStatusOpen', '{count}/{total} open')
+        .replace('{count}', String(openCount))
+        .replace('{total}', String(offerCount));
+}
+
+function getSummaryLeadText(openCount) {
+    if (openCount === 0) {
+        return translate('werfsleutel.summaryLeadComplete', 'Alle kanaalcombinaties zijn gekozen.');
+    }
+
+    if (openCount === 1) {
+        return translate('werfsleutel.summaryLeadPendingSingle', 'Nog 1 kanaalcombinatie kiezen.');
+    }
+
+    return translate('werfsleutel.summaryLeadPendingMultiple', 'Nog {count} kanaalcombinaties kiezen.')
+        .replace('{count}', String(openCount));
+}
+
+function getSummaryHintText(openCount) {
+    if (openCount === 0) {
+        return translate('werfsleutel.summaryHintComplete', 'Alle producten zijn compleet ingesteld.');
+    }
+
+    return translate('werfsleutel.summaryHintPending', 'Kies hieronder per product de juiste combinatie.');
+}
+
+function toggleSelectedOfferExpansion(salesCode) {
+    const entryIndex = findSelectedOfferEntryIndex(salesCode);
+    if (entryIndex < 0) {
+        return;
+    }
+
+    const entry = werfsleutelSliceState.selectedOffers[entryIndex];
+    const nextExpandedState = entry.isExpanded === false;
+    if (!nextExpandedState && entryIndex === getFirstIncompleteOfferIndex()) {
+        return;
+    }
+
+    werfsleutelSliceState.selectedOffers[entryIndex] = {
+        ...entry,
+        isExpanded: nextExpandedState
+    };
+    renderSelectedOfferList();
+}
+
 function renderWerfsleutelSuggestions(matches, options = {}) {
     const documentRef = getDocument();
     const container = documentRef ? documentRef.getElementById('werfsleutelSuggestions') : null;
@@ -526,56 +736,116 @@ function moveWerfsleutelActiveSelection(delta) {
     renderWerfsleutelSuggestions(werfsleutelSliceState.visibleMatches, { preserveActiveIndex: true });
 }
 
-function renderWerfsleutelChannelOptions() {
+function renderSelectedOfferList() {
     const documentRef = getDocument();
-    const container = documentRef ? documentRef.getElementById('werfsleutelChannels') : null;
+    const container = documentRef ? documentRef.getElementById('subscriptionOfferSelections') : null;
     if (!container) {
         return;
     }
 
-    const selectedKey = werfsleutelSliceState.selectedKey;
-    if (!selectedKey) {
-        container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.selectKeyFirst', 'Selecteer eerst een werfsleutel')}</div>`;
+    if (!Array.isArray(werfsleutelSliceState.selectedOffers) || werfsleutelSliceState.selectedOffers.length === 0) {
+        container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.noOffersSelected', 'Nog geen aanbiedingen toegevoegd')}</div>`;
         return;
     }
 
-    const allowedChannels = Array.isArray(selectedKey.allowedChannels)
-        ? selectedKey.allowedChannels
-        : [];
-    const channelEntries = allowedChannels.length > 0
-        ? allowedChannels
-            .filter((channelCode) => werfsleutelSliceState.channels[channelCode])
-            .map((channelCode) => [channelCode, werfsleutelSliceState.channels[channelCode]])
-        : Object.entries(werfsleutelSliceState.channels);
+    ensureFirstIncompleteOfferExpanded();
 
-    if (channelEntries.length === 0) {
-        werfsleutelSliceState.selectedChannel = null;
-        container.innerHTML = `<div class="empty-state-small">${translate('werfsleutel.noChannels', 'Geen kanalen beschikbaar voor deze werfsleutel')}</div>`;
-        return;
-    }
+    container.innerHTML = werfsleutelSliceState.selectedOffers.map((entry) => {
+        const offer = entry.offer || {};
+        const offerDetails = getWerfsleutelOfferDetails(offer);
+        const isExpanded = entry.isExpanded !== false;
+        const normalizedOfferTitle = String(offer.title || '').trim();
+        const unknownLabel = translate('common.unknown', 'Onbekend');
+        const metaParts = [];
+        if (offerDetails.magazine && offerDetails.magazine !== unknownLabel && offerDetails.magazine !== normalizedOfferTitle) {
+            metaParts.push(offerDetails.magazine);
+        }
+        const priceLabel = formatEuro(offer.price);
+        const hasSelectedCombination = Boolean(entry.selectedCombinationKey);
+        const statusLabel = translate('werfsleutel.channelRequiredHint', 'Open');
+        const combinationOptions = Array.isArray(entry.combinationOptions) ? entry.combinationOptions : [];
+        const selectedOption = combinationOptions.find((option) => option.key === entry.selectedCombinationKey) || null;
+        const toggleLabel = isExpanded
+            ? translate('werfsleutel.collapseOffer', 'Kanaalkeuze inklappen')
+            : translate('werfsleutel.expandOffer', 'Kanaalkeuze openen');
+        const selectedChannelBadgeMarkup = selectedOption
+            ? `<span class="subscription-offer-channel-code" title="${escapeHtml(selectedOption.label || selectedOption.detail || '')}">${escapeHtml(selectedOption.displayCode)}</span>`
+            : '';
+        const optionMarkup = entry.loadingCombinations && combinationOptions.length === 0
+            ? `<div class="empty-state-small">${translate('werfsleutel.loadingCombinations', 'Kanaalcombinaties laden...')}</div>`
+            : combinationOptions.length === 0
+                ? `<div class="empty-state-small">${translate('werfsleutel.noChannels', 'Geen kanalen beschikbaar voor deze werfsleutel')}</div>`
+                : combinationOptions.map((option) => {
+                    const isSelected = entry.selectedCombinationKey === option.key;
+                    return `
+                        <button type="button"
+                                class="${isSelected ? 'channel-chip selected' : 'channel-chip'}"
+                                data-action="select-werfsleutel-channel"
+                                data-arg-sales-code="${escapeHtml(offer.salesCode)}"
+                                data-arg-combination-key="${escapeHtml(option.key)}"
+                                title="${escapeHtml(option.detail || option.label)}">
+                            <span class="channel-icon">${escapeHtml(option.icon)}</span>
+                            <span class="channel-code">${escapeHtml(option.displayCode)}</span>
+                            <span class="channel-label">${escapeHtml(option.label)}</span>
+                            <span class="channel-detail">${escapeHtml(option.detail)}</span>
+                        </button>
+                    `;
+                }).join('');
+        const warningMarkup = entry.combinationError
+            ? `<div class="subscription-offer-warning">${escapeHtml(entry.combinationError)}</div>`
+            : '';
+        const offerMetaBadges = [];
 
-    const allowedChannelCodes = channelEntries.map(([channelCode]) => channelCode);
-    if (!allowedChannelCodes.includes(werfsleutelSliceState.selectedChannel)) {
-        werfsleutelSliceState.selectedChannel = null;
-    }
-    if (!werfsleutelSliceState.selectedChannel && allowedChannelCodes.length === 1) {
-        werfsleutelSliceState.selectedChannel = allowedChannelCodes[0];
-    }
+        if (offer.salesCode) {
+            offerMetaBadges.push(`<span class="subscription-offer-code">${escapeHtml(offer.salesCode)}</span>`);
+        }
 
-    container.innerHTML = channelEntries.map(([channelCode, channelMeta]) => {
-        const isSelected = werfsleutelSliceState.selectedChannel === channelCode;
-        const channelClassName = isSelected ? 'channel-chip selected' : 'channel-chip';
+        if (selectedChannelBadgeMarkup) {
+            offerMetaBadges.push(selectedChannelBadgeMarkup);
+        }
+
+        offerMetaBadges.push(
+            ...metaParts.map((metaPart) => `<span class="subscription-offer-meta-badge">${escapeHtml(metaPart)}</span>`)
+        );
+
+        const metaMarkup = offerMetaBadges.length > 0
+            ? `<span class="subscription-offer-meta">${offerMetaBadges.join('')}</span>`
+            : '';
+        const statusMarkup = hasSelectedCombination
+            ? ''
+            : `<span class="status-pill status-pill--warning">${escapeHtml(statusLabel)}</span>`;
+
         return `
-            <button type="button"
-                    class="${channelClassName}"
-                    data-action="select-werfsleutel-channel"
-                    data-arg-channel-code="${escapeHtml(channelCode)}"
-                    data-channel="${escapeHtml(channelCode)}"
-                    title="${escapeHtml(channelMeta.label)}">
-                <span class="channel-icon">${escapeHtml(channelMeta.icon)}</span>
-                <span class="channel-code">${escapeHtml(channelCode)}</span>
-                <span class="channel-label">${escapeHtml(channelMeta.label)}</span>
-            </button>
+            <article class="subscription-offer-card ${isExpanded ? 'is-expanded' : 'is-collapsed'}">
+                <div class="subscription-offer-header">
+                    <button type="button"
+                            class="subscription-offer-toggle"
+                            data-action="toggle-subscription-offer"
+                            data-arg-sales-code="${escapeHtml(offer.salesCode)}"
+                            aria-expanded="${isExpanded ? 'true' : 'false'}"
+                            title="${escapeHtml(toggleLabel)}">
+                        <span class="subscription-offer-toggle-main">
+                            <span class="subscription-offer-title-row">
+                                <strong class="subscription-offer-title">${escapeHtml(offer.title || translate('werfsleutel.unknownTitle', 'Onbekende werfsleutel'))}</strong>
+                                <span class="subscription-offer-price">${escapeHtml(priceLabel)}</span>
+                            </span>
+                            ${metaMarkup}
+                        </span>
+                        <span class="subscription-offer-toggle-side">
+                            ${statusMarkup}
+                            <span class="subscription-offer-chevron" aria-hidden="true">${isExpanded ? '▾' : '▸'}</span>
+                        </span>
+                    </button>
+                    <button type="button"
+                            class="btn btn-secondary ghost btn-small"
+                            data-action="remove-subscription-offer"
+                            data-arg-sales-code="${escapeHtml(offer.salesCode)}">
+                        ${escapeHtml(translate('werfsleutel.removeOffer', 'Verwijderen'))}
+                    </button>
+                </div>
+                ${isExpanded ? `<div class="channel-options">${optionMarkup}</div>` : ''}
+                ${warningMarkup}
+            </article>
         `;
     }).join('');
 }
@@ -587,44 +857,106 @@ function updateWerfsleutelSummary() {
         return;
     }
 
-    const selectedKey = werfsleutelSliceState.selectedKey;
-    if (!selectedKey) {
-        summary.classList.remove('visible');
+    const offerCount = werfsleutelSliceState.selectedOffers.length;
+    if (offerCount === 0) {
+        summary.classList.remove('visible', 'is-complete', 'is-pending');
         summary.textContent = '';
         return;
     }
 
-    const selectedChannelCode = werfsleutelSliceState.selectedChannel;
-    const channelMeta = selectedChannelCode ? werfsleutelSliceState.channels[selectedChannelCode] : null;
-    const channelLabel = selectedChannelCode && channelMeta
-        ? `${selectedChannelCode} · ${channelMeta.label}`
-        : translate('werfsleutel.selectChannel', 'Kies een kanaal voor deze werfsleutel.');
-    const hasSelectedChannel = Boolean(selectedChannelCode && channelMeta);
-    const statusClass = hasSelectedChannel ? 'status-pill--success' : 'status-pill--warning';
-    const statusLabel = hasSelectedChannel
-        ? translate('werfsleutel.channelSelected', 'Kanaal gekozen')
-        : translate('werfsleutel.channelRequiredHint', 'Kanaal nog kiezen');
+    const selectedCombinationCount = getSelectedCombinationCount();
+    const openCount = Math.max(offerCount - selectedCombinationCount, 0);
+    const isComplete = openCount === 0;
+    const statusLabel = getSummaryStatusLabel(offerCount, openCount);
+    const leadText = getSummaryLeadText(openCount);
+    const hintText = getSummaryHintText(openCount);
 
     summary.innerHTML = `
-        <div>
-            <strong>${escapeHtml(selectedKey.salesCode)}</strong> - ${escapeHtml(selectedKey.title)} (${escapeHtml(formatEuro(selectedKey.price))})
+        <div class="werfsleutel-summary-row">
+            <strong class="werfsleutel-summary-count">${escapeHtml(getSelectionCountLabel(offerCount))}</strong>
+            <span class="werfsleutel-summary-badge ${isComplete ? 'is-complete' : 'is-open'}">${escapeHtml(statusLabel)}</span>
         </div>
-        <div class="werfsleutel-summary-status">
-            <span class="status-pill ${statusClass}">${escapeHtml(statusLabel)}</span>
-            <span>${escapeHtml(channelLabel)}</span>
-        </div>
+        <p class="werfsleutel-summary-copy">
+            <span class="werfsleutel-summary-lead">${escapeHtml(leadText)}</span>
+            <span class="werfsleutel-summary-hint">${escapeHtml(hintText)}</span>
+        </p>
     `;
+    summary.classList.remove('is-complete', 'is-pending');
+    summary.classList.add(isComplete ? 'is-complete' : 'is-pending');
     summary.classList.add('visible');
 }
 
-function clearWerfsleutelSelection() {
-    werfsleutelSliceState.selectedKey = null;
-    werfsleutelSliceState.selectedChannel = null;
-    renderWerfsleutelChannelOptions();
+async function loadSalesCodeCombinationsForOffer(salesCode) {
+    const entryIndex = findSelectedOfferEntryIndex(salesCode);
+    if (entryIndex < 0) {
+        return;
+    }
+
+    const apiClient = getApiClient();
+    if (!apiClient || typeof apiClient.get !== 'function') {
+        return;
+    }
+
+    const existingEntry = werfsleutelSliceState.selectedOffers[entryIndex];
+    werfsleutelSliceState.selectedOffers[entryIndex] = {
+        ...existingEntry,
+        loadingCombinations: true,
+        combinationError: null
+    };
+    renderSelectedOfferList();
+
+    try {
+        const payload = await apiClient.get(buildSalesCodeCombinationUrl(salesCode));
+        const items = Array.isArray(payload && payload.items)
+            ? payload.items.map((item) => normalizeCombinationOption(item, 'webabo-salescodecombinations')).filter(Boolean)
+            : [];
+        if (findSelectedOfferEntryIndex(salesCode) < 0) {
+            return;
+        }
+
+        const currentEntry = findSelectedOfferEntry(salesCode);
+        const nextCombinationOptions = items.length > 0 ? items : currentEntry.combinationOptions;
+        const nextSelectedCombinationKey = currentEntry && items.some((item) => item.key === currentEntry.selectedCombinationKey)
+            ? currentEntry.selectedCombinationKey
+            : items.length === 1
+                ? items[0].key
+                : null;
+
+        werfsleutelSliceState.selectedOffers[findSelectedOfferEntryIndex(salesCode)] = {
+            ...currentEntry,
+            combinationOptions: nextCombinationOptions,
+            selectedCombinationKey: nextSelectedCombinationKey,
+            loadingCombinations: false,
+            isExpanded: nextSelectedCombinationKey && !currentEntry.selectedCombinationKey
+                ? false
+                : currentEntry.isExpanded,
+            combinationError: payload && payload.warning
+                ? String(payload.warning)
+                : nextCombinationOptions.length > 0
+                    ? null
+                    : translate('werfsleutel.noChannels', 'Geen kanalen beschikbaar voor deze werfsleutel')
+        };
+    } catch (error) {
+        const fallbackEntry = findSelectedOfferEntry(salesCode);
+        if (!fallbackEntry) {
+            return;
+        }
+
+        werfsleutelSliceState.selectedOffers[findSelectedOfferEntryIndex(salesCode)] = {
+            ...fallbackEntry,
+            loadingCombinations: false,
+            combinationError: translate(
+                'werfsleutel.salesCodeCombinationFallback',
+                'Live kanaalcombinaties konden niet geladen worden; de bekende offerkanalen blijven beschikbaar.'
+            )
+        };
+    }
+
+    renderSelectedOfferList();
     updateWerfsleutelSummary();
 }
 
-function selectWerfsleutel(salesCode) {
+function addSelectedOffer(salesCode) {
     const selectedItem = getWerfsleutelBySalesCode(salesCode);
     if (!selectedItem) {
         notifyUser(translate('werfsleutel.unknown', 'Onbekende werfsleutel.'), 'error');
@@ -636,22 +968,46 @@ function selectWerfsleutel(salesCode) {
         return;
     }
 
-    werfsleutelSliceState.selectedKey = selectedItem;
+    if (findSelectedOfferEntryIndex(selectedItem.salesCode) >= 0) {
+        notifyUser(translate('werfsleutel.offerAlreadyAdded', 'Deze aanbieding staat al in de lijst.'), 'warning');
+        return;
+    }
+
+    const fallbackCombinationOptions = buildFallbackCombinationOptions(selectedItem);
+    werfsleutelSliceState.selectedOffers.push({
+        offer: selectedItem,
+        combinationOptions: fallbackCombinationOptions,
+        selectedCombinationKey: fallbackCombinationOptions.length === 1 ? fallbackCombinationOptions[0].key : null,
+        isExpanded: true,
+        loadingCombinations: true,
+        combinationError: null
+    });
+
     const documentRef = getDocument();
     const input = documentRef ? documentRef.getElementById('werfsleutelInput') : null;
     if (input) {
-        input.value = selectedItem.salesCode;
-        werfsleutelSliceState.latestQuery = selectedItem.salesCode;
+        input.value = '';
         input.setAttribute('aria-expanded', 'false');
         input.removeAttribute('aria-activedescendant');
     }
 
-    if (!selectedItem.allowedChannels.includes(werfsleutelSliceState.selectedChannel)) {
-        werfsleutelSliceState.selectedChannel = null;
+    werfsleutelSliceState.latestQuery = '';
+    renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
+    renderSelectedOfferList();
+    updateWerfsleutelSummary();
+    notifyUser(translate('werfsleutel.offerAdded', 'Aanbieding toegevoegd aan de lijst.'), 'success');
+
+    void loadSalesCodeCombinationsForOffer(selectedItem.salesCode);
+}
+
+function removeSelectedOffer(salesCode) {
+    const entryIndex = findSelectedOfferEntryIndex(salesCode);
+    if (entryIndex < 0) {
+        return;
     }
 
-    renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
-    renderWerfsleutelChannelOptions();
+    werfsleutelSliceState.selectedOffers.splice(entryIndex, 1);
+    renderSelectedOfferList();
     updateWerfsleutelSummary();
 }
 
@@ -663,55 +1019,45 @@ function validateWerfsleutelBarcode(rawValue) {
 
     const match = findWerfsleutelByBarcode(barcode);
     if (!match) {
-        clearWerfsleutelSelection();
         return false;
     }
 
     if (!match.isActive) {
-        clearWerfsleutelSelection();
         notifyUser(translate('werfsleutel.notActive', 'Deze werfsleutel is niet meer actief.'), 'warning');
         return false;
     }
 
-    selectWerfsleutel(match.salesCode);
+    addSelectedOffer(match.salesCode);
     return true;
 }
 
-function selectWerfsleutelChannel(channelCode) {
-    const selectedChannelMeta = werfsleutelSliceState.channels[channelCode];
-    if (!selectedChannelMeta) {
+function selectWerfsleutelChannel(salesCode, combinationKey) {
+    const entryIndex = findSelectedOfferEntryIndex(salesCode);
+    if (entryIndex < 0) {
+        return;
+    }
+
+    const entry = werfsleutelSliceState.selectedOffers[entryIndex];
+    const selectedOption = Array.isArray(entry.combinationOptions)
+        ? entry.combinationOptions.find((option) => option.key === combinationKey)
+        : null;
+    if (!selectedOption) {
         notifyUser(translate('werfsleutel.unknownChannel', 'Onbekend kanaal'), 'error');
         return;
     }
 
-    const allowedChannels = werfsleutelSliceState.selectedKey && Array.isArray(werfsleutelSliceState.selectedKey.allowedChannels)
-        ? werfsleutelSliceState.selectedKey.allowedChannels
-        : [];
-    const channelIsAllowed = allowedChannels.length === 0 || allowedChannels.includes(channelCode);
-    if (!channelIsAllowed) {
-        notifyUser(
-            translate('werfsleutel.channelMismatch', 'Dit kanaal hoort niet bij de gekozen werfsleutel.'),
-            'warning'
-        );
-        return;
-    }
-
-    werfsleutelSliceState.selectedChannel = channelCode;
-    renderWerfsleutelChannelOptions();
+    werfsleutelSliceState.selectedOffers[entryIndex] = {
+        ...entry,
+        selectedCombinationKey: selectedOption.key,
+        isExpanded: false
+    };
+    renderSelectedOfferList();
     updateWerfsleutelSummary();
 }
 
 function handleWerfsleutelQuery(rawValue) {
     const query = String(rawValue || '').trim();
     werfsleutelSliceState.latestQuery = query;
-
-    const selectedSalesCode = werfsleutelSliceState.selectedKey
-        ? werfsleutelSliceState.selectedKey.salesCode
-        : '';
-    const queryMatchesSelection = selectedSalesCode.toLowerCase() === query.toLowerCase();
-    if (selectedSalesCode && !queryMatchesSelection) {
-        clearWerfsleutelSelection();
-    }
 
     clearWerfsleutelSearchDebounceTimer();
 
@@ -790,7 +1136,7 @@ async function handleWerfsleutelInputKeyDown(event) {
             notifyUser(translate('werfsleutel.notActive', 'Deze werfsleutel is niet meer actief.'), 'warning');
             return;
         }
-        selectWerfsleutel(activeMatch.salesCode);
+        addSelectedOffer(activeMatch.salesCode);
         return;
     }
 
@@ -807,13 +1153,12 @@ async function handleWerfsleutelInputKeyDown(event) {
         return;
     }
 
-    selectWerfsleutel(candidate.salesCode);
+    addSelectedOffer(candidate.salesCode);
 }
 
 function resetWerfsleutelPicker() {
     clearWerfsleutelSearchDebounceTimer();
-    werfsleutelSliceState.selectedKey = null;
-    werfsleutelSliceState.selectedChannel = null;
+    werfsleutelSliceState.selectedOffers = [];
     werfsleutelSliceState.visibleMatches = [];
     werfsleutelSliceState.activeIndex = -1;
     werfsleutelSliceState.latestQuery = '';
@@ -827,7 +1172,7 @@ function resetWerfsleutelPicker() {
     }
 
     renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
-    renderWerfsleutelChannelOptions();
+    renderSelectedOfferList();
     updateWerfsleutelSummary();
 }
 
@@ -882,7 +1227,16 @@ function deriveMagazineFromKey(key) {
     if (key.magazine && key.magazine !== unknownMagazine) {
         return key.magazine;
     }
-    return inferMagazineFromTitle(key.title || '');
+    const inferredMagazine = inferMagazineFromTitle(key.title || '');
+    if (inferredMagazine !== unknownMagazine) {
+        return inferredMagazine;
+    }
+
+    if (key.title) {
+        return String(key.title);
+    }
+
+    return unknownMagazine;
 }
 
 export function detectDurationKeyFromTitle(title = '') {
@@ -949,23 +1303,27 @@ function setCatalogMetadata(metadata = {}) {
         rememberWerfsleutels(metadata.catalog);
     }
 
-    const selectedSalesCode = werfsleutelSliceState.selectedKey
-        ? werfsleutelSliceState.selectedKey.salesCode
-        : null;
-    if (selectedSalesCode) {
-        werfsleutelSliceState.selectedKey = getWerfsleutelBySalesCode(selectedSalesCode);
-    }
+    werfsleutelSliceState.selectedOffers = werfsleutelSliceState.selectedOffers.map((entry) => {
+        const refreshedOffer = getWerfsleutelBySalesCode(entry.offer && entry.offer.salesCode ? entry.offer.salesCode : '')
+            || entry.offer;
+        const fallbackCombinationOptions = buildFallbackCombinationOptions(refreshedOffer);
+        const nextCombinationOptions = Array.isArray(entry.combinationOptions) && entry.combinationOptions.length > 0
+            ? entry.combinationOptions
+            : fallbackCombinationOptions;
+        const hasSelectedCombination = nextCombinationOptions.some((option) => option.key === entry.selectedCombinationKey);
 
-    if (werfsleutelSliceState.selectedKey) {
-        const allowedChannels = Array.isArray(werfsleutelSliceState.selectedKey.allowedChannels)
-            ? werfsleutelSliceState.selectedKey.allowedChannels
-            : [];
-        if (!allowedChannels.includes(werfsleutelSliceState.selectedChannel)) {
-            werfsleutelSliceState.selectedChannel = null;
-        }
-    } else {
-        werfsleutelSliceState.selectedChannel = null;
-    }
+        return {
+            ...entry,
+            offer: refreshedOffer,
+            combinationOptions: nextCombinationOptions,
+            isExpanded: entry.isExpanded !== false,
+            selectedCombinationKey: hasSelectedCombination
+                ? entry.selectedCombinationKey
+                : nextCombinationOptions.length === 1
+                    ? nextCombinationOptions[0].key
+                    : null
+        };
+    });
 
     const hasQuery = Boolean(werfsleutelSliceState.latestQuery);
     if (hasQuery) {
@@ -973,19 +1331,39 @@ function setCatalogMetadata(metadata = {}) {
             preserveActiveIndex: true
         });
     }
-    renderWerfsleutelChannelOptions();
+    renderSelectedOfferList();
     updateWerfsleutelSummary();
 }
 
+function getSelections() {
+    return werfsleutelSliceState.selectedOffers.map((entry) => {
+        const selectedChannelMeta = Array.isArray(entry.combinationOptions)
+            ? entry.combinationOptions.find((option) => option.key === entry.selectedCombinationKey) || null
+            : null;
+
+        return {
+            selectedKey: entry.offer || null,
+            selectedChannel: selectedChannelMeta ? selectedChannelMeta.key : null,
+            selectedChannelMeta
+        };
+    });
+}
+
 function getSelection() {
-    const selectedChannelCode = werfsleutelSliceState.selectedChannel;
-    const selectedChannelMeta = selectedChannelCode
-        ? werfsleutelSliceState.channels[selectedChannelCode] || null
-        : null;
+    const selections = getSelections();
+    if (selections.length !== 1) {
+        return {
+            selectedKey: null,
+            selectedChannel: null,
+            selectedChannelMeta: null
+        };
+    }
+
+    const [selection] = selections;
     return {
-        selectedKey: werfsleutelSliceState.selectedKey,
-        selectedChannel: selectedChannelCode,
-        selectedChannelMeta
+        selectedKey: selection.selectedKey || null,
+        selectedChannel: selection.selectedChannel || null,
+        selectedChannelMeta: selection.selectedChannelMeta || null
     };
 }
 
@@ -1001,6 +1379,7 @@ function installWerfsleutelBridge() {
         resetPicker: resetWerfsleutelPicker,
         refreshCatalogIfStale: triggerWerfsleutelBackgroundRefreshIfStale,
         setCatalogMetadata,
+        getSelections,
         getSelection,
         getOfferDetails: getWerfsleutelOfferDetails
     };
@@ -1050,13 +1429,27 @@ export function registerWerfsleutelActions(actionRouter) {
                 context.event.preventDefault();
             }
 
-            selectWerfsleutel(payload.salesCode);
+            addSelectedOffer(payload.salesCode);
         },
         'select-werfsleutel-channel': (payload) => {
-            if (!payload.channelCode) {
+            if (!payload.salesCode || !payload.combinationKey) {
                 return;
             }
-            selectWerfsleutelChannel(payload.channelCode);
+            selectWerfsleutelChannel(payload.salesCode, payload.combinationKey);
+        },
+        'toggle-subscription-offer': (payload) => {
+            if (!payload.salesCode) {
+                return;
+            }
+
+            toggleSelectedOfferExpansion(payload.salesCode);
+        },
+        'remove-subscription-offer': (payload) => {
+            if (!payload.salesCode) {
+                return;
+            }
+
+            removeSelectedOffer(payload.salesCode);
         }
     });
 }
@@ -1068,8 +1461,7 @@ export function __resetWerfsleutelSliceForTests() {
     werfsleutelSliceState.loadAttempted = false;
     werfsleutelSliceState.catalogSyncPromise = null;
     werfsleutelSliceState.catalogSyncedAt = 0;
-    werfsleutelSliceState.selectedKey = null;
-    werfsleutelSliceState.selectedChannel = null;
+    werfsleutelSliceState.selectedOffers = [];
     werfsleutelSliceState.visibleMatches = [];
     werfsleutelSliceState.activeIndex = -1;
     werfsleutelSliceState.latestQuery = '';

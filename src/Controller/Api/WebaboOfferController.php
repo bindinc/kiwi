@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Http\ApiProblemException;
 use App\Oidc\OidcClient;
 use App\Service\WebaboOfferCatalogService;
+use App\Service\WebaboSalesCodeCombinationCatalogService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -16,6 +18,7 @@ final class WebaboOfferController extends AbstractApiController
     public function __construct(
         OidcClient $oidcClient,
         private readonly WebaboOfferCatalogService $webaboOfferCatalog,
+        private readonly WebaboSalesCodeCombinationCatalogService $salesCodeCombinationCatalog,
     ) {
         parent::__construct($oidcClient);
     }
@@ -36,5 +39,18 @@ final class WebaboOfferController extends AbstractApiController
             'items' => $items,
             'total' => count($items),
         ]);
+    }
+
+    #[Route('/offers/{salesCode}/salescodecombinations', name: 'api_webabo_offer_salescode_combinations', methods: ['GET'])]
+    public function salesCodeCombinations(Request $request, string $salesCode): JsonResponse
+    {
+        $this->requireApiAccess($request);
+
+        $normalizedSalesCode = trim($salesCode);
+        if ('' === $normalizedSalesCode) {
+            throw new ApiProblemException(400, 'invalid_sales_code', 'salesCode must be a non-empty string');
+        }
+
+        return $this->json($this->salesCodeCombinationCatalog->getOfferSalesCodeCombinations($normalizedSalesCode));
     }
 }
