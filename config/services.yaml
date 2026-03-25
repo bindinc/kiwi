@@ -32,6 +32,8 @@ services:
         arguments:
             $sessionTtlSeconds: '%app.session.ttl_seconds%'
 
+    App\Webabo\WebaboSalesCodeCombinationProviderInterface: '@App\Webabo\WebaboSalesCodeCombinationClient'
+
     Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler:
         factory: ['@App\Session\DoctrinePdoSessionHandlerFactory', 'create']
         arguments:

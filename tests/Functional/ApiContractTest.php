@@ -259,6 +259,14 @@ final class ApiContractTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertGreaterThanOrEqual(1, json_decode($client->getResponse()->getContent(), true)['total']);
 
+        $client->request('GET', '/api/v1/webabo/offers/AVRV519/salescodecombinations');
+        self::assertResponseIsSuccessful();
+        $salesCodeCombinationsPayload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame('AVRV519', $salesCodeCombinationsPayload['salesCode']);
+        self::assertSame('AVR', $salesCodeCombinationsPayload['productCode']);
+        self::assertSame('avrotros', $salesCodeCombinationsPayload['credentialKey']);
+        self::assertSame(['EM/OU', 'TM/IB'], array_column($salesCodeCombinationsPayload['items'], 'key'));
+
         $client->request('GET', '/api/v1/catalog/delivery-calendar?year=2026&month=2');
         self::assertResponseIsSuccessful();
         $calendar = json_decode($client->getResponse()->getContent(), true);
@@ -296,6 +304,8 @@ final class ApiContractTest extends WebTestCase
             'salesCode' => 'AVRV519',
             'title' => '1 jaar Avrobode voor maar EUR52',
             'credentialKey' => 'avrotros',
+            'productCode' => 'AVR',
+            'allowedChannels' => ['EM/OU', 'TM/IB'],
             'offerPrice' => [
                 'price' => 52.0,
                 'priceCode' => 'std',

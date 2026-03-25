@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Let the HUP/Webabo integration read named credential sets from `hup.credentials`, keep legacy single-credential config as a fallback, sync werfsleutel offers by looping over every configured credential, and persist each offer's `credentialKey` so queued subscription requests can reuse the matching credential downstream.
+- Drive subscription channel combinations from Webabo `GET /offers/salescodecombinations` per cached offer credential/product and let agents add multiple subscriptions or memberships in one signup flow.
 
 ## [v1.0.11]
 

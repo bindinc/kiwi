@@ -65,7 +65,9 @@ function testActionRegistrationAndBridgeApi() {
         'handle-werfsleutel-input',
         'reset-werfsleutel-picker',
         'select-werfsleutel',
-        'select-werfsleutel-channel'
+        'select-werfsleutel-channel',
+        'toggle-subscription-offer',
+        'remove-subscription-offer'
     ];
     assert.deepEqual(
         router.getRegisteredActions().slice().sort(),
@@ -73,8 +75,10 @@ function testActionRegistrationAndBridgeApi() {
     );
 
     assert.equal(typeof globalThis.kiwiWerfsleutelSlice, 'object');
+    assert.equal(typeof globalThis.kiwiWerfsleutelSlice.getSelections, 'function');
     assert.equal(typeof globalThis.kiwiWerfsleutelSlice.getSelection, 'function');
     assert.equal(typeof globalThis.kiwiWerfsleutelSlice.getOfferDetails, 'function');
+    assert.deepEqual(globalThis.kiwiWerfsleutelSlice.getSelections(), []);
 }
 
 function run() {

@@ -3667,9 +3667,9 @@ select option {
     margin-top: 12px;
     padding: 10px 12px;
     border-radius: 10px;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #14532d;
+    background: #f8fafc;
+    border: 1px solid #dbe4ef;
+    color: #1f2937;
     font-size: 0.92rem;
     display: none;
 }
@@ -3681,10 +3681,134 @@ select option {
 .werfsleutel-summary-status {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 6px;
     font-size: 0.85rem;
-    color: #166534;
+    color: #475569;
+}
+
+.subscription-offer-list {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+}
+
+.subscription-offer-card {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #dfe6ef;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.subscription-offer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.subscription-offer-toggle {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.subscription-offer-toggle-main {
+    min-width: 0;
+}
+
+.subscription-offer-toggle-side {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.subscription-offer-card.is-expanded {
+    border-color: #bfdbfe;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.subscription-offer-card.is-collapsed {
+    background: #fbfdff;
+}
+
+.subscription-offer-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.subscription-offer-title-row strong {
+    color: #111827;
+    font-size: 0.98rem;
+}
+
+.subscription-offer-code {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.subscription-offer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.subscription-offer-meta span {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+.subscription-offer-warning {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #fed7aa;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 0.88rem;
+}
+
+.subscription-offer-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.9rem;
+    line-height: 1;
 }
 
 .status-pill {
@@ -3722,18 +3846,18 @@ select option {
 
 .channel-options {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 8px;
 }
 
 .channel-chip {
     border: 1px solid #d1d5db;
     border-radius: 12px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     background: #fff;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     cursor: pointer;
     transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
     text-align: left;
@@ -3763,8 +3887,18 @@ select option {
     color: #4b5563;
 }
 
+.channel-chip .channel-detail {
+    font-size: 0.72rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
 .channel-chip.selected .channel-label {
     color: #1d4ed8;
+}
+
+.channel-chip.selected .channel-detail {
+    color: #4338ca;
 }
 
 .channel-options .empty-state-small {
@@ -3772,6 +3906,33 @@ select option {
     padding: 8px 10px;
     border: 1px dashed #cbd5e1;
     border-radius: 8px;
+}
+
+@media (max-width: 720px) {
+    .werfsleutel-search-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .werfsleutel-search-row .btn {
+        width: 100%;
+    }
+
+    .subscription-offer-header {
+        flex-direction: column;
+    }
+
+    .subscription-offer-toggle {
+        width: 100%;
+    }
+
+    .subscription-offer-header .btn {
+        width: 100%;
+    }
+
+    .channel-options {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ============================================================================

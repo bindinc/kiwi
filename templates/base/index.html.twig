@@ -387,13 +387,13 @@
                             <div class="werfsleutel-fieldset">
                                 <div class="fieldset-heading">
                                     <label for="werfsleutelInput" data-i18n="indexHtml.text.werfsleutel_c5732867">Werfsleutel *</label>
-                                    <p class="helper-text" id="werfsleutelInputHint" data-i18n="indexHtml.text.zoek_op_salescode_of_titel_en_kies_het_kanaal_83ec4db3">Zoek op salescode of titel en kies het kanaal</p>
+                                    <p class="helper-text" id="werfsleutelInputHint" data-i18n="indexHtml.text.zoek_op_salescode_of_titel_en_kies_het_kanaal_83ec4db3">Zoek op salescode of titel, voeg een of meer producten toe en kies per product het kanaal</p>
                                 </div>
                                 <div class="werfsleutel-search-row">
                                     <input type="search"
                                            class="form-control"
                                            id="werfsleutelInput"
-                                           placeholder="Typ werfsleutel of scan barcode (bijv. AVRV525 of 8712345...)"
+                                           placeholder="Typ werfsleutel, producttitel of scan barcode om toe te voegen..."
                                            autocomplete="off"
                                            role="combobox"
                                            aria-autocomplete="list"
@@ -412,13 +412,7 @@
                                 </div>
                                 <div class="werfsleutel-suggestions" id="werfsleutelSuggestions" role="listbox"></div>
                                 <div class="werfsleutel-summary" id="werfsleutelSummary"></div>
-                                <div class="channel-picker">
-                                    <div class="fieldset-heading compact">
-                                        <label for="werfsleutelChannels" data-i18n="indexHtml.text.kanaal_bb8f5e13">Kanaal *</label>
-                                        <p class="helper-text" data-i18n="indexHtml.text.kanaal_bepaalt_vervolgcommunicatie_6b21e3db">Kanaal bepaalt vervolgcommunicatie</p>
-                                    </div>
-                                    <div class="channel-options" id="werfsleutelChannels"></div>
-                                </div>
+                                <div class="subscription-offer-list" id="subscriptionOfferSelections"></div>
                             </div>
                             
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.betaalmethode_5e503508">Betaalmethode *</h3>

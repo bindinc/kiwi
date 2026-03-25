@@ -457,6 +457,17 @@ function getSelectedWerfsleutelSelection() {
     };
 }
 
+function getSelectedWerfsleutelSelections() {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    if (werfsleutelSliceApi && typeof werfsleutelSliceApi.getSelections === 'function') {
+        const selections = werfsleutelSliceApi.getSelections();
+        return Array.isArray(selections) ? selections : [];
+    }
+
+    const selection = getSelectedWerfsleutelSelection();
+    return selection && selection.selectedKey ? [selection] : [];
+}
+
 function getWerfsleutelOfferDetails(selectionKey) {
     const werfsleutelSliceApi = getWerfsleutelSliceApi();
     const canResolveOfferDetails = werfsleutelSliceApi && typeof werfsleutelSliceApi.getOfferDetails === 'function';
@@ -627,48 +638,31 @@ export async function createSubscription(event) {
         event.preventDefault();
     }
 
-    const werfsleutelSelection = getSelectedWerfsleutelSelection();
-    const selectedWerfsleutelKey = werfsleutelSelection.selectedKey;
-    const selectedWerfsleutelChannel = werfsleutelSelection.selectedChannel;
-
-    if (!selectedWerfsleutelKey) {
+    const werfsleutelSelections = getSelectedWerfsleutelSelections();
+    if (werfsleutelSelections.length === 0) {
         showToast(translateKey('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
         return;
     }
 
-    if (!selectedWerfsleutelChannel) {
+    const incompleteSelection = werfsleutelSelections.find((selection) => !selection.selectedChannel);
+    if (incompleteSelection) {
         showToast(translateKey('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'error');
         return;
     }
-
-    const offerDetails = getWerfsleutelOfferDetails(selectedWerfsleutelKey);
-    const formData = {
-        magazine: offerDetails.magazine,
-        duration: offerDetails.durationKey || '',
-        durationLabel: offerDetails.durationLabel,
+    const submissionId = ensureSubscriptionSubmissionId();
+    const sharedFormData = {
         startDate: getInputValue('subStartDate'),
         paymentMethod: getCheckedValue('subPayment'),
         iban: getInputValue('subIBAN'),
         optinEmail: getCheckedValue('subOptinEmail'),
         optinPhone: getCheckedValue('subOptinPhone'),
-        optinPost: getCheckedValue('subOptinPost'),
-        werfsleutel: selectedWerfsleutelKey.salesCode,
-        werfsleutelTitle: selectedWerfsleutelKey.title,
-        werfsleutelPrice: selectedWerfsleutelKey.price,
-        werfsleutelOfferId: selectedWerfsleutelKey.offerId,
-        werfsleutelOrderChoiceKey: selectedWerfsleutelKey.orderChoiceKey,
-        werfsleutelSubscriptionCode: selectedWerfsleutelKey.subscriptionCode,
-        werfsleutelProductCode: selectedWerfsleutelKey.productCode,
-        werfsleutelCredentialKey: selectedWerfsleutelKey.credentialKey,
-        werfsleutelChannel: selectedWerfsleutelChannel,
-        werfsleutelChannelLabel: werfsleutelSelection.selectedChannelMeta?.label || ''
+        optinPost: getCheckedValue('subOptinPost')
     };
-    const submissionId = ensureSubscriptionSubmissionId();
 
     const optinData = {
-        optinEmail: formData.optinEmail,
-        optinPhone: formData.optinPhone,
-        optinPost: formData.optinPost
+        optinEmail: sharedFormData.optinEmail,
+        optinPhone: sharedFormData.optinPhone,
+        optinPost: sharedFormData.optinPost
     };
 
     const recipientPayload = buildSubscriptionRolePayload('recipient', { optinData });
@@ -705,67 +699,128 @@ export async function createSubscription(event) {
         return;
     }
 
-    const werfsleutelChannelLabel = formData.werfsleutelChannelLabel
-        || translateKey('werfsleutel.unknownChannel', {}, 'Onbekend kanaal');
-    const werfsleutelNote = `Werfsleutel ${formData.werfsleutel} (${formData.werfsleutelTitle}, ${formatEuro(formData.werfsleutelPrice)}) via ${formData.werfsleutelChannel} (${werfsleutelChannelLabel})`;
-    const durationDisplay = getSubscriptionDurationDescription(formData.duration, formData.durationLabel);
-
     const apiClient = getApiClient();
     if (!apiClient || typeof apiClient.post !== 'function') {
         showToast(translateKey('subscription.createRequiresBackend', {}, 'Abonnement aanmaken vereist backend API'), 'error');
         return;
     }
 
-    const subscriptionPayload = {
-        magazine: formData.magazine,
-        duration: formData.duration,
-        durationLabel: formData.durationLabel,
-        startDate: formData.startDate,
-        status: 'active',
-        lastEdition: new Date().toISOString().split('T')[0]
-    };
-
     const isExistingRecipient = recipientPayload.personId !== undefined && recipientPayload.personId !== null;
-    const contactEntry = {
-        type: isExistingRecipient ? 'Extra abonnement' : 'Nieuw abonnement',
-        description: isExistingRecipient
-            ? `Extra abonnement ${formData.magazine} (${durationDisplay}) toegevoegd. ${werfsleutelNote}.`
-            : `Abonnement ${formData.magazine} (${durationDisplay}) aangemaakt via telefonische bestelling. ${werfsleutelNote}.`
-    };
-
-    const payload = {
-        submissionId,
-        recipient: recipientPayload,
-        requester: requesterPayload,
-        subscription: subscriptionPayload,
-        offer: {
-            offerId: formData.werfsleutelOfferId,
-            orderChoiceKey: formData.werfsleutelOrderChoiceKey,
-            salesCode: formData.werfsleutel,
-            title: formData.werfsleutelTitle,
-            price: formData.werfsleutelPrice,
-            subscriptionCode: formData.werfsleutelSubscriptionCode,
-            productCode: formData.werfsleutelProductCode,
-            credentialKey: formData.werfsleutelCredentialKey,
-            channel: formData.werfsleutelChannel,
-            channelLabel: werfsleutelChannelLabel
-        },
-        contactEntry
-    };
-
     const { workflowsApiUrl } = getApiEndpoints();
+    const queuedSalesCodes = [];
+    const failedSelections = [];
 
-    try {
-        await apiClient.post(`${workflowsApiUrl}/subscription`, payload);
-        showSubscriptionQueueCard();
-        await loadSubscriptionQueueItems();
-        setSubscriptionQueueExpanded(true);
-        closeForm('newSubscriptionForm');
-        showToast(translateKey('subscription.queued', {}, 'Aanvraag in wachtrij geplaatst!'), 'success');
-    } catch (error) {
-        showToast(error.message || translateKey('subscription.createFailed', {}, 'Abonnement aanmaken via backend mislukt'), 'error');
+    for (const [index, selection] of werfsleutelSelections.entries()) {
+        const selectedWerfsleutelKey = selection.selectedKey;
+        const selectedWerfsleutelChannel = selection.selectedChannel;
+        if (!selectedWerfsleutelKey || !selectedWerfsleutelChannel) {
+            continue;
+        }
+
+        const offerDetails = getWerfsleutelOfferDetails(selectedWerfsleutelKey);
+        const formData = {
+            magazine: offerDetails.magazine,
+            duration: offerDetails.durationKey || '',
+            durationLabel: offerDetails.durationLabel,
+            startDate: sharedFormData.startDate,
+            werfsleutel: selectedWerfsleutelKey.salesCode,
+            werfsleutelTitle: selectedWerfsleutelKey.title,
+            werfsleutelPrice: selectedWerfsleutelKey.price,
+            werfsleutelOfferId: selectedWerfsleutelKey.offerId,
+            werfsleutelOrderChoiceKey: selectedWerfsleutelKey.orderChoiceKey,
+            werfsleutelSubscriptionCode: selectedWerfsleutelKey.subscriptionCode,
+            werfsleutelProductCode: selectedWerfsleutelKey.productCode,
+            werfsleutelCredentialKey: selectedWerfsleutelKey.credentialKey,
+            werfsleutelChannel: selectedWerfsleutelChannel,
+            werfsleutelChannelLabel: selection.selectedChannelMeta?.label || ''
+        };
+        const itemSubmissionId = werfsleutelSelections.length === 1
+            ? submissionId
+            : `${submissionId}::${String(formData.werfsleutel || index).toLowerCase()}`;
+        const werfsleutelChannelLabel = formData.werfsleutelChannelLabel
+            || translateKey('werfsleutel.unknownChannel', {}, 'Onbekend kanaal');
+        const werfsleutelNote = `Werfsleutel ${formData.werfsleutel} (${formData.werfsleutelTitle}, ${formatEuro(formData.werfsleutelPrice)}) via ${formData.werfsleutelChannel} (${werfsleutelChannelLabel})`;
+        const durationDisplay = getSubscriptionDurationDescription(formData.duration, formData.durationLabel);
+
+        const payload = {
+            submissionId: itemSubmissionId,
+            recipient: recipientPayload,
+            requester: requesterPayload,
+            subscription: {
+                magazine: formData.magazine,
+                duration: formData.duration,
+                durationLabel: formData.durationLabel,
+                startDate: formData.startDate,
+                status: 'active',
+                lastEdition: new Date().toISOString().split('T')[0]
+            },
+            offer: {
+                offerId: formData.werfsleutelOfferId,
+                orderChoiceKey: formData.werfsleutelOrderChoiceKey,
+                salesCode: formData.werfsleutel,
+                title: formData.werfsleutelTitle,
+                price: formData.werfsleutelPrice,
+                subscriptionCode: formData.werfsleutelSubscriptionCode,
+                productCode: formData.werfsleutelProductCode,
+                credentialKey: formData.werfsleutelCredentialKey,
+                channel: formData.werfsleutelChannel,
+                channelLabel: werfsleutelChannelLabel
+            },
+            contactEntry: {
+                type: isExistingRecipient ? 'Extra abonnement' : 'Nieuw abonnement',
+                description: isExistingRecipient
+                    ? `Extra abonnement ${formData.magazine} (${durationDisplay}) toegevoegd. ${werfsleutelNote}.`
+                    : `Abonnement ${formData.magazine} (${durationDisplay}) aangemaakt via telefonische bestelling. ${werfsleutelNote}.`
+            }
+        };
+
+        try {
+            await apiClient.post(`${workflowsApiUrl}/subscription`, payload);
+            queuedSalesCodes.push(formData.werfsleutel);
+        } catch (error) {
+            failedSelections.push({
+                salesCode: formData.werfsleutel,
+                message: error.message || translateKey('subscription.createFailed', {}, 'Abonnement aanmaken via backend mislukt')
+            });
+        }
+    }
+
+    if (queuedSalesCodes.length === 0) {
+        showToast(
+            failedSelections[0]?.message || translateKey('subscription.createFailed', {}, 'Abonnement aanmaken via backend mislukt'),
+            'error'
+        );
         return;
     }
+
+    showSubscriptionQueueCard();
+    await loadSubscriptionQueueItems();
+    setSubscriptionQueueExpanded(true);
+
+    if (failedSelections.length > 0) {
+        const failedCodes = failedSelections.map((item) => item.salesCode).join(', ');
+        showToast(
+            translateKey(
+                'subscription.partiallyQueued',
+                { queued: queuedSalesCodes.length, failed: failedSelections.length, salesCodes: failedCodes },
+                `${queuedSalesCodes.length} aanvraag(en) geplaatst, ${failedSelections.length} mislukt (${failedCodes}).`
+            ),
+            'warning'
+        );
+        return;
+    }
+
+    closeForm('newSubscriptionForm');
+    showToast(
+        werfsleutelSelections.length > 1
+            ? translateKey(
+                'subscription.multipleQueued',
+                { count: werfsleutelSelections.length },
+                `${werfsleutelSelections.length} aanvragen in wachtrij geplaatst!`
+            )
+            : translateKey('subscription.queued', {}, 'Aanvraag in wachtrij geplaatst!'),
+        'success'
+    );
 
     const form = getElementById('subscriptionForm');
     if (form && typeof form.reset === 'function') {
@@ -1295,6 +1350,7 @@ export function registerSubscriptionWorkflowSlice(actionRouter) {
 }
 
 export const __subscriptionWorkflowTestUtils = {
+    getSelectedWerfsleutelSelections,
     getSubscriptionChanges,
     getSubscriptionDurationDescription,
     setSubscriptionQueueExpanded,

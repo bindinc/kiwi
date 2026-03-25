@@ -176,6 +176,39 @@ function testSubscriptionHelperFunctions() {
     ]);
 }
 
+function testWerfsleutelSelectionHelperPrefersMultiSelectionBridge() {
+    const previousSlice = globalThis.kiwiWerfsleutelSlice;
+    globalThis.kiwiWerfsleutelSlice = {
+        getSelections() {
+            return [
+                {
+                    selectedKey: { salesCode: 'TVZ123' },
+                    selectedChannel: 'PR/ET/LV',
+                    selectedChannelMeta: { key: 'PR/ET/LV' }
+                },
+                {
+                    selectedKey: { salesCode: 'AVR123' },
+                    selectedChannel: 'EM/OU',
+                    selectedChannelMeta: { key: 'EM/OU' }
+                }
+            ];
+        }
+    };
+
+    try {
+        assert.deepEqual(
+            __subscriptionWorkflowTestUtils.getSelectedWerfsleutelSelections().map((selection) => selection.selectedKey.salesCode),
+            ['TVZ123', 'AVR123']
+        );
+    } finally {
+        if (previousSlice === undefined) {
+            delete globalThis.kiwiWerfsleutelSlice;
+        } else {
+            globalThis.kiwiWerfsleutelSlice = previousSlice;
+        }
+    }
+}
+
 function testQueueToggleUpdatesPanelVisibilityAndButtonState() {
     const previousDocument = globalThis.document;
     const elements = {
@@ -294,6 +327,7 @@ function run() {
     testRegistersItemSevenActions();
     testInstallsLegacyCompatibilityExports();
     testSubscriptionHelperFunctions();
+    testWerfsleutelSelectionHelperPrefersMultiSelectionBridge();
     testQueueToggleUpdatesPanelVisibilityAndButtonState();
     testQueueRenderingUsesBackendDisplayFields();
     console.log('subscription workflow slice tests passed');
