@@ -3773,17 +3773,16 @@ select option {
 }
 
 .subscription-offer-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
     gap: 12px;
 }
 
 .subscription-offer-toggle {
-    flex: 1;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
     gap: 12px;
     padding: 0;
     border: 0;
@@ -3795,6 +3794,8 @@ select option {
 
 .subscription-offer-toggle-main {
     min-width: 0;
+    display: grid;
+    gap: 8px;
 }
 
 .subscription-offer-toggle-side {
@@ -3802,7 +3803,8 @@ select option {
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
 }
 
 .subscription-offer-card.is-expanded {
@@ -3815,15 +3817,25 @@ select option {
 }
 
 .subscription-offer-title-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 12px;
 }
 
-.subscription-offer-title-row strong {
+.subscription-offer-title {
     color: #111827;
     font-size: 0.98rem;
+    line-height: 1.35;
+    min-width: 0;
+}
+
+.subscription-offer-price {
+    color: #0f172a;
+    font-size: 0.98rem;
+    font-weight: 700;
+    white-space: nowrap;
+    justify-self: end;
 }
 
 .subscription-offer-code {
@@ -3856,10 +3868,9 @@ select option {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 6px;
 }
 
-.subscription-offer-meta span {
+.subscription-offer-meta-badge {
     display: inline-flex;
     align-items: center;
     padding: 4px 8px;
@@ -4000,15 +4011,29 @@ select option {
     }
 
     .subscription-offer-header {
-        flex-direction: column;
+        grid-template-columns: 1fr;
     }
 
     .subscription-offer-toggle {
+        grid-template-columns: 1fr;
         width: 100%;
     }
 
     .subscription-offer-header .btn {
         width: 100%;
+    }
+
+    .subscription-offer-toggle-side {
+        justify-content: flex-start;
+    }
+
+    .subscription-offer-title-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .subscription-offer-price {
+        justify-self: start;
     }
 
     .werfsleutel-summary-row {
