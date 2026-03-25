@@ -3665,17 +3665,85 @@ select option {
 
 .werfsleutel-summary {
     margin-top: 12px;
-    padding: 10px 12px;
-    border-radius: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
     background: #f8fafc;
     border: 1px solid #dbe4ef;
     color: #1f2937;
-    font-size: 0.92rem;
     display: none;
 }
 
 .werfsleutel-summary.visible {
     display: block;
+}
+
+.werfsleutel-summary.is-pending {
+    background: #fbfdff;
+    border-color: #dbe4ef;
+}
+
+.werfsleutel-summary.is-complete {
+    background: #f8fafc;
+    border-color: #d6dee8;
+}
+
+.werfsleutel-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.werfsleutel-summary-count {
+    color: #111827;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.werfsleutel-summary-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.werfsleutel-summary-badge.is-open {
+    border-color: #fcd34d;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.werfsleutel-summary-badge.is-complete {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+}
+
+.werfsleutel-summary-copy {
+    margin: 6px 0 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: #475569;
+}
+
+.werfsleutel-summary-lead {
+    color: #334155;
+    font-weight: 600;
+}
+
+.werfsleutel-summary-hint {
+    color: #64748b;
+}
+
+.werfsleutel-summary-copy span + span {
+    margin-left: 0.3rem;
 }
 
 .werfsleutel-summary-status {
@@ -3941,6 +4009,17 @@ select option {
 
     .subscription-offer-header .btn {
         width: 100%;
+    }
+
+    .werfsleutel-summary-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .werfsleutel-summary-copy span + span {
+        display: inline;
+        margin-left: 0;
     }
 
     .channel-options {

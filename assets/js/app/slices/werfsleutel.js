@@ -537,6 +537,73 @@ function findSelectedOfferEntry(salesCode) {
     return entryIndex >= 0 ? werfsleutelSliceState.selectedOffers[entryIndex] : null;
 }
 
+function getSelectedCombinationCount() {
+    return werfsleutelSliceState.selectedOffers.filter((entry) => Boolean(entry.selectedCombinationKey)).length;
+}
+
+function getFirstIncompleteOfferIndex() {
+    return werfsleutelSliceState.selectedOffers.findIndex((entry) => !entry.selectedCombinationKey);
+}
+
+function ensureFirstIncompleteOfferExpanded() {
+    const firstIncompleteIndex = getFirstIncompleteOfferIndex();
+    if (firstIncompleteIndex < 0) {
+        return;
+    }
+
+    const firstIncompleteEntry = werfsleutelSliceState.selectedOffers[firstIncompleteIndex];
+    if (!firstIncompleteEntry || firstIncompleteEntry.isExpanded !== false) {
+        return;
+    }
+
+    werfsleutelSliceState.selectedOffers[firstIncompleteIndex] = {
+        ...firstIncompleteEntry,
+        isExpanded: true
+    };
+}
+
+function getSelectionCountLabel(count) {
+    if (count === 1) {
+        return translate('werfsleutel.selectionCountSingle', '1 product toegevoegd');
+    }
+
+    return translate('werfsleutel.selectionCountMultiple', '{count} producten toegevoegd')
+        .replace('{count}', String(count));
+}
+
+function getSummaryStatusLabel(offerCount, openCount) {
+    if (openCount === 0) {
+        return translate('werfsleutel.summaryStatusComplete', '{count}/{total} compleet')
+            .replace('{count}', String(offerCount))
+            .replace('{total}', String(offerCount));
+    }
+
+    return translate('werfsleutel.summaryStatusOpen', '{count}/{total} open')
+        .replace('{count}', String(openCount))
+        .replace('{total}', String(offerCount));
+}
+
+function getSummaryLeadText(openCount) {
+    if (openCount === 0) {
+        return translate('werfsleutel.summaryLeadComplete', 'Alle kanaalcombinaties zijn gekozen.');
+    }
+
+    if (openCount === 1) {
+        return translate('werfsleutel.summaryLeadPendingSingle', 'Nog 1 kanaalcombinatie kiezen.');
+    }
+
+    return translate('werfsleutel.summaryLeadPendingMultiple', 'Nog {count} kanaalcombinaties kiezen.')
+        .replace('{count}', String(openCount));
+}
+
+function getSummaryHintText(openCount) {
+    if (openCount === 0) {
+        return translate('werfsleutel.summaryHintComplete', 'Alle producten zijn compleet ingesteld.');
+    }
+
+    return translate('werfsleutel.summaryHintPending', 'Kies hieronder per product de juiste combinatie.');
+}
+
 function toggleSelectedOfferExpansion(salesCode) {
     const entryIndex = findSelectedOfferEntryIndex(salesCode);
     if (entryIndex < 0) {
@@ -544,9 +611,14 @@ function toggleSelectedOfferExpansion(salesCode) {
     }
 
     const entry = werfsleutelSliceState.selectedOffers[entryIndex];
+    const nextExpandedState = entry.isExpanded === false;
+    if (!nextExpandedState && entryIndex === getFirstIncompleteOfferIndex()) {
+        return;
+    }
+
     werfsleutelSliceState.selectedOffers[entryIndex] = {
         ...entry,
-        isExpanded: entry.isExpanded === false
+        isExpanded: nextExpandedState
     };
     renderSelectedOfferList();
 }
@@ -676,6 +748,8 @@ function renderSelectedOfferList() {
         return;
     }
 
+    ensureFirstIncompleteOfferExpanded();
+
     container.innerHTML = werfsleutelSliceState.selectedOffers.map((entry) => {
         const offer = entry.offer || {};
         const offerDetails = getWerfsleutelOfferDetails(offer);
@@ -690,8 +764,8 @@ function renderSelectedOfferList() {
         const hasSelectedCombination = Boolean(entry.selectedCombinationKey);
         const statusClass = hasSelectedCombination ? 'status-pill--success' : 'status-pill--warning';
         const statusLabel = hasSelectedCombination
-            ? translate('werfsleutel.channelSelected', 'Kanaal gekozen')
-            : translate('werfsleutel.channelRequiredHint', 'Kanaal nog kiezen');
+            ? translate('werfsleutel.channelSelected', 'Compleet')
+            : translate('werfsleutel.channelRequiredHint', 'Open');
         const combinationOptions = Array.isArray(entry.combinationOptions) ? entry.combinationOptions : [];
         const selectedOption = combinationOptions.find((option) => option.key === entry.selectedCombinationKey) || null;
         const toggleLabel = isExpanded
@@ -772,26 +846,30 @@ function updateWerfsleutelSummary() {
 
     const offerCount = werfsleutelSliceState.selectedOffers.length;
     if (offerCount === 0) {
-        summary.classList.remove('visible');
+        summary.classList.remove('visible', 'is-complete', 'is-pending');
         summary.textContent = '';
         return;
     }
 
-    const selectedCombinationCount = werfsleutelSliceState.selectedOffers.filter((entry) => entry.selectedCombinationKey).length;
-    const statusClass = selectedCombinationCount === offerCount ? 'status-pill--success' : 'status-pill--warning';
-    const statusLabel = selectedCombinationCount === offerCount
-        ? translate('werfsleutel.allChannelsSelected', 'Alle kanaalcombinaties gekozen')
-        : translate('werfsleutel.pendingChannelsSelected', 'Nog kanaalcombinaties kiezen');
+    const selectedCombinationCount = getSelectedCombinationCount();
+    const openCount = Math.max(offerCount - selectedCombinationCount, 0);
+    const isComplete = openCount === 0;
+    const statusLabel = getSummaryStatusLabel(offerCount, openCount);
+    const leadText = getSummaryLeadText(openCount);
+    const hintText = getSummaryHintText(openCount);
 
     summary.innerHTML = `
-        <div>
-            <strong>${escapeHtml(translate('werfsleutel.selectionCount', '{count} product(en) toegevoegd').replace('{count}', String(offerCount)))}</strong>
+        <div class="werfsleutel-summary-row">
+            <strong class="werfsleutel-summary-count">${escapeHtml(getSelectionCountLabel(offerCount))}</strong>
+            <span class="werfsleutel-summary-badge ${isComplete ? 'is-complete' : 'is-open'}">${escapeHtml(statusLabel)}</span>
         </div>
-        <div class="werfsleutel-summary-status">
-            <span class="status-pill ${statusClass}">${escapeHtml(statusLabel)}</span>
-            <span>${escapeHtml(translate('werfsleutel.multiOfferHint', 'Per product kiest u hieronder de juiste kanaalcombinatie.'))}</span>
-        </div>
+        <p class="werfsleutel-summary-copy">
+            <span class="werfsleutel-summary-lead">${escapeHtml(leadText)}</span>
+            <span class="werfsleutel-summary-hint">${escapeHtml(hintText)}</span>
+        </p>
     `;
+    summary.classList.remove('is-complete', 'is-pending');
+    summary.classList.add(isComplete ? 'is-complete' : 'is-pending');
     summary.classList.add('visible');
 }
 
