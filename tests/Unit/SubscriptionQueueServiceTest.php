@@ -9,6 +9,7 @@ use App\Outbox\SubscriptionQueueSchemaManager;
 use App\Repository\SubscriptionOrderRepository;
 use App\Service\PocCatalogService;
 use App\Service\PocStateService;
+use App\Service\SubscriptionQueueDisplayFormatter;
 use App\Service\SubscriptionQueueService;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
@@ -106,10 +107,17 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('AVRV519', $firstResponse['summary']['offer']['salesCode']);
         self::assertTrue($firstResponse['summary']['requester']['sameAsRecipient']);
         self::assertSame('B. Example', $firstResponse['summary']['agent']['shortName']);
+        self::assertSame('Aanvraag', $firstResponse['summary']['typeLabel']);
+        self::assertSame('Aanvraag', $firstResponse['display']['typeLabel']);
+        self::assertSame('BE', $firstResponse['display']['agentBadge']);
+        self::assertSame('in behandeling', $firstResponse['display']['statusLabel']);
+        self::assertStringContainsString("Aanvraag '1 jaar Avrobode voor maar EUR52' (AVRV519) voor Dhr. Tester (nieuw)", $firstResponse['display']['line']);
+        self::assertStringNotContainsString('B. Example', $firstResponse['display']['line']);
 
         $secondResponse = $service->queueSubscription($session, $payload, $currentUserContext);
         self::assertSame($firstResponse['orderId'], $secondResponse['orderId']);
         self::assertSame($firstResponse['submissionId'], $secondResponse['submissionId']);
+        self::assertSame($firstResponse['display'], $secondResponse['display']);
 
         $listResponse = $service->listRecentOrders(5);
         self::assertCount(1, $listResponse['items']);
@@ -149,7 +157,14 @@ final class SubscriptionQueueServiceTest extends TestCase
         $stateService = new PocStateService(new PocCatalogService($projectDir), $projectDir);
 
         return [
-            new SubscriptionQueueService($schemaManager, $repository, $entityManager, $connection, $stateService),
+            new SubscriptionQueueService(
+                $schemaManager,
+                $repository,
+                $entityManager,
+                $connection,
+                $stateService,
+                new SubscriptionQueueDisplayFormatter(),
+            ),
             $entityManager,
             $schemaManager,
         ];

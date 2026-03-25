@@ -22,6 +22,7 @@ final class SubscriptionQueueService
         private readonly EntityManagerInterface $entityManager,
         private readonly Connection $connection,
         private readonly PocStateService $stateService,
+        private readonly SubscriptionQueueDisplayFormatter $displayFormatter,
     ) {
     }
 
@@ -391,7 +392,7 @@ final class SubscriptionQueueService
 
         return [
             'agent' => $this->buildAgentSummary($currentUserContext),
-            'typeLabel' => $this->normalizeNullableString($contactEntry['type'] ?? null) ?? 'Aanvraag',
+            'typeLabel' => $this->displayFormatter->normalizeTypeLabel($contactEntry['type'] ?? null),
             'recipient' => [
                 'personId' => $normalizedPayload['recipient']['personId'] ?? null,
                 'displayName' => $normalizedPayload['recipient']['person']['displayName'] ?? 'Onbekende ontvanger',
@@ -510,8 +511,7 @@ final class SubscriptionQueueService
     private function mapOrderToApiPayload(SubscriptionOrder $subscriptionOrder): array
     {
         $latestOutboxEvent = $subscriptionOrder->getLatestOutboxEvent();
-
-        return [
+        $payload = [
             'orderId' => $subscriptionOrder->getId(),
             'submissionId' => $subscriptionOrder->getSubmissionId(),
             'status' => $subscriptionOrder->getStatus(),
@@ -533,5 +533,8 @@ final class SubscriptionQueueService
                 'updatedAt' => $latestOutboxEvent->getUpdatedAt()->format(\DateTimeInterface::ATOM),
             ],
         ];
+        $payload['display'] = $this->displayFormatter->formatOrderPayload($payload);
+
+        return $payload;
     }
 }

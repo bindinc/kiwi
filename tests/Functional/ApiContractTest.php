@@ -111,7 +111,13 @@ final class ApiContractTest extends WebTestCase
         self::assertSame('queued', $payload['status']);
         self::assertSame($recipientId, $payload['summary']['recipient']['personId']);
         self::assertSame('AVRV519', $payload['summary']['offer']['salesCode']);
+        self::assertSame('Aanvraag', $payload['summary']['typeLabel']);
         self::assertSame('pending', $payload['event']['status']);
+        self::assertSame('Aanvraag', $payload['display']['typeLabel']);
+        self::assertSame('TU', $payload['display']['agentBadge']);
+        self::assertSame('in behandeling', $payload['display']['statusLabel']);
+        self::assertStringNotContainsString('T. User', $payload['display']['line']);
+        self::assertStringContainsString("Aanvraag '1 jaar Avrobode voor maar EUR52' (AVRV519)", $payload['display']['line']);
         $orderId = $payload['orderId'];
 
         $client->request('POST', '/api/v1/workflows/subscription', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($requestPayload, JSON_THROW_ON_ERROR));
@@ -119,17 +125,20 @@ final class ApiContractTest extends WebTestCase
         $duplicatePayload = json_decode($client->getResponse()->getContent(), true);
         self::assertSame($orderId, $duplicatePayload['orderId']);
         self::assertSame($submissionId, $duplicatePayload['submissionId']);
+        self::assertSame($payload['display'], $duplicatePayload['display']);
 
         $client->request('GET', sprintf('/api/v1/workflows/subscription/%d', $orderId));
         self::assertResponseIsSuccessful();
         $statusPayload = json_decode($client->getResponse()->getContent(), true);
         self::assertSame($submissionId, $statusPayload['submissionId']);
         self::assertSame('queued', $statusPayload['status']);
+        self::assertSame($payload['display'], $statusPayload['display']);
 
         $client->request('GET', '/api/v1/workflows/subscription?limit=5');
         self::assertResponseIsSuccessful();
         $listPayload = json_decode($client->getResponse()->getContent(), true);
         self::assertSame($submissionId, $listPayload['items'][0]['submissionId']);
+        self::assertSame($payload['display'], $listPayload['items'][0]['display']);
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);

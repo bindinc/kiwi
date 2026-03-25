@@ -122,6 +122,47 @@ body {
     border-right: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.workbox-toggle-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.45rem;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: rgba(255, 255, 255, 0.88);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.workbox-toggle-button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+}
+
+.workbox-toggle-button:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+.workbox-toggle-button.is-active {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}
+
+.workbox-toggle-icon {
+    font-size: 1.12rem;
+    line-height: 1;
+}
+
+.workbox-toggle-count {
+    margin-left: 0.25rem;
+    color: #fef08a;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
 .agent-profile-trigger {
     position: relative;
     display: flex;
@@ -1098,97 +1139,85 @@ select option {
     font-size: 1rem;
 }
 
-.subscription-queue-card {
-    margin-bottom: 1rem;
-    border: 1px solid #c7d7ea;
-    border-radius: var(--radius-lg);
-    background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-    overflow: hidden;
+.subscription-queue-panel {
+    margin-top: 1rem;
+    min-height: 220px;
 }
 
-.subscription-queue-toggle {
-    width: 100%;
-    border: 0;
-    background: transparent;
-    display: flex;
+.subscription-queue-panel[hidden] {
+    display: none !important;
+}
+
+.subscription-queue-header {
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.95rem 1.1rem;
-    cursor: pointer;
-    text-align: left;
-}
-
-.subscription-queue-toggle:hover {
-    background: rgba(255, 255, 255, 0.45);
-}
-
-.subscription-queue-toggle-copy {
     display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
 }
 
-.subscription-queue-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-primary);
+.subscription-queue-header h2 {
+    margin: 0;
 }
 
-.subscription-queue-meta {
-    font-size: 0.82rem;
+.subscription-queue-summary {
     color: var(--text-secondary);
-}
-
-.subscription-queue-chevron {
-    font-size: 1rem;
-    color: var(--text-secondary);
-    transition: transform 0.2s ease;
-}
-
-.subscription-queue-toggle[aria-expanded="true"] .subscription-queue-chevron {
-    transform: rotate(180deg);
-}
-
-.subscription-queue-body[hidden] {
-    display: none;
-}
-
-.subscription-queue-body {
-    border-top: 1px solid rgba(148, 163, 184, 0.3);
-    padding: 0.9rem 1.1rem 1rem;
-}
-
-.subscription-queue-empty {
-    color: var(--text-secondary);
-    font-size: 0.88rem;
-    font-style: italic;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
 }
 
 .subscription-queue-list {
     display: flex;
+    flex: 1;
     flex-direction: column;
-    gap: 0.7rem;
+    gap: 0.65rem;
+    max-height: 260px;
+    overflow-y: auto;
 }
 
 .subscription-queue-item {
-    border: 1px solid rgba(148, 163, 184, 0.32);
-    border-radius: var(--radius-md);
-    background: rgba(255, 255, 255, 0.88);
-    padding: 0.75rem 0.85rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem;
+}
+
+.subscription-queue-main {
+    align-items: flex-start;
+    display: flex;
+    gap: 0.55rem;
+}
+
+.subscription-queue-avatar {
+    align-items: center;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    border-radius: 50%;
+    color: #1e3a8a;
+    display: inline-flex;
+    flex: 0 0 22px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    height: 22px;
+    justify-content: center;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    width: 22px;
+}
+
+.subscription-queue-content {
+    min-width: 0;
 }
 
 .subscription-queue-line {
-    font-size: 0.9rem;
-    line-height: 1.45;
     color: var(--text-primary);
+    display: block;
+    font-size: 0.94rem;
+    font-weight: 600;
+    line-height: 1.35;
 }
 
-.subscription-queue-subline {
-    margin-top: 0.35rem;
-    font-size: 0.78rem;
-    color: var(--text-secondary);
+.subscription-queue-empty {
+    padding: 2rem 0.5rem;
 }
 
 .btn-link {

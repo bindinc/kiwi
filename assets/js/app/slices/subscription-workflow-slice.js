@@ -257,10 +257,10 @@ function ensureSubscriptionSubmissionId(forceNew = false) {
 
 function getSubscriptionQueueWidgetElements() {
     return {
-        card: getElementById('subscriptionQueueCard'),
+        panel: getElementById('subscriptionQueuePanel'),
         toggle: getElementById('subscriptionQueueToggle'),
+        toggleCount: getElementById('subscriptionQueueToggleCount'),
         meta: getElementById('subscriptionQueueMeta'),
-        body: getElementById('subscriptionQueueBody'),
         empty: getElementById('subscriptionQueueEmpty'),
         list: getElementById('subscriptionQueueList')
     };
@@ -270,79 +270,58 @@ function setSubscriptionQueueExpanded(isOpen) {
     subscriptionQueueState.isOpen = Boolean(isOpen);
 
     const elements = getSubscriptionQueueWidgetElements();
-    if (!elements.toggle || !elements.body) {
-        return;
+    if (elements.panel) {
+        elements.panel.hidden = !subscriptionQueueState.isOpen;
+        if (elements.panel.style) {
+            elements.panel.style.display = subscriptionQueueState.isOpen ? '' : 'none';
+        }
     }
 
-    elements.toggle.setAttribute('aria-expanded', subscriptionQueueState.isOpen ? 'true' : 'false');
-    elements.body.hidden = !subscriptionQueueState.isOpen;
+    if (elements.toggle) {
+        elements.toggle.setAttribute('aria-expanded', subscriptionQueueState.isOpen ? 'true' : 'false');
+        if (elements.toggle.classList && typeof elements.toggle.classList.toggle === 'function') {
+            elements.toggle.classList.toggle('is-active', subscriptionQueueState.isOpen);
+        }
+    }
 }
 
 function toggleSubscriptionQueueInfo() {
-    setSubscriptionQueueExpanded(!subscriptionQueueState.isOpen);
+    const shouldOpen = !subscriptionQueueState.isOpen;
+    if (shouldOpen && subscriptionQueueState.items.length === 0) {
+        void loadSubscriptionQueueItems();
+    }
+
+    setSubscriptionQueueExpanded(shouldOpen);
 }
 
 function showSubscriptionQueueCard() {
-    const { card } = getSubscriptionQueueWidgetElements();
-    if (!card || !card.style) {
+    setSubscriptionQueueExpanded(true);
+}
+
+function setSubscriptionQueueToggleCount(itemCount) {
+    const { toggleCount } = getSubscriptionQueueWidgetElements();
+    if (!toggleCount || !toggleCount.style) {
         return;
     }
 
-    card.style.display = 'block';
+    const normalizedCount = Number(itemCount || 0);
+    if (normalizedCount > 0) {
+        toggleCount.textContent = String(normalizedCount);
+        toggleCount.style.display = 'inline-flex';
+        return;
+    }
+
+    toggleCount.textContent = '';
+    toggleCount.style.display = 'none';
 }
 
-function formatQueueTime(dateString) {
-    if (!dateString) {
-        return '--.--';
-    }
+function getQueueDisplay(order = {}) {
+    const display = order.display && typeof order.display === 'object' ? order.display : {};
 
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) {
-        return '--.--';
-    }
-
-    return new Intl.DateTimeFormat(getDateLocaleForApp(), {
-        hour: '2-digit',
-        minute: '2-digit'
-    }).format(date).replace(':', '.');
-}
-
-function formatQueueStatusLabel(order = {}) {
-    const status = String(order.status || '').toLowerCase();
-    const attemptCount = Number.isFinite(Number(order.attemptCount)) ? Number(order.attemptCount) : 0;
-
-    if (status === 'processed') {
-        return 'verwerkt';
-    }
-
-    if (status === 'failed') {
-        return 'mislukt';
-    }
-
-    if (status === 'retrying') {
-        return `poging ${String(Math.max(1, attemptCount)).padStart(2, '0')}`;
-    }
-
-    return 'in behandeling';
-}
-
-function buildQueueLine(order = {}) {
-    const summary = order.summary && typeof order.summary === 'object' ? order.summary : {};
-    const agent = summary.agent && typeof summary.agent === 'object'
-        ? (summary.agent.shortName || summary.agent.fullName || 'Onbekende medewerker')
-        : 'Onbekende medewerker';
-    const typeLabel = summary.typeLabel || 'Aanvraag';
-    const offer = summary.offer && typeof summary.offer === 'object' ? summary.offer : {};
-    const subscription = summary.subscription && typeof summary.subscription === 'object' ? summary.subscription : {};
-    const recipient = summary.recipient && typeof summary.recipient === 'object' ? summary.recipient : {};
-    const offerTitle = offer.title || subscription.magazine || 'Onbekend aanbod';
-    const offerCode = offer.salesCode || 'ONBEKEND';
-    const recipientName = recipient.displayName || 'Onbekende persoon';
-    const recipientId = recipient.personId !== undefined && recipient.personId !== null
-        ? recipient.personId
-        : 'nieuw';
-
-    return `${agent} ${formatQueueTime(order.queuedAt)} (${formatQueueStatusLabel(order)}) : ${typeLabel} ${offerTitle} ${offerCode} (${recipientName}) (${recipientId})`;
+    return {
+        agentBadge: typeof display.agentBadge === 'string' ? display.agentBadge : '',
+        line: typeof display.line === 'string' ? display.line : ''
+    };
 }
 
 function renderSubscriptionQueueItems(items = []) {
@@ -358,29 +337,36 @@ function renderSubscriptionQueueItems(items = []) {
     if (subscriptionQueueState.items.length === 0) {
         elements.empty.style.display = 'block';
         elements.meta.textContent = 'Nog geen aanvragen in beeld';
+        setSubscriptionQueueToggleCount(0);
         return;
     }
 
     elements.empty.style.display = 'none';
     elements.meta.textContent = `Laatste ${subscriptionQueueState.items.length} aanvragen`;
+    setSubscriptionQueueToggleCount(subscriptionQueueState.items.length);
 
     for (const order of subscriptionQueueState.items) {
+        const display = getQueueDisplay(order);
         const item = documentRef.createElement('div');
         item.className = 'subscription-queue-item';
 
+        const main = documentRef.createElement('div');
+        main.className = 'subscription-queue-main';
+
+        const avatar = documentRef.createElement('div');
+        avatar.className = 'subscription-queue-avatar';
+        avatar.textContent = display.agentBadge;
+        main.appendChild(avatar);
+
+        const content = documentRef.createElement('div');
+        content.className = 'subscription-queue-content';
+
         const line = documentRef.createElement('div');
         line.className = 'subscription-queue-line';
-        line.textContent = buildQueueLine(order);
-        item.appendChild(line);
-
-        const meta = documentRef.createElement('div');
-        meta.className = 'subscription-queue-subline';
-        const messageParts = [`order #${order.orderId}`, `submissionId ${order.submissionId}`];
-        if (order.errorMessage) {
-            messageParts.push(order.errorMessage);
-        }
-        meta.textContent = messageParts.join(' · ');
-        item.appendChild(meta);
+        line.textContent = display.line;
+        content.appendChild(line);
+        main.appendChild(content);
+        item.appendChild(main);
 
         elements.list.appendChild(item);
     }
@@ -1299,7 +1285,9 @@ export function registerSubscriptionWorkflowSlice(actionRouter) {
 }
 
 export const __subscriptionWorkflowTestUtils = {
-    formatQueueStatusLabel,
     getSubscriptionChanges,
-    getSubscriptionDurationDescription
+    getSubscriptionDurationDescription,
+    setSubscriptionQueueExpanded,
+    toggleSubscriptionQueueInfo,
+    renderSubscriptionQueueItems
 };
