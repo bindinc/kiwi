@@ -686,10 +686,7 @@ function renderSelectedOfferList() {
         if (offerDetails.magazine && offerDetails.magazine !== unknownLabel && offerDetails.magazine !== normalizedOfferTitle) {
             metaParts.push(offerDetails.magazine);
         }
-        if (offerDetails.durationLabel) {
-            metaParts.push(offerDetails.durationLabel);
-        }
-        metaParts.push(formatEuro(offer.price));
+        const priceLabel = formatEuro(offer.price);
         const hasSelectedCombination = Boolean(entry.selectedCombinationKey);
         const statusClass = hasSelectedCombination ? 'status-pill--success' : 'status-pill--warning';
         const statusLabel = hasSelectedCombination
@@ -697,12 +694,12 @@ function renderSelectedOfferList() {
             : translate('werfsleutel.channelRequiredHint', 'Kanaal nog kiezen');
         const combinationOptions = Array.isArray(entry.combinationOptions) ? entry.combinationOptions : [];
         const selectedOption = combinationOptions.find((option) => option.key === entry.selectedCombinationKey) || null;
-        const helperLine = selectedOption
-            ? `${selectedOption.displayCode} · ${selectedOption.label}`
-            : translate('werfsleutel.selectChannel', 'Kies een kanaal voor deze werfsleutel.');
         const toggleLabel = isExpanded
             ? translate('werfsleutel.collapseOffer', 'Kanaalkeuze inklappen')
             : translate('werfsleutel.expandOffer', 'Kanaalkeuze openen');
+        const selectedChannelBadgeMarkup = selectedOption
+            ? `<span class="subscription-offer-channel-code" title="${escapeHtml(selectedOption.label || selectedOption.detail || '')}">${escapeHtml(selectedOption.displayCode)}</span>`
+            : '';
         const optionMarkup = entry.loadingCombinations && combinationOptions.length === 0
             ? `<div class="empty-state-small">${translate('werfsleutel.loadingCombinations', 'Kanaalcombinaties laden...')}</div>`
             : combinationOptions.length === 0
@@ -739,7 +736,9 @@ function renderSelectedOfferList() {
                         <span class="subscription-offer-toggle-main">
                             <span class="subscription-offer-title-row">
                                 <strong>${escapeHtml(offer.title || translate('werfsleutel.unknownTitle', 'Onbekende werfsleutel'))}</strong>
+                                <span>${escapeHtml(priceLabel)}</span>
                                 <span class="subscription-offer-code">${escapeHtml(offer.salesCode || '')}</span>
+                                ${selectedChannelBadgeMarkup}
                             </span>
                             <span class="subscription-offer-meta">
                                 ${metaParts.map((metaPart) => `<span>${escapeHtml(metaPart)}</span>`).join('')}
@@ -756,11 +755,6 @@ function renderSelectedOfferList() {
                             data-arg-sales-code="${escapeHtml(offer.salesCode)}">
                         ${escapeHtml(translate('werfsleutel.removeOffer', 'Verwijderen'))}
                     </button>
-                </div>
-                <div class="werfsleutel-summary visible">
-                    <div class="werfsleutel-summary-status">
-                        <span>${escapeHtml(helperLine)}</span>
-                    </div>
                 </div>
                 ${isExpanded ? `<div class="channel-options">${optionMarkup}</div>` : ''}
                 ${warningMarkup}

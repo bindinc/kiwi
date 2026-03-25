@@ -404,7 +404,7 @@ const nl = {
         "loadingCombinations": "Kanaalcombinaties laden...",
         "unknownChannel": "Onbekend kanaal",
         "channelMismatch": "Dit kanaal hoort niet bij de gekozen werfsleutel.",
-        "channelSelected": "Kanaal gekozen",
+        "channelSelected": "ok",
         "channelRequiredHint": "Kanaal nog kiezen",
         "selectKey": "Selecteer eerst een actieve werfsleutel.",
         "selectKeyFirst": "Selecteer eerst een werfsleutel",

@@ -404,7 +404,7 @@ const en = {
         "loadingCombinations": "Loading channel combinations...",
         "unknownChannel": "Unknown channel",
         "channelMismatch": "This channel does not belong to the selected site key.",
-        "channelSelected": "Channel selected",
+        "channelSelected": "ok",
         "channelRequiredHint": "Still select channel",
         "selectKey": "First select an active site key.",
         "selectKeyFirst": "First select a site key",
