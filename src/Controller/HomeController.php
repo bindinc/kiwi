@@ -66,9 +66,13 @@ final class HomeController extends AbstractController
         ]);
     }
 
-    #[Route('/app-logout', name: 'app_logout', methods: ['POST'])]
-    public function logout(Request $request): RedirectResponse
+    #[Route('/app-logout', name: 'app_logout', methods: ['GET', 'POST'])]
+    public function logout(Request $request): Response
     {
+        if (!$request->isMethod('POST')) {
+            return new Response('', Response::HTTP_METHOD_NOT_ALLOWED, ['Allow' => 'POST']);
+        }
+
         $submittedToken = trim((string) $request->request->get('_csrf_token', ''));
         if (!$this->csrfTokenManager->isTokenValid(new CsrfToken(self::LOGOUT_CSRF_TOKEN_ID, $submittedToken))) {
             throw $this->createAccessDeniedException('Invalid logout CSRF token.');
