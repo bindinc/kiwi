@@ -977,7 +977,7 @@ async function testCustomerDetailSliceLoadsSubscriptionApiDetailWithCredentialCo
         assert.equal(currentCustomer.credentialKey, 'tvk');
         assert.equal(currentCustomer.lastName, 'Gebruiker');
         assert.equal(currentCustomer.birthday, '1945-11-20');
-        assert.equal(elements.customerName.textContent, 'Dhr. Remote Gebruiker');
+        assert.equal(elements.customerName.textContent, 'Dhr. Remote Gebruiker (71234)');
         assert.equal(elements.customerEmail.textContent, 'detail@example.com');
         assert.equal(elements.subscriptionsList.innerHTML.includes('Mikrogids'), true);
         assert.equal(elements.subscriptionsList.innerHTML.includes('edit-subscription'), false);
