@@ -225,9 +225,17 @@ export function createBootstrapSlice(options = {}) {
         const currentCustomer = optionsByCall.currentCustomer;
         const hasCustomer = currentCustomer !== null;
         const hasLegacyCustomer = hasCustomer && String(currentCustomer?.sourceSystem || '').trim() !== 'subscription-api';
+        const editCustomerButton = documentRef.getElementById('editCustomerBtn');
+        const editorialComplaintButton = documentRef.getElementById('editorialComplaintBtn');
         const resendButton = documentRef.getElementById('resendMagazineBtn');
         const winbackButton = documentRef.getElementById('winbackFlowBtn');
 
+        if (editCustomerButton) {
+            editCustomerButton.style.display = hasLegacyCustomer ? 'inline-flex' : 'none';
+        }
+        if (editorialComplaintButton) {
+            editorialComplaintButton.style.display = hasLegacyCustomer ? 'inline-flex' : 'none';
+        }
         if (resendButton) {
             resendButton.style.display = hasLegacyCustomer ? 'inline-flex' : 'none';
         }

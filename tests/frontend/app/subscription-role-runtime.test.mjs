@@ -60,6 +60,7 @@ function createRuntimeContext(options = {}) {
         requesterSameAsRecipient: checkbox,
         requesterRoleDetails,
         requesterSameSummary,
+        subIBAN: createElementStub(),
         requesterSelectedPerson: createElementStub(),
         requesterSearchResults: createElementStub(),
         requesterDuplicateCheck: createElementStub(),
@@ -142,7 +143,8 @@ function createRuntimeContext(options = {}) {
         },
         upsertCustomerInCache(person) {
             contextObject.__upserts.push(person);
-        }
+        },
+        kiwiApi: options.kiwiApi || null
     };
 
     contextObject.window = contextObject;
@@ -206,11 +208,18 @@ function testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext() 
         firstName: 'Demo',
         middleName: '',
         lastName: 'Gebruiker',
+        postalCode: '1217AA',
+        houseNumber: '7',
+        address: 'Voorbeeldstraat 7',
+        city: 'Hilversum',
+        email: 'demo@example.org',
+        phone: '0612345678',
         credentialKey: 'tvk',
         credentialTitle: 'TV Krant',
         mandant: 'HMC',
         supportsPersonLookup: true,
-        sourceSystem: 'subscription-api'
+        sourceSystem: 'subscription-api',
+        iban: 'NL12RABO0123456789'
     };
 
     const { runtime } = createRuntimeContext({
@@ -225,8 +234,70 @@ function testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext() 
         credentialTitle: 'TV Krant',
         mandant: 'HMC',
         supportsPersonLookup: true,
-        sourceSystem: 'subscription-api'
+        sourceSystem: 'subscription-api',
+        person: {
+            salutation: '',
+            firstName: 'Demo',
+            middleName: '',
+            lastName: 'Gebruiker',
+            birthday: '',
+            personNumber: '',
+            postalCode: '1217AA',
+            houseNumber: '7',
+            address: 'Voorbeeldstraat 7',
+            city: 'Hilversum',
+            email: 'demo@example.org',
+            phone: '0612345678',
+            optinEmail: '',
+            optinPhone: '',
+            optinPost: '',
+            iban: 'NL12RABO0123456789',
+            credentialKey: 'tvk',
+            credentialTitle: 'TV Krant',
+            mandant: 'HMC',
+            sourceSystem: 'subscription-api',
+            supportsPersonLookup: true
+        }
     });
+}
+
+async function testSelectSubscriptionRolePersonHydratesDetailAndPrefillsIban() {
+    let requestedUrl = '';
+    const { context, elements, runtime } = createRuntimeContext({
+        kiwiApi: {
+            get(url) {
+                requestedUrl = url;
+                return Promise.resolve({
+                    id: 73,
+                    personNumber: '41929371',
+                    iban: 'NL80INGB0001340187',
+                    email: 'detail@example.org'
+                });
+            }
+        }
+    });
+
+    context.subscriptionRoleState.recipient.searchResults = [
+        {
+            id: 73,
+            firstName: 'Demo',
+            middleName: '',
+            lastName: 'Gebruiker',
+            credentialKey: 'tvk',
+            credentialTitle: 'TV Krant',
+            mandant: 'HMC',
+            supportsPersonLookup: true,
+            sourceSystem: 'subscription-api'
+        }
+    ];
+
+    runtime.selectSubscriptionRolePerson('recipient', 73);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(requestedUrl, '/api/v1/persons/73?credentialKey=tvk&sourceSystem=subscription-api');
+    assert.equal(context.subscriptionRoleState.recipient.selectedPerson.iban, 'NL80INGB0001340187');
+    assert.equal(elements.subIBAN.value, 'NL80INGB0001340187');
+    assert.equal(context.__upserts.length, 1);
 }
 
 function testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant() {
@@ -349,10 +420,11 @@ function testRenderSearchResultsFallsBackToMandantWhenDivisionIdIsMissing() {
     assert.equal(elements.requesterSearchResults.innerHTML.includes('alt="KRO-NCRV"'), true);
 }
 
-function run() {
+async function run() {
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
     testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext();
+    await testSelectSubscriptionRolePersonHydratesDetailAndPrefillsIban();
     testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant();
     testRenderSelectedPersonPrefersDivisionIdForBadge();
     testRenderSelectedPersonFallsBackToMandantForUnknownDivisionId();
@@ -361,4 +433,7 @@ function run() {
     console.log('subscription role runtime tests passed');
 }
 
-run();
+run().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+});

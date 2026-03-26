@@ -108,10 +108,65 @@ function testAddDeliveryRemarkByKeyAppendsToTextarea() {
     }
 }
 
+function testShowArticleSaleBlocksSubscriptionApiCustomers() {
+    const previousNamespaceValue = globalThis.kiwiOrderSlice;
+    const previousDocumentValue = globalThis.document;
+
+    const toasts = [];
+
+    try {
+        globalThis.document = {
+            getElementById() {
+                return null;
+            },
+            querySelector() {
+                return null;
+            }
+        };
+
+        configureOrderSliceDependencies(() => ({
+            getCurrentCustomer() {
+                return {
+                    id: 81,
+                    sourceSystem: 'subscription-api'
+                };
+            },
+            showToast(message, type) {
+                toasts.push({ message, type });
+            },
+            translate(_key, _params, fallback) {
+                return fallback;
+            }
+        }));
+
+        registerOrderActions(createRouter());
+        globalThis.kiwiOrderSlice.showArticleSale();
+
+        assert.equal(toasts.length, 1);
+        assert.equal(toasts[0].type, 'error');
+        assert.equal(toasts[0].message.includes('artikelbestellingen'), true);
+    } finally {
+        if (previousNamespaceValue === undefined) {
+            delete globalThis.kiwiOrderSlice;
+        } else {
+            globalThis.kiwiOrderSlice = previousNamespaceValue;
+        }
+
+        configureOrderSliceDependencies(null);
+
+        if (previousDocumentValue === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocumentValue;
+        }
+    }
+}
+
 function run() {
     testRegistersOrderActions();
     testInstallsOrderSliceNamespace();
     testAddDeliveryRemarkByKeyAppendsToTextarea();
+    testShowArticleSaleBlocksSubscriptionApiCustomers();
     console.log('order slice tests passed');
 }
 

@@ -116,6 +116,23 @@ function translateLabel(dependencies, key, params = {}, fallback = key) {
     return fallback;
 }
 
+function isSubscriptionApiCustomer(customer) {
+    return String(customer && customer.sourceSystem || '').trim() === 'subscription-api';
+}
+
+function showReadonlySubscriptionApiToast(dependencies) {
+    showToast(
+        dependencies,
+        translateLabel(
+            dependencies,
+            'customer.subscriptionApiReadonlyArticleOrders',
+            {},
+            'Deze klant gebruikt nog subscription-api detaildata; artikelbestellingen zijn daarom tijdelijk alleen-lezen.'
+        ),
+        'error'
+    );
+}
+
 function formatDateLabel(dependencies, dateString) {
     if (!dateString) {
         return '';
@@ -402,6 +419,10 @@ function prefillArticleSaleForm(currentCustomer, dependencies) {
 export function showArticleSale() {
     const dependencies = resolveDependencies();
     const currentCustomer = getCurrentCustomer(dependencies);
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        showReadonlySubscriptionApiToast(dependencies);
+        return;
+    }
 
     if (currentCustomer) {
         prefillArticleSaleForm(currentCustomer, dependencies);
@@ -766,6 +787,12 @@ export async function createArticleSale(event) {
     }
 
     const dependencies = resolveDependencies();
+    const currentCustomer = getCurrentCustomer(dependencies);
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        showReadonlySubscriptionApiToast(dependencies);
+        return;
+    }
+
     const orderItems = getOrderItems(dependencies);
     if (orderItems.length === 0) {
         showToast(
@@ -809,7 +836,6 @@ export async function createArticleSale(event) {
     const fullLastName = formData.middleName
         ? `${formData.middleName} ${formData.lastName}`
         : formData.lastName;
-    const currentCustomer = getCurrentCustomer(dependencies);
 
     const apiPathHandled = await submitArticleOrderViaApi(dependencies, {
         currentCustomer,

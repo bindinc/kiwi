@@ -261,6 +261,78 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('tvk', $requestPayload['requester']['person']['credentialKey']);
     }
 
+    public function testQueueSubscriptionAcceptsExistingSubscriptionApiPersonSnapshotWithoutSessionState(): void
+    {
+        [$service, $entityManager] = $this->createQueueServiceWithDependencies();
+
+        $session = new Session(new MockArraySessionStorage());
+        $payload = [
+            'submissionId' => 'unit-test-existing-person-snapshot',
+            'recipient' => [
+                'personId' => 11860448,
+                'credentialKey' => 'tvk',
+                'credentialTitle' => 'TV Krant',
+                'mandant' => 'HMC',
+                'supportsPersonLookup' => true,
+                'sourceSystem' => 'subscription-api',
+                'person' => [
+                    'salutation' => 'Mevr.',
+                    'firstName' => 'Wiesje',
+                    'middleName' => '',
+                    'lastName' => 'Meeringa',
+                    'personNumber' => '41929371',
+                    'postalCode' => '1217AB',
+                    'houseNumber' => '14',
+                    'address' => 'Teststraat 14',
+                    'city' => 'Hilversum',
+                    'email' => 'wiesje@example.org',
+                    'phone' => '0611122233',
+                    'iban' => 'NL80INGB0001340187',
+                    'credentialKey' => 'tvk',
+                    'credentialTitle' => 'TV Krant',
+                    'mandant' => 'HMC',
+                    'supportsPersonLookup' => true,
+                    'sourceSystem' => 'subscription-api',
+                ],
+            ],
+            'requester' => [
+                'sameAsRecipient' => true,
+            ],
+            'subscription' => [
+                'magazine' => 'Mikrogids',
+                'duration' => '1-jaar',
+                'durationLabel' => '1 jaar',
+                'startDate' => '2026-04-01',
+                'status' => 'active',
+            ],
+            'offer' => [
+                'salesCode' => 'MKGV100',
+                'title' => 'Mikrogids 1 jaar',
+                'price' => 59.0,
+                'channel' => 'online',
+                'channelLabel' => 'Online',
+                'sourceSystem' => 'webabo-api',
+            ],
+        ];
+
+        $response = $service->queueSubscription($session, $payload, [
+            'identity' => [
+                'full_name' => 'Test User',
+            ],
+        ]);
+
+        $requestPayload = json_decode((string) $entityManager->getConnection()->fetchOne(
+            'SELECT request_payload FROM subscription_orders WHERE submission_id = ?',
+            ['unit-test-existing-person-snapshot'],
+        ), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(11860448, $response['summary']['recipient']['personId']);
+        self::assertSame('Mevr. Meeringa', $response['summary']['recipient']['displayName']);
+        self::assertSame('41929371', $requestPayload['recipient']['person']['personNumber']);
+        self::assertSame('NL80INGB0001340187', $requestPayload['recipient']['person']['iban']);
+        self::assertSame('tvk', $requestPayload['requester']['person']['credentialKey']);
+    }
+
     /**
      * @return array{0: SubscriptionQueueService, 1: EntityManager, 2: SubscriptionQueueSchemaManager, 3: WebaboOfferCacheSchemaManager}
      */

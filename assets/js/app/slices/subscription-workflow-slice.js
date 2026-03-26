@@ -234,6 +234,70 @@ function parseNumericValue(rawValue) {
     return Number.isFinite(value) ? value : null;
 }
 
+function isSubscriptionApiCustomer(customer) {
+    return String(customer && customer.sourceSystem || '').trim() === 'subscription-api';
+}
+
+function showReadonlySubscriptionApiToast(actionLabel = 'bewerkt') {
+    showToast(
+        translateKey(
+            'customer.subscriptionApiReadonly',
+            { actionLabel },
+            `Deze klant gebruikt nog subscription-api detaildata; klantgegevens kunnen daarom tijdelijk niet worden ${actionLabel}.`
+        ),
+        'error'
+    );
+}
+
+function syncSubscriptionIbanFromCustomer(customer, options = {}) {
+    const ibanInput = getElementById('subIBAN');
+    if (!ibanInput || !('value' in ibanInput)) {
+        return;
+    }
+
+    const primaryIban = String(customer && customer.iban || '').trim();
+    if (!primaryIban) {
+        return;
+    }
+
+    const shouldForce = options.force === true;
+    if (!shouldForce && String(ibanInput.value || '').trim() !== '') {
+        return;
+    }
+
+    ibanInput.value = primaryIban;
+}
+
+function buildExistingPersonSnapshot(person) {
+    if (!person || typeof person !== 'object') {
+        return null;
+    }
+
+    return {
+        salutation: String(person.salutation || '').trim(),
+        firstName: String(person.firstName || '').trim(),
+        middleName: String(person.middleName || '').trim(),
+        lastName: String(person.lastName || '').trim(),
+        birthday: String(person.birthday || '').trim(),
+        personNumber: String(person.personNumber || '').trim(),
+        postalCode: String(person.postalCode || '').trim(),
+        houseNumber: String(person.houseNumber || '').trim(),
+        address: String(person.address || '').trim(),
+        city: String(person.city || '').trim(),
+        email: String(person.email || '').trim(),
+        phone: String(person.phone || '').trim(),
+        optinEmail: String(person.optinEmail || '').trim(),
+        optinPhone: String(person.optinPhone || '').trim(),
+        optinPost: String(person.optinPost || '').trim(),
+        iban: String(person.iban || '').trim(),
+        credentialKey: String(person.credentialKey || '').trim(),
+        credentialTitle: String(person.credentialTitle || '').trim(),
+        mandant: String(person.mandant || '').trim(),
+        sourceSystem: String(person.sourceSystem || '').trim(),
+        supportsPersonLookup: Boolean(person.supportsPersonLookup)
+    };
+}
+
 function generateSubmissionId() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         return crypto.randomUUID();
@@ -628,6 +692,7 @@ export function showNewSubscription() {
     refreshWerfsleutelCatalogIfStale();
 
     initializeSubscriptionRolesForForm();
+    syncSubscriptionIbanFromCustomer(readCurrentCustomer(), { force: true });
     showSubscriptionQueueCard();
     void loadSubscriptionQueueItems();
     showElement('newSubscriptionForm', 'flex');
@@ -864,6 +929,10 @@ export function editCustomer() {
     if (!currentCustomer) {
         return;
     }
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        showReadonlySubscriptionApiToast('bewerkt');
+        return;
+    }
 
     setInputValue('editCustomerId', currentCustomer.id);
 
@@ -907,6 +976,10 @@ export async function saveCustomerEdit(event) {
 
     const customer = readCustomers().find((item) => item.id === customerId);
     if (!customer) {
+        return;
+    }
+    if (isSubscriptionApiCustomer(customer)) {
+        showReadonlySubscriptionApiToast('bewerkt');
         return;
     }
 
@@ -986,6 +1059,10 @@ export function showResendMagazine() {
         showToast(translateKey('customer.selectFirst', {}, 'Selecteer eerst een klant'), 'error');
         return;
     }
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        showReadonlySubscriptionApiToast('gewijzigd');
+        return;
+    }
 
     const subscriptionSelect = getElementById('resendSubscription');
     if (!subscriptionSelect) {
@@ -1007,6 +1084,10 @@ export async function resendMagazine() {
     const currentCustomer = readCurrentCustomer();
     if (!currentCustomer) {
         showToast(translateKey('customer.selectFirst', {}, 'Selecteer eerst een klant'), 'error');
+        return;
+    }
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        showReadonlySubscriptionApiToast('gewijzigd');
         return;
     }
 
@@ -1069,6 +1150,10 @@ export function showEditorialComplaintForm() {
         showToast(translateKey('customer.selectFirst', {}, 'Selecteer eerst een klant'), 'error');
         return;
     }
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        showReadonlySubscriptionApiToast('geregistreerd');
+        return;
+    }
 
     const magazineSelect = getElementById('editorialComplaintMagazine');
     if (!magazineSelect) {
@@ -1103,6 +1188,10 @@ export async function submitEditorialComplaint() {
     const currentCustomer = readCurrentCustomer();
     if (!currentCustomer) {
         showToast(translateKey('customer.selectFirst', {}, 'Selecteer eerst een klant'), 'error');
+        return;
+    }
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        showReadonlySubscriptionApiToast('geregistreerd');
         return;
     }
 

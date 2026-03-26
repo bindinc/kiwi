@@ -213,9 +213,11 @@ final class SubscriptionQueueService
         }
 
         $hasPersonId = null !== ($rolePayload['personId'] ?? null) && '' !== trim((string) ($rolePayload['personId'] ?? ''));
-        $hasPersonPayload = \is_array($rolePayload['person'] ?? null);
+        $personPayload = \is_array($rolePayload['person'] ?? null) ? $rolePayload['person'] : null;
+        $hasNewPersonPayload = !$hasPersonId && \is_array($personPayload);
+        $hasExistingPersonSnapshot = $hasPersonId && \is_array($personPayload) && [] !== $personPayload;
         $hasSameAsRecipient = $allowSameAsRecipient && true === ($rolePayload['sameAsRecipient'] ?? false);
-        $selectedModes = (int) $hasPersonId + (int) $hasPersonPayload + (int) $hasSameAsRecipient;
+        $selectedModes = (int) $hasPersonId + (int) $hasNewPersonPayload + (int) $hasSameAsRecipient;
 
         if (1 !== $selectedModes) {
             $allowed = $allowSameAsRecipient ? 'personId, person, or sameAsRecipient=true' : 'personId or person';
@@ -241,9 +243,19 @@ final class SubscriptionQueueService
                 throw new ApiProblemException(400, 'invalid_payload', sprintf('%s.personId must be >= 1', $roleName));
             }
 
+            $roleContext = $this->extractCredentialContext($rolePayload);
+            if ($hasExistingPersonSnapshot) {
+                $personContext = $this->extractCredentialContext($personPayload);
+
+                return [
+                    'mode' => 'existing',
+                    'personId' => $personId,
+                    'person' => $this->buildPersonSnapshot($personPayload, $roleContext + $personContext),
+                ];
+            }
+
             $person = $this->stateService->getCustomer($session, $personId);
             $personContext = $this->extractCredentialContext($person);
-            $roleContext = $this->extractCredentialContext($rolePayload);
 
             return [
                 'mode' => 'existing',
@@ -252,7 +264,6 @@ final class SubscriptionQueueService
             ];
         }
 
-        $personPayload = $rolePayload['person'];
         if (!\is_array($personPayload) || [] === $personPayload) {
             throw new ApiProblemException(400, 'invalid_payload', sprintf('%s.person must be a non-empty object', $roleName));
         }
@@ -514,12 +525,14 @@ final class SubscriptionQueueService
             'middleName' => $this->normalizeNullableString($person['middleName'] ?? null) ?? '',
             'lastName' => $this->normalizeNullableString($person['lastName'] ?? null),
             'birthday' => $this->normalizeNullableString($person['birthday'] ?? null),
+            'personNumber' => $this->normalizeNullableString($person['personNumber'] ?? null),
             'postalCode' => $this->normalizeNullableString($person['postalCode'] ?? null),
             'houseNumber' => $this->normalizeNullableString($person['houseNumber'] ?? null),
             'address' => $this->normalizeNullableString($person['address'] ?? null),
             'city' => $this->normalizeNullableString($person['city'] ?? null),
             'email' => $this->normalizeNullableString($person['email'] ?? null),
             'phone' => $this->normalizeNullableString($person['phone'] ?? null),
+            'iban' => $this->normalizeNullableString($person['iban'] ?? null),
             'optinEmail' => $this->normalizeNullableString($person['optinEmail'] ?? null),
             'optinPhone' => $this->normalizeNullableString($person['optinPhone'] ?? null),
             'optinPost' => $this->normalizeNullableString($person['optinPost'] ?? null),

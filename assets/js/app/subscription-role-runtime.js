@@ -459,6 +459,120 @@ function buildPersonDisplayAddress(person) {
     return `${postalCode} ${city}`.trim();
 }
 
+function isSubscriptionApiPerson(person) {
+    return String(person && person.sourceSystem || '').trim() === 'subscription-api';
+}
+
+function syncSubscriptionRecipientIban(person, options = {}) {
+    const ibanInput = document.getElementById('subIBAN');
+    if (!ibanInput || !('value' in ibanInput)) {
+        return;
+    }
+
+    const iban = String(person && person.iban || '').trim();
+    if (!iban) {
+        return;
+    }
+
+    if (options.force !== true && String(ibanInput.value || '').trim() !== '') {
+        return;
+    }
+
+    ibanInput.value = iban;
+}
+
+function buildExistingPersonSnapshot(selectedPerson) {
+    if (!selectedPerson || typeof selectedPerson !== 'object') {
+        return null;
+    }
+
+    return {
+        salutation: String(selectedPerson.salutation || '').trim(),
+        firstName: String(selectedPerson.firstName || '').trim(),
+        middleName: String(selectedPerson.middleName || '').trim(),
+        lastName: String(selectedPerson.lastName || '').trim(),
+        birthday: String(selectedPerson.birthday || '').trim(),
+        personNumber: String(selectedPerson.personNumber || '').trim(),
+        postalCode: String(selectedPerson.postalCode || '').trim(),
+        houseNumber: String(selectedPerson.houseNumber || '').trim(),
+        address: String(selectedPerson.address || '').trim(),
+        city: String(selectedPerson.city || '').trim(),
+        email: String(selectedPerson.email || '').trim(),
+        phone: String(selectedPerson.phone || '').trim(),
+        optinEmail: String(selectedPerson.optinEmail || '').trim(),
+        optinPhone: String(selectedPerson.optinPhone || '').trim(),
+        optinPost: String(selectedPerson.optinPost || '').trim(),
+        iban: String(selectedPerson.iban || '').trim(),
+        credentialKey: String(selectedPerson.credentialKey || '').trim(),
+        credentialTitle: String(selectedPerson.credentialTitle || '').trim(),
+        mandant: String(selectedPerson.mandant || '').trim(),
+        sourceSystem: String(selectedPerson.sourceSystem || '').trim(),
+        supportsPersonLookup: Boolean(selectedPerson.supportsPersonLookup)
+    };
+}
+
+function buildSubscriptionRolePersonDetailUrl(selectedPerson) {
+    if (!selectedPerson || selectedPerson.id === undefined || selectedPerson.id === null || !window.kiwiApi) {
+        return '';
+    }
+
+    const credentialKey = String(selectedPerson.credentialKey || '').trim();
+    if (!credentialKey) {
+        return '';
+    }
+
+    const params = new URLSearchParams({
+        credentialKey
+    });
+    const sourceSystem = String(selectedPerson.sourceSystem || '').trim();
+    if (sourceSystem) {
+        params.set('sourceSystem', sourceSystem);
+    }
+
+    return `${personsApiUrl}/${encodeURIComponent(String(selectedPerson.id))}?${params.toString()}`;
+}
+
+function mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload) {
+    if (!selectedPerson || typeof selectedPerson !== 'object') {
+        return detailPayload;
+    }
+
+    return {
+        ...selectedPerson,
+        ...(detailPayload && typeof detailPayload === 'object' ? detailPayload : {})
+    };
+}
+
+async function hydrateSubscriptionRoleSelectedPerson(role) {
+    const roleState = subscriptionRoleState[role];
+    const selectedPerson = roleState ? roleState.selectedPerson : null;
+    if (!selectedPerson || !isSubscriptionApiPerson(selectedPerson) || !window.kiwiApi) {
+        return;
+    }
+
+    const detailUrl = buildSubscriptionRolePersonDetailUrl(selectedPerson);
+    if (!detailUrl) {
+        return;
+    }
+
+    try {
+        const detailPayload = await window.kiwiApi.get(detailUrl);
+        const hydratedPerson = mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload);
+        subscriptionRoleState[role].selectedPerson = hydratedPerson;
+        upsertCustomerInCache(hydratedPerson);
+        renderSubscriptionRoleSelectedPerson(role);
+
+        if (role === 'recipient') {
+            syncSubscriptionRecipientIban(hydratedPerson);
+            if (subscriptionRoleState.requesterSameAsRecipient) {
+                renderRequesterSameSummary();
+            }
+        }
+    } catch (error) {
+        // Keep the selected person usable even when detail enrichment is unavailable.
+    }
+}
+
 function formatPersonReference(personId) {
     return translate('common.personWithId', { id: personId }, `persoon #${personId}`);
 }
@@ -1109,6 +1223,10 @@ function selectSubscriptionDuplicatePerson(role, personId) {
     subscriptionRoleState[role].selectedPerson = selectedPerson;
     setSubscriptionRoleMode(role, 'existing');
     renderSubscriptionRoleSelectedPerson(role);
+    if (role === 'recipient') {
+        syncSubscriptionRecipientIban(selectedPerson);
+        void hydrateSubscriptionRoleSelectedPerson(role);
+    }
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
@@ -1504,6 +1622,10 @@ function selectSubscriptionRolePerson(role, personId) {
 
     subscriptionRoleState[role].selectedPerson = selected;
     renderSubscriptionRoleSelectedPerson(role);
+    if (role === 'recipient') {
+        syncSubscriptionRecipientIban(selected);
+        void hydrateSubscriptionRoleSelectedPerson(role);
+    }
 
     const cfg = getSubscriptionRoleConfig(role);
     const resultsNode = document.getElementById(cfg.searchResultsId);
@@ -1630,10 +1752,15 @@ function buildSubscriptionRolePayload(role, options = {}) {
             return null;
         }
 
-        return {
+        const payload = {
             personId: Number(roleState.selectedPerson.id),
             ...buildExistingPersonCredentialContext(roleState.selectedPerson)
         };
+        if (isSubscriptionApiPerson(roleState.selectedPerson)) {
+            payload.person = buildExistingPersonSnapshot(roleState.selectedPerson);
+        }
+
+        return payload;
     }
 
     if (roleState.mode === 'create') {
@@ -1662,6 +1789,7 @@ function initializeSubscriptionRolesForForm() {
     if (currentCustomer) {
         subscriptionRoleState.recipient.selectedPerson = currentCustomer;
         renderSubscriptionRoleSelectedPerson('recipient');
+        syncSubscriptionRecipientIban(currentCustomer);
     } else {
         setSubscriptionRoleMode('recipient', 'create');
     }

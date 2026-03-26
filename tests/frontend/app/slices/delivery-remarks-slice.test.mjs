@@ -109,10 +109,62 @@ function testAddDeliveryRemarkToModalByKeyAppendsText() {
     }
 }
 
+function testEditDeliveryRemarksBlocksSubscriptionApiCustomers() {
+    const previousNamespaceValue = globalThis.kiwiDeliveryRemarksSlice;
+    const previousDocumentValue = globalThis.document;
+
+    const toasts = [];
+
+    try {
+        globalThis.document = {
+            getElementById() {
+                return null;
+            }
+        };
+
+        configureDeliveryRemarksSliceDependencies(() => ({
+            getCurrentCustomer() {
+                return {
+                    id: 73,
+                    sourceSystem: 'subscription-api'
+                };
+            },
+            showToast(message, type) {
+                toasts.push({ message, type });
+            },
+            translate(_key, _params, fallback) {
+                return fallback;
+            }
+        }));
+
+        registerDeliveryRemarksSlice(createRouter());
+        globalThis.kiwiDeliveryRemarksSlice.editDeliveryRemarks();
+
+        assert.equal(toasts.length, 1);
+        assert.equal(toasts[0].type, 'error');
+        assert.equal(toasts[0].message.includes('bezorgvoorkeuren'), true);
+    } finally {
+        if (previousNamespaceValue === undefined) {
+            delete globalThis.kiwiDeliveryRemarksSlice;
+        } else {
+            globalThis.kiwiDeliveryRemarksSlice = previousNamespaceValue;
+        }
+
+        configureDeliveryRemarksSliceDependencies(null);
+
+        if (previousDocumentValue === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocumentValue;
+        }
+    }
+}
+
 function run() {
     testRegistersDeliveryRemarkActions();
     testInstallsDeliveryRemarkNamespace();
     testAddDeliveryRemarkToModalByKeyAppendsText();
+    testEditDeliveryRemarksBlocksSubscriptionApiCustomers();
     console.log('delivery remarks slice tests passed');
 }
 

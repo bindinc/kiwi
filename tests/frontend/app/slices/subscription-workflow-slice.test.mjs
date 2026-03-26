@@ -46,6 +46,7 @@ function createDomElement() {
     const element = {
         className: '',
         textContent: '',
+        value: '',
         style: {
             display: ''
         },
@@ -323,6 +324,142 @@ function testQueueRenderingUsesBackendDisplayFields() {
     }
 }
 
+function testShowNewSubscriptionPrefillsPrimaryIbanFromCurrentCustomer() {
+    const previousDocument = globalThis.document;
+    const previousBridge = globalThis.kiwiLegacyCustomerSearchBridge;
+    const previousWerfsleutelSlice = globalThis.kiwiWerfsleutelSlice;
+    const previousInitialize = globalThis.initializeSubscriptionRolesForForm;
+    const previousRenderRequesterSameSummary = globalThis.renderRequesterSameSummary;
+
+    const elements = {
+        subscriptionForm: {
+            resetCalled: false,
+            reset() {
+                this.resetCalled = true;
+            }
+        },
+        subStartDate: createDomElement(),
+        subscriptionSubmissionId: createDomElement(),
+        subIBAN: createDomElement(),
+        newSubscriptionForm: createDomElement(),
+        subscriptionQueuePanel: createDomElement(),
+        subscriptionQueueToggle: createDomElement(),
+        subscriptionQueueToggleCount: createDomElement(),
+        subscriptionQueueMeta: createDomElement(),
+        subscriptionQueueEmpty: createDomElement(),
+        subscriptionQueueList: createDomElement()
+    };
+
+    try {
+        globalThis.document = {
+            getElementById(id) {
+                return elements[id] || null;
+            },
+            createElement() {
+                return createDomElement();
+            }
+        };
+        globalThis.kiwiLegacyCustomerSearchBridge = {
+            getCurrentCustomer() {
+                return {
+                    id: 27,
+                    sourceSystem: 'subscription-api',
+                    iban: 'NL12RABO0123456789'
+                };
+            },
+            getCustomers() {
+                return [];
+            }
+        };
+        globalThis.kiwiWerfsleutelSlice = {
+            resetPicker() {},
+            refreshCatalogIfStale() {}
+        };
+        globalThis.initializeSubscriptionRolesForForm = () => {};
+        globalThis.renderRequesterSameSummary = () => {};
+
+        registerSubscriptionWorkflowSlice(createRouter());
+        globalThis.showNewSubscription();
+
+        assert.equal(elements.subscriptionForm.resetCalled, true);
+        assert.equal(elements.subIBAN.value, 'NL12RABO0123456789');
+        assert.equal(elements.newSubscriptionForm.style.display, 'flex');
+    } finally {
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+
+        if (previousBridge === undefined) {
+            delete globalThis.kiwiLegacyCustomerSearchBridge;
+        } else {
+            globalThis.kiwiLegacyCustomerSearchBridge = previousBridge;
+        }
+
+        if (previousWerfsleutelSlice === undefined) {
+            delete globalThis.kiwiWerfsleutelSlice;
+        } else {
+            globalThis.kiwiWerfsleutelSlice = previousWerfsleutelSlice;
+        }
+
+        if (previousInitialize === undefined) {
+            delete globalThis.initializeSubscriptionRolesForForm;
+        } else {
+            globalThis.initializeSubscriptionRolesForForm = previousInitialize;
+        }
+
+        if (previousRenderRequesterSameSummary === undefined) {
+            delete globalThis.renderRequesterSameSummary;
+        } else {
+            globalThis.renderRequesterSameSummary = previousRenderRequesterSameSummary;
+        }
+    }
+}
+
+function testEditCustomerBlocksSubscriptionApiCustomers() {
+    const previousBridge = globalThis.kiwiLegacyCustomerSearchBridge;
+    const previousShowToast = globalThis.showToast;
+
+    const toasts = [];
+
+    try {
+        globalThis.kiwiLegacyCustomerSearchBridge = {
+            getCurrentCustomer() {
+                return {
+                    id: 27,
+                    sourceSystem: 'subscription-api'
+                };
+            },
+            getCustomers() {
+                return [];
+            }
+        };
+        globalThis.showToast = (message, type) => {
+            toasts.push({ message, type });
+        };
+
+        registerSubscriptionWorkflowSlice(createRouter());
+        globalThis.editCustomer();
+
+        assert.equal(toasts.length, 1);
+        assert.equal(toasts[0].type, 'error');
+        assert.equal(toasts[0].message.includes('subscription-api detaildata'), true);
+    } finally {
+        if (previousBridge === undefined) {
+            delete globalThis.kiwiLegacyCustomerSearchBridge;
+        } else {
+            globalThis.kiwiLegacyCustomerSearchBridge = previousBridge;
+        }
+
+        if (previousShowToast === undefined) {
+            delete globalThis.showToast;
+        } else {
+            globalThis.showToast = previousShowToast;
+        }
+    }
+}
+
 function run() {
     testRegistersItemSevenActions();
     testInstallsLegacyCompatibilityExports();
@@ -330,6 +467,8 @@ function run() {
     testWerfsleutelSelectionHelperPrefersMultiSelectionBridge();
     testQueueToggleUpdatesPanelVisibilityAndButtonState();
     testQueueRenderingUsesBackendDisplayFields();
+    testShowNewSubscriptionPrefillsPrimaryIbanFromCurrentCustomer();
+    testEditCustomerBlocksSubscriptionApiCustomers();
     console.log('subscription workflow slice tests passed');
 }
 
