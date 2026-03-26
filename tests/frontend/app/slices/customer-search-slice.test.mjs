@@ -165,12 +165,58 @@ function testRenderCustomerRowShowsMandantBadgeForRecognizedMandant() {
     }
 }
 
+function testBuildSearchParamsIncludesEmailFilter() {
+    const params = __customerSearchTestUtils.buildSearchParams({
+        postalCode: '',
+        houseNumber: '',
+        name: '',
+        phone: '',
+        email: 'klant@example.org'
+    });
+
+    assert.equal(params.get('email'), 'klant@example.org');
+    assert.equal(params.get('page'), '1');
+    assert.equal(params.get('pageSize'), '200');
+}
+
+function testBuildSearchQueryLabelIncludesEmailAndPhone() {
+    const previousDocument = globalThis.document;
+
+    try {
+        globalThis.document = {
+            getElementById(id) {
+                const values = {
+                    searchPostalCode: { value: '' },
+                    searchHouseNumber: { value: '' },
+                    searchName: { value: '' },
+                    searchPhone: { value: '0612345678' },
+                    searchEmail: { value: 'klant@example.org' }
+                };
+
+                return values[id] || null;
+            }
+        };
+
+        const label = __customerSearchTestUtils.buildSearchQueryLabel();
+        assert.equal(label.includes('Telefoon: 0612345678'), true);
+        assert.equal(label.includes('E-mail: klant@example.org'), true);
+    } finally {
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+    }
+}
+
 function run() {
     testRegistersItemFiveActions();
     testInstallsLegacyCompatibilityExports();
     testPageNumbersAndNormalizationHelpers();
     testSortResultsList();
     testRenderCustomerRowShowsMandantBadgeForRecognizedMandant();
+    testBuildSearchParamsIncludesEmailFilter();
+    testBuildSearchQueryLabelIncludesEmailAndPhone();
     console.log('customer search slice tests passed');
 }
 

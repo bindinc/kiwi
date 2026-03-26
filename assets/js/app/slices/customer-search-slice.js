@@ -257,6 +257,8 @@ function buildSearchQueryLabel() {
     const postalCode = getElementValueById('searchPostalCode').trim();
     const houseNumber = getElementValueById('searchHouseNumber').trim();
     const name = getElementValueById('searchName').trim();
+    const phone = getElementValueById('searchPhone').trim();
+    const email = getElementValueById('searchEmail').trim();
 
     const labelParts = [];
 
@@ -266,6 +268,12 @@ function buildSearchQueryLabel() {
 
     if (name) {
         labelParts.push(translateKey('search.nameFilterLabel', { name }, `Naam: ${name}`));
+    }
+    if (phone) {
+        labelParts.push(translateKey('search.phoneFilterLabel', { phone }, `Telefoon: ${phone}`));
+    }
+    if (email) {
+        labelParts.push(translateKey('search.emailFilterLabel', { email }, `E-mail: ${email}`));
     }
 
     if (labelParts.length === 0) {
@@ -981,6 +989,8 @@ export function registerCustomerSearchSlice(actionRouter) {
 export const __customerSearchTestUtils = {
     getPageNumbers,
     normalizePhone,
+    buildSearchParams,
+    buildSearchQueryLabel,
     renderCustomerRow,
     resetSearchStateForTests() {
         resetSearchState();
