@@ -75,6 +75,10 @@ final class WebaboSalesCodeCombinationCatalogServiceTest extends TestCase
             'salesCode' => 'MKGV452',
             'title' => '2026 MKG DL actie 52 ed. EUR 59,00',
             'credentialKey' => 'mkg',
+            'credentialTitle' => 'Mikrogids',
+            'mandant' => 'KRONCRV',
+            'supportsPersonLookup' => false,
+            'sourceSystem' => 'webabo-api',
             'productCode' => 'MKG',
             'allowedChannels' => ['EM/OU'],
         ], new \DateTimeImmutable('2026-03-20T12:00:00+00:00'));
@@ -86,6 +90,10 @@ final class WebaboSalesCodeCombinationCatalogServiceTest extends TestCase
 
         self::assertSame('MKGV452', $payload['salesCode']);
         self::assertSame('mkg', $payload['credentialKey']);
+        self::assertSame('Mikrogids', $payload['credentialTitle']);
+        self::assertSame('KRONCRV', $payload['mandant']);
+        self::assertFalse($payload['supportsPersonLookup']);
+        self::assertSame('webabo-api', $payload['sourceSystem']);
         self::assertSame(false, $payload['usedFallback']);
         self::assertNull($payload['warning']);
         self::assertCount(2, $payload['items']);
@@ -110,6 +118,10 @@ final class WebaboSalesCodeCombinationCatalogServiceTest extends TestCase
             'salesCode' => 'AVRV519',
             'title' => '1 jaar Avrobode voor maar EUR52',
             'credentialKey' => 'avrotros',
+            'credentialTitle' => 'AVROTROS',
+            'mandant' => 'AVROTROS',
+            'supportsPersonLookup' => true,
+            'sourceSystem' => 'webabo-api',
             'productCode' => 'AVR',
             'allowedChannels' => ['EM/OU', 'TM/IB'],
         ], new \DateTimeImmutable('2026-03-20T12:00:00+00:00'));
@@ -143,6 +155,7 @@ final class WebaboSalesCodeCombinationCatalogServiceTest extends TestCase
             'salesCode' => 'MKGV452',
             'title' => '2026 MKG DL actie 52 ed. EUR 59,00',
             'credentialKey' => 'mkg',
+            'mandant' => 'KRONCRV',
             'productCode' => 'MKG',
         ], new \DateTimeImmutable('2026-03-20T12:00:00+00:00'));
 

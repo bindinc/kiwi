@@ -1568,7 +1568,9 @@
         window.kiwiAgentName = pageDataset.kiwiAgentName || '';
         window.kiwiAssetPaths = {
             callAgentRuntime: '{{ asset('js/app/call-agent-runtime.js')|e('js') }}',
-            subscriptionRoleRuntime: '{{ asset('js/app/subscription-role-runtime.js')|e('js') }}'
+            subscriptionRoleRuntime: '{{ asset('js/app/subscription-role-runtime.js')|e('js') }}',
+            avrotrosLogo: '{{ asset('img/avrotros-logo.svg')|e('js') }}',
+            kroncrvLogo: '{{ asset('img/kroncrv-logo.svg')|e('js') }}'
         };
     </script>
     <script src="{{ asset('js/app/feature-flags.js') }}"></script>

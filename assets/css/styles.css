@@ -2709,6 +2709,13 @@ select option {
     background-color: #fff;
 }
 
+.onepager-container .party-person-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .onepager-container .party-search-result-meta {
     font-size: 0.82rem;
     color: var(--text-secondary);
@@ -2720,6 +2727,8 @@ select option {
     background-color: #fff;
     padding: 0.55rem 0.65rem;
     font-size: 0.9rem;
+    display: grid;
+    gap: 0.2rem;
 }
 
 .onepager-container .party-selected-person.empty {
@@ -2729,6 +2738,11 @@ select option {
 
 .onepager-container .party-selected-person strong {
     font-size: 0.95rem;
+}
+
+.onepager-container .party-selected-person-meta {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
 }
 
 .onepager-container .subscription-duplicate-check {
@@ -2810,6 +2824,11 @@ select option {
     gap: 0.65rem;
     align-items: center;
     background: #fff;
+}
+
+.onepager-container .party-search-result > div,
+.onepager-container .subscription-duplicate-item > div {
+    min-width: 0;
 }
 
 .onepager-container .subscription-duplicate-item-meta {
@@ -3647,6 +3666,54 @@ select option {
 .werfsleutel-suggestion .code {
     font-weight: 600;
     color: #111827;
+}
+
+.mandant-logo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    min-height: 28px;
+    border-radius: 999px;
+    border: 1px solid #d8e1eb;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    vertical-align: middle;
+}
+
+.mandant-logo-badge img {
+    display: block;
+    width: auto;
+    height: 16px;
+    max-width: 90px;
+    object-fit: contain;
+}
+
+.mandant-logo-badge--compact {
+    padding: 3px 8px;
+    min-height: 24px;
+}
+
+.mandant-logo-badge--compact img {
+    height: 14px;
+    max-width: 76px;
+}
+
+.mandant-logo-badge--meta {
+    min-height: 26px;
+}
+
+.mandant-logo-badge--meta img {
+    height: 15px;
+    max-width: 82px;
+}
+
+.werfsleutel-suggestion-copy {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .werfsleutel-suggestion .title {

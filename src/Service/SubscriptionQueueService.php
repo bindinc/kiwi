@@ -242,11 +242,13 @@ final class SubscriptionQueueService
             }
 
             $person = $this->stateService->getCustomer($session, $personId);
+            $personContext = $this->extractCredentialContext($person);
+            $roleContext = $this->extractCredentialContext($rolePayload);
 
             return [
                 'mode' => 'existing',
                 'personId' => $personId,
-                'person' => $this->buildPersonSnapshot($person),
+                'person' => $this->buildPersonSnapshot($person, $roleContext + $personContext),
             ];
         }
 
@@ -358,6 +360,10 @@ final class SubscriptionQueueService
             'subscriptionCode' => $this->normalizeNullableString($offerPayload['subscriptionCode'] ?? null),
             'productCode' => $this->normalizeNullableString($offerPayload['productCode'] ?? null),
             'credentialKey' => $this->normalizeNullableString($offerPayload['credentialKey'] ?? null),
+            'credentialTitle' => $this->normalizeNullableString($offerPayload['credentialTitle'] ?? null),
+            'mandant' => $this->normalizeNullableString($offerPayload['mandant'] ?? null),
+            'supportsPersonLookup' => $this->normalizeNullableBoolean($offerPayload['supportsPersonLookup'] ?? null),
+            'sourceSystem' => $this->normalizeNullableString($offerPayload['sourceSystem'] ?? null),
         ];
 
         $cachedOffer = $this->findCachedOffer($salesCode);
@@ -371,6 +377,10 @@ final class SubscriptionQueueService
         $normalizedOffer['subscriptionCode'] = $cachedOffer->getSubscriptionCode() ?? $normalizedOffer['subscriptionCode'];
         $normalizedOffer['productCode'] = $cachedOffer->getProductCode() ?? $normalizedOffer['productCode'];
         $normalizedOffer['credentialKey'] = $cachedOffer->getCredentialKey() ?? $normalizedOffer['credentialKey'];
+        $normalizedOffer['credentialTitle'] = $this->normalizeNullableString($rawPayload['credentialTitle'] ?? null) ?? $normalizedOffer['credentialTitle'];
+        $normalizedOffer['mandant'] = $this->normalizeNullableString($rawPayload['mandant'] ?? null) ?? $normalizedOffer['mandant'];
+        $normalizedOffer['supportsPersonLookup'] = $this->normalizeNullableBoolean($rawPayload['supportsPersonLookup'] ?? null) ?? $normalizedOffer['supportsPersonLookup'];
+        $normalizedOffer['sourceSystem'] = $this->normalizeNullableString($rawPayload['sourceSystem'] ?? null) ?? $normalizedOffer['sourceSystem'] ?? 'webabo-api';
 
         return $normalizedOffer;
     }
@@ -408,6 +418,29 @@ final class SubscriptionQueueService
     private function normalizeNullableInt(mixed $value): ?int
     {
         return is_numeric($value) ? (int) $value : null;
+    }
+
+    private function normalizeNullableBoolean(mixed $value): ?bool
+    {
+        if (\is_bool($value)) {
+            return $value;
+        }
+
+        if (\is_int($value)) {
+            return 0 !== $value;
+        }
+
+        if (!\is_string($value)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return match ($normalized) {
+            '1', 'true', 'yes', 'y', 'on' => true,
+            '0', 'false', 'no', 'n', 'off' => false,
+            default => null,
+        };
     }
 
     /**
@@ -473,7 +506,7 @@ final class SubscriptionQueueService
      * @param array<string, mixed> $person
      * @return array<string, mixed>
      */
-    private function buildPersonSnapshot(array $person): array
+    private function buildPersonSnapshot(array $person, array $context = []): array
     {
         $snapshot = [
             'salutation' => $this->normalizeNullableString($person['salutation'] ?? null),
@@ -491,6 +524,11 @@ final class SubscriptionQueueService
             'optinPhone' => $this->normalizeNullableString($person['optinPhone'] ?? null),
             'optinPost' => $this->normalizeNullableString($person['optinPost'] ?? null),
         ];
+
+        foreach ($context as $key => $value) {
+            $snapshot[$key] = $value;
+        }
+
         $snapshot['displayName'] = $this->buildPersonDisplayName($snapshot);
 
         return $snapshot;
@@ -545,6 +583,42 @@ final class SubscriptionQueueService
         } catch (\Throwable $exception) {
             throw $this->buildQueueUnavailableException($exception);
         }
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, bool|string>
+     */
+    private function extractCredentialContext(array $payload): array
+    {
+        $context = [];
+
+        $credentialKey = $this->normalizeNullableString($payload['credentialKey'] ?? null);
+        if (null !== $credentialKey) {
+            $context['credentialKey'] = $credentialKey;
+        }
+
+        $credentialTitle = $this->normalizeNullableString($payload['credentialTitle'] ?? null);
+        if (null !== $credentialTitle) {
+            $context['credentialTitle'] = $credentialTitle;
+        }
+
+        $mandant = $this->normalizeNullableString($payload['mandant'] ?? null);
+        if (null !== $mandant) {
+            $context['mandant'] = $mandant;
+        }
+
+        $supportsPersonLookup = $this->normalizeNullableBoolean($payload['supportsPersonLookup'] ?? null);
+        if (null !== $supportsPersonLookup) {
+            $context['supportsPersonLookup'] = $supportsPersonLookup;
+        }
+
+        $sourceSystem = $this->normalizeNullableString($payload['sourceSystem'] ?? null);
+        if (null !== $sourceSystem) {
+            $context['sourceSystem'] = $sourceSystem;
+        }
+
+        return $context;
     }
 
     /**

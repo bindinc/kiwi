@@ -76,6 +76,9 @@ final class HupApiConfigProvider
 
                 $credential = new HupApiCredential(
                     name: $normalizedName,
+                    title: $this->normalizeOptionalString($credentialSection['title'] ?? null),
+                    mandant: $this->normalizeOptionalString($credentialSection['client'] ?? null),
+                    supportsPersonLookup: $this->normalizeOptionalBoolean($credentialSection['client_search'] ?? null),
                     username: $this->normalizeOptionalString($credentialSection['username'] ?? null),
                     password: $this->normalizeOptionalString($credentialSection['password'] ?? null),
                     refreshToken: $this->normalizeOptionalString($credentialSection['refresh_token'] ?? null),
@@ -95,6 +98,9 @@ final class HupApiConfigProvider
 
         $legacyCredential = new HupApiCredential(
             name: 'default',
+            title: null,
+            mandant: null,
+            supportsPersonLookup: null,
             username: $this->normalizeOptionalString($section['username'] ?? null),
             password: $this->normalizeOptionalString($section['password'] ?? null),
             refreshToken: $this->normalizeOptionalString($section['refresh_token'] ?? null),
@@ -118,5 +124,28 @@ final class HupApiConfigProvider
         $normalized = trim($value);
 
         return '' !== $normalized ? $normalized : null;
+    }
+
+    private function normalizeOptionalBoolean(mixed $value): ?bool
+    {
+        if (\is_bool($value)) {
+            return $value;
+        }
+
+        if (\is_int($value)) {
+            return 0 !== $value;
+        }
+
+        if (!\is_string($value)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return match ($normalized) {
+            '1', 'true', 'yes', 'y', 'on' => true,
+            '0', 'false', 'no', 'n', 'off' => false,
+            default => null,
+        };
     }
 }

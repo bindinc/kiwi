@@ -37,6 +37,23 @@ const CHANNEL_FAMILY_BY_CODE = {
 const CHANNEL_PREFIX_ALIASES = {
     'TM/IN': 'TM/IB'
 };
+const MANDANT_BADGE_CONFIG_BY_KEY = {
+    AVROTROS: {
+        brandLabel: 'AVROTROS',
+        assetKey: 'avrotrosLogo',
+        fallbackPath: 'assets/img/avrotros-logo.svg'
+    },
+    HMC: {
+        brandLabel: 'AVROTROS',
+        assetKey: 'avrotrosLogo',
+        fallbackPath: 'assets/img/avrotros-logo.svg'
+    },
+    KRONCRV: {
+        brandLabel: 'KRO-NCRV',
+        assetKey: 'kroncrvLogo',
+        fallbackPath: 'assets/img/kroncrv-logo.svg'
+    }
+};
 
 const euroFormattersByLocale = {};
 
@@ -150,6 +167,53 @@ function getApiClient() {
     return hasApiClient ? globalScope.kiwiApi : null;
 }
 
+function joinBasePath(basePath, relativePath) {
+    const normalizedBasePath = String(basePath || '').replace(/\/+$/, '');
+    const normalizedRelativePath = String(relativePath || '').replace(/^\/+/, '');
+
+    if (!normalizedRelativePath) {
+        return normalizedBasePath || '/';
+    }
+
+    if (!normalizedBasePath) {
+        return `/${normalizedRelativePath}`;
+    }
+
+    return `${normalizedBasePath}/${normalizedRelativePath}`;
+}
+
+function normalizeMandantKey(value) {
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function resolveMandantBadgeConfig(mandant) {
+    const normalizedMandantKey = normalizeMandantKey(mandant);
+    if (!normalizedMandantKey) {
+        return null;
+    }
+
+    const badgeConfig = MANDANT_BADGE_CONFIG_BY_KEY[normalizedMandantKey];
+    if (!badgeConfig) {
+        return null;
+    }
+
+    const globalScope = getGlobalScope();
+    const mappedAssetPaths = globalScope && typeof globalScope.kiwiAssetPaths === 'object'
+        ? globalScope.kiwiAssetPaths
+        : null;
+    const mappedAssetUrl = mappedAssetPaths && typeof mappedAssetPaths[badgeConfig.assetKey] === 'string'
+        ? mappedAssetPaths[badgeConfig.assetKey].trim()
+        : '';
+    const basePath = globalScope && typeof globalScope.kiwiBasePath === 'string'
+        ? globalScope.kiwiBasePath
+        : '';
+
+    return {
+        brandLabel: badgeConfig.brandLabel,
+        assetUrl: mappedAssetUrl || joinBasePath(basePath, badgeConfig.fallbackPath)
+    };
+}
+
 function clearWerfsleutelSearchDebounceTimer() {
     if (!werfsleutelSliceState.searchDebounceTimer) {
         return;
@@ -201,6 +265,8 @@ function normalizeWerfsleutelItem(item) {
         price: Number.isFinite(priceValue) ? priceValue : 0,
         barcode: item.barcode === undefined || item.barcode === null ? '' : String(item.barcode),
         magazine: item.magazine === undefined || item.magazine === null ? '' : String(item.magazine),
+        mandant: item.mandant === undefined || item.mandant === null ? '' : String(item.mandant).trim(),
+        credentialTitle: item.credentialTitle === undefined || item.credentialTitle === null ? '' : String(item.credentialTitle).trim(),
         allowedChannels,
         isActive: item.isActive !== false
     };
@@ -262,7 +328,15 @@ function filterWerfsleutelCatalog(query) {
         const priceMatches = String(item.price).includes(normalizedQuery);
         const barcodeMatches = String(item.barcode || '').includes(normalizedQuery);
         const magazineMatches = String(item.magazine || '').toLowerCase().includes(normalizedQuery);
-        return salesCodeMatches || titleMatches || priceMatches || barcodeMatches || magazineMatches;
+        const mandantMatches = String(item.mandant || '').toLowerCase().includes(normalizedQuery);
+        const credentialTitleMatches = String(item.credentialTitle || '').toLowerCase().includes(normalizedQuery);
+        return salesCodeMatches
+            || titleMatches
+            || priceMatches
+            || barcodeMatches
+            || magazineMatches
+            || mandantMatches
+            || credentialTitleMatches;
     }).slice(0, WERFSLEUTEL_SEARCH_LIMIT);
 }
 
@@ -431,6 +505,23 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function buildMandantBadgeMarkup(mandant, className = 'mandant-logo-badge') {
+    const badgeConfig = resolveMandantBadgeConfig(mandant);
+    if (!badgeConfig) {
+        return '';
+    }
+
+    const safeBrandLabel = escapeHtml(badgeConfig.brandLabel);
+    const safeAssetUrl = escapeHtml(badgeConfig.assetUrl);
+    const safeClassName = escapeHtml(className);
+
+    return `
+        <span class="${safeClassName}" title="${safeBrandLabel}" aria-label="${safeBrandLabel}">
+            <img src="${safeAssetUrl}" alt="${safeBrandLabel}">
+        </span>
+    `;
 }
 
 function normalizeCombinationCodes(rawCodes) {
@@ -666,6 +757,15 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
         const suggestionClassName = item.isActive
             ? `werfsleutel-suggestion${isActiveOption ? ' active' : ''}`
             : `werfsleutel-suggestion inactive${isActiveOption ? ' active' : ''}`;
+        const mandantBadgeMarkup = buildMandantBadgeMarkup(item.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+        const titleMarkup = mandantBadgeMarkup
+            ? `
+                <span class="werfsleutel-suggestion-copy">
+                    <span class="title">${escapeHtml(item.title)}</span>
+                    ${mandantBadgeMarkup}
+                </span>
+            `
+            : `<span class="title">${escapeHtml(item.title)}</span>`;
 
         return `
         <button type="button"
@@ -677,7 +777,7 @@ function renderWerfsleutelSuggestions(matches, options = {}) {
                 data-arg-sales-code="${escapeHtml(item.salesCode)}"
                 data-code="${escapeHtml(item.salesCode)}">
             <span class="code">${escapeHtml(item.salesCode)}</span>
-            <span class="title">${escapeHtml(item.title)}</span>
+            ${titleMarkup}
             <span class="price">${escapeHtml(formatEuro(item.price))}</span>
             <span class="status-pill ${statusClass}">
                 ${statusLabel}
@@ -755,6 +855,7 @@ function renderSelectedOfferList() {
         const offerDetails = getWerfsleutelOfferDetails(offer);
         const isExpanded = entry.isExpanded !== false;
         const normalizedOfferTitle = String(offer.title || '').trim();
+        const mandantBadgeMarkup = buildMandantBadgeMarkup(offer.mandant, 'mandant-logo-badge mandant-logo-badge--meta');
         const unknownLabel = translate('common.unknown', 'Onbekend');
         const metaParts = [];
         if (offerDetails.magazine && offerDetails.magazine !== unknownLabel && offerDetails.magazine !== normalizedOfferTitle) {
@@ -798,6 +899,10 @@ function renderSelectedOfferList() {
 
         if (offer.salesCode) {
             offerMetaBadges.push(`<span class="subscription-offer-code">${escapeHtml(offer.salesCode)}</span>`);
+        }
+
+        if (mandantBadgeMarkup) {
+            offerMetaBadges.push(mandantBadgeMarkup);
         }
 
         if (selectedChannelBadgeMarkup) {

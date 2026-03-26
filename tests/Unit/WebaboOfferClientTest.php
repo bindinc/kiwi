@@ -74,6 +74,7 @@ final class WebaboOfferClientTest extends TestCase
         self::assertCount(1, $offers);
         self::assertSame('AVRV519', $offers[0]['salesCode']);
         self::assertSame('default', $offers[0]['credentialKey']);
+        self::assertSame('webabo-api', $offers[0]['sourceSystem']);
         self::assertCount(4, $requests);
         $firstPasswordBody = $this->parseRequestBody($requests[0]['options']['body']);
         $secondPasswordBody = $this->parseRequestBody($requests[2]['options']['body']);
@@ -103,10 +104,16 @@ final class WebaboOfferClientTest extends TestCase
     {
         $clientSecretsPath = $this->writeClientSecretsFileWithNamedCredentials([
             'mkg' => [
+                'title' => 'Mikrogids',
+                'client' => 'KRONCRV',
+                'client_search' => 'no',
                 'username' => 'mkg-user',
                 'password' => 'mkg-password',
             ],
             'tvz' => [
+                'title' => 'Televizier',
+                'client' => 'AVROTROS',
+                'client_search' => 'yes',
                 'username' => 'tvz-user',
                 'password' => 'tvz-password',
             ],
@@ -149,6 +156,10 @@ final class WebaboOfferClientTest extends TestCase
         self::assertCount(2, $offers);
         self::assertSame(['AVRV519', 'TVZ100'], array_column($offers, 'salesCode'));
         self::assertSame(['mkg', 'tvz'], array_column($offers, 'credentialKey'));
+        self::assertSame(['Mikrogids', 'Televizier'], array_column($offers, 'credentialTitle'));
+        self::assertSame(['KRONCRV', 'AVROTROS'], array_column($offers, 'mandant'));
+        self::assertSame([false, true], array_column($offers, 'supportsPersonLookup'));
+        self::assertSame(['webabo-api', 'webabo-api'], array_column($offers, 'sourceSystem'));
         self::assertCount(4, $requests);
 
         $firstTokenBody = $this->parseRequestBody($requests[0]['options']['body']);
@@ -204,7 +215,7 @@ final class WebaboOfferClientTest extends TestCase
     }
 
     /**
-     * @param array<string, array<string, string>> $credentials
+     * @param array<string, array<string, mixed>> $credentials
      */
     private function writeClientSecretsFileWithNamedCredentials(array $credentials): string
     {

@@ -112,6 +112,11 @@ function createRuntimeContext(options = {}) {
         normalizePhone(value = '') {
             return String(value).replace(/\D+/g, '');
         },
+        kiwiBasePath: '/kiwi',
+        kiwiAssetPaths: {
+            avrotrosLogo: '/assets/img/avrotros-logo.svg',
+            kroncrvLogo: '/assets/img/kroncrv-logo.svg'
+        },
         kiwiSubscriptionIdentityPricingHelpers: {
             normalizeNameFragment: sharedNormalizeNameFragment
         },
@@ -148,6 +153,7 @@ function createRuntimeContext(options = {}) {
 
     return {
         context,
+        elements: elementById,
         checkbox,
         runtime: context.window.kiwiSubscriptionRoleRuntime
     };
@@ -194,9 +200,96 @@ function testNormalizeDuplicateLastNameUsesSharedHelpers() {
     assert.equal(runtime.normalizeDuplicateLastName('de Groot'), 'normalized:DE GROOT');
 }
 
+function testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext() {
+    const selectedPerson = {
+        id: 73,
+        firstName: 'Demo',
+        middleName: '',
+        lastName: 'Gebruiker',
+        credentialKey: 'tvk',
+        credentialTitle: 'TV Krant',
+        mandant: 'HMC',
+        supportsPersonLookup: true,
+        sourceSystem: 'subscription-api'
+    };
+
+    const { runtime } = createRuntimeContext({
+        recipientSelectedPerson: selectedPerson
+    });
+
+    const payload = JSON.parse(JSON.stringify(runtime.buildSubscriptionRolePayload('recipient')));
+
+    assert.deepEqual(payload, {
+        personId: 73,
+        credentialKey: 'tvk',
+        credentialTitle: 'TV Krant',
+        mandant: 'HMC',
+        supportsPersonLookup: true,
+        sourceSystem: 'subscription-api'
+    });
+}
+
+function testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant() {
+    const selectedPerson = {
+        id: 41,
+        firstName: 'Demo',
+        middleName: '',
+        lastName: 'Gebruiker',
+        postalCode: '1217AA',
+        city: 'Hilversum',
+        mandant: 'HMC'
+    };
+
+    const { elements, runtime } = createRuntimeContext({
+        recipientSelectedPerson: selectedPerson
+    });
+
+    runtime.renderSubscriptionRoleSelectedPerson('recipient');
+
+    assert.equal(elements.recipientSelectedPerson.innerHTML.includes('avrotros-logo.svg'), true);
+    assert.equal(elements.recipientSelectedPerson.innerHTML.includes('alt="AVROTROS"'), true);
+}
+
+function testRenderSearchResultsShowsKroncrvBadgeAndUnknownFallback() {
+    const { context, elements, runtime } = createRuntimeContext();
+
+    context.subscriptionRoleState.requester.searchResults = [
+        {
+            id: 52,
+            firstName: 'Kro',
+            middleName: '',
+            lastName: 'Gebruiker',
+            postalCode: '1234AB',
+            city: 'Utrecht',
+            mandant: 'KRONCRV'
+        }
+    ];
+    runtime.renderSubscriptionRoleSearchResults('requester');
+    assert.equal(elements.requesterSearchResults.innerHTML.includes('kroncrv-logo.svg'), true);
+    assert.equal(elements.requesterSearchResults.innerHTML.includes('alt="KRO-NCRV"'), true);
+
+    context.subscriptionRoleState.requester.searchResults = [
+        {
+            id: 53,
+            firstName: 'Onbekend',
+            middleName: '',
+            lastName: 'Mandant',
+            postalCode: '1234AB',
+            city: 'Utrecht',
+            mandant: 'LOSSEWAARDE'
+        }
+    ];
+    runtime.renderSubscriptionRoleSearchResults('requester');
+    assert.equal(elements.requesterSearchResults.innerHTML.includes('avrotros-logo.svg'), false);
+    assert.equal(elements.requesterSearchResults.innerHTML.includes('kroncrv-logo.svg'), false);
+}
+
 function run() {
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
+    testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext();
+    testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant();
+    testRenderSearchResultsShowsKroncrvBadgeAndUnknownFallback();
     console.log('subscription role runtime tests passed');
 }
 

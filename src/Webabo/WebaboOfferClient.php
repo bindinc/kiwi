@@ -21,11 +21,17 @@ final class WebaboOfferClient
      */
     public function fetchOffers(): array
     {
+        $config = $this->configProvider->getConfig();
         $offers = [];
 
-        foreach ($this->configProvider->getConfig()->getCredentials() as $credential) {
+        foreach ($config->getCredentials() as $credential) {
+            $credentialContext = $credential->toContextPayload('webabo-api');
+
             foreach ($this->requestOffers($credential->name, false) as $offer) {
-                $offer['credentialKey'] = $credential->name;
+                foreach ($credentialContext as $contextKey => $contextValue) {
+                    $offer[$contextKey] = $contextValue;
+                }
+
                 $offers[] = $offer;
             }
         }

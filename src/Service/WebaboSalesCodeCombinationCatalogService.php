@@ -75,6 +75,10 @@ final class WebaboSalesCodeCombinationCatalogService
             'title' => $offer->getTitle(),
             'productCode' => $offer->getProductCode(),
             'credentialKey' => $offer->getCredentialKey(),
+            'credentialTitle' => $this->normalizeNullableString($offer->getRawPayload()['credentialTitle'] ?? null),
+            'mandant' => $this->normalizeNullableString($offer->getRawPayload()['mandant'] ?? null),
+            'supportsPersonLookup' => $this->normalizeNullableBoolean($offer->getRawPayload()['supportsPersonLookup'] ?? null),
+            'sourceSystem' => $this->normalizeNullableString($offer->getRawPayload()['sourceSystem'] ?? null) ?? 'webabo-api',
             'items' => $items,
             'total' => count($items),
             'usedFallback' => $usedFallback,
@@ -336,5 +340,28 @@ final class WebaboSalesCodeCombinationCatalogService
         $normalized = trim((string) $value);
 
         return '' !== $normalized ? $normalized : null;
+    }
+
+    private function normalizeNullableBoolean(mixed $value): ?bool
+    {
+        if (\is_bool($value)) {
+            return $value;
+        }
+
+        if (\is_int($value)) {
+            return 0 !== $value;
+        }
+
+        if (!\is_string($value)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return match ($normalized) {
+            '1', 'true', 'yes', 'y', 'on' => true,
+            '0', 'false', 'no', 'n', 'off' => false,
+            default => null,
+        };
     }
 }

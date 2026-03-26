@@ -60,6 +60,10 @@ final class SubscriptionQueueServiceTest extends TestCase
             'salesCode' => 'AVRV519',
             'title' => '1 jaar Avrobode voor maar EUR52',
             'credentialKey' => 'avrotros',
+            'credentialTitle' => 'AVROTROS',
+            'mandant' => 'AVROTROS',
+            'supportsPersonLookup' => true,
+            'sourceSystem' => 'webabo-api',
             'subscriptionCode' => 'SUB-AVRO-1',
             'productCode' => 'PROD-AVRO-1',
             'offerPrice' => [
@@ -141,6 +145,10 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('SUB-AVRO-1', $firstResponse['summary']['offer']['subscriptionCode']);
         self::assertSame('PROD-AVRO-1', $firstResponse['summary']['offer']['productCode']);
         self::assertSame('avrotros', $firstResponse['summary']['offer']['credentialKey']);
+        self::assertSame('AVROTROS', $firstResponse['summary']['offer']['credentialTitle']);
+        self::assertSame('AVROTROS', $firstResponse['summary']['offer']['mandant']);
+        self::assertTrue($firstResponse['summary']['offer']['supportsPersonLookup']);
+        self::assertSame('webabo-api', $firstResponse['summary']['offer']['sourceSystem']);
         self::assertTrue($firstResponse['summary']['requester']['sameAsRecipient']);
         self::assertSame('B. Example', $firstResponse['summary']['agent']['shortName']);
         self::assertSame('Aanvraag', $firstResponse['summary']['typeLabel']);
@@ -163,6 +171,94 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame($firstResponse['submissionId'], $statusResponse['submissionId']);
         self::assertSame('queued', $statusResponse['status']);
         self::assertSame('pending', $statusResponse['event']['status']);
+    }
+
+    public function testQueueSubscriptionPreservesExistingPersonCredentialContext(): void
+    {
+        [$service, $entityManager, , $offerSchemaManager] = $this->createQueueServiceWithDependencies();
+        $offerSchemaManager->ensureSchema();
+
+        $offer = new WebaboOffer('TVZ100');
+        $offer->refreshFromWebaboPayload([
+            'salesCode' => 'TVZ100',
+            'title' => 'Televizier 1 jaar',
+            'credentialKey' => 'tvz',
+            'mandant' => 'AVROTROS',
+            'sourceSystem' => 'webabo-api',
+            'offerPrice' => [
+                'price' => 49.0,
+            ],
+        ], new \DateTimeImmutable('2026-03-20T12:00:00+00:00'));
+        $entityManager->persist($offer);
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $session = new Session(new MockArraySessionStorage());
+        $session->set('kiwi_poc_state', [
+            'customers' => [
+                [
+                    'id' => 27,
+                    'salutation' => 'Mevr.',
+                    'firstName' => 'Anne',
+                    'middleName' => 'van',
+                    'lastName' => 'Dijk',
+                    'birthday' => '1988-04-12',
+                    'postalCode' => '1234AB',
+                    'houseNumber' => '8',
+                    'address' => 'Voorbeeldstraat 8',
+                    'city' => 'Hilversum',
+                    'email' => 'anne@example.org',
+                    'phone' => '0612345678',
+                    'credentialKey' => 'tvk',
+                    'credentialTitle' => 'TV Krant',
+                    'mandant' => 'HMC',
+                    'supportsPersonLookup' => true,
+                    'sourceSystem' => 'subscription-api',
+                ],
+            ],
+        ]);
+
+        $payload = [
+            'submissionId' => 'unit-test-existing-person-context',
+            'recipient' => [
+                'personId' => 27,
+            ],
+            'requester' => [
+                'sameAsRecipient' => true,
+            ],
+            'subscription' => [
+                'magazine' => 'Televizier',
+                'duration' => '1-jaar',
+                'durationLabel' => '1 jaar',
+                'startDate' => '2026-04-01',
+                'status' => 'active',
+            ],
+            'offer' => [
+                'salesCode' => 'TVZ100',
+                'title' => 'Televizier 1 jaar',
+                'price' => 49.0,
+                'channel' => 'online',
+                'channelLabel' => 'Online',
+            ],
+        ];
+
+        $service->queueSubscription($session, $payload, [
+            'identity' => [
+                'full_name' => 'Test User',
+            ],
+        ]);
+
+        $requestPayload = json_decode((string) $entityManager->getConnection()->fetchOne(
+            'SELECT request_payload FROM subscription_orders WHERE submission_id = ?',
+            ['unit-test-existing-person-context'],
+        ), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('tvk', $requestPayload['recipient']['person']['credentialKey']);
+        self::assertSame('TV Krant', $requestPayload['recipient']['person']['credentialTitle']);
+        self::assertSame('HMC', $requestPayload['recipient']['person']['mandant']);
+        self::assertTrue($requestPayload['recipient']['person']['supportsPersonLookup']);
+        self::assertSame('subscription-api', $requestPayload['recipient']['person']['sourceSystem']);
+        self::assertSame('tvk', $requestPayload['requester']['person']['credentialKey']);
     }
 
     /**

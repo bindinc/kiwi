@@ -51,6 +51,14 @@ final readonly class HupApiConfig
         throw new \RuntimeException(sprintf('HUP credential "%s" ontbreekt in de client secrets configuratie.', $credentialName));
     }
 
+    /**
+     * @return array<string, bool|string>
+     */
+    public function getCredentialContext(?string $credentialName = null, ?string $sourceSystem = null): array
+    {
+        return $this->getCredential($credentialName)->toContextPayload($sourceSystem);
+    }
+
     public function hasClientCredentials(): bool
     {
         return null !== $this->clientId && '' !== $this->clientId

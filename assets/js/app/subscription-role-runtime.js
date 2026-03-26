@@ -7,6 +7,23 @@
 // ============================================================================
 
 const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
+const MANDANT_BADGE_CONFIG_BY_KEY = {
+    AVROTROS: {
+        brandLabel: 'AVROTROS',
+        assetKey: 'avrotrosLogo',
+        fallbackPath: 'assets/img/avrotros-logo.svg'
+    },
+    HMC: {
+        brandLabel: 'AVROTROS',
+        assetKey: 'avrotrosLogo',
+        fallbackPath: 'assets/img/avrotros-logo.svg'
+    },
+    KRONCRV: {
+        brandLabel: 'KRO-NCRV',
+        assetKey: 'kroncrvLogo',
+        fallbackPath: 'assets/img/kroncrv-logo.svg'
+    }
+};
 
 function resolveSharedNormalizeNameFragment() {
     const globalScope = typeof window !== 'undefined'
@@ -312,6 +329,69 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+function joinBasePath(basePath, relativePath) {
+    const normalizedBasePath = String(basePath || '').replace(/\/+$/, '');
+    const normalizedRelativePath = String(relativePath || '').replace(/^\/+/, '');
+
+    if (!normalizedRelativePath) {
+        return normalizedBasePath || '/';
+    }
+
+    if (!normalizedBasePath) {
+        return `/${normalizedRelativePath}`;
+    }
+
+    return `${normalizedBasePath}/${normalizedRelativePath}`;
+}
+
+function normalizeMandantKey(value) {
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function resolveMandantBadgeConfig(mandant) {
+    const normalizedMandantKey = normalizeMandantKey(mandant);
+    if (!normalizedMandantKey) {
+        return null;
+    }
+
+    const badgeConfig = MANDANT_BADGE_CONFIG_BY_KEY[normalizedMandantKey];
+    if (!badgeConfig) {
+        return null;
+    }
+
+    const mappedAssetPaths = typeof window !== 'undefined' && typeof window.kiwiAssetPaths === 'object'
+        ? window.kiwiAssetPaths
+        : null;
+    const mappedAssetUrl = mappedAssetPaths && typeof mappedAssetPaths[badgeConfig.assetKey] === 'string'
+        ? mappedAssetPaths[badgeConfig.assetKey].trim()
+        : '';
+    const basePath = typeof window !== 'undefined' && typeof window.kiwiBasePath === 'string'
+        ? window.kiwiBasePath
+        : '';
+
+    return {
+        brandLabel: badgeConfig.brandLabel,
+        assetUrl: mappedAssetUrl || joinBasePath(basePath, badgeConfig.fallbackPath)
+    };
+}
+
+function buildMandantBadgeMarkup(mandant, className = 'mandant-logo-badge') {
+    const badgeConfig = resolveMandantBadgeConfig(mandant);
+    if (!badgeConfig) {
+        return '';
+    }
+
+    const safeBrandLabel = escapeHtml(badgeConfig.brandLabel);
+    const safeAssetUrl = escapeHtml(badgeConfig.assetUrl);
+    const safeClassName = escapeHtml(className);
+
+    return `
+        <span class="${safeClassName}" title="${safeBrandLabel}" aria-label="${safeBrandLabel}">
+            <img src="${safeAssetUrl}" alt="${safeBrandLabel}">
+        </span>
+    `;
+}
+
 function getSubscriptionRoleConfig(role) {
     if (role === 'recipient') {
         return {
@@ -390,8 +470,15 @@ function renderSubscriptionRoleSelectedPerson(role) {
     const address = escapeHtml(buildPersonDisplayAddress(selectedPerson));
     const personId = escapeHtml(formatPersonReference(selectedPerson.id));
     const addressLine = address ? ` · ${address}` : '';
+    const mandantBadgeMarkup = buildMandantBadgeMarkup(selectedPerson.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
     selectedNode.classList.remove('empty');
-    selectedNode.innerHTML = `<strong>${name}</strong> · ${personId}${addressLine}`;
+    selectedNode.innerHTML = `
+        <span class="party-person-main">
+            <strong>${name}</strong>
+            ${mandantBadgeMarkup}
+        </span>
+        <div class="party-selected-person-meta">${personId}${addressLine}</div>
+    `;
 }
 
 function renderRequesterSameSummary() {
@@ -406,11 +493,13 @@ function renderRequesterSameSummary() {
     const recipient = subscriptionRoleState.recipient.selectedPerson;
     if (recipient && recipient.id !== undefined && recipient.id !== null) {
         const name = escapeHtml(buildPersonDisplayName(recipient) || formatPersonReference(recipient.id));
-        summaryNode.innerHTML = translate(
-            'subscription.requesterFollowsRecipient',
-            { name, person: formatPersonReference(recipient.id) },
-            `Aanvrager/betaler volgt de ontvanger: <strong>${name}</strong> · ${formatPersonReference(recipient.id)}.`
+        const recipientBadgeMarkup = buildMandantBadgeMarkup(recipient.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+        const requesterFollowsRecipientLabel = translate(
+            'subscription.requesterFollowsRecipientIntro',
+            {},
+            'Aanvrager/betaler volgt de ontvanger:'
         );
+        summaryNode.innerHTML = `${escapeHtml(requesterFollowsRecipientLabel)} <span class="party-person-main"><strong>${name}</strong>${recipientBadgeMarkup}</span> · ${escapeHtml(formatPersonReference(recipient.id))}.`;
         return;
     }
 
@@ -924,10 +1013,14 @@ function renderSubscriptionDuplicateCheck(role) {
         const safeName = escapeHtml(buildPersonDisplayName(person) || `Persoon #${person.id}`);
         const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
         const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
+        const mandantBadgeMarkup = buildMandantBadgeMarkup(person.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
         return `
             <div class="subscription-duplicate-item">
                 <div>
-                    <strong>${safeName}</strong>
+                    <span class="party-person-main">
+                        <strong>${safeName}</strong>
+                        ${mandantBadgeMarkup}
+                    </span>
                     <div class="subscription-duplicate-item-meta">persoon #${safeId}${safeAddressLine}</div>
                 </div>
                 <button type="button" class="subscription-duplicate-action" data-action="select-subscription-duplicate-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}">${escapeHtml(useExistingLabel)}</button>
@@ -1328,10 +1421,14 @@ function renderSubscriptionRoleSearchResults(role) {
         const safeId = escapeHtml(formatPersonReference(person.id));
         const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
         const selectLabel = escapeHtml(translate('subscription.search.selectButton', {}, 'Selecteer'));
+        const mandantBadgeMarkup = buildMandantBadgeMarkup(person.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
         return `
             <div class="party-search-result">
                 <div>
-                    <strong>${safeName}</strong>
+                    <span class="party-person-main">
+                        <strong>${safeName}</strong>
+                        ${mandantBadgeMarkup}
+                    </span>
                     <div class="party-search-result-meta">${safeId}${safeAddressLine}</div>
                 </div>
                 <button type="button" class="btn btn-small" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}">${selectLabel}</button>
@@ -1465,6 +1562,40 @@ function createPersonPayloadFromForm(prefix, optinData = null) {
     return personPayload;
 }
 
+function buildExistingPersonCredentialContext(selectedPerson) {
+    if (!selectedPerson || typeof selectedPerson !== 'object') {
+        return {};
+    }
+
+    const context = {};
+    const credentialKey = String(selectedPerson.credentialKey || '').trim();
+    const credentialTitle = String(selectedPerson.credentialTitle || '').trim();
+    const mandant = String(selectedPerson.mandant || '').trim();
+    const sourceSystem = String(selectedPerson.sourceSystem || '').trim();
+
+    if (credentialKey) {
+        context.credentialKey = credentialKey;
+    }
+
+    if (credentialTitle) {
+        context.credentialTitle = credentialTitle;
+    }
+
+    if (mandant) {
+        context.mandant = mandant;
+    }
+
+    if (typeof selectedPerson.supportsPersonLookup === 'boolean') {
+        context.supportsPersonLookup = selectedPerson.supportsPersonLookup;
+    }
+
+    if (sourceSystem) {
+        context.sourceSystem = sourceSystem;
+    }
+
+    return context;
+}
+
 function buildSubscriptionRolePayload(role, options = {}) {
     if (role === 'requester' && subscriptionRoleState.requesterSameAsRecipient) {
         return { sameAsRecipient: true };
@@ -1485,7 +1616,11 @@ function buildSubscriptionRolePayload(role, options = {}) {
             showToast(message, 'error');
             return null;
         }
-        return { personId: Number(roleState.selectedPerson.id) };
+
+        return {
+            personId: Number(roleState.selectedPerson.id),
+            ...buildExistingPersonCredentialContext(roleState.selectedPerson)
+        };
     }
 
     if (roleState.mode === 'create') {
@@ -1571,6 +1706,7 @@ if (typeof window !== 'undefined') {
         populateBirthdayFields,
         refreshSubscriptionDuplicateMatches,
         renderCustomerForm,
+        resolveMandantBadgeConfig,
         renderRequesterSameSummary,
         renderSubscriptionDuplicateCheck,
         renderSubscriptionRoleSearchResults,

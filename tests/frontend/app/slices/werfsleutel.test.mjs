@@ -111,6 +111,15 @@ function createMockElement(overrides = {}) {
         removeAttribute(name) {
             delete this.attributes[name];
         },
+        querySelector(selector) {
+            if (typeof selector === 'string' && selector.startsWith('#werfsleutelOption-')) {
+                return {
+                    id: selector.slice(1),
+                    scrollIntoView() {}
+                };
+            }
+            return null;
+        },
         querySelectorAll() {
             return [];
         }
@@ -177,6 +186,11 @@ function installWerfsleutelDomHarness(locale = 'nl') {
     globalThis.showToast = (message, type) => {
         toasts.push({ message, type });
     };
+    globalThis.kiwiBasePath = '/kiwi';
+    globalThis.kiwiAssetPaths = {
+        avrotrosLogo: '/assets/img/avrotros-logo.svg',
+        kroncrvLogo: '/assets/img/kroncrv-logo.svg'
+    };
 
     return { elements, toasts };
 }
@@ -187,11 +201,11 @@ function createWerfsleutelActionHarness() {
             addEventListener() {},
             removeEventListener() {}
         },
-        eventTypes: ['click']
+        eventTypes: ['click', 'input']
     });
     registerWerfsleutelActions(router);
 
-    function dispatchClick(actionName, args = {}) {
+    function dispatchAction(eventType, actionName, args = {}, value = '') {
         const dataset = { action: actionName };
         for (const [key, value] of Object.entries(args)) {
             const datasetKey = `arg${key.charAt(0).toUpperCase()}${key.slice(1)}`;
@@ -199,11 +213,12 @@ function createWerfsleutelActionHarness() {
         }
 
         const actionElement = {
-            dataset
+            dataset,
+            value
         };
 
         router.dispatch({
-            type: 'click',
+            type: eventType,
             target: {
                 closest() {
                     return actionElement;
@@ -214,7 +229,15 @@ function createWerfsleutelActionHarness() {
         });
     }
 
-    return { dispatchClick };
+    function dispatchClick(actionName, args = {}) {
+        dispatchAction('click', actionName, args);
+    }
+
+    function dispatchInput(actionName, value, args = {}) {
+        dispatchAction('input', actionName, args, value);
+    }
+
+    return { dispatchClick, dispatchInput };
 }
 
 function testSummaryHeaderStatesAndCardTerminology() {
@@ -345,6 +368,54 @@ function testSelectingOfferDoesNotShowSuccessToast() {
     assert.deepEqual(toasts, []);
 }
 
+function testWerfsleutelMandantBadgesUseLogoBranding() {
+    __resetWerfsleutelSliceForTests();
+    const { elements } = installWerfsleutelDomHarness('nl');
+    const { dispatchClick, dispatchInput } = createWerfsleutelActionHarness();
+
+    globalThis.kiwiWerfsleutelSlice.setCatalogMetadata({
+        catalog: [
+            {
+                salesCode: 'TVK1',
+                title: 'TV Krant 1 jaar',
+                price: 52,
+                allowedChannels: ['OL'],
+                isActive: true,
+                mandant: 'HMC'
+            },
+            {
+                salesCode: 'KRO1',
+                title: 'KRO Magazine 1 jaar',
+                price: 52,
+                allowedChannels: ['OL'],
+                isActive: true,
+                mandant: 'KRONCRV'
+            },
+            {
+                salesCode: 'UNK1',
+                title: 'Onbekend aanbod',
+                price: 52,
+                allowedChannels: ['OL'],
+                isActive: true
+            }
+        ]
+    });
+
+    dispatchInput('handle-werfsleutel-input', 'TV Krant');
+    assert.equal(elements.werfsleutelSuggestions.innerHTML.includes('avrotros-logo.svg'), true);
+    assert.equal(elements.werfsleutelSuggestions.innerHTML.includes('alt="AVROTROS"'), true);
+
+    dispatchInput('handle-werfsleutel-input', 'Onbekend');
+    assert.equal(elements.werfsleutelSuggestions.innerHTML.includes('avrotros-logo.svg'), false);
+    assert.equal(elements.werfsleutelSuggestions.innerHTML.includes('kroncrv-logo.svg'), false);
+
+    dispatchClick('select-werfsleutel', { salesCode: 'TVK1' });
+    dispatchClick('select-werfsleutel', { salesCode: 'KRO1' });
+
+    assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('avrotros-logo.svg'), true);
+    assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('kroncrv-logo.svg'), true);
+}
+
 function run() {
     __resetWerfsleutelSliceForTests();
     testBarcodeDetection();
@@ -356,6 +427,7 @@ function run() {
     testPluralSummaryAndFirstIncompleteStaysExpanded();
     testEnglishSingularAndPluralSummaryCopy();
     testSelectingOfferDoesNotShowSuccessToast();
+    testWerfsleutelMandantBadgesUseLogoBranding();
     console.log('werfsleutel slice tests passed');
 }
 

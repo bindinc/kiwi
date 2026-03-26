@@ -91,6 +91,10 @@ final class WebaboOfferCatalogService
             'subscriptionCode' => $offer->getSubscriptionCode(),
             'productCode' => $offer->getProductCode(),
             'credentialKey' => $offer->getCredentialKey(),
+            'credentialTitle' => $this->normalizeNullableString($rawPayload['credentialTitle'] ?? null),
+            'mandant' => $this->normalizeNullableString($rawPayload['mandant'] ?? null),
+            'supportsPersonLookup' => $this->normalizeNullableBoolean($rawPayload['supportsPersonLookup'] ?? null),
+            'sourceSystem' => $this->normalizeNullableString($rawPayload['sourceSystem'] ?? null) ?? 'webabo-api',
             'validFrom' => $offer->getValidFrom()?->format(\DateTimeInterface::ATOM),
             'validUntil' => $offer->getValidUntil()?->format(\DateTimeInterface::ATOM),
             'syncedAt' => $offer->getSyncedAt()->format(\DateTimeInterface::ATOM),
@@ -201,5 +205,39 @@ final class WebaboOfferCatalogService
         }
 
         return 'Onbekend';
+    }
+
+    private function normalizeNullableString(mixed $value): ?string
+    {
+        if (!\is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return '' !== $normalized ? $normalized : null;
+    }
+
+    private function normalizeNullableBoolean(mixed $value): ?bool
+    {
+        if (\is_bool($value)) {
+            return $value;
+        }
+
+        if (\is_int($value)) {
+            return 0 !== $value;
+        }
+
+        if (!\is_string($value)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return match ($normalized) {
+            '1', 'true', 'yes', 'y', 'on' => true,
+            '0', 'false', 'no', 'n', 'off' => false,
+            default => null,
+        };
     }
 }

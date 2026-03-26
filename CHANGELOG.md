@@ -3,7 +3,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [v1.0.13]
+## [unreleased]
+
+### Changed
+- Parse mandant and person-lookup metadata from named HUP credentials, expose that context on Webabo offer responses, and carry the same credential context through subscription queue payloads so upcoming API-backed person retrieval can switch over without another contract change.
+- Render AVROTROS and KRO-NCRV logo badges for werfsleutels and subscription person lookups based on HUP credential `client` metadata, while keeping `client_search` available for the later full API-backed person lookup flow.
+
+## [v1.0.14]
 
 ### Added
 - Add the `sc-187755` queue-first subscription ordering flow with PostgreSQL-backed `subscription_orders` and `outbox_events`, idempotency on `submissionId`, order status lookup endpoints, and a frontend queue infobox.
