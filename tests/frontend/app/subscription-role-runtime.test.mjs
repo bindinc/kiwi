@@ -303,6 +303,7 @@ async function testSelectSubscriptionRolePersonHydratesDetailAndPrefillsIban() {
 function testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant() {
     const selectedPerson = {
         id: 41,
+        personId: '12345',
         firstName: 'Demo',
         middleName: '',
         lastName: 'Gebruiker',
@@ -319,6 +320,7 @@ function testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant() {
 
     assert.equal(elements.recipientSelectedPerson.innerHTML.includes('avrotros-logo.svg'), true);
     assert.equal(elements.recipientSelectedPerson.innerHTML.includes('alt="AVROTROS"'), true);
+    assert.equal(elements.recipientSelectedPerson.innerHTML.includes('Abon.nr 12345'), true);
 }
 
 function testRenderSelectedPersonPrefersDivisionIdForBadge() {
@@ -371,6 +373,7 @@ function testRenderSearchResultsShowsKroncrvBadgeAndUnknownFallback() {
     context.subscriptionRoleState.requester.searchResults = [
         {
             id: 52,
+            personId: '98765',
             firstName: 'Kro',
             middleName: '',
             lastName: 'Gebruiker',
@@ -382,6 +385,7 @@ function testRenderSearchResultsShowsKroncrvBadgeAndUnknownFallback() {
     runtime.renderSubscriptionRoleSearchResults('requester');
     assert.equal(elements.requesterSearchResults.innerHTML.includes('kroncrv-logo.svg'), true);
     assert.equal(elements.requesterSearchResults.innerHTML.includes('alt="KRO-NCRV"'), true);
+    assert.equal(elements.requesterSearchResults.innerHTML.includes('Abon.nr 98765'), true);
 
     context.subscriptionRoleState.requester.searchResults = [
         {

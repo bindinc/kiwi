@@ -573,8 +573,34 @@ async function hydrateSubscriptionRoleSelectedPerson(role) {
     }
 }
 
-function formatPersonReference(personId) {
-    return translate('common.personWithId', { id: personId }, `persoon #${personId}`);
+function resolvePersonReferenceValue(personOrId) {
+    if (personOrId && typeof personOrId === 'object') {
+        const referenceCandidates = [
+            personOrId.personId,
+            personOrId.personNumber,
+            personOrId.id
+        ];
+
+        for (const candidate of referenceCandidates) {
+            const normalizedCandidate = String(candidate || '').trim();
+            if (normalizedCandidate) {
+                return normalizedCandidate;
+            }
+        }
+
+        return '';
+    }
+
+    return String(personOrId || '').trim();
+}
+
+function formatPersonReference(personOrId) {
+    const referenceValue = resolvePersonReferenceValue(personOrId);
+    if (!referenceValue) {
+        return translate('common.personWithoutReference', {}, 'persoon');
+    }
+
+    return translate('subscription.personReference', { personId: referenceValue }, `Abon.nr ${referenceValue}`);
 }
 
 function renderSubscriptionRoleSelectedPerson(role) {
@@ -593,9 +619,9 @@ function renderSubscriptionRoleSelectedPerson(role) {
         return;
     }
 
-    const name = escapeHtml(buildPersonDisplayName(selectedPerson) || formatPersonReference(selectedPerson.id));
+    const name = escapeHtml(buildPersonDisplayName(selectedPerson) || formatPersonReference(selectedPerson));
     const address = escapeHtml(buildPersonDisplayAddress(selectedPerson));
-    const personId = escapeHtml(formatPersonReference(selectedPerson.id));
+    const personId = escapeHtml(formatPersonReference(selectedPerson));
     const addressLine = address ? ` · ${address}` : '';
     const mandantBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(selectedPerson), 'mandant-logo-badge mandant-logo-badge--compact');
     selectedNode.classList.remove('empty');
@@ -619,14 +645,14 @@ function renderRequesterSameSummary() {
 
     const recipient = subscriptionRoleState.recipient.selectedPerson;
     if (recipient && recipient.id !== undefined && recipient.id !== null) {
-        const name = escapeHtml(buildPersonDisplayName(recipient) || formatPersonReference(recipient.id));
+        const name = escapeHtml(buildPersonDisplayName(recipient) || formatPersonReference(recipient));
         const recipientBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(recipient), 'mandant-logo-badge mandant-logo-badge--compact');
         const requesterFollowsRecipientLabel = translate(
             'subscription.requesterFollowsRecipientIntro',
             {},
             'Aanvrager/betaler volgt de ontvanger:'
         );
-        summaryNode.innerHTML = `${escapeHtml(requesterFollowsRecipientLabel)} <span class="party-person-main"><strong>${name}</strong>${recipientBadgeMarkup}</span> · ${escapeHtml(formatPersonReference(recipient.id))}.`;
+        summaryNode.innerHTML = `${escapeHtml(requesterFollowsRecipientLabel)} <span class="party-person-main"><strong>${name}</strong>${recipientBadgeMarkup}</span> · ${escapeHtml(formatPersonReference(recipient))}.`;
         return;
     }
 
@@ -1547,9 +1573,9 @@ function renderSubscriptionRoleSearchResults(role) {
     }
 
     resultsNode.innerHTML = results.map((person) => {
-        const safeName = escapeHtml(buildPersonDisplayName(person) || formatPersonReference(person.id));
+        const safeName = escapeHtml(buildPersonDisplayName(person) || formatPersonReference(person));
         const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
-        const safeId = escapeHtml(formatPersonReference(person.id));
+        const safeId = escapeHtml(formatPersonReference(person));
         const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
         const selectLabel = escapeHtml(translate('subscription.search.selectButton', {}, 'Selecteer'));
         const mandantBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(person), 'mandant-logo-badge mandant-logo-badge--compact');
