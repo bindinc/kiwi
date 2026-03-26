@@ -107,9 +107,9 @@ final class AggregatedPersonSearchServiceTest extends TestCase
 
         self::assertSame(1, $payload['page']);
         self::assertSame(20, $payload['pageSize']);
-        self::assertSame(2, $payload['total']);
-        self::assertSame(['Bakker', 'Vries'], array_column($payload['items'], 'lastName'));
-        self::assertSame([150, 200], array_column($payload['items'], 'id'));
+        self::assertSame(1, $payload['total']);
+        self::assertSame(['Bakker'], array_column($payload['items'], 'lastName'));
+        self::assertSame([150], array_column($payload['items'], 'id'));
         self::assertSame(
             'https://example.invalid/subscription/public/personsearch?page=0&pagesize=20&postcode=1217AA&houseno=10&name=bakker',
             $requests[1]['url'],
@@ -118,6 +118,67 @@ final class AggregatedPersonSearchServiceTest extends TestCase
             'https://example.invalid/subscription/public/personsearch?page=0&pagesize=20&postcode=1217AA&houseno=10&name=bakker',
             $requests[3]['url'],
         );
+    }
+
+    public function testSearchAppliesAdditionalFiltersStrictlyAfterUpstreamSearch(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFile([
+            'tvk' => [
+                'title' => 'TV Krant',
+                'username' => 'tvk-user',
+                'password' => 'tvk-password',
+                'client_search' => 'yes',
+                'client' => 'HMC',
+            ],
+        ]);
+
+        $responses = [
+            $this->createTokenResponse('tvk-token'),
+            $this->createSearchResponse([
+                [
+                    'personId' => '200',
+                    'divisionId' => 'HMC',
+                    'name' => 'deijkers',
+                    'firstName' => 'Bart',
+                    'street' => 'Teststraat',
+                    'houseNo' => '80',
+                    'city' => 'Hilversum',
+                    'postCode' => '1217EW',
+                    'phone' => ['035-1234567'],
+                    'geteMail' => ['bart.deijkers@bindinc.nl'],
+                ],
+                [
+                    'personId' => '201',
+                    'divisionId' => 'HMC',
+                    'name' => 'deijkers',
+                    'firstName' => 'Bart',
+                    'street' => 'Teststraat',
+                    'houseNo' => '80',
+                    'city' => 'Hilversum',
+                    'postCode' => '1217EW',
+                    'phone' => ['035-1234567'],
+                    'geteMail' => ['ictservices@bindinc.nl'],
+                ],
+            ]),
+        ];
+
+        $httpClient = new MockHttpClient(static function () use (&$responses) {
+            return array_shift($responses);
+        });
+
+        $service = $this->createService($httpClient, dirname($clientSecretsPath));
+
+        $payload = $service->search([
+            'postalCode' => '1217EW',
+            'houseNumber' => '80',
+            'name' => '',
+            'phone' => '',
+            'email' => 'bart.deijkers@bindinc.nl',
+        ], 1, 20, 'name');
+
+        self::assertSame(1, $payload['total']);
+        self::assertSame([200], array_column($payload['items'], 'id'));
+        self::assertSame(['bart.deijkers@bindinc.nl'], array_column($payload['items'], 'email'));
     }
 
     public function testSearchReturnsPartialResultsWhenOneCredentialFails(): void

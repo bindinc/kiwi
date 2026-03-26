@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Keep subscription-api customer selection stateless by letting the detailcall carry `credentialKey` and merge hydrated detail fields with the cached search result instead of depending on pod-local lookup state.
 - Keep subscription-api customer detail usable when order enrichment fails by returning the hydrated person data with an empty `subscriptions` list instead of failing the whole selection flow.
 - Keep `Klant Zoeken` interface feedback aligned with the actual request by including phone and e-mail filters in the visible search summary instead of making those searches look like an unfiltered `"alle klanten"` query.
+- Keep subscription-api `Klant Zoeken` result sets strict when upstream `personsearch` responds fuzzily, by reapplying postcode, house number, name, phone, and e-mail filters locally before KIWI shows the aggregated customer list.
 
 ## [v1.0.14]
 

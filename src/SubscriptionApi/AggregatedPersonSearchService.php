@@ -45,11 +45,25 @@ final class AggregatedPersonSearchService
         $safePage = max(1, $page);
         $safePageSize = max(1, min($pageSize, 200));
         $upstreamQuery = $this->buildUpstreamQuery($filters, $safePage, $safePageSize);
+        $normalizedFilters = $this->normalizeFilters($filters);
 
         $normalizedItems = [];
         foreach ($this->multiCredentialPersonSearchService->search($upstreamQuery) as $searchResult) {
-            foreach ($this->personSearchResultNormalizer->normalizeCredentialResult($searchResult) as $normalizedPerson) {
-                $normalizedItems[] = $normalizedPerson;
+            $content = $searchResult->payload['content'] ?? null;
+            if (!\is_array($content)) {
+                continue;
+            }
+
+            foreach ($content as $rawPerson) {
+                if (!\is_array($rawPerson)) {
+                    continue;
+                }
+
+                if (!$this->matchesRawPersonAgainstFilters($rawPerson, $normalizedFilters)) {
+                    continue;
+                }
+
+                $normalizedItems[] = $this->personSearchResultNormalizer->normalizePerson($rawPerson, $searchResult->credential);
             }
         }
 
@@ -82,6 +96,94 @@ final class AggregatedPersonSearchService
             'phone' => $this->normalizeNullableString($filters['phone'] ?? null),
             'email' => $this->normalizeNullableString($filters['email'] ?? null),
         ];
+    }
+
+    /**
+     * @param array<string, string> $filters
+     * @return array{postalCode:string, houseNumber:string, name:string, phone:string, email:string}
+     */
+    private function normalizeFilters(array $filters): array
+    {
+        return [
+            'postalCode' => $this->normalizePostalCode($filters['postalCode'] ?? null),
+            'houseNumber' => $this->normalizeCaseInsensitiveString($filters['houseNumber'] ?? null),
+            'name' => $this->normalizeCaseInsensitiveString($filters['name'] ?? null),
+            'phone' => $this->normalizePhone($filters['phone'] ?? null),
+            'email' => $this->normalizeCaseInsensitiveString($filters['email'] ?? null),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $rawPerson
+     * @param array{postalCode:string, houseNumber:string, name:string, phone:string, email:string} $filters
+     */
+    private function matchesRawPersonAgainstFilters(array $rawPerson, array $filters): bool
+    {
+        $matchesPostalCode = '' === $filters['postalCode']
+            || $this->normalizePostalCode($rawPerson['postCode'] ?? null) === $filters['postalCode'];
+        $matchesHouseNumber = '' === $filters['houseNumber']
+            || $this->normalizeCaseInsensitiveString($rawPerson['houseNo'] ?? null) === $filters['houseNumber'];
+        $matchesName = $this->matchesNameFilter($rawPerson, $filters['name']);
+        $matchesPhone = $this->matchesPhoneFilter($rawPerson['phone'] ?? null, $filters['phone']);
+        $matchesEmail = $this->matchesEmailFilter($rawPerson['geteMail'] ?? null, $filters['email']);
+
+        return $matchesPostalCode && $matchesHouseNumber && $matchesName && $matchesPhone && $matchesEmail;
+    }
+
+    /**
+     * @param array<string, mixed> $rawPerson
+     */
+    private function matchesNameFilter(array $rawPerson, string $nameFilter): bool
+    {
+        if ('' === $nameFilter) {
+            return true;
+        }
+
+        $firstName = $this->normalizeCaseInsensitiveString($rawPerson['firstName'] ?? null);
+        $lastName = $this->normalizeCaseInsensitiveString($rawPerson['name'] ?? null);
+        $nameCandidates = array_filter([
+            $firstName,
+            $lastName,
+            trim(sprintf('%s %s', $firstName, $lastName)),
+        ], static fn (string $value): bool => '' !== $value);
+
+        foreach ($nameCandidates as $candidate) {
+            if (str_contains($candidate, $nameFilter)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function matchesPhoneFilter(mixed $rawPhoneNumbers, string $phoneFilter): bool
+    {
+        if ('' === $phoneFilter) {
+            return true;
+        }
+
+        foreach ($this->normalizeStringList($rawPhoneNumbers, [$this, 'normalizePhone']) as $phoneNumber) {
+            if (str_contains($phoneNumber, $phoneFilter)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function matchesEmailFilter(mixed $rawEmails, string $emailFilter): bool
+    {
+        if ('' === $emailFilter) {
+            return true;
+        }
+
+        foreach ($this->normalizeStringList($rawEmails, [$this, 'normalizeCaseInsensitiveString']) as $emailAddress) {
+            if (str_contains($emailAddress, $emailFilter)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -145,6 +247,58 @@ final class AggregatedPersonSearchService
             $this->normalizeNullableString($left) ?? '',
             $this->normalizeNullableString($right) ?? '',
         );
+    }
+
+    private function normalizePostalCode(mixed $value): string
+    {
+        $normalized = $this->normalizeNullableString($value);
+        if (null === $normalized) {
+            return '';
+        }
+
+        return strtoupper(str_replace(' ', '', $normalized));
+    }
+
+    private function normalizeCaseInsensitiveString(mixed $value): string
+    {
+        $normalized = $this->normalizeNullableString($value);
+        if (null === $normalized) {
+            return '';
+        }
+
+        return strtolower($normalized);
+    }
+
+    private function normalizePhone(mixed $value): string
+    {
+        if (!\is_string($value)) {
+            return '';
+        }
+
+        return preg_replace('/\D+/', '', $value) ?? '';
+    }
+
+    /**
+     * @param callable(mixed): string $normalizer
+     * @return list<string>
+     */
+    private function normalizeStringList(mixed $values, callable $normalizer): array
+    {
+        if (!\is_array($values)) {
+            return [];
+        }
+
+        $normalizedValues = [];
+        foreach ($values as $value) {
+            $normalizedValue = $normalizer($value);
+            if ('' === $normalizedValue) {
+                continue;
+            }
+
+            $normalizedValues[] = $normalizedValue;
+        }
+
+        return $normalizedValues;
     }
 
     private function normalizeNullableString(mixed $value): ?string
