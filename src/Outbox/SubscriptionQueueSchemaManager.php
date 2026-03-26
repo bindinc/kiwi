@@ -45,7 +45,7 @@ final class SubscriptionQueueSchemaManager
             $this->entityManager->getClassMetadata(OutboxEvent::class),
         ];
         $tablesExist = $this->hasQueueTables();
-        $sql = $schemaTool->getUpdateSchemaSql($metadata, true);
+        $sql = $this->filterManagedSchemaSql($schemaTool->getUpdateSchemaSql($metadata, true));
 
         if ([] === $sql) {
             return [
@@ -54,11 +54,37 @@ final class SubscriptionQueueSchemaManager
             ];
         }
 
-        $schemaTool->updateSchema($metadata, true);
+        foreach ($sql as $statement) {
+            $this->connection->executeStatement($statement);
+        }
 
         return [
             'status' => $tablesExist ? 'updated' : 'created',
             'sql_count' => count($sql),
         ];
+    }
+
+    /**
+     * @param list<string> $sql
+     * @return list<string>
+     */
+    private function filterManagedSchemaSql(array $sql): array
+    {
+        $managedTableNames = [
+            self::ORDER_TABLE,
+            self::OUTBOX_TABLE,
+        ];
+
+        return array_values(array_filter($sql, static function (string $statement) use ($managedTableNames): bool {
+            $normalizedStatement = strtolower($statement);
+
+            foreach ($managedTableNames as $tableName) {
+                if (str_contains($normalizedStatement, strtolower($tableName))) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
     }
 }

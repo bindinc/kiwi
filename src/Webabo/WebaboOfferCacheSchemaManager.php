@@ -42,7 +42,7 @@ final class WebaboOfferCacheSchemaManager
         $schemaTool = new SchemaTool($this->entityManager);
         $metadata = [$this->entityManager->getClassMetadata(WebaboOffer::class)];
         $tableExists = $this->hasCacheTable();
-        $sql = $schemaTool->getUpdateSchemaSql($metadata, true);
+        $sql = $this->filterManagedSchemaSql($schemaTool->getUpdateSchemaSql($metadata, true));
 
         if ([] === $sql) {
             return [
@@ -51,7 +51,9 @@ final class WebaboOfferCacheSchemaManager
             ];
         }
 
-        $schemaTool->updateSchema($metadata, true);
+        foreach ($sql as $statement) {
+            $this->connection->executeStatement($statement);
+        }
 
         return [
             'status' => $tableExists ? 'updated' : 'created',
@@ -74,5 +76,29 @@ final class WebaboOfferCacheSchemaManager
             self::LEGACY_CACHE_TABLE,
             self::CACHE_TABLE,
         ));
+    }
+
+    /**
+     * @param list<string> $sql
+     * @return list<string>
+     */
+    private function filterManagedSchemaSql(array $sql): array
+    {
+        $managedTableNames = [
+            self::CACHE_TABLE,
+            self::LEGACY_CACHE_TABLE,
+        ];
+
+        return array_values(array_filter($sql, static function (string $statement) use ($managedTableNames): bool {
+            $normalizedStatement = strtolower($statement);
+
+            foreach ($managedTableNames as $tableName) {
+                if (str_contains($normalizedStatement, strtolower($tableName))) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
     }
 }
