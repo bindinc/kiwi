@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [v1.0.13]
 
 ### Added
 - Add the `sc-187755` queue-first subscription ordering flow with PostgreSQL-backed `subscription_orders` and `outbox_events`, idempotency on `submissionId`, order status lookup endpoints, and a frontend queue infobox.
