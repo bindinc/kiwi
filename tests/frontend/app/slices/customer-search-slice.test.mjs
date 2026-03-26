@@ -137,6 +137,7 @@ function testRenderCustomerRowShowsMandantBadgeForRecognizedMandant() {
     try {
         const markup = __customerSearchTestUtils.renderCustomerRow({
             id: 41,
+            personId: '12345',
             firstName: 'Demo',
             middleName: '',
             lastName: 'Gebruiker',
@@ -150,6 +151,7 @@ function testRenderCustomerRowShowsMandantBadgeForRecognizedMandant() {
 
         assert.equal(markup.includes('avrotros-logo.svg'), true);
         assert.equal(markup.includes('alt="AVROTROS"'), true);
+        assert.equal(markup.includes('12345'), true);
     } finally {
         if (previousBasePath === undefined) {
             delete globalThis.kiwiBasePath;

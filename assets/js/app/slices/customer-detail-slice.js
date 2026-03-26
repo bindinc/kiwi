@@ -162,6 +162,19 @@ function buildCustomerFullName(customer) {
     return nameParts.join(' ');
 }
 
+function buildCustomerHeader(customer) {
+    const fullName = buildCustomerFullName(customer);
+    const personReference = String(customer && customer.personId || '').trim();
+
+    if (!personReference) {
+        return fullName;
+    }
+
+    return fullName
+        ? `${fullName} (${personReference})`
+        : `(${personReference})`;
+}
+
 function buildCustomerAddressLine(customer) {
     if (!customer) {
         return '';
@@ -528,7 +541,7 @@ export async function selectCustomer(customerId) {
     setElementDisplay('searchResultsView', 'none');
     setElementDisplay('customerDetail', 'block');
 
-    setElementText('customerName', buildCustomerFullName(selectedCustomer));
+    setElementText('customerName', buildCustomerHeader(selectedCustomer));
     setElementText('customerAddress', buildCustomerAddressLine(selectedCustomer));
     setElementText('customerEmail', selectedCustomer.email || '');
     setElementText('customerPhone', selectedCustomer.phone || '');
@@ -584,3 +597,8 @@ export function registerCustomerDetailSlice(actionRouter) {
         }
     });
 }
+
+export const __customerDetailTestUtils = {
+    buildCustomerFullName,
+    buildCustomerHeader
+};

@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Switch `GET /api/v1/persons` to the new subscription-api aggregator when searchable HUP credentials are configured, while keeping a local cached-result fallback for customer selection until the dedicated detail hydration route lands in the next phase.
 - Keep subscription-api customers readonly in unsupported detail actions by hiding legacy edit/editorial buttons and blocking customer edits, article orders, and delivery-remark mutations while those data domains still lack upstream API coverage.
 - Carry a selected subscription-api person's hydrated snapshot through the subscription workflow so queued requests stay stateless, preserve credential context, and can reuse the selected customer's primary IBAN when it is already available via `ppa_base_url`.
+- Show the selected customer's `personId` in the `Klant Zoeken` result table and append the same reference to the detail header so agents can see the abon.nr without opening another screen.
 
 ### Fixed
 - Keep `Klant Zoeken` working when the upstream `personsearch` endpoint returns `HTTP 500` for `divisionid`-filtered requests by searching each enabled credential without that broken filter and still returning partial results when one credential fails.

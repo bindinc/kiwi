@@ -1,5 +1,5 @@
 import { getGlobalScope } from '../services.js';
-import { NAME_INSERTION_PREFIXES, generateSubscriptionNumber } from '../subscription-shared-helpers.js';
+import { NAME_INSERTION_PREFIXES } from '../subscription-shared-helpers.js';
 
 const searchState = {
     results: [],
@@ -526,18 +526,21 @@ function buildSubscriptionBadges(customer) {
     return '<span style="color: var(--text-secondary); font-size: 0.875rem;">Geen actief</span>';
 }
 
-function buildSubscriberNumber(customer) {
-    const subscriptions = getCustomerSubscriptions(customer);
-    const activeSubscriptions = subscriptions.filter((subscription) => subscription.status === 'active');
-    const primarySubscription = activeSubscriptions.length > 0
-        ? activeSubscriptions[0]
-        : subscriptions[0];
+function buildCustomerSearchReference(customer) {
+    const referenceCandidates = [
+        customer && customer.personId,
+        customer && customer.personNumber,
+        customer && customer.id
+    ];
 
-    if (!primarySubscription) {
-        return '-';
+    for (const candidate of referenceCandidates) {
+        const normalizedCandidate = String(candidate || '').trim();
+        if (normalizedCandidate) {
+            return normalizedCandidate;
+        }
     }
 
-    return generateSubscriptionNumber(customer.id, primarySubscription.id);
+    return '-';
 }
 
 function shouldShowIdentifyButton() {
@@ -550,7 +553,7 @@ function renderCustomerRow(customer) {
     const mandantBadgeMarkup = buildMandantBadgeMarkup(customer);
     const initials = getCustomerInitials(customer) || '-';
     const subscriptionBadges = buildSubscriptionBadges(customer);
-    const subscriberNumber = buildSubscriberNumber(customer);
+    const customerReference = buildCustomerSearchReference(customer);
     const showIdentifyButton = shouldShowIdentifyButton();
     const viewActionLabel = translateKey('search.viewAction', {}, 'Bekijken');
 
@@ -565,7 +568,7 @@ function renderCustomerRow(customer) {
                 <span>${customer.postalCode} ${customer.city}</span>
             </td>
             <td class="result-row-subscriptions">${subscriptionBadges}</td>
-            <td class="result-row-subscriber-number">${subscriberNumber}</td>
+            <td class="result-row-subscriber-number">${customerReference}</td>
             <td class="result-row-actions">
                 <button class="btn btn-small" type="button" data-action="select-customer" data-arg-customer-id="${customer.id}" data-action-stop-propagation="true">
                     ${viewActionLabel}
