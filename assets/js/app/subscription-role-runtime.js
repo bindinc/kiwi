@@ -392,6 +392,19 @@ function buildMandantBadgeMarkup(mandant, className = 'mandant-logo-badge') {
     `;
 }
 
+function resolvePersonBadgeMandant(person) {
+    if (!person || typeof person !== 'object') {
+        return '';
+    }
+
+    const divisionId = String(person.divisionId || '').trim();
+    if (divisionId) {
+        return divisionId;
+    }
+
+    return String(person.mandant || '').trim();
+}
+
 function getSubscriptionRoleConfig(role) {
     if (role === 'recipient') {
         return {
@@ -470,7 +483,7 @@ function renderSubscriptionRoleSelectedPerson(role) {
     const address = escapeHtml(buildPersonDisplayAddress(selectedPerson));
     const personId = escapeHtml(formatPersonReference(selectedPerson.id));
     const addressLine = address ? ` · ${address}` : '';
-    const mandantBadgeMarkup = buildMandantBadgeMarkup(selectedPerson.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+    const mandantBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(selectedPerson), 'mandant-logo-badge mandant-logo-badge--compact');
     selectedNode.classList.remove('empty');
     selectedNode.innerHTML = `
         <span class="party-person-main">
@@ -493,7 +506,7 @@ function renderRequesterSameSummary() {
     const recipient = subscriptionRoleState.recipient.selectedPerson;
     if (recipient && recipient.id !== undefined && recipient.id !== null) {
         const name = escapeHtml(buildPersonDisplayName(recipient) || formatPersonReference(recipient.id));
-        const recipientBadgeMarkup = buildMandantBadgeMarkup(recipient.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+        const recipientBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(recipient), 'mandant-logo-badge mandant-logo-badge--compact');
         const requesterFollowsRecipientLabel = translate(
             'subscription.requesterFollowsRecipientIntro',
             {},
@@ -1013,7 +1026,7 @@ function renderSubscriptionDuplicateCheck(role) {
         const safeName = escapeHtml(buildPersonDisplayName(person) || `Persoon #${person.id}`);
         const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
         const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
-        const mandantBadgeMarkup = buildMandantBadgeMarkup(person.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+        const mandantBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(person), 'mandant-logo-badge mandant-logo-badge--compact');
         return `
             <div class="subscription-duplicate-item">
                 <div>
@@ -1421,7 +1434,7 @@ function renderSubscriptionRoleSearchResults(role) {
         const safeId = escapeHtml(formatPersonReference(person.id));
         const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
         const selectLabel = escapeHtml(translate('subscription.search.selectButton', {}, 'Selecteer'));
-        const mandantBadgeMarkup = buildMandantBadgeMarkup(person.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+        const mandantBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(person), 'mandant-logo-badge mandant-logo-badge--compact');
         return `
             <div class="party-search-result">
                 <div>

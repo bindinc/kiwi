@@ -250,6 +250,28 @@ function testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant() {
     assert.equal(elements.recipientSelectedPerson.innerHTML.includes('alt="AVROTROS"'), true);
 }
 
+function testRenderSelectedPersonPrefersDivisionIdForBadge() {
+    const selectedPerson = {
+        id: 42,
+        firstName: 'Demo',
+        middleName: '',
+        lastName: 'Gebruiker',
+        postalCode: '1217AA',
+        city: 'Hilversum',
+        divisionId: 'HMC',
+        mandant: 'KRONCRV'
+    };
+
+    const { elements, runtime } = createRuntimeContext({
+        recipientSelectedPerson: selectedPerson
+    });
+
+    runtime.renderSubscriptionRoleSelectedPerson('recipient');
+
+    assert.equal(elements.recipientSelectedPerson.innerHTML.includes('avrotros-logo.svg'), true);
+    assert.equal(elements.recipientSelectedPerson.innerHTML.includes('kroncrv-logo.svg'), false);
+}
+
 function testRenderSearchResultsShowsKroncrvBadgeAndUnknownFallback() {
     const { context, elements, runtime } = createRuntimeContext();
 
@@ -284,12 +306,35 @@ function testRenderSearchResultsShowsKroncrvBadgeAndUnknownFallback() {
     assert.equal(elements.requesterSearchResults.innerHTML.includes('kroncrv-logo.svg'), false);
 }
 
+function testRenderSearchResultsFallsBackToMandantWhenDivisionIdIsMissing() {
+    const { context, elements, runtime } = createRuntimeContext();
+
+    context.subscriptionRoleState.requester.searchResults = [
+        {
+            id: 54,
+            firstName: 'Fallback',
+            middleName: '',
+            lastName: 'Gebruiker',
+            postalCode: '1234AB',
+            city: 'Utrecht',
+            divisionId: '',
+            mandant: 'KRONCRV'
+        }
+    ];
+    runtime.renderSubscriptionRoleSearchResults('requester');
+
+    assert.equal(elements.requesterSearchResults.innerHTML.includes('kroncrv-logo.svg'), true);
+    assert.equal(elements.requesterSearchResults.innerHTML.includes('alt="KRO-NCRV"'), true);
+}
+
 function run() {
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
     testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext();
     testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant();
+    testRenderSelectedPersonPrefersDivisionIdForBadge();
     testRenderSearchResultsShowsKroncrvBadgeAndUnknownFallback();
+    testRenderSearchResultsFallsBackToMandantWhenDivisionIdIsMissing();
     console.log('subscription role runtime tests passed');
 }
 

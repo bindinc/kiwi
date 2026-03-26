@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Parse mandant and person-lookup metadata from named HUP credentials, expose that context on Webabo offer responses, and carry the same credential context through subscription queue payloads so upcoming API-backed person retrieval can switch over without another contract change.
 - Render AVROTROS and KRO-NCRV logo badges for werfsleutels and subscription person lookups based on HUP credential `client` metadata, while keeping `client_search` available for the later full API-backed person lookup flow.
+- Let subscription person badges prefer `divisionId` when available and otherwise fall back to `mandant`, while preserving the existing HMC -> AVROTROS and KRONCRV -> KRO-NCRV branding rules.
 
 ## [v1.0.14]
 
