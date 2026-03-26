@@ -933,7 +933,17 @@ async function testCustomerDetailSliceLoadsSubscriptionApiDetailWithCredentialCo
                 city: 'Hilversum',
                 email: 'detail@example.com',
                 phone: '0591522006',
-                subscriptions: [],
+                subscriptions: [
+                    {
+                        id: 9001,
+                        magazine: 'Mikrogids',
+                        startDate: '2024-01-01',
+                        endDate: '2027-01-01',
+                        lastEdition: '2027-01-01',
+                        status: 'active',
+                        sourceSystem: 'subscription-api'
+                    }
+                ],
                 contactHistory: [],
                 sourceSystem: 'subscription-api'
             };
@@ -969,6 +979,9 @@ async function testCustomerDetailSliceLoadsSubscriptionApiDetailWithCredentialCo
         assert.equal(currentCustomer.birthday, '1945-11-20');
         assert.equal(elements.customerName.textContent, 'Dhr. Remote Gebruiker');
         assert.equal(elements.customerEmail.textContent, 'detail@example.com');
+        assert.equal(elements.subscriptionsList.innerHTML.includes('Mikrogids'), true);
+        assert.equal(elements.subscriptionsList.innerHTML.includes('edit-subscription'), false);
+        assert.equal(elements.subscriptionsList.innerHTML.includes('cancel-subscription'), false);
     } finally {
         if (previousDocument === undefined) {
             delete globalThis.document;

@@ -49,6 +49,21 @@ final class PersonSearchClient
         );
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function getOrders(string|int $customerPersonId, ?string $credentialName = null): array
+    {
+        $credential = $this->configProvider->getConfig()->getCredential($credentialName);
+
+        return $this->requestJson(
+            $credential->name,
+            $this->buildOrdersUrl((string) $customerPersonId),
+            'orders',
+            false,
+        );
+    }
+
     private function buildPersonUrl(string $personId): string
     {
         $normalizedPersonId = trim($personId);
@@ -60,6 +75,24 @@ final class PersonSearchClient
             '%s/public/persons/%s',
             rtrim($this->resolvePpaBaseUrl(), '/'),
             rawurlencode($normalizedPersonId),
+        );
+    }
+
+    private function buildOrdersUrl(string $customerPersonId): string
+    {
+        $normalizedCustomerPersonId = trim($customerPersonId);
+        if ('' === $normalizedCustomerPersonId) {
+            throw new \RuntimeException('Subscription API orders vereist een niet-lege customerPersonId.');
+        }
+
+        return sprintf(
+            '%s/public/orders?%s',
+            rtrim($this->resolvePpaBaseUrl(), '/'),
+            http_build_query([
+                'page' => 0,
+                'pagesize' => 500,
+                'customerPersonId' => $normalizedCustomerPersonId,
+            ]),
         );
     }
 

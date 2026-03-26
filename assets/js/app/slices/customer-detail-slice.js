@@ -192,6 +192,10 @@ function getSubscriptionMetadata(dependencies, subscription) {
     };
 }
 
+function isReadOnlySubscription(subscription) {
+    return String(subscription && subscription.sourceSystem || '').trim() === 'subscription-api';
+}
+
 function renderActiveSubscriptions(subscriptions, dependencies) {
     if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
         return '';
@@ -199,6 +203,13 @@ function renderActiveSubscriptions(subscriptions, dependencies) {
 
     const rows = subscriptions.map((subscription) => {
         const { pricingInfo, requesterMeta } = getSubscriptionMetadata(dependencies, subscription);
+        const actionsMarkup = isReadOnlySubscription(subscription)
+            ? ''
+            : `
+                <button class="icon-btn" type="button" data-action="edit-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.editTitle', 'Bewerken')}">✏️</button>
+                <button class="icon-btn" type="button" data-action="cancel-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.cancelTitle', 'Opzeggen')}">🚫</button>
+            `;
+
         return `
             <div class="subscription-item">
                 <div class="subscription-info">
@@ -211,8 +222,7 @@ function renderActiveSubscriptions(subscriptions, dependencies) {
                 </div>
                 <div class="subscription-actions">
                     <span class="subscription-status status-active">${translateLabel(dependencies, 'subscription.statusActive', 'Actief')}</span>
-                    <button class="icon-btn" type="button" data-action="edit-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.editTitle', 'Bewerken')}">✏️</button>
-                    <button class="icon-btn" type="button" data-action="cancel-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.cancelTitle', 'Opzeggen')}">🚫</button>
+                    ${actionsMarkup}
                 </div>
             </div>
         `;
@@ -240,6 +250,13 @@ function renderEndedSubscriptions(subscriptions, dependencies) {
         const endDateLabel = subscription.endDate
             ? `${translateLabel(dependencies, 'subscription.endLabel', 'Einde')}: ${formatDate(subscription.endDate)} • `
             : '';
+        const actionsMarkup = isReadOnlySubscription(subscription)
+            ? ''
+            : `
+                <button class="btn btn-small btn-winback" type="button" data-action="start-winback-for-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.winbackTitle', 'Winback/Opzegging')}">
+                    ${translateLabel(dependencies, 'subscription.winbackAction', '🎯 Winback/Opzegging')}
+                </button>
+            `;
 
         return `
             <div class="subscription-item subscription-ended">
@@ -254,9 +271,7 @@ function renderEndedSubscriptions(subscriptions, dependencies) {
                 </div>
                 <div class="subscription-actions">
                     <span class="subscription-status ${statusClass}">${statusText}</span>
-                    <button class="btn btn-small btn-winback" type="button" data-action="start-winback-for-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.winbackTitle', 'Winback/Opzegging')}">
-                        ${translateLabel(dependencies, 'subscription.winbackAction', '🎯 Winback/Opzegging')}
-                    </button>
+                    ${actionsMarkup}
                 </div>
             </div>
         `;
@@ -283,6 +298,13 @@ function renderRestitutedSubscriptions(subscriptions, dependencies) {
         const refundInfo = subscription.refundInfo
             ? `<br>${translateLabel(dependencies, 'subscription.refundToLabel', 'Restitutie naar')}: ${subscription.refundInfo.email}`
             : '';
+        const actionsMarkup = isReadOnlySubscription(subscription)
+            ? ''
+            : `
+                <button class="btn btn-small btn-secondary" type="button" data-action="revert-restitution" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.transferToOtherTitle', 'Overzetten naar andere persoon')}">
+                    ${translateLabel(dependencies, 'subscription.transferAction', '🔄 Overzetten')}
+                </button>
+            `;
 
         return `
             <div class="subscription-item subscription-restituted">
@@ -297,9 +319,7 @@ function renderRestitutedSubscriptions(subscriptions, dependencies) {
                 </div>
                 <div class="subscription-actions">
                     <span class="subscription-status status-restituted">${translateLabel(dependencies, 'subscription.statusRestituted', 'Gerestitueerd')}</span>
-                    <button class="btn btn-small btn-secondary" type="button" data-action="revert-restitution" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.transferToOtherTitle', 'Overzetten naar andere persoon')}">
-                        ${translateLabel(dependencies, 'subscription.transferAction', '🔄 Overzetten')}
-                    </button>
+                    ${actionsMarkup}
                 </div>
             </div>
         `;

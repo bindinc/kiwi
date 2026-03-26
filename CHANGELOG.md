@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add a personsearch result normalizer that maps subscription API search hits onto the KIWI person model, including credential context, badge-ready mandant resolution, and empty KIWI collections for fields that will be hydrated in later phases.
 - Add an aggregated `/api/v1/persons` search path that merges normalized Subscription API personsearch results across eligible credentials while keeping the existing frontend request shape intact.
 - Add a subscription-api detail hydration path for `GET /api/v1/persons/{id}` that loads `/public/persons/{personid}` with explicit credential context and maps the upstream person payload back onto the KIWI customer model.
+- Add subscription-api order hydration for selected customers so `GET /api/v1/persons/{id}` enriches the detail response with `/public/orders?customerPersonId=...` results instead of loading subscriptions during search.
 
 ### Changed
 - Parse mandant and person-lookup metadata from named HUP credentials, expose that context on Webabo offer responses, and carry the same credential context through subscription queue payloads so upcoming API-backed person retrieval can switch over without another contract change.
@@ -23,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Preserve badge and workflow mandant context from the configured HUP credential even when upstream search results expose numeric `divisionId` codes instead of the expected brand keys.
 - Show the same AVROTROS and KRO-NCRV mandant badges in the regular `Klant Zoeken` result list that subscription role search results already render.
 - Keep subscription-api customer selection stateless by letting the detailcall carry `credentialKey` and merge hydrated detail fields with the cached search result instead of depending on pod-local lookup state.
+- Keep subscription-api customer detail usable when order enrichment fails by returning the hydrated person data with an empty `subscriptions` list instead of failing the whole selection flow.
 
 ## [v1.0.14]
 

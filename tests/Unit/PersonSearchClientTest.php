@@ -174,6 +174,54 @@ final class PersonSearchClientTest extends TestCase
         );
     }
 
+    public function testGetOrdersUsesCustomerPersonIdQueryAndBearerToken(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFile([
+            'username' => 'demo-user',
+            'password' => 'demo-password',
+            'ppa_base_url' => 'https://example.invalid/subscription',
+        ]);
+        $requests = [];
+        $responses = [
+            new MockResponse((string) json_encode([
+                'access_token' => 'orders-token',
+                'expires_in' => 3600,
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+            new MockResponse((string) json_encode([
+                'content' => [
+                    [
+                        'rId' => '9001',
+                        'orderNumber' => 'SO-9001',
+                    ],
+                ],
+                'pageNumber' => 0,
+                'pageSize' => 500,
+                'totalElements' => 1,
+                'totalPages' => 1,
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+        ];
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests, &$responses) {
+            $requests[] = compact('method', 'url', 'options');
+
+            return array_shift($responses);
+        });
+
+        $client = $this->createClient($httpClient, dirname($clientSecretsPath));
+
+        $payload = $client->getOrders('12345');
+
+        self::assertSame('9001', $payload['content'][0]['rId'] ?? null);
+        self::assertCount(2, $requests);
+        self::assertSame(
+            'https://example.invalid/subscription/public/orders?page=0&pagesize=500&customerPersonId=12345',
+            $requests[1]['url'],
+        );
+        self::assertStringContainsString(
+            'Bearer orders-token',
+            $requests[1]['options']['normalized_headers']['authorization'][0] ?? '',
+        );
+    }
+
     public function testUnauthorizedSearchRetriesWithFreshToken(): void
     {
         $clientSecretsPath = $this->writeClientSecretsFile([

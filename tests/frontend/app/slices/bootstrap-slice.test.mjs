@@ -216,6 +216,13 @@ function testUpdateCustomerActionButtons() {
     });
     assert.equal(resendButton.style.display, 'inline-flex');
     assert.equal(winbackButton.style.display, 'inline-flex');
+
+    slice.updateCustomerActionButtons({
+        documentRef,
+        currentCustomer: { id: 1, sourceSystem: 'subscription-api' }
+    });
+    assert.equal(resendButton.style.display, 'none');
+    assert.equal(winbackButton.style.display, 'none');
 }
 
 function testUpdateTime() {
