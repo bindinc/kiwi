@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Add a reusable Subscription API personsearch client on top of `ppa_base_url` that reuses the existing HUP/WebAbo bearer-token flow, including retry-on-`401` behavior, so the later KIWI customer-search migration can switch to the upstream backend in phases.
+- Add a multi-credential Subscription API personsearch service that fans out searches only over HUP credentials with `client_search: "yes"` and injects the credential mandant as `divisionid` on every upstream request.
+- Add a personsearch result normalizer that maps subscription API search hits onto the KIWI person model, including credential context, badge-ready mandant resolution, and empty KIWI collections for fields that will be hydrated in later phases.
 
 ### Changed
 - Parse mandant and person-lookup metadata from named HUP credentials, expose that context on Webabo offer responses, and carry the same credential context through subscription queue payloads so upcoming API-backed person retrieval can switch over without another contract change.
@@ -14,13 +16,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [v1.0.14]
 
-### Added
-- Add the `sc-187755` queue-first subscription ordering flow with PostgreSQL-backed `subscription_orders` and `outbox_events`, idempotency on `submissionId`, order status lookup endpoints, and a frontend queue infobox.
-
 ### Changed
 - Let the HUP/Webabo integration read named credential sets from `hup.credentials`, keep legacy single-credential config as a fallback, sync werfsleutel offers by looping over every configured credential, and persist each offer's `credentialKey` so queued subscription requests can reuse the matching credential downstream.
 - Drive subscription channel combinations from Webabo `GET /offers/salescodecombinations` per cached offer credential/product and let agents add multiple subscriptions or memberships in one signup flow.
-- Refine the werfsleutel selection cards so completed items no longer show a redundant `Compleet` badge and title, price, sales code, and channel badges align more consistently across multiple selections.
+- Refine the werfsleutel selection cards so completed items no longer show a redundant `Compleet` badge and title, remove the extra success toast on offer selection, and align price, sales code, and channel badges more consistently across multiple selections.
+
+### Fixed
+- Prefer HUP password credentials over cached refresh tokens when acquiring access tokens, so named credential sets recover more reliably after token expiry.
+
+## [v1.0.13]
+
+### Fixed
+- Make `/app-logout` explicitly reject `GET` requests with `405 Method Not Allowed` and `Allow: POST`, while keeping the CSRF-protected `POST` logout flow intact.
+
+## [v1.0.12]
+
+### Added
+- Add the `sc-187755` queue-first subscription ordering flow with PostgreSQL-backed `subscription_orders` and `outbox_events`, idempotency on `submissionId`, order status lookup endpoints, and a frontend queue infobox.
+- Add a dedicated subscription queue display formatter plus PHPUnit and frontend coverage so queued order summaries render consistently across the workflow UI.
+
+### Changed
+- Normalize subscription signup payloads into explicit recipient, requester, offer, subscription, and contact-entry snapshots before queueing, so downstream processing and status views can rely on a stable queued contract.
+- Refine the queue infobox layout and queued-order summary rendering so agent, requester, recipient, and offer details stay readable during the subscription workflow.
 
 ## [v1.0.11]
 
