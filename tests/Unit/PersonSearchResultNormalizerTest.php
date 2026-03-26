@@ -199,4 +199,42 @@ final class PersonSearchResultNormalizerTest extends TestCase
         self::assertSame('NL80INGB0001340187', $normalized['iban']);
         self::assertSame([['origin' => 'UIS', 'identifier' => '41929371']], $normalized['references']);
     }
+
+    public function testNormalizeCredentialResultSupportsLiveEmailFieldName(): void
+    {
+        $credential = new HupApiCredential(
+            name: 'avrotros',
+            title: 'AVROTROS',
+            mandant: 'AVROTROS',
+            supportsPersonLookup: true,
+            username: 'avrotros-user',
+            password: 'avrotros-password',
+            refreshToken: null,
+        );
+        $result = new CredentialPersonSearchResult($credential, [
+            'content' => [
+                [
+                    'personId' => '54321',
+                    'divisionId' => '14',
+                    'name' => 'Deijkers',
+                    'firstName' => 'Bart',
+                    'street' => 'Kerkstraat',
+                    'houseNo' => '80',
+                    'city' => 'Hilversum',
+                    'postCode' => '1217EW',
+                    'phone' => ['035-1234567'],
+                    'eMail' => [' bart.deijkers@bindinc.nl '],
+                ],
+            ],
+        ]);
+
+        $normalizer = new PersonSearchResultNormalizer();
+
+        $normalized = $normalizer->normalizeCredentialResult($result);
+
+        self::assertCount(1, $normalized);
+        self::assertSame('bart.deijkers@bindinc.nl', $normalized[0]['email']);
+        self::assertSame('035-1234567', $normalized[0]['phone']);
+        self::assertSame('1217EW', $normalized[0]['postalCode']);
+    }
 }

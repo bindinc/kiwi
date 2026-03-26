@@ -87,7 +87,7 @@ final class PersonSearchResultNormalizer
                 $houseNumber,
             ),
             'city' => $this->normalizeNullableString($rawPerson['city'] ?? null) ?? '',
-            'email' => $this->normalizePrimaryStringFromList($rawPerson['geteMail'] ?? null) ?? '',
+            'email' => $this->extractSearchEmailAddress($rawPerson) ?? '',
             'phone' => $this->normalizePrimaryStringFromList($rawPerson['phone'] ?? null) ?? '',
             'credentialKey' => $credential->name,
             'credentialTitle' => $credential->title ?? '',
@@ -254,6 +254,15 @@ final class PersonSearchResultNormalizer
         }
 
         return null;
+    }
+
+    /**
+     * @param array<string, mixed> $rawPerson
+     */
+    private function extractSearchEmailAddress(array $rawPerson): ?string
+    {
+        return $this->normalizePrimaryStringFromList($rawPerson['eMail'] ?? null)
+            ?? $this->normalizePrimaryStringFromList($rawPerson['geteMail'] ?? null);
     }
 
     /**

@@ -125,7 +125,7 @@ final class AggregatedPersonSearchService
             || $this->normalizeCaseInsensitiveString($rawPerson['houseNo'] ?? null) === $filters['houseNumber'];
         $matchesName = $this->matchesNameFilter($rawPerson, $filters['name']);
         $matchesPhone = $this->matchesPhoneFilter($rawPerson['phone'] ?? null, $filters['phone']);
-        $matchesEmail = $this->matchesEmailFilter($rawPerson['geteMail'] ?? null, $filters['email']);
+        $matchesEmail = $this->matchesEmailFilter($rawPerson, $filters['email']);
 
         return $matchesPostalCode && $matchesHouseNumber && $matchesName && $matchesPhone && $matchesEmail;
     }
@@ -171,13 +171,16 @@ final class AggregatedPersonSearchService
         return false;
     }
 
-    private function matchesEmailFilter(mixed $rawEmails, string $emailFilter): bool
+    /**
+     * @param array<string, mixed> $rawPerson
+     */
+    private function matchesEmailFilter(array $rawPerson, string $emailFilter): bool
     {
         if ('' === $emailFilter) {
             return true;
         }
 
-        foreach ($this->normalizeStringList($rawEmails, [$this, 'normalizeCaseInsensitiveString']) as $emailAddress) {
+        foreach ($this->extractRawEmailAddresses($rawPerson) as $emailAddress) {
             if (str_contains($emailAddress, $emailFilter)) {
                 return true;
             }
@@ -299,6 +302,20 @@ final class AggregatedPersonSearchService
         }
 
         return $normalizedValues;
+    }
+
+    /**
+     * @param array<string, mixed> $rawPerson
+     * @return list<string>
+     */
+    private function extractRawEmailAddresses(array $rawPerson): array
+    {
+        $emailAddresses = array_merge(
+            $this->normalizeStringList($rawPerson['eMail'] ?? null, [$this, 'normalizeCaseInsensitiveString']),
+            $this->normalizeStringList($rawPerson['geteMail'] ?? null, [$this, 'normalizeCaseInsensitiveString']),
+        );
+
+        return array_values(array_unique($emailAddresses));
     }
 
     private function normalizeNullableString(mixed $value): ?string

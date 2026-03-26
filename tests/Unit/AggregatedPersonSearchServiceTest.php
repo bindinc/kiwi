@@ -145,7 +145,7 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                     'city' => 'Hilversum',
                     'postCode' => '1217EW',
                     'phone' => ['035-1234567'],
-                    'geteMail' => ['bart.deijkers@bindinc.nl'],
+                    'eMail' => ['bart.deijkers@bindinc.nl'],
                 ],
                 [
                     'personId' => '201',
@@ -157,7 +157,7 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                     'city' => 'Hilversum',
                     'postCode' => '1217EW',
                     'phone' => ['035-1234567'],
-                    'geteMail' => ['ictservices@bindinc.nl'],
+                    'eMail' => ['ictservices@bindinc.nl'],
                 ],
             ]),
         ];
