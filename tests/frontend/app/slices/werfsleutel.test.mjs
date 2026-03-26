@@ -118,6 +118,7 @@ function createMockElement(overrides = {}) {
 }
 
 function installWerfsleutelDomHarness(locale = 'nl') {
+    const toasts = [];
     const elements = {
         werfsleutelInput: createMockElement(),
         werfsleutelSuggestions: createMockElement(),
@@ -173,9 +174,11 @@ function installWerfsleutelDomHarness(locale = 'nl') {
             return localeTranslations[key] || key;
         }
     };
-    globalThis.showToast = () => {};
+    globalThis.showToast = (message, type) => {
+        toasts.push({ message, type });
+    };
 
-    return elements;
+    return { elements, toasts };
 }
 
 function createWerfsleutelActionHarness() {
@@ -216,7 +219,7 @@ function createWerfsleutelActionHarness() {
 
 function testSummaryHeaderStatesAndCardTerminology() {
     __resetWerfsleutelSliceForTests();
-    const elements = installWerfsleutelDomHarness('nl');
+    const { elements } = installWerfsleutelDomHarness('nl');
     const { dispatchClick } = createWerfsleutelActionHarness();
 
     globalThis.kiwiWerfsleutelSlice.setCatalogMetadata({
@@ -249,7 +252,7 @@ function testSummaryHeaderStatesAndCardTerminology() {
 
 function testPluralSummaryAndFirstIncompleteStaysExpanded() {
     __resetWerfsleutelSliceForTests();
-    const elements = installWerfsleutelDomHarness('nl');
+    const { elements } = installWerfsleutelDomHarness('nl');
     const { dispatchClick } = createWerfsleutelActionHarness();
 
     globalThis.kiwiWerfsleutelSlice.setCatalogMetadata({
@@ -287,7 +290,7 @@ function testPluralSummaryAndFirstIncompleteStaysExpanded() {
 
 function testEnglishSingularAndPluralSummaryCopy() {
     __resetWerfsleutelSliceForTests();
-    const elements = installWerfsleutelDomHarness('en');
+    const { elements } = installWerfsleutelDomHarness('en');
     const { dispatchClick } = createWerfsleutelActionHarness();
 
     globalThis.kiwiWerfsleutelSlice.setCatalogMetadata({
@@ -320,6 +323,28 @@ function testEnglishSingularAndPluralSummaryCopy() {
     assert.equal(elements.werfsleutelSummary.innerHTML.includes('2 channel combinations left to choose.'), true);
 }
 
+function testSelectingOfferDoesNotShowSuccessToast() {
+    __resetWerfsleutelSliceForTests();
+    const { toasts } = installWerfsleutelDomHarness('nl');
+    const { dispatchClick } = createWerfsleutelActionHarness();
+
+    globalThis.kiwiWerfsleutelSlice.setCatalogMetadata({
+        catalog: [
+            {
+                salesCode: 'AV1',
+                title: 'Avrobode 1 jaar',
+                price: 52,
+                allowedChannels: ['OL', 'TM/IB'],
+                isActive: true
+            }
+        ]
+    });
+
+    dispatchClick('select-werfsleutel', { salesCode: 'AV1' });
+
+    assert.deepEqual(toasts, []);
+}
+
 function run() {
     __resetWerfsleutelSliceForTests();
     testBarcodeDetection();
@@ -330,6 +355,7 @@ function run() {
     testSummaryHeaderStatesAndCardTerminology();
     testPluralSummaryAndFirstIncompleteStaysExpanded();
     testEnglishSingularAndPluralSummaryCopy();
+    testSelectingOfferDoesNotShowSuccessToast();
     console.log('werfsleutel slice tests passed');
 }
 

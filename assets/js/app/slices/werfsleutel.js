@@ -995,7 +995,6 @@ function addSelectedOffer(salesCode) {
     renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
     renderSelectedOfferList();
     updateWerfsleutelSummary();
-    notifyUser(translate('werfsleutel.offerAdded', 'Aanbieding toegevoegd aan de lijst.'), 'success');
 
     void loadSalesCodeCombinationsForOffer(selectedItem.salesCode);
 }
