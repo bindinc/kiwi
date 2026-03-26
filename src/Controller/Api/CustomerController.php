@@ -7,6 +7,8 @@ namespace App\Controller\Api;
 use App\Http\ApiProblemException;
 use App\Oidc\OidcClient;
 use App\SubscriptionApi\AggregatedPersonSearchService;
+use App\SubscriptionApi\PersonDetailService;
+use App\SubscriptionApi\SubscriptionApiResponseException;
 use App\Service\PocStateService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,6 +21,7 @@ final class CustomerController extends AbstractApiController
         OidcClient $oidcClient,
         private readonly PocStateService $stateService,
         private readonly AggregatedPersonSearchService $aggregatedPersonSearchService,
+        private readonly PersonDetailService $personDetailService,
     ) {
         parent::__construct($oidcClient);
     }
@@ -93,12 +96,19 @@ final class CustomerController extends AbstractApiController
         return $this->json($this->stateService->replaceCustomers($request->getSession(), $customers));
     }
 
-    #[Route('/{customerId}', name: 'api_customer_read', methods: ['GET'], requirements: ['customerId' => '\d+'])]
-    public function readCustomer(Request $request, int $customerId): JsonResponse
+    #[Route('/{customerId}', name: 'api_customer_read', methods: ['GET'], requirements: ['customerId' => '[^/]+' ])]
+    public function readCustomer(Request $request, string $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
 
-        return $this->json($this->stateService->getCustomer($request->getSession(), $customerId));
+        $credentialKey = trim((string) $request->query->get('credentialKey', ''));
+        if ('' !== $credentialKey) {
+            return $this->readSubscriptionApiCustomer($customerId, $credentialKey);
+        }
+
+        $numericCustomerId = $this->parseIntValue($customerId, 'customerId', required: true, errorCode: 'invalid_route_parameter');
+
+        return $this->json($this->stateService->getCustomer($request->getSession(), $numericCustomerId));
     }
 
     #[Route('/{customerId}', name: 'api_customer_update', methods: ['PATCH'], requirements: ['customerId' => '\d+'])]
@@ -170,5 +180,32 @@ final class CustomerController extends AbstractApiController
         $this->requireApiAccess($request);
 
         return $this->json($this->stateService->getArticleOrders($request->getSession(), $customerId));
+    }
+
+    private function readSubscriptionApiCustomer(string $customerId, string $credentialKey): JsonResponse
+    {
+        try {
+            return $this->json($this->personDetailService->getPerson($customerId, $credentialKey));
+        } catch (SubscriptionApiResponseException $exception) {
+            if (404 === $exception->getStatusCode()) {
+                throw new ApiProblemException(404, 'customer_not_found', 'Customer not found');
+            }
+
+            if (400 === $exception->getStatusCode()) {
+                throw new ApiProblemException(400, 'invalid_customer_lookup', 'Customer lookup request is invalid');
+            }
+
+            throw new ApiProblemException(
+                503,
+                'customer_detail_unavailable',
+                'Klantdetail via subscription API is tijdelijk niet beschikbaar.',
+            );
+        } catch (\RuntimeException) {
+            throw new ApiProblemException(
+                503,
+                'customer_detail_unavailable',
+                'Klantdetail via subscription API is tijdelijk niet beschikbaar.',
+            );
+        }
     }
 }

@@ -26,20 +26,45 @@ final class PersonSearchClient
     {
         $credential = $this->configProvider->getConfig()->getCredential($credentialName);
 
-        return $this->requestSearch(
+        return $this->requestJson(
             $credential->name,
-            $this->normalizeQueryParameters($queryParameters),
+            $this->buildSearchUrl($this->normalizeQueryParameters($queryParameters)),
+            'personsearch',
             false,
         );
     }
 
     /**
-     * @param array<string, scalar> $queryParameters
      * @return array<string, mixed>
      */
-    private function requestSearch(string $credentialName, array $queryParameters, bool $isRetry): array
+    public function getPerson(string|int $personId, ?string $credentialName = null): array
     {
-        $url = $this->buildSearchUrl($queryParameters);
+        $credential = $this->configProvider->getConfig()->getCredential($credentialName);
+
+        return $this->requestJson(
+            $credential->name,
+            $this->buildPersonUrl((string) $personId),
+            'person detail',
+            false,
+        );
+    }
+
+    private function buildPersonUrl(string $personId): string
+    {
+        $normalizedPersonId = trim($personId);
+        if ('' === $normalizedPersonId) {
+            throw new \RuntimeException('Subscription API person detail vereist een niet-lege personId.');
+        }
+
+        return sprintf(
+            '%s/public/persons/%s',
+            rtrim($this->resolvePpaBaseUrl(), '/'),
+            rawurlencode($normalizedPersonId),
+        );
+    }
+
+    private function requestJson(string $credentialName, string $url, string $operationLabel, bool $isRetry): array
+    {
         $accessToken = $this->accessTokenProvider->getAccessToken($credentialName);
 
         try {
@@ -51,8 +76,9 @@ final class PersonSearchClient
                 'timeout' => 15.0,
             ]);
         } catch (TransportExceptionInterface $exception) {
-            throw new \RuntimeException(sprintf(
-                'Subscription API personsearch voor credential "%s" mislukte door een transportfout.',
+            throw new SubscriptionApiResponseException(sprintf(
+                'Subscription API %s voor credential "%s" mislukte door een transportfout.',
+                $operationLabel,
                 $credentialName,
             ), 0, $exception);
         }
@@ -61,16 +87,17 @@ final class PersonSearchClient
         if (401 === $statusCode && !$isRetry) {
             $this->accessTokenProvider->invalidateCachedToken($credentialName);
 
-            return $this->requestSearch($credentialName, $queryParameters, true);
+            return $this->requestJson($credentialName, $url, $operationLabel, true);
         }
 
         $payload = json_decode($response->getContent(false), true);
         if (200 !== $statusCode || !\is_array($payload)) {
-            throw new \RuntimeException(sprintf(
-                'Subscription API personsearch endpoint voor credential "%s" gaf een onbruikbaar antwoord terug (HTTP %d).',
+            throw new SubscriptionApiResponseException(sprintf(
+                'Subscription API %s endpoint voor credential "%s" gaf een onbruikbaar antwoord terug (HTTP %d).',
+                $operationLabel,
                 $credentialName,
                 $statusCode,
-            ));
+            ), $statusCode);
         }
 
         return $payload;

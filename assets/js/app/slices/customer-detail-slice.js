@@ -48,6 +48,78 @@ function normalizeCustomerId(customerId) {
     return customerId;
 }
 
+function buildCustomerDetailUrl(baseUrl, customerId, cachedCustomer) {
+    const normalizedBaseUrl = String(baseUrl || '').replace(/\/+$/, '');
+    const normalizedCustomerId = encodeURIComponent(String(customerId || '').trim());
+    const queryParams = new URLSearchParams();
+
+    const credentialKey = String(cachedCustomer && cachedCustomer.credentialKey || '').trim();
+    if (credentialKey) {
+        queryParams.set('credentialKey', credentialKey);
+    }
+
+    const sourceSystem = String(cachedCustomer && cachedCustomer.sourceSystem || '').trim();
+    if (sourceSystem) {
+        queryParams.set('sourceSystem', sourceSystem);
+    }
+
+    const queryString = queryParams.toString();
+
+    return queryString
+        ? `${normalizedBaseUrl}/${normalizedCustomerId}?${queryString}`
+        : `${normalizedBaseUrl}/${normalizedCustomerId}`;
+}
+
+function mergeCustomerDetail(cachedCustomer, detailCustomer) {
+    if (!cachedCustomer || !detailCustomer) {
+        return detailCustomer || cachedCustomer || null;
+    }
+
+    const mergedCustomer = {
+        ...cachedCustomer,
+        ...detailCustomer,
+    };
+    const stringFields = [
+        'personId',
+        'personNumber',
+        'salutation',
+        'firstName',
+        'middleName',
+        'lastName',
+        'initials',
+        'birthday',
+        'address',
+        'postalCode',
+        'houseNumber',
+        'city',
+        'email',
+        'phone',
+        'credentialKey',
+        'credentialTitle',
+        'mandant',
+        'divisionId',
+        'sourceSystem',
+        'matchCode',
+        'iban',
+    ];
+
+    stringFields.forEach((fieldName) => {
+        const detailValue = detailCustomer[fieldName];
+        if (typeof detailValue === 'string') {
+            mergedCustomer[fieldName] = detailValue.trim() !== ''
+                ? detailValue
+                : (cachedCustomer[fieldName] ?? detailValue);
+            return;
+        }
+
+        if (detailValue === undefined || detailValue === null) {
+            mergedCustomer[fieldName] = cachedCustomer[fieldName] ?? detailValue;
+        }
+    });
+
+    return mergedCustomer;
+}
+
 function setElementText(id, value) {
     if (typeof document === 'undefined') {
         return;
@@ -395,7 +467,9 @@ export async function selectCustomer(customerId) {
 
     if (apiClient && dependencies.personsApiUrl) {
         try {
-            customer = await apiClient.get(`${dependencies.personsApiUrl}/${normalizedCustomerId}`);
+            const detailUrl = buildCustomerDetailUrl(dependencies.personsApiUrl, normalizedCustomerId, cachedCustomer);
+            customer = await apiClient.get(detailUrl);
+            customer = mergeCustomerDetail(cachedCustomer, customer);
             if (typeof dependencies.upsertCustomerInCache === 'function') {
                 dependencies.upsertCustomerInCache(customer);
             }

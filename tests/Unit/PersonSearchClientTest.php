@@ -134,6 +134,46 @@ final class PersonSearchClientTest extends TestCase
         );
     }
 
+    public function testGetPersonUsesPpaBaseUrlAndBearerToken(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFile([
+            'username' => 'demo-user',
+            'password' => 'demo-password',
+            'ppa_base_url' => 'https://example.invalid/subscription',
+        ]);
+        $requests = [];
+        $responses = [
+            new MockResponse((string) json_encode([
+                'access_token' => 'detail-token',
+                'expires_in' => 3600,
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+            new MockResponse((string) json_encode([
+                'rId' => '12345',
+                'lastName' => 'Doe',
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+        ];
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests, &$responses) {
+            $requests[] = compact('method', 'url', 'options');
+
+            return array_shift($responses);
+        });
+
+        $client = $this->createClient($httpClient, dirname($clientSecretsPath));
+
+        $payload = $client->getPerson('12345');
+
+        self::assertSame('12345', $payload['rId'] ?? null);
+        self::assertCount(2, $requests);
+        self::assertSame(
+            'https://example.invalid/subscription/public/persons/12345',
+            $requests[1]['url'],
+        );
+        self::assertStringContainsString(
+            'Bearer detail-token',
+            $requests[1]['options']['normalized_headers']['authorization'][0] ?? '',
+        );
+    }
+
     public function testUnauthorizedSearchRetriesWithFreshToken(): void
     {
         $clientSecretsPath = $this->writeClientSecretsFile([
