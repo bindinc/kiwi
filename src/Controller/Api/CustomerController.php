@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
 use App\Oidc\OidcClient;
+use App\SubscriptionApi\AggregatedPersonSearchService;
 use App\Service\PocStateService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,6 +18,7 @@ final class CustomerController extends AbstractApiController
     public function __construct(
         OidcClient $oidcClient,
         private readonly PocStateService $stateService,
+        private readonly AggregatedPersonSearchService $aggregatedPersonSearchService,
     ) {
         parent::__construct($oidcClient);
     }
@@ -28,14 +30,29 @@ final class CustomerController extends AbstractApiController
 
         $page = $this->parseQueryInt($request, 'page', 1, 1) ?? 1;
         $pageSize = $this->parseQueryInt($request, 'pageSize', 20, 1, 200) ?? 20;
-
-        return $this->json($this->stateService->searchCustomers($request->getSession(), [
+        $filters = [
             'postalCode' => (string) $request->query->get('postalCode', ''),
             'houseNumber' => (string) $request->query->get('houseNumber', ''),
             'name' => (string) $request->query->get('name', ''),
             'phone' => (string) $request->query->get('phone', ''),
             'email' => (string) $request->query->get('email', ''),
-            'sortBy' => (string) $request->query->get('sortBy', 'name'),
+        ];
+        $sortBy = (string) $request->query->get('sortBy', 'name');
+
+        if ($this->aggregatedPersonSearchService->isAvailable()) {
+            try {
+                return $this->json($this->aggregatedPersonSearchService->search($filters, $page, $pageSize, $sortBy));
+            } catch (\Throwable $exception) {
+                throw new ApiProblemException(
+                    503,
+                    'customer_search_unavailable',
+                    'Klant zoeken via subscription API is tijdelijk niet beschikbaar.',
+                );
+            }
+        }
+
+        return $this->json($this->stateService->searchCustomers($request->getSession(), $filters + [
+            'sortBy' => $sortBy,
         ], $page, $pageSize));
     }
 

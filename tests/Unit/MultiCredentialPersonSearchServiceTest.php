@@ -34,7 +34,7 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
         parent::tearDown();
     }
 
-    public function testSearchUsesOnlySupportedCredentialsAndForcesDivisionIdPerCredential(): void
+    public function testSearchUsesOnlySupportedCredentialsWithoutSendingDivisionId(): void
     {
         $clientSecretsPath = $this->writeClientSecretsFile([
             'mkg' => [
@@ -92,11 +92,11 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
         self::assertSame('avrotros-person', $results[1]->payload['content'][0]['personId'] ?? null);
         self::assertCount(4, $requests);
         self::assertSame(
-            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=10&name=Jane+Doe&divisionid=HMC',
+            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=10&name=Jane+Doe',
             $requests[1]['url'],
         );
         self::assertSame(
-            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=10&name=Jane+Doe&divisionid=AVROTROS',
+            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=10&name=Jane+Doe',
             $requests[3]['url'],
         );
     }
@@ -133,6 +133,87 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
 
         self::assertSame([], $results);
         self::assertSame([], $requests);
+    }
+
+    public function testSearchSkipsFailingCredentialsWhenOthersStillRespond(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFile([
+            'tvk' => [
+                'title' => 'TV Krant',
+                'username' => 'tvk-user',
+                'password' => 'tvk-password',
+                'client_search' => 'yes',
+                'client' => 'HMC',
+            ],
+            'avrotros' => [
+                'title' => 'AVROTROS',
+                'username' => 'avrotros-user',
+                'password' => 'avrotros-password',
+                'client_search' => 'yes',
+                'client' => 'AVROTROS',
+            ],
+        ]);
+
+        $responses = [
+            $this->createTokenResponse('tvk-token'),
+            new MockResponse('upstream broken', ['http_code' => 500]),
+            $this->createTokenResponse('avrotros-token'),
+            $this->createSearchResponse('avrotros-person'),
+        ];
+
+        $httpClient = new MockHttpClient(static function () use (&$responses) {
+            return array_shift($responses);
+        });
+
+        $service = $this->createService($httpClient, dirname($clientSecretsPath));
+
+        $results = $service->search([
+            'name' => 'Jane Doe',
+        ]);
+
+        self::assertCount(1, $results);
+        self::assertSame('avrotros', $results[0]->credential->name);
+        self::assertSame('avrotros-person', $results[0]->payload['content'][0]['personId'] ?? null);
+    }
+
+    public function testSearchThrowsWhenAllSearchableCredentialsFail(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFile([
+            'tvk' => [
+                'title' => 'TV Krant',
+                'username' => 'tvk-user',
+                'password' => 'tvk-password',
+                'client_search' => 'yes',
+                'client' => 'HMC',
+            ],
+            'avrotros' => [
+                'title' => 'AVROTROS',
+                'username' => 'avrotros-user',
+                'password' => 'avrotros-password',
+                'client_search' => 'yes',
+                'client' => 'AVROTROS',
+            ],
+        ]);
+
+        $responses = [
+            $this->createTokenResponse('tvk-token'),
+            new MockResponse('upstream broken', ['http_code' => 500]),
+            $this->createTokenResponse('avrotros-token'),
+            new MockResponse('still broken', ['http_code' => 500]),
+        ];
+
+        $httpClient = new MockHttpClient(static function () use (&$responses) {
+            return array_shift($responses);
+        });
+
+        $service = $this->createService($httpClient, dirname($clientSecretsPath));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Subscription API personsearch mislukte voor alle zoekbare credentials');
+
+        $service->search([
+            'name' => 'Jane Doe',
+        ]);
     }
 
     private function createService(MockHttpClient $httpClient, string $projectDir): MultiCredentialPersonSearchService

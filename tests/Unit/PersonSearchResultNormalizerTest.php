@@ -16,7 +16,7 @@ final class PersonSearchResultNormalizerTest extends TestCase
         $credential = new HupApiCredential(
             name: 'tvk',
             title: 'TV Krant',
-            mandant: 'AVROTROS',
+            mandant: 'HMC',
             supportsPersonLookup: true,
             username: 'tvk-user',
             password: 'tvk-password',
@@ -26,7 +26,7 @@ final class PersonSearchResultNormalizerTest extends TestCase
             'content' => [
                 [
                     'personId' => '12345',
-                    'divisionId' => 'HMC',
+                    'divisionId' => '14',
                     'name' => 'de Vries',
                     'firstName' => 'Jan',
                     'street' => 'Damstraat',
@@ -48,7 +48,7 @@ final class PersonSearchResultNormalizerTest extends TestCase
         $normalized = $normalizer->normalizeCredentialResult($result);
 
         self::assertSame([[
-            'id' => '12345',
+            'id' => 12345,
             'personId' => '12345',
             'firstName' => 'Jan',
             'middleName' => 'de',
@@ -62,7 +62,7 @@ final class PersonSearchResultNormalizerTest extends TestCase
             'credentialKey' => 'tvk',
             'credentialTitle' => 'TV Krant',
             'mandant' => 'HMC',
-            'divisionId' => 'HMC',
+            'divisionId' => '14',
             'supportsPersonLookup' => true,
             'sourceSystem' => 'subscription-api',
             'subscriptions' => [],
@@ -109,6 +109,7 @@ final class PersonSearchResultNormalizerTest extends TestCase
         $normalized = $normalizer->normalizeCredentialResult($result);
 
         self::assertCount(1, $normalized);
+        self::assertSame(987, $normalized[0]['id']);
         self::assertSame('KRONCRV', $normalized[0]['mandant']);
         self::assertNull($normalized[0]['divisionId']);
         self::assertSame('', $normalized[0]['middleName']);

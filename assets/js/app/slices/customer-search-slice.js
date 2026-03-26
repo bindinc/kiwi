@@ -8,7 +8,94 @@ const searchState = {
     sortBy: 'name'
 };
 
+const MANDANT_BADGE_CONFIG_BY_KEY = {
+    AVROTROS: {
+        brandLabel: 'AVROTROS',
+        assetKey: 'avrotrosLogo',
+        fallbackPath: 'assets/img/avrotros-logo.svg'
+    },
+    HMC: {
+        brandLabel: 'AVROTROS',
+        assetKey: 'avrotrosLogo',
+        fallbackPath: 'assets/img/avrotros-logo.svg'
+    },
+    KRONCRV: {
+        brandLabel: 'KRO-NCRV',
+        assetKey: 'kroncrvLogo',
+        fallbackPath: 'assets/img/kroncrv-logo.svg'
+    }
+};
+
 let compatibilityExportsInstalled = false;
+
+function joinBasePath(basePath, relativePath) {
+    const normalizedBasePath = String(basePath || '').replace(/\/+$/, '');
+    const normalizedRelativePath = String(relativePath || '').replace(/^\/+/, '');
+
+    if (!normalizedRelativePath) {
+        return normalizedBasePath || '/';
+    }
+
+    if (!normalizedBasePath) {
+        return `/${normalizedRelativePath}`;
+    }
+
+    return `${normalizedBasePath}/${normalizedRelativePath}`;
+}
+
+function normalizeMandantKey(value) {
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function resolveMandantBadgeConfig(mandant) {
+    const normalizedMandantKey = normalizeMandantKey(mandant);
+    if (!normalizedMandantKey) {
+        return null;
+    }
+
+    const badgeConfig = MANDANT_BADGE_CONFIG_BY_KEY[normalizedMandantKey];
+    if (!badgeConfig) {
+        return null;
+    }
+
+    const globalScope = getGlobalScope();
+    const mappedAssetPaths = globalScope && typeof globalScope.kiwiAssetPaths === 'object'
+        ? globalScope.kiwiAssetPaths
+        : null;
+    const mappedAssetUrl = mappedAssetPaths && typeof mappedAssetPaths[badgeConfig.assetKey] === 'string'
+        ? mappedAssetPaths[badgeConfig.assetKey].trim()
+        : '';
+    const basePath = globalScope && typeof globalScope.kiwiBasePath === 'string'
+        ? globalScope.kiwiBasePath
+        : '';
+
+    return {
+        brandLabel: badgeConfig.brandLabel,
+        assetUrl: mappedAssetUrl || joinBasePath(basePath, badgeConfig.fallbackPath)
+    };
+}
+
+function resolveCustomerBadgeMandant(customer) {
+    const divisionId = normalizeMandantKey(customer.divisionId);
+    if (divisionId && MANDANT_BADGE_CONFIG_BY_KEY[divisionId]) {
+        return divisionId;
+    }
+
+    return normalizeMandantKey(customer.mandant);
+}
+
+function buildMandantBadgeMarkup(customer) {
+    const badgeConfig = resolveMandantBadgeConfig(resolveCustomerBadgeMandant(customer));
+    if (!badgeConfig) {
+        return '';
+    }
+
+    return `
+        <span class="mandant-logo-badge mandant-logo-badge--compact" title="${badgeConfig.brandLabel}" aria-label="${badgeConfig.brandLabel}">
+            <img src="${badgeConfig.assetUrl}" alt="${badgeConfig.brandLabel}">
+        </span>
+    `;
+}
 
 function getLegacySearchBridge() {
     const globalScope = getGlobalScope();
@@ -251,6 +338,21 @@ function setSearchResults(results) {
     searchState.sortBy = 'name';
 }
 
+function rememberCustomersInCache(customers) {
+    const globalScope = getGlobalScope();
+    if (!globalScope || typeof globalScope.upsertCustomerInCache !== 'function' || !Array.isArray(customers)) {
+        return;
+    }
+
+    customers.forEach((customer) => {
+        if (!customer || typeof customer !== 'object') {
+            return;
+        }
+
+        globalScope.upsertCustomerInCache(customer);
+    });
+}
+
 function buildSearchParams(filters) {
     const query = new URLSearchParams();
 
@@ -300,6 +402,7 @@ export async function searchCustomer() {
         try {
             const payload = await globalScope.kiwiApi.get(`/api/v1/persons?${query.toString()}`);
             results = Array.isArray(payload && payload.items) ? payload.items : [];
+            rememberCustomersInCache(results);
         } catch (error) {
             console.error('Kon klanten niet zoeken via API', error);
             showToast(translateKey('search.backendFailed', {}, 'Zoeken via backend mislukt'), 'error');
@@ -436,6 +539,7 @@ function shouldShowIdentifyButton() {
 
 function renderCustomerRow(customer) {
     const lastNameSection = formatLastNameSection(customer) || '-';
+    const mandantBadgeMarkup = buildMandantBadgeMarkup(customer);
     const initials = getCustomerInitials(customer) || '-';
     const subscriptionBadges = buildSubscriptionBadges(customer);
     const subscriberNumber = buildSubscriberNumber(customer);
@@ -444,7 +548,7 @@ function renderCustomerRow(customer) {
 
     return `
         <tr class="result-row" data-action="select-customer" data-arg-customer-id="${customer.id}">
-            <td class="result-row-lastname">${lastNameSection}</td>
+            <td class="result-row-lastname">${lastNameSection}${mandantBadgeMarkup}</td>
             <td class="result-row-initials">
                 <span class="initials-value">${initials}</span>
             </td>
@@ -877,6 +981,7 @@ export function registerCustomerSearchSlice(actionRouter) {
 export const __customerSearchTestUtils = {
     getPageNumbers,
     normalizePhone,
+    renderCustomerRow,
     resetSearchStateForTests() {
         resetSearchState();
     },

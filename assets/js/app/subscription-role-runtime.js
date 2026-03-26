@@ -397,12 +397,12 @@ function resolvePersonBadgeMandant(person) {
         return '';
     }
 
-    const divisionId = String(person.divisionId || '').trim();
-    if (divisionId) {
+    const divisionId = normalizeMandantKey(person.divisionId);
+    if (divisionId && MANDANT_BADGE_CONFIG_BY_KEY[divisionId]) {
         return divisionId;
     }
 
-    return String(person.mandant || '').trim();
+    return normalizeMandantKey(person.mandant);
 }
 
 function getSubscriptionRoleConfig(role) {

@@ -272,6 +272,28 @@ function testRenderSelectedPersonPrefersDivisionIdForBadge() {
     assert.equal(elements.recipientSelectedPerson.innerHTML.includes('kroncrv-logo.svg'), false);
 }
 
+function testRenderSelectedPersonFallsBackToMandantForUnknownDivisionId() {
+    const selectedPerson = {
+        id: 43,
+        firstName: 'Demo',
+        middleName: '',
+        lastName: 'Gebruiker',
+        postalCode: '1217AA',
+        city: 'Hilversum',
+        divisionId: '14',
+        mandant: 'HMC'
+    };
+
+    const { elements, runtime } = createRuntimeContext({
+        recipientSelectedPerson: selectedPerson
+    });
+
+    runtime.renderSubscriptionRoleSelectedPerson('recipient');
+
+    assert.equal(elements.recipientSelectedPerson.innerHTML.includes('avrotros-logo.svg'), true);
+    assert.equal(elements.recipientSelectedPerson.innerHTML.includes('alt="AVROTROS"'), true);
+}
+
 function testRenderSearchResultsShowsKroncrvBadgeAndUnknownFallback() {
     const { context, elements, runtime } = createRuntimeContext();
 
@@ -333,6 +355,7 @@ function run() {
     testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext();
     testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant();
     testRenderSelectedPersonPrefersDivisionIdForBadge();
+    testRenderSelectedPersonFallsBackToMandantForUnknownDivisionId();
     testRenderSearchResultsShowsKroncrvBadgeAndUnknownFallback();
     testRenderSearchResultsFallsBackToMandantWhenDivisionIdIsMissing();
     console.log('subscription role runtime tests passed');

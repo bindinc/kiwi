@@ -634,6 +634,182 @@ async function testCustomerDetailSlice() {
     }
 }
 
+async function testCustomerDetailSliceFallsBackToCachedSubscriptionApiCustomer() {
+    const listeners = {};
+    const root = {
+        addEventListener(eventType, handler) {
+            listeners[eventType] = handler;
+        },
+        removeEventListener(eventType) {
+            delete listeners[eventType];
+        }
+    };
+
+    const previousDocument = globalThis.document;
+    const previousScrollTo = globalThis.scrollTo;
+    const previousCustomerDetailNamespace = globalThis.kiwiCustomerDetailSlice;
+    const previousContactHistoryNamespace = globalThis.kiwiContactHistorySlice;
+    const previousKiwiApi = globalThis.kiwiApi;
+
+    const cachedCustomer = {
+        id: 81234,
+        firstName: 'Remote',
+        middleName: '',
+        lastName: 'Gebruiker',
+        address: 'API Straat 10',
+        postalCode: '1234AB',
+        city: 'Hilversum',
+        email: 'remote@example.com',
+        phone: '0612345678',
+        subscriptions: [],
+        contactHistory: [],
+        sourceSystem: 'subscription-api'
+    };
+
+    const contactHistoryState = {
+        currentPage: 2,
+        itemsPerPage: 6,
+        highlightId: 'y',
+        lastEntry: { id: 'y' }
+    };
+    let currentCustomer = null;
+    let toastCalls = 0;
+    let scrollToCalls = 0;
+
+    const elements = {
+        welcomeMessage: { style: { display: 'block' } },
+        searchResultsView: { style: { display: 'block' } },
+        customerDetail: {
+            style: { display: 'none' },
+            querySelector() {
+                return null;
+            }
+        },
+        customerName: { textContent: '' },
+        customerAddress: { textContent: '' },
+        customerEmail: { textContent: '' },
+        customerPhone: { textContent: '' },
+        subscriptionsList: { innerHTML: '' },
+        contactHistory: { innerHTML: '' }
+    };
+
+    const customerDetailDependencies = {
+        findCustomerById(customerId) {
+            return Number(customerId) === cachedCustomer.id ? cachedCustomer : null;
+        },
+        upsertCustomerInCache() {},
+        getCurrentCustomer() {
+            return currentCustomer;
+        },
+        setCurrentCustomer(customer) {
+            currentCustomer = customer;
+        },
+        getContactHistoryState() {
+            return contactHistoryState;
+        },
+        resetContactHistoryViewState() {
+            contactHistoryState.currentPage = 1;
+            contactHistoryState.highlightId = null;
+            contactHistoryState.lastEntry = null;
+        },
+        translate(_key, _params, fallback) {
+            return fallback;
+        },
+        showToast() {
+            toastCalls += 1;
+        },
+        displayArticles() {},
+        updateCustomerActionButtons() {},
+        updateIdentifyCallerButtons() {},
+        getSubscriptionRequesterMetaLine() {
+            return '';
+        },
+        getDateLocaleForApp() {
+            return 'nl-NL';
+        },
+        personsApiUrl: '/api/v1/persons'
+    };
+
+    configureContactHistorySliceDependencies(() => customerDetailDependencies);
+    configureCustomerDetailSliceDependencies(() => customerDetailDependencies);
+    globalThis.document = {
+        getElementById(id) {
+            return elements[id] || null;
+        },
+        querySelector() {
+            return null;
+        }
+    };
+    globalThis.scrollTo = () => {
+        scrollToCalls += 1;
+    };
+    globalThis.kiwiApi = {
+        async get() {
+            throw new Error('detail endpoint unavailable');
+        }
+    };
+
+    try {
+        const router = createActionRouter({
+            root,
+            eventTypes: ['click']
+        });
+        registerContactHistorySlice(router);
+        registerCustomerDetailSlice(router);
+        router.install();
+
+        const selectCustomerElement = {
+            dataset: {
+                action: 'select-customer',
+                actionEvent: 'click',
+                argCustomerId: String(cachedCustomer.id)
+            }
+        };
+        listeners.click(createDelegatedEvent(selectCustomerElement, 'click'));
+        await Promise.resolve();
+
+        assert.equal(currentCustomer.id, cachedCustomer.id);
+        assert.equal(currentCustomer.sourceSystem, 'subscription-api');
+        assert.equal(toastCalls, 0);
+        assert.equal(scrollToCalls, 1);
+        assert.equal(elements.customerName.textContent, 'Remote Gebruiker');
+        assert.equal(elements.customerDetail.style.display, 'block');
+    } finally {
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+
+        if (previousScrollTo === undefined) {
+            delete globalThis.scrollTo;
+        } else {
+            globalThis.scrollTo = previousScrollTo;
+        }
+
+        if (previousCustomerDetailNamespace === undefined) {
+            delete globalThis.kiwiCustomerDetailSlice;
+        } else {
+            globalThis.kiwiCustomerDetailSlice = previousCustomerDetailNamespace;
+        }
+
+        if (previousContactHistoryNamespace === undefined) {
+            delete globalThis.kiwiContactHistorySlice;
+        } else {
+            globalThis.kiwiContactHistorySlice = previousContactHistoryNamespace;
+        }
+
+        if (previousKiwiApi === undefined) {
+            delete globalThis.kiwiApi;
+        } else {
+            globalThis.kiwiApi = previousKiwiApi;
+        }
+
+        configureContactHistorySliceDependencies(null);
+        configureCustomerDetailSliceDependencies(null);
+    }
+}
+
 async function run() {
     testCoerceActionValue();
     testExtractActionPayload();
@@ -642,6 +818,7 @@ async function run() {
     testLocalizationSlice();
     testContactHistorySlice();
     await testCustomerDetailSlice();
+    await testCustomerDetailSliceFallsBackToCachedSubscriptionApiCustomer();
     console.log('actions router tests passed');
 }
 

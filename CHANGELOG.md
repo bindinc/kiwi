@@ -7,13 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Add a reusable Subscription API personsearch client on top of `ppa_base_url` that reuses the existing HUP/WebAbo bearer-token flow, including retry-on-`401` behavior, so the later KIWI customer-search migration can switch to the upstream backend in phases.
-- Add a multi-credential Subscription API personsearch service that fans out searches only over HUP credentials with `client_search: "yes"` and injects the credential mandant as `divisionid` on every upstream request.
+- Add a multi-credential Subscription API personsearch service that fans out searches only over HUP credentials with `client_search: "yes"` and merges those credential-scoped result sets for KIWI customer search.
 - Add a personsearch result normalizer that maps subscription API search hits onto the KIWI person model, including credential context, badge-ready mandant resolution, and empty KIWI collections for fields that will be hydrated in later phases.
+- Add an aggregated `/api/v1/persons` search path that merges normalized Subscription API personsearch results across eligible credentials while keeping the existing frontend request shape intact.
 
 ### Changed
 - Parse mandant and person-lookup metadata from named HUP credentials, expose that context on Webabo offer responses, and carry the same credential context through subscription queue payloads so upcoming API-backed person retrieval can switch over without another contract change.
 - Render AVROTROS and KRO-NCRV logo badges for werfsleutels and subscription person lookups based on HUP credential `client` metadata, while keeping `client_search` available for the later full API-backed person lookup flow.
 - Let subscription person badges prefer `divisionId` when available and otherwise fall back to `mandant`, while preserving the existing HMC -> AVROTROS and KRONCRV -> KRO-NCRV branding rules.
+- Switch `GET /api/v1/persons` to the new subscription-api aggregator when searchable HUP credentials are configured, while keeping a local cached-result fallback for customer selection until the dedicated detail hydration route lands in the next phase.
+
+### Fixed
+- Keep `Klant Zoeken` working when the upstream `personsearch` endpoint returns `HTTP 500` for `divisionid`-filtered requests by searching each enabled credential without that broken filter and still returning partial results when one credential fails.
+- Preserve badge and workflow mandant context from the configured HUP credential even when upstream search results expose numeric `divisionId` codes instead of the expected brand keys.
+- Show the same AVROTROS and KRO-NCRV mandant badges in the regular `Klant Zoeken` result list that subscription role search results already render.
 
 ## [v1.0.14]
 

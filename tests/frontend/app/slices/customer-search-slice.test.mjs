@@ -124,11 +124,53 @@ function testSortResultsList() {
     );
 }
 
+function testRenderCustomerRowShowsMandantBadgeForRecognizedMandant() {
+    const previousBasePath = globalThis.kiwiBasePath;
+    const previousAssetPaths = globalThis.kiwiAssetPaths;
+
+    globalThis.kiwiBasePath = '/kiwi';
+    globalThis.kiwiAssetPaths = {
+        avrotrosLogo: '/assets/img/avrotros-logo.svg',
+        kroncrvLogo: '/assets/img/kroncrv-logo.svg'
+    };
+
+    try {
+        const markup = __customerSearchTestUtils.renderCustomerRow({
+            id: 41,
+            firstName: 'Demo',
+            middleName: '',
+            lastName: 'Gebruiker',
+            address: 'Teststraat 1',
+            postalCode: '1217AA',
+            city: 'Hilversum',
+            subscriptions: [],
+            divisionId: '14',
+            mandant: 'HMC'
+        });
+
+        assert.equal(markup.includes('avrotros-logo.svg'), true);
+        assert.equal(markup.includes('alt="AVROTROS"'), true);
+    } finally {
+        if (previousBasePath === undefined) {
+            delete globalThis.kiwiBasePath;
+        } else {
+            globalThis.kiwiBasePath = previousBasePath;
+        }
+
+        if (previousAssetPaths === undefined) {
+            delete globalThis.kiwiAssetPaths;
+        } else {
+            globalThis.kiwiAssetPaths = previousAssetPaths;
+        }
+    }
+}
+
 function run() {
     testRegistersItemFiveActions();
     testInstallsLegacyCompatibilityExports();
     testPageNumbersAndNormalizationHelpers();
     testSortResultsList();
+    testRenderCustomerRowShowsMandantBadgeForRecognizedMandant();
     console.log('customer search slice tests passed');
 }
 

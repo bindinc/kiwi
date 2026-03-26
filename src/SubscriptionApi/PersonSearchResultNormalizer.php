@@ -68,13 +68,14 @@ final class PersonSearchResultNormalizer
     public function normalizePerson(array $rawPerson, HupApiCredential $credential): array
     {
         $personId = $this->normalizeNullableString($rawPerson['personId'] ?? null);
+        $normalizedId = $this->normalizeId($personId);
         [$middleName, $lastName] = $this->splitLastName($this->normalizeNullableString($rawPerson['name'] ?? null));
         $houseNumber = $this->normalizeNullableString($rawPerson['houseNo'] ?? null);
         $divisionId = $this->normalizeNullableString($rawPerson['divisionId'] ?? null);
-        $mandant = $divisionId ?? $credential->mandant ?? '';
+        $mandant = $credential->mandant ?? $divisionId ?? '';
 
         return [
-            'id' => $personId,
+            'id' => $normalizedId,
             'personId' => $personId,
             'firstName' => $this->normalizeNullableString($rawPerson['firstName'] ?? null) ?? '',
             'middleName' => $middleName,
@@ -171,5 +172,21 @@ final class PersonSearchResultNormalizer
         $normalized = trim($value);
 
         return '' !== $normalized ? $normalized : null;
+    }
+
+    /**
+     * @return int|string|null
+     */
+    private function normalizeId(?string $personId): int|string|null
+    {
+        if (null === $personId) {
+            return null;
+        }
+
+        if (preg_match('/^\d+$/', $personId)) {
+            return (int) $personId;
+        }
+
+        return $personId;
     }
 }

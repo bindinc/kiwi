@@ -387,9 +387,10 @@ export async function selectCustomer(customerId) {
     }
 
     const normalizedCustomerId = normalizeCustomerId(customerId);
-    let customer = dependencies.findCustomerById
+    const cachedCustomer = dependencies.findCustomerById
         ? dependencies.findCustomerById(normalizedCustomerId)
         : null;
+    let customer = cachedCustomer;
     const apiClient = resolveApiClient();
 
     if (apiClient && dependencies.personsApiUrl) {
@@ -399,14 +400,20 @@ export async function selectCustomer(customerId) {
                 dependencies.upsertCustomerInCache(customer);
             }
         } catch (error) {
-            if (typeof dependencies.showToast === 'function') {
-                dependencies.showToast(
-                    translateLabel(dependencies, 'customer.detailLoadFailed', 'Kon klantdetail niet laden'),
-                    'error'
-                );
+            const canUseCachedCustomer = cachedCustomer
+                && String(cachedCustomer.sourceSystem || '').trim() === 'subscription-api';
+            if (canUseCachedCustomer) {
+                customer = cachedCustomer;
+            } else {
+                if (typeof dependencies.showToast === 'function') {
+                    dependencies.showToast(
+                        translateLabel(dependencies, 'customer.detailLoadFailed', 'Kon klantdetail niet laden'),
+                        'error'
+                    );
+                }
+                console.error('Kon klantdetail niet laden via API', error);
+                return;
             }
-            console.error('Kon klantdetail niet laden via API', error);
-            return;
         }
     }
 
