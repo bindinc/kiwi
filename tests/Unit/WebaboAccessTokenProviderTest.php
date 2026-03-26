@@ -32,7 +32,7 @@ final class WebaboAccessTokenProviderTest extends TestCase
         parent::tearDown();
     }
 
-    public function testRefreshTokenFallsBackToPasswordGrant(): void
+    public function testPasswordCredentialsTakePrecedenceOverRefreshGrant(): void
     {
         $clientSecretsPath = $this->writeClientSecretsFile([
             'refresh_token' => 'refresh-token-1',
@@ -40,33 +40,27 @@ final class WebaboAccessTokenProviderTest extends TestCase
             'password' => 'demo-password',
         ]);
         $requests = [];
-        $responses = [
-            new MockResponse((string) json_encode(['error' => 'invalid_grant'], JSON_THROW_ON_ERROR), ['http_code' => 400]),
-            new MockResponse((string) json_encode([
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests) {
+            $requests[] = compact('method', 'url', 'options');
+
+            return new MockResponse((string) json_encode([
                 'access_token' => 'password-token',
                 'expires_in' => 3600,
                 'refresh_token' => 'refresh-token-2',
-            ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
-        ];
-        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests, &$responses) {
-            $requests[] = compact('method', 'url', 'options');
-
-            return array_shift($responses);
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]);
         });
 
         $provider = $this->createProvider($httpClient, dirname($clientSecretsPath));
 
         self::assertSame('password-token', $provider->getAccessToken());
-        self::assertCount(2, $requests);
-        $refreshBody = $this->parseRequestBody($requests[0]['options']['body']);
-        $passwordBody = $this->parseRequestBody($requests[1]['options']['body']);
+        self::assertCount(1, $requests);
+        $passwordBody = $this->parseRequestBody($requests[0]['options']['body']);
 
-        self::assertSame('refresh_token', $refreshBody['grant_type'] ?? null);
         self::assertSame('password', $passwordBody['grant_type'] ?? null);
         self::assertSame('demo-user', $passwordBody['username'] ?? null);
         self::assertStringContainsString(
             sprintf('Basic %s', base64_encode('PPA:')),
-            $requests[1]['options']['normalized_headers']['authorization'][0] ?? ''
+            $requests[0]['options']['normalized_headers']['authorization'][0] ?? ''
         );
     }
 
@@ -100,6 +94,50 @@ final class WebaboAccessTokenProviderTest extends TestCase
         );
     }
 
+    public function testProcessRestartStillRecoversViaPasswordGrantWhenConfigRefreshTokenIsStale(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFile([
+            'refresh_token' => 'refresh-token-1',
+            'username' => 'demo-user',
+            'password' => 'demo-password',
+        ]);
+
+        $firstProcessRequests = [];
+        $firstProcessClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$firstProcessRequests) {
+            $firstProcessRequests[] = compact('method', 'url', 'options');
+
+            return new MockResponse((string) json_encode([
+                'access_token' => 'first-process-token',
+                'expires_in' => 3600,
+                'refresh_token' => 'refresh-token-2',
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]);
+        });
+
+        $firstProcessProvider = $this->createProvider($firstProcessClient, dirname($clientSecretsPath));
+        self::assertSame('first-process-token', $firstProcessProvider->getAccessToken());
+        self::assertCount(1, $firstProcessRequests);
+        self::assertSame('password', $this->parseRequestBody($firstProcessRequests[0]['options']['body'])['grant_type'] ?? null);
+
+        $secondProcessRequests = [];
+        $secondProcessClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$secondProcessRequests) {
+            $secondProcessRequests[] = compact('method', 'url', 'options');
+
+            return new MockResponse((string) json_encode([
+                'access_token' => 'second-process-token',
+                'expires_in' => 3600,
+                'refresh_token' => 'refresh-token-3',
+            ], JSON_THROW_ON_ERROR), ['http_code' => 200]);
+        });
+
+        $secondProcessProvider = $this->createProvider($secondProcessClient, dirname($clientSecretsPath));
+        self::assertSame('second-process-token', $secondProcessProvider->getAccessToken());
+        self::assertCount(1, $secondProcessRequests);
+
+        $secondProcessBody = $this->parseRequestBody($secondProcessRequests[0]['options']['body']);
+        self::assertSame('password', $secondProcessBody['grant_type'] ?? null);
+        self::assertSame('demo-user', $secondProcessBody['username'] ?? null);
+    }
+
     public function testClientSecretPostAddsClientCredentialsToRequestBody(): void
     {
         $clientSecretsPath = $this->writeClientSecretsFile([
@@ -128,6 +166,35 @@ final class WebaboAccessTokenProviderTest extends TestCase
         self::assertSame('kiwi-webabo', $body['client_id'] ?? null);
         self::assertSame('super-secret', $body['client_secret'] ?? null);
         self::assertArrayNotHasKey('authorization', $requests[0]['options']['normalized_headers'] ?? []);
+    }
+
+    public function testRefreshOnlyCredentialFailsWithInvalidGrant(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFile([
+            'refresh_token' => 'refresh-token-1',
+        ]);
+        $requests = [];
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests) {
+            $requests[] = compact('method', 'url', 'options');
+
+            return new MockResponse((string) json_encode([
+                'error' => 'invalid_grant',
+                'error_description' => 'Refresh token expired or already used',
+            ], JSON_THROW_ON_ERROR), ['http_code' => 400]);
+        });
+
+        $provider = $this->createProvider($httpClient, dirname($clientSecretsPath));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('invalid_grant - Refresh token expired or already used');
+
+        try {
+            $provider->getAccessToken();
+        } finally {
+            self::assertCount(1, $requests);
+            $refreshBody = $this->parseRequestBody($requests[0]['options']['body']);
+            self::assertSame('refresh_token', $refreshBody['grant_type'] ?? null);
+        }
     }
 
     public function testNamedCredentialsKeepSeparateTokenCaches(): void

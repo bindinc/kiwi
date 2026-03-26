@@ -75,11 +75,12 @@ final class WebaboOfferClientTest extends TestCase
         self::assertSame('AVRV519', $offers[0]['salesCode']);
         self::assertSame('default', $offers[0]['credentialKey']);
         self::assertCount(4, $requests);
-        $passwordBody = $this->parseRequestBody($requests[0]['options']['body']);
-        $refreshBody = $this->parseRequestBody($requests[2]['options']['body']);
+        $firstPasswordBody = $this->parseRequestBody($requests[0]['options']['body']);
+        $secondPasswordBody = $this->parseRequestBody($requests[2]['options']['body']);
 
-        self::assertSame('password', $passwordBody['grant_type'] ?? null);
-        self::assertSame('refresh_token', $refreshBody['grant_type'] ?? null);
+        self::assertSame('password', $firstPasswordBody['grant_type'] ?? null);
+        self::assertSame('password', $secondPasswordBody['grant_type'] ?? null);
+        self::assertSame('demo-user', $secondPasswordBody['username'] ?? null);
         self::assertStringContainsString(
             sprintf('Basic %s', base64_encode('PPA:')),
             $requests[0]['options']['normalized_headers']['authorization'][0] ?? ''

@@ -32,33 +32,30 @@ final class WebaboAccessTokenProvider
             return $tokenState['accessToken'] ?? '';
         }
 
+        // In a multi-replica deployment we cannot rely on rotated refresh tokens
+        // surviving pod or process restarts, so password-backed credentials always
+        // mint a fresh access token directly.
+        if ($credential->hasPasswordCredentials()) {
+            return $this->storeTokenData($credential->name, $this->requestToken($credential, [
+                'grant_type' => 'password',
+                'username' => $credential->username,
+                'password' => $credential->password,
+            ]));
+        }
+
         $refreshToken = $tokenState['refreshToken'] ?? $credential->refreshToken;
 
         if (null !== $refreshToken) {
-            try {
-                return $this->storeTokenData($credential->name, $this->requestToken($credential, [
-                    'grant_type' => 'refresh_token',
-                    'refresh_token' => $refreshToken,
-                ]));
-            } catch (\RuntimeException $exception) {
-                if (!$credential->hasPasswordCredentials()) {
-                    throw $exception;
-                }
-            }
+            return $this->storeTokenData($credential->name, $this->requestToken($credential, [
+                'grant_type' => 'refresh_token',
+                'refresh_token' => $refreshToken,
+            ]));
         }
 
-        if (!$credential->hasPasswordCredentials()) {
-            throw new \RuntimeException(sprintf(
-                'HUP authenticatie voor credential "%s" mist een bruikbare refresh token of username/password combinatie.',
-                $credential->name,
-            ));
-        }
-
-        return $this->storeTokenData($credential->name, $this->requestToken($credential, [
-            'grant_type' => 'password',
-            'username' => $credential->username,
-            'password' => $credential->password,
-        ]));
+        throw new \RuntimeException(sprintf(
+            'HUP authenticatie voor credential "%s" mist een bruikbare refresh token of username/password combinatie.',
+            $credential->name,
+        ));
     }
 
     public function invalidateCachedToken(?string $credentialName = null): void

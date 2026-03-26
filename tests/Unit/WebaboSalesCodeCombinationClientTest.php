@@ -73,6 +73,15 @@ final class WebaboSalesCodeCombinationClientTest extends TestCase
         self::assertCount(1, $items);
         self::assertSame('MKGV452', $items[0]['salesCode']);
         self::assertCount(4, $requests);
+
+        $firstPasswordBody = [];
+        parse_str((string) ($requests[0]['options']['body'] ?? ''), $firstPasswordBody);
+        $secondPasswordBody = [];
+        parse_str((string) ($requests[2]['options']['body'] ?? ''), $secondPasswordBody);
+
+        self::assertSame('password', $firstPasswordBody['grant_type'] ?? null);
+        self::assertSame('password', $secondPasswordBody['grant_type'] ?? null);
+        self::assertSame('demo-user', $secondPasswordBody['username'] ?? null);
         self::assertStringContainsString(
             'productCode=MKG',
             $requests[1]['url'] ?? ''
