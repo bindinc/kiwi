@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add an aggregated `/api/v1/persons` search path that merges normalized Subscription API personsearch results across eligible credentials while keeping the existing frontend request shape intact.
 - Add a subscription-api detail hydration path for `GET /api/v1/persons/{id}` that loads `/public/persons/{personid}` with explicit credential context and maps the upstream person payload back onto the KIWI customer model.
 - Add subscription-api order hydration for selected customers so `GET /api/v1/persons/{id}` enriches the detail response with `/public/orders?customerPersonId=...` results instead of loading subscriptions during search.
+- Add deterministic functional coverage for the subscription-api-backed `/api/v1/persons` and `/api/v1/persons/{id}` routes, including scoped search queries, detail hydration, and API-problem mappings for upstream failures.
+- Add security-hardening regression coverage that asserts every `/api/v1/*` route rejects unauthenticated calls, keeps `/api/v1/status` behind authorization, and checks that Swagger advertises the full API namespace as protected.
 
 ### Changed
 - Parse mandant and person-lookup metadata from named HUP credentials, expose that context on Webabo offer responses, and carry the same credential context through subscription queue payloads so upcoming API-backed person retrieval can switch over without another contract change.
@@ -36,6 +38,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Keep `subscription-api` customers' contact history truly empty/read-only by skipping local history writes for that source system, rendering the empty-state timeline, and falling back to visible toasts instead of silently logging messages as contact moments.
 - Document the known subscription API OpenAPI mismatch where `personId` is modeled as a string in the schema even though the live/domain contract uses a numeric customer id.
 - Use the configured per-credential `divisionid` again for subscription-api personsearch, while limiting the credential fan-out to the currently selected werfsleutel mandants/divisions instead of searching every enabled tenant.
+- Keep the legacy API workflow contract test on the PoC customer dataset even when a local `client_secrets.json` is present, so functional tests stay stable across CI and external-mode developer machines.
+- Move the public health response to `/status` so container checks stay available without leaving any `/api/v1/*` endpoint publicly callable.
 
 ## [v1.0.14]
 

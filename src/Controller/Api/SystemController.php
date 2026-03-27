@@ -28,8 +28,10 @@ final class SystemController extends AbstractApiController
     }
 
     #[Route('/status', name: 'api_status', methods: ['GET'])]
-    public function status(): JsonResponse
+    public function status(Request $request): JsonResponse
     {
+        $this->requireApiAccess($request);
+
         return $this->json([
             'status' => 'ok',
             'timestamp' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM),

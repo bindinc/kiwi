@@ -13,11 +13,6 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 abstract class AbstractApiController extends AbstractController
 {
-    /**
-     * @var string[]
-     */
-    private const PUBLIC_PATHS = ['/api/v1/status'];
-
     public function __construct(
         protected readonly OidcClient $oidcClient,
     ) {
@@ -25,11 +20,6 @@ abstract class AbstractApiController extends AbstractController
 
     protected function requireApiAccess(Request $request): void
     {
-        $normalizedPath = rtrim($request->getPathInfo(), '/') ?: '/';
-        if (\in_array($normalizedPath, self::PUBLIC_PATHS, true)) {
-            return;
-        }
-
         if (!$this->isApiAuthenticated($request)) {
             throw new ApiProblemException(401, 'unauthorized', 'Authentication required');
         }

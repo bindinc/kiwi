@@ -14,14 +14,43 @@ final class ApiContractTest extends WebTestCase
 {
     use AuthenticatedClientTrait;
 
-    public function testStatusIsPublicAndBootstrapRequiresAuthentication(): void
+    private ?string $previousClientSecretsPath = null;
+    private ?string $tempClientSecretsDir = null;
+
+    protected function tearDown(): void
+    {
+        static::ensureKernelShutdown();
+
+        if (null !== $this->previousClientSecretsPath && '' !== $this->previousClientSecretsPath) {
+            putenv(sprintf('KIWI_CLIENT_SECRETS_PATH=%s', $this->previousClientSecretsPath));
+        } else {
+            putenv('KIWI_CLIENT_SECRETS_PATH');
+        }
+
+        if (null !== $this->tempClientSecretsDir && is_dir($this->tempClientSecretsDir)) {
+            array_map('unlink', glob($this->tempClientSecretsDir.'/*') ?: []);
+            rmdir($this->tempClientSecretsDir);
+        }
+
+        $this->previousClientSecretsPath = null;
+        $this->tempClientSecretsDir = null;
+
+        parent::tearDown();
+    }
+
+    public function testHealthRouteIsPublicAndApiStatusRequiresAuthentication(): void
     {
         $client = static::createClient();
-        $client->request('GET', '/api/v1/status');
+        $client->request('GET', '/status');
         self::assertResponseIsSuccessful();
         $payload = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('ok', $payload['status']);
         self::assertArrayHasKey('rate_limit', $payload);
+
+        $client->request('GET', '/api/v1/status');
+        self::assertResponseStatusCodeSame(401);
+        $payload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame('unauthorized', $payload['error']['code']);
 
         $client->request('GET', '/api/v1/bootstrap');
         self::assertResponseStatusCodeSame(401);
@@ -71,6 +100,8 @@ final class ApiContractTest extends WebTestCase
 
     public function testCustomerWorkflowAndMutationFlow(): void
     {
+        $this->disableSubscriptionApiCustomerSearch();
+
         $client = $this->createAuthenticatedClient();
         $this->resetSubscriptionQueueStorage();
 
@@ -336,5 +367,19 @@ final class ApiContractTest extends WebTestCase
         $connection->executeStatement('DELETE FROM outbox_events');
         $connection->executeStatement('DELETE FROM subscription_orders');
         $entityManager->clear();
+    }
+
+    private function disableSubscriptionApiCustomerSearch(): void
+    {
+        $this->previousClientSecretsPath = getenv('KIWI_CLIENT_SECRETS_PATH') ?: null;
+        $this->tempClientSecretsDir = sys_get_temp_dir().'/kiwi-functional-api-contract-'.bin2hex(random_bytes(4));
+        mkdir($this->tempClientSecretsDir, 0777, true);
+
+        $path = $this->tempClientSecretsDir.'/client_secrets.json';
+        file_put_contents($path, (string) json_encode([
+            'hup' => [],
+        ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
+
+        putenv(sprintf('KIWI_CLIENT_SECRETS_PATH=%s', $path));
     }
 }

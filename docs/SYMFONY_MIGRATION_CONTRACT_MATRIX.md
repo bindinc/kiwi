@@ -24,13 +24,13 @@ This matrix records the HTTP and runtime contract that the Symfony runtime must 
 | `/auth/callback` | Public | Complete OIDC authorization-code flow and establish the application session. |
 | `/app-logout` | Authenticated session | Clear the local session first, then attempt provider logout with `post_logout_redirect_uri` only when whitelisted in `client_secrets.json`. Fallback target is `/logged-out`. |
 | `/logged-out` | Public | Render a logged-out page with a link back to `/login`. |
+| `/status` | Public | Returns `status`, `timestamp`, and `rate_limit` for health checks without exposing the `/api/v1` namespace. |
 
 ## API routes
 
 | Route family | Auth | Notes |
 | --- | --- | --- |
-| `/api/v1/status` | Public | Returns `status`, `timestamp`, and `rate_limit`. |
-| `/api/v1/*` except status | Required | Returns structured `401` or `403` JSON errors instead of redirects. |
+| `/api/v1/*` | Required | Returns structured `401` or `403` JSON errors instead of redirects. |
 | `/api/v1/me` | Required | Returns `identity` and `roles`. |
 | `/api/v1/bootstrap` | Required | Returns `customers`, `call_queue`, `call_session`, `last_call_session`, and `catalog`. |
 | `/api/v1/agent-status` | Required | Persists Kiwi agent status in session and optionally synchronizes to Microsoft Teams when issuer/scope checks allow it. |
