@@ -71,6 +71,10 @@ function areSameCustomer(leftCustomer, rightCustomer) {
     return String(leftCustomer.id) === String(rightCustomer.id);
 }
 
+function isSubscriptionApiCustomer(customer) {
+    return String(customer && customer.sourceSystem || '').trim() === 'subscription-api';
+}
+
 function normalizeContactHistoryEntry(entry = {}) {
     return {
         id: entry.id || generateContactHistoryId(),
@@ -81,6 +85,10 @@ function normalizeContactHistoryEntry(entry = {}) {
 }
 
 function persistContactHistoryEntry(dependencies, customer, normalizedEntry) {
+    if (isSubscriptionApiCustomer(customer)) {
+        return;
+    }
+
     const shouldPersistViaApi = (
         dependencies
         && typeof dependencies.getApiClient === 'function'
@@ -192,6 +200,10 @@ export function generateContactHistoryId() {
 
 export function pushContactHistory(customer, entry, options = {}) {
     if (!customer) {
+        return null;
+    }
+
+    if (isSubscriptionApiCustomer(customer)) {
         return null;
     }
 
@@ -331,6 +343,11 @@ export function displayContactHistory() {
         ? dependencies.getContactHistoryState()
         : null;
     if (!contactHistoryState) {
+        return;
+    }
+
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        historyContainer.innerHTML = `<div class="empty-state-small"><p>${translateLabel(dependencies, 'contactHistory.none', 'Geen contactgeschiedenis beschikbaar')}</p></div>`;
         return;
     }
 

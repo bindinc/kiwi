@@ -200,6 +200,30 @@ final class PersonSearchResultNormalizerTest extends TestCase
         self::assertSame([['origin' => 'UIS', 'identifier' => '41929371']], $normalized['references']);
     }
 
+    public function testNormalizePersonDocumentsOpenApiStringIdMismatchAgainstNumericDomainId(): void
+    {
+        $credential = new HupApiCredential(
+            name: 'tvk',
+            title: 'TV Krant',
+            mandant: 'HMC',
+            supportsPersonLookup: true,
+            username: 'tvk-user',
+            password: 'tvk-password',
+            refreshToken: null,
+        );
+        $normalizer = new PersonSearchResultNormalizer();
+
+        $normalized = $normalizer->normalizePerson([
+            'personId' => '11860448',
+            'divisionId' => '14',
+            'name' => 'Meeringa',
+            'firstName' => 'Wiesje',
+        ], $credential);
+
+        self::assertSame(11860448, $normalized['id']);
+        self::assertSame('11860448', $normalized['personId']);
+    }
+
     public function testNormalizeCredentialResultSupportsLiveEmailFieldName(): void
     {
         $credential = new HupApiCredential(

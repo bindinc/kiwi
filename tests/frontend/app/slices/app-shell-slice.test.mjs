@@ -157,6 +157,53 @@ function testShowToastUsesContactHistoryAndDeduplicatesRecentSuccessToast() {
     });
 }
 
+function testShowToastFallsBackToVisualToastForSubscriptionApiCustomer() {
+    withGlobalState(() => {
+        const toastElement = {
+            textContent: '',
+            className: '',
+            classList: {
+                add(className) {
+                    this.lastAdded = className;
+                },
+                remove() {}
+            }
+        };
+        const documentStub = createDocumentStub({
+            elementsById: {
+                toast: toastElement
+            }
+        });
+        globalThis.document = documentStub;
+
+        let pushedEntries = 0;
+        configureAppShellSliceDependencies(() => ({
+            getCurrentCustomer() {
+                return {
+                    id: 77,
+                    sourceSystem: 'subscription-api'
+                };
+            },
+            getContactHistoryState() {
+                return {
+                    highlightId: null,
+                    lastEntry: null
+                };
+            },
+            pushContactHistory() {
+                pushedEntries += 1;
+            }
+        }));
+
+        showToast('readonly melding', 'warning');
+
+        assert.equal(pushedEntries, 0);
+        assert.equal(toastElement.textContent, 'readonly melding');
+        assert.equal(toastElement.className, 'toast warning');
+        assert.equal(toastElement.classList.lastAdded, 'show');
+    });
+}
+
 function testGlobalListenersHandleKeyboardClickAndChangeEvents() {
     withGlobalState(() => {
         const searchInput = {
@@ -304,6 +351,7 @@ function run() {
     testRegistersItemTwelveActionAndNamespace();
     testCloseFormResetsDuplicateStateForNewSubscriptionForm();
     testShowToastUsesContactHistoryAndDeduplicatesRecentSuccessToast();
+    testShowToastFallsBackToVisualToastForSubscriptionApiCustomer();
     testGlobalListenersHandleKeyboardClickAndChangeEvents();
     console.log('app shell slice tests passed');
 }

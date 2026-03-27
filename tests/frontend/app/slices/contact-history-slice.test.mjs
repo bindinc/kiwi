@@ -4,6 +4,7 @@ import {
     __contactHistoryTestUtils,
     addContactMoment,
     configureContactHistorySliceDependencies,
+    displayContactHistory,
     pushContactHistory,
     registerContactHistorySlice,
     resetContactHistoryViewState
@@ -261,6 +262,86 @@ function testAddContactMomentResolvesCustomerById() {
     });
 }
 
+function testSubscriptionApiCustomerKeepsContactHistoryReadonlyAndEmpty() {
+    withGlobalState(() => {
+        const customer = {
+            id: 31,
+            sourceSystem: 'subscription-api',
+            contactHistory: [
+                {
+                    id: 'legacy-entry',
+                    type: 'notification_info',
+                    date: '2026-03-27T08:00:00.000Z',
+                    description: 'Mag niet zichtbaar blijven'
+                }
+            ]
+        };
+        const contactHistoryState = {
+            currentPage: 2,
+            itemsPerPage: 6,
+            highlightId: null,
+            lastEntry: null
+        };
+        const historyContainer = {
+            innerHTML: ''
+        };
+        let savedCustomersCount = 0;
+        let postCalls = 0;
+
+        globalThis.document = {
+            getElementById(id) {
+                if (id === 'contactHistory') {
+                    return historyContainer;
+                }
+
+                return null;
+            }
+        };
+
+        configureContactHistorySliceDependencies(() => ({
+            findCustomerById(customerId) {
+                return Number(customerId) === 31 ? customer : null;
+            },
+            getCurrentCustomer() {
+                return customer;
+            },
+            getContactHistoryState() {
+                return contactHistoryState;
+            },
+            getApiClient() {
+                return {
+                    post() {
+                        postCalls += 1;
+                        return Promise.resolve({ id: 'server-entry-id' });
+                    }
+                };
+            },
+            personsApiUrl: '/api/v1/persons',
+            saveCustomers() {
+                savedCustomersCount += 1;
+            }
+        }));
+
+        const entry = pushContactHistory(
+            customer,
+            {
+                type: 'notification_success',
+                description: 'Mag niet worden opgeslagen'
+            },
+            { highlight: true, moveToFirstPage: true }
+        );
+
+        assert.equal(entry, null);
+        assert.equal(customer.contactHistory.length, 1);
+        assert.equal(savedCustomersCount, 0);
+        assert.equal(postCalls, 0);
+
+        displayContactHistory();
+        assert.equal(historyContainer.innerHTML.includes('Geen contactgeschiedenis beschikbaar'), true);
+        assert.equal(historyContainer.innerHTML.includes('Mag niet zichtbaar blijven'), false);
+    });
+}
+
 function testResetContactHistoryViewStateClearsTimerAndState() {
     withGlobalState(() => {
         const customer = {
@@ -323,6 +404,7 @@ async function run() {
     testPushContactHistoryTracksHighlightAndPersistsViaSaveCustomers();
     await testPushContactHistoryPersistsViaApiWhenAvailable();
     testAddContactMomentResolvesCustomerById();
+    testSubscriptionApiCustomerKeepsContactHistoryReadonlyAndEmpty();
     testResetContactHistoryViewStateClearsTimerAndState();
     console.log('contact history slice tests passed');
 }

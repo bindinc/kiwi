@@ -31,6 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Keep `Klant Zoeken` interface feedback aligned with the actual request by including phone and e-mail filters in the visible search summary instead of making those searches look like an unfiltered `"alle klanten"` query.
 - Keep subscription-api `Klant Zoeken` result sets strict when upstream `personsearch` responds fuzzily, by reapplying postcode, house number, name, phone, and e-mail filters locally before KIWI shows the aggregated customer list.
 - Read search-result e-mail addresses from both live `eMail` payloads and documented `geteMail` payloads so subscription-api e-mail filtering and result rendering stay compatible across response variants.
+- Keep `subscription-api` customers' contact history truly empty/read-only by skipping local history writes for that source system, rendering the empty-state timeline, and falling back to visible toasts instead of silently logging messages as contact moments.
+- Document the known subscription API OpenAPI mismatch where `personId` is modeled as a string in the schema even though the live/domain contract uses a numeric customer id.
 
 ## [v1.0.14]
 

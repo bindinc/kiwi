@@ -386,6 +386,9 @@ final class PersonSearchResultNormalizer
             return null;
         }
 
+        // The current subscription API OpenAPI schema publishes person identifiers as strings,
+        // while the live/domain contract uses numeric customer ids. Keep the raw upstream value
+        // on `personId`, but normalize the KIWI cache key to an integer when the payload is digits-only.
         if (preg_match('/^\d+$/', $personId)) {
             return (int) $personId;
         }

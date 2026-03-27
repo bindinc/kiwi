@@ -152,6 +152,10 @@ export function mapToastTypeToContactType(toastType) {
     }
 }
 
+function isSubscriptionApiCustomer(customer) {
+    return String(customer && customer.sourceSystem || '').trim() === 'subscription-api';
+}
+
 function shouldSkipContactHistoryToast(type, contactHistoryState) {
     if (type !== 'success') {
         return false;
@@ -181,8 +185,11 @@ export function showToast(message, type = 'success') {
         ? dependencies.getContactHistoryState()
         : null;
     const canLogContactHistory = dependencies && typeof dependencies.pushContactHistory === 'function';
+    const canAppendContactHistoryToast = currentCustomer
+        && !isSubscriptionApiCustomer(currentCustomer)
+        && canLogContactHistory;
 
-    if (currentCustomer && canLogContactHistory) {
+    if (canAppendContactHistoryToast) {
         const shouldSkipToast = shouldSkipContactHistoryToast(type, contactHistoryState);
         if (shouldSkipToast) {
             return;
