@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
-use App\Oidc\OidcClient;
+use App\Http\JsonRequestDecoder;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\RequestOidcContext;
 use App\Service\PocStateService;
 use App\Service\SubscriptionQueueService;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,11 +19,14 @@ use Symfony\Component\Routing\Annotation\Route;
 final class WorkflowController extends AbstractApiController
 {
     public function __construct(
-        OidcClient $oidcClient,
+        RequestOidcContext $requestOidcContext,
+        OidcRoleAccess $oidcRoleAccess,
+        OidcConfiguration $oidcConfiguration,
+        JsonRequestDecoder $jsonRequestDecoder,
         private readonly PocStateService $stateService,
         private readonly SubscriptionQueueService $subscriptionQueueService,
     ) {
-        parent::__construct($oidcClient);
+        parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
 
     #[Route('/subscription', name: 'api_workflow_subscription_list', methods: ['GET'])]
@@ -46,10 +52,7 @@ final class WorkflowController extends AbstractApiController
     public function queueSubscription(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json(
             $this->subscriptionQueueService->queueSubscription(
@@ -65,10 +68,7 @@ final class WorkflowController extends AbstractApiController
     public function articleOrder(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         $customerId = $this->parseIntValue($payload['customerId'] ?? null, 'customerId', null, false, 1);
         $customer = \is_array($payload['customer'] ?? null) ? $payload['customer'] : null;

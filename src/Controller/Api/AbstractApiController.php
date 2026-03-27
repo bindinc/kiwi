@@ -5,27 +5,33 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
-use App\Oidc\OidcClient;
+use App\Http\JsonRequestDecoder;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\RequestOidcContext;
 use App\Security\OidcUser;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 abstract class AbstractApiController extends AbstractController
 {
     public function __construct(
-        protected readonly OidcClient $oidcClient,
+        protected readonly RequestOidcContext $requestOidcContext,
+        protected readonly OidcRoleAccess $oidcRoleAccess,
+        protected readonly OidcConfiguration $oidcConfiguration,
+        protected readonly JsonRequestDecoder $jsonRequestDecoder,
     ) {
     }
 
     protected function requireApiAccess(Request $request): void
     {
-        if (!$this->isApiAuthenticated($request)) {
+        $authenticatedUser = $this->getAuthenticatedUser();
+        if (!$this->requestOidcContext->isAuthenticated($request, $authenticatedUser)) {
             throw new ApiProblemException(401, 'unauthorized', 'Authentication required');
         }
 
-        $roles = $this->oidcClient->getUserRoles($this->getSessionData($request));
-        if (!$this->oidcClient->userHasAccess($roles)) {
+        $roles = $this->requestOidcContext->getUserRoles($request, $authenticatedUser);
+        if (!$this->oidcRoleAccess->userHasAccess($roles)) {
             throw new ApiProblemException(
                 403,
                 'forbidden',
@@ -40,13 +46,7 @@ abstract class AbstractApiController extends AbstractController
      */
     protected function getCurrentUserContext(Request $request): array
     {
-        $sessionData = $this->getSessionData($request);
-        $profile = \is_array($sessionData['oidc_auth_profile'] ?? null) ? $sessionData['oidc_auth_profile'] : [];
-
-        return [
-            'identity' => $this->oidcClient->buildUserIdentity($profile),
-            'roles' => $this->oidcClient->getUserRoles($sessionData),
-        ];
+        return $this->requestOidcContext->getCurrentUserContext($request, $this->getAuthenticatedUser());
     }
 
     protected function parseQueryInt(
@@ -110,21 +110,15 @@ abstract class AbstractApiController extends AbstractController
      */
     protected function getSessionData(Request $request): array
     {
-        $session = $request->getSession();
-        $sessionData = [];
+        return $this->requestOidcContext->getSessionData($request, $this->getAuthenticatedUser());
+    }
 
-        foreach (['oidc_auth_profile', 'oidc_auth_token', 'oidc_profile_photo'] as $key) {
-            $value = $session->get($key);
-            if (\is_array($value) || (\is_string($value) && '' !== $value)) {
-                $sessionData[$key] = $value;
-            }
-        }
-
-        if (!isset($sessionData['oidc_auth_profile']) && $this->getUser() instanceof OidcUser) {
-            $sessionData['oidc_auth_profile'] = $this->getUser()->getProfile();
-        }
-
-        return $sessionData;
+    /**
+     * @return array<string, mixed>
+     */
+    protected function parseJsonObject(Request $request, string $errorCode = 'invalid_payload'): array
+    {
+        return $this->jsonRequestDecoder->decodeObject($request, $errorCode);
     }
 
     /**
@@ -135,21 +129,14 @@ abstract class AbstractApiController extends AbstractController
         return [
             'TEAMS_PRESENCE_SYNC_ENABLED' => getenv('TEAMS_PRESENCE_SYNC_ENABLED') ?: false,
             'TEAMS_PRESENCE_SESSION_ID' => getenv('TEAMS_PRESENCE_SESSION_ID') ?: null,
-            'OIDC_CLIENT_ID' => $this->oidcClient->getConfig()['client_id'] ?? null,
+            'OIDC_CLIENT_ID' => $this->oidcConfiguration->getClientId(),
         ];
     }
 
-    private function isApiAuthenticated(Request $request): bool
+    private function getAuthenticatedUser(): ?OidcUser
     {
-        $sessionData = $this->getSessionData($request);
-        if (!$this->oidcClient->hasFreshSessionToken($sessionData)) {
-            return false;
-        }
+        $user = $this->getUser();
 
-        if ($this->getUser() instanceof OidcUser) {
-            return true;
-        }
-
-        return isset($sessionData['oidc_auth_profile']) || isset($sessionData['oidc_auth_token']);
+        return $user instanceof OidcUser ? $user : null;
     }
 }

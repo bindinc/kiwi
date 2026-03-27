@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
-use App\Oidc\OidcClient;
+use App\Http\JsonRequestDecoder;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\RequestOidcContext;
 use App\Service\PocCatalogService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,10 +18,13 @@ use Symfony\Component\Routing\Annotation\Route;
 final class CatalogController extends AbstractApiController
 {
     public function __construct(
-        OidcClient $oidcClient,
+        RequestOidcContext $requestOidcContext,
+        OidcRoleAccess $oidcRoleAccess,
+        OidcConfiguration $oidcConfiguration,
+        JsonRequestDecoder $jsonRequestDecoder,
         private readonly PocCatalogService $catalog,
     ) {
-        parent::__construct($oidcClient);
+        parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
 
     #[Route('/articles', name: 'api_catalog_articles', methods: ['GET'])]
@@ -64,10 +70,7 @@ final class CatalogController extends AbstractApiController
     {
         $this->requireApiAccess($request);
 
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         $items = \is_array($payload['items'] ?? null) ? $payload['items'] : [];
         $couponCode = \is_string($payload['couponCode'] ?? null) ? $payload['couponCode'] : null;

@@ -4,70 +4,42 @@ declare(strict_types=1);
 
 namespace App\Oidc;
 
-use Firebase\JWT\JWK;
-use Firebase\JWT\JWT;
 use League\OAuth2\Client\Provider\GenericProvider;
-use League\OAuth2\Client\Token\AccessTokenInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class OidcClient
 {
-    public const DEFAULT_CLIENT_SECRETS_PATH = '/etc/kiwi/oidc-client-secrets/client_secrets.json';
+    public const DEFAULT_CLIENT_SECRETS_PATH = OidcConfiguration::DEFAULT_CLIENT_SECRETS_PATH;
 
-    /**
-     * @var string[]
-     */
-    private const ALLOWED_ROLES = [
-        'bink8s.app.kiwi.admin',
-        'bink8s.app.kiwi.dev',
-        'bink8s.app.kiwi.supervisor',
-        'bink8s.app.kiwi.user',
-        'bink8s.app.kiwi.view',
-    ];
-
-    /**
-     * @var string[]
-     */
-    private const MICROSOFT_ISSUER_HOSTS = [
-        'login.microsoftonline.com',
-        'login.windows.net',
-        'sts.windows.net',
-    ];
-
-    /**
-     * @var string[]
-     */
-    private const SAFE_JWKS_ALGORITHMS = [
-        'RS256',
-        'RS384',
-        'RS512',
-        'PS256',
-        'PS384',
-        'PS512',
-        'ES256',
-        'ES256K',
-        'ES384',
-        'EdDSA',
-    ];
-
-    /**
-     * @var array<string, mixed>|null
-     */
-    private ?array $config = null;
-
-    /**
-     * @var array<string, mixed>|null
-     */
-    private ?array $serverMetadata = null;
+    private ?OidcConfiguration $configurationService;
+    private ?OidcRoleAccess $roleAccessService;
+    private ?OidcServerMetadataProvider $serverMetadataProviderService;
+    private ?OidcTokenInspector $tokenInspectorService;
+    private ?OidcUserIdentityMapper $userIdentityMapperService;
+    private ?OidcProfilePhotoClient $profilePhotoClientService;
+    private ?OidcLogoutUrlBuilder $logoutUrlBuilderService;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         #[Autowire('%kernel.project_dir%')]
         private readonly string $projectDir,
+        ?OidcConfiguration $configuration = null,
+        ?OidcRoleAccess $roleAccess = null,
+        ?OidcServerMetadataProvider $serverMetadataProvider = null,
+        ?OidcTokenInspector $tokenInspector = null,
+        ?OidcUserIdentityMapper $userIdentityMapper = null,
+        ?OidcProfilePhotoClient $profilePhotoClient = null,
+        ?OidcLogoutUrlBuilder $logoutUrlBuilder = null,
     ) {
+        $this->configurationService = $configuration;
+        $this->roleAccessService = $roleAccess;
+        $this->serverMetadataProviderService = $serverMetadataProvider;
+        $this->tokenInspectorService = $tokenInspector;
+        $this->userIdentityMapperService = $userIdentityMapper;
+        $this->profilePhotoClientService = $profilePhotoClient;
+        $this->logoutUrlBuilderService = $logoutUrlBuilder;
     }
 
     /**
@@ -75,7 +47,7 @@ class OidcClient
      */
     public function getAllowedRoles(): array
     {
-        return self::ALLOWED_ROLES;
+        return $this->roleAccess()->getAllowedRoles();
     }
 
     /**
@@ -83,84 +55,32 @@ class OidcClient
      */
     public function getConfig(): array
     {
-        if (null !== $this->config) {
-            return $this->config;
-        }
-
-        $path = $this->getClientSecretsPath();
-        if (!is_file($path)) {
-            $this->config = [];
-
-            return $this->config;
-        }
-
-        $raw = file_get_contents($path);
-        if (false === $raw) {
-            $this->config = [];
-
-            return $this->config;
-        }
-
-        $decoded = json_decode($raw, true);
-        if (!\is_array($decoded)) {
-            $this->config = [];
-
-            return $this->config;
-        }
-
-        $web = $decoded['web'] ?? [];
-        $this->config = \is_array($web) ? $web : [];
-
-        return $this->config;
+        return $this->configuration()->getConfig();
     }
 
     public function getClientSecretsPath(): string
     {
-        $configured = trim((string) (getenv('OIDC_CLIENT_SECRETS') ?: ''));
-        if ('' !== $configured) {
-            return $configured;
-        }
-
-        $mountedSecrets = self::DEFAULT_CLIENT_SECRETS_PATH;
-        if (is_file($mountedSecrets)) {
-            return $mountedSecrets;
-        }
-
-        return $this->projectDir.'/infra/docker/oidc/client_secrets.fallback.json';
+        return $this->configuration()->getClientSecretsPath();
     }
 
     public function createProvider(Request $request): GenericProvider
     {
-        $config = $this->getConfig();
-
-        return new GenericProvider([
-            'clientId' => (string) ($config['client_id'] ?? ''),
-            'clientSecret' => (string) ($config['client_secret'] ?? ''),
-            'redirectUri' => $this->buildRedirectUri($request),
-            'urlAuthorize' => (string) ($config['auth_uri'] ?? ''),
-            'urlAccessToken' => (string) ($config['token_uri'] ?? ''),
-            'urlResourceOwnerDetails' => (string) ($config['userinfo_uri'] ?? ''),
-        ]);
+        return $this->configuration()->createProvider($request);
     }
 
     public function getAuthorizationScope(): string
     {
-        return implode(' ', $this->getScopes());
+        return $this->configuration()->getAuthorizationScope();
     }
 
     public function buildRedirectUri(Request $request): string
     {
-        $explicit = trim((string) (getenv('OIDC_REDIRECT_URI') ?: ''));
-        if ('' !== $explicit) {
-            return $explicit;
-        }
-
-        return rtrim($request->getSchemeAndHttpHost(), '/').$request->getBasePath().'/auth/callback';
+        return $this->configuration()->buildRedirectUri($request);
     }
 
     public function buildLoggedOutUri(Request $request): string
     {
-        return rtrim($request->getSchemeAndHttpHost(), '/').$request->getBasePath().'/logged-out';
+        return $this->logoutUrlBuilder()->buildLoggedOutUri($request);
     }
 
     /**
@@ -168,83 +88,7 @@ class OidcClient
      */
     public function getScopes(): array
     {
-        $raw = trim((string) (getenv('OIDC_SCOPES') ?: ''));
-        $scopes = '' !== $raw
-            ? preg_split('/\s+/', $raw) ?: []
-            : $this->buildDefaultScopes();
-
-        $scopes = $this->normalizeScopes($scopes);
-        if (!$this->isPresenceSyncEnabled()) {
-            $scopes = array_values(array_filter(
-                $scopes,
-                static fn (string $scope): bool => !self::isPresenceScope($scope),
-            ));
-        }
-
-        return $scopes;
-    }
-
-    private function isFallbackSecretsConfig(): bool
-    {
-        $path = $this->getClientSecretsPath();
-        if (str_ends_with($path, 'client_secrets.fallback.json')) {
-            return true;
-        }
-
-        $issuer = trim((string) ($this->getConfig()['issuer'] ?? ''));
-
-        return str_contains($issuer, '/kiwi-oidc/');
-    }
-
-    /**
-     * @return string[]
-     */
-    private function buildDefaultScopes(): array
-    {
-        $scopes = ['openid', 'email', 'profile'];
-
-        if (!$this->isFallbackSecretsConfig()) {
-            $scopes[] = 'User.Read';
-
-            if ($this->isPresenceSyncEnabled()) {
-                $scopes[] = 'Presence.Read';
-                $scopes[] = 'Presence.ReadWrite';
-            }
-        }
-
-        return $scopes;
-    }
-
-    /**
-     * @param string[] $scopes
-     * @return string[]
-     */
-    private function normalizeScopes(array $scopes): array
-    {
-        return array_values(array_unique(array_filter(
-            array_map(
-                static fn (mixed $scope): string => \is_string($scope) ? trim($scope) : '',
-                $scopes,
-            ),
-            static fn (string $scope): bool => '' !== $scope,
-        )));
-    }
-
-    private function isPresenceSyncEnabled(): bool
-    {
-        $raw = strtolower(trim((string) (getenv('TEAMS_PRESENCE_SYNC_ENABLED') ?: '')));
-
-        return \in_array($raw, ['1', 'true', 'yes', 'on'], true);
-    }
-
-    private static function isPresenceScope(string $scope): bool
-    {
-        return \in_array($scope, [
-            'Presence.Read',
-            'Presence.Read.All',
-            'Presence.ReadWrite',
-            'Presence.ReadWrite.All',
-        ], true);
+        return $this->configuration()->getScopes();
     }
 
     /**
@@ -262,29 +106,14 @@ class OidcClient
         }
 
         return [
-            'token' => $this->normalizeTokenData($token),
+            'token' => $this->tokenInspector()->normalizeTokenData($token),
             'profile' => \is_array($profile) ? $profile : [],
         ];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function normalizeTokenData(AccessTokenInterface $token): array
+    public function normalizeTokenData(\League\OAuth2\Client\Token\AccessTokenInterface $token): array
     {
-        $values = method_exists($token, 'getValues') ? $token->getValues() : [];
-        if (!\is_array($values)) {
-            $values = [];
-        }
-
-        return [
-            'access_token' => $token->getToken(),
-            'expires' => $token->getExpires(),
-            'scope' => $values['scope'] ?? null,
-            'id_token' => $values['id_token'] ?? null,
-            'token_type' => $values['token_type'] ?? null,
-            'roles' => $values['roles'] ?? null,
-        ];
+        return $this->tokenInspector()->normalizeTokenData($token);
     }
 
     /**
@@ -293,53 +122,7 @@ class OidcClient
      */
     public function getUserRoles(array $sessionData): array
     {
-        if (!$this->hasFreshSessionToken($sessionData)) {
-            return [];
-        }
-
-        $roles = [];
-
-        $tokenData = $sessionData['oidc_auth_token'] ?? null;
-        if (\is_array($tokenData)) {
-            $idToken = $tokenData['id_token'] ?? null;
-            if (\is_string($idToken) && '' !== $idToken) {
-                $claims = $this->decodeJwtPayload($idToken);
-                if (\is_array($claims) && \is_array($claims['roles'] ?? null)) {
-                    $roles = $claims['roles'];
-                }
-            }
-
-            if ([] === $roles) {
-                $rawRoles = $tokenData['roles'] ?? [];
-                if (\is_string($rawRoles)) {
-                    $roles = [$rawRoles];
-                } elseif (\is_array($rawRoles)) {
-                    $roles = $rawRoles;
-                }
-            }
-        }
-
-        if ([] === $roles) {
-            $profile = $sessionData['oidc_auth_profile'] ?? null;
-            if (\is_array($profile)) {
-                $rawRoles = $profile['roles'] ?? [];
-                if (\is_string($rawRoles)) {
-                    $roles = [$rawRoles];
-                } elseif (\is_array($rawRoles)) {
-                    $roles = $rawRoles;
-                }
-            }
-        }
-
-        return array_values(
-            array_filter(
-                array_map(
-                    static fn (mixed $value): string => \is_string($value) ? trim($value) : '',
-                    $roles,
-                ),
-                static fn (string $value): bool => '' !== $value,
-            ),
-        );
+        return $this->tokenInspector()->getUserRoles($sessionData);
     }
 
     /**
@@ -347,13 +130,7 @@ class OidcClient
      */
     public function userHasAccess(array $roles): bool
     {
-        foreach ($roles as $role) {
-            if (\in_array($role, self::ALLOWED_ROLES, true)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->roleAccess()->userHasAccess($roles);
     }
 
     /**
@@ -362,56 +139,7 @@ class OidcClient
      */
     public function buildUserIdentity(?array $profile): array
     {
-        $profile ??= [];
-
-        $firstName = trim((string) ($profile['given_name'] ?? $profile['first_name'] ?? ''));
-        $lastName = trim((string) ($profile['family_name'] ?? $profile['last_name'] ?? ''));
-
-        $displayName = trim(implode(' ', array_filter([$firstName, $lastName])));
-        $fallbackName = trim((string) ($profile['name'] ?? ''));
-
-        if ('' === $displayName && '' !== $fallbackName) {
-            $displayName = $fallbackName;
-        }
-
-        if ('' !== $displayName && ('' === $firstName || '' === $lastName)) {
-            $parts = preg_split('/\s+/', $displayName) ?: [];
-            if ([] !== $parts) {
-                $firstName = '' !== $firstName ? $firstName : $parts[0];
-                if (count($parts) > 1 && '' === $lastName) {
-                    $lastName = $parts[count($parts) - 1];
-                }
-            }
-        }
-
-        $displayName = trim(implode(' ', array_filter([$firstName, $lastName])));
-        if ('' === $displayName) {
-            $displayName = trim((string) ($profile['preferred_username'] ?? $profile['email'] ?? 'Onbekende gebruiker'));
-        }
-
-        $initials = '';
-        foreach ([$firstName, $lastName] as $part) {
-            if ('' !== $part) {
-                $initials .= strtoupper($part[0]);
-            }
-        }
-
-        if ('' === $initials && '' !== $displayName) {
-            $initials = strtoupper($displayName[0]);
-        }
-
-        $email = $profile['email'] ?? $profile['preferred_username'] ?? null;
-        if (!\is_string($email) || '' === trim($email)) {
-            $email = null;
-        }
-
-        return [
-            'first_name' => $firstName,
-            'last_name' => $lastName,
-            'full_name' => $displayName,
-            'initials' => $initials,
-            'email' => $email,
-        ];
+        return $this->userIdentityMapper()->buildUserIdentity($profile);
     }
 
     /**
@@ -419,42 +147,7 @@ class OidcClient
      */
     public function getProfileImage(array &$sessionData): ?string
     {
-        if (!$this->hasFreshSessionToken($sessionData)) {
-            return null;
-        }
-
-        $cached = $sessionData['oidc_profile_photo'] ?? null;
-        if (\is_string($cached) && '' !== $cached) {
-            return $cached;
-        }
-
-        $accessToken = $this->getAccessToken($sessionData);
-        if (null === $accessToken) {
-            return null;
-        }
-
-        try {
-            $response = $this->httpClient->request('GET', 'https://graph.microsoft.com/v1.0/me/photo/$value', [
-                'headers' => [
-                    'Authorization' => 'Bearer '.$accessToken,
-                ],
-                'timeout' => 5,
-            ]);
-        } catch (TransportExceptionInterface) {
-            return null;
-        }
-
-        if (200 !== $response->getStatusCode()) {
-            return null;
-        }
-
-        $headers = $response->getHeaders(false);
-        $contentType = $headers['content-type'][0] ?? 'image/jpeg';
-        $content = $response->getContent(false);
-        $dataUrl = 'data:'.$contentType.';base64,'.base64_encode($content);
-        $sessionData['oidc_profile_photo'] = $dataUrl;
-
-        return $dataUrl;
+        return $this->profilePhotoClient()->getProfileImage($sessionData);
     }
 
     /**
@@ -462,40 +155,12 @@ class OidcClient
      */
     public function getOidcIssuer(array $sessionData): ?string
     {
-        $idTokenClaims = $this->getIdTokenClaims($sessionData);
-        if (\is_array($idTokenClaims) && \is_string($idTokenClaims['iss'] ?? null) && '' !== trim((string) $idTokenClaims['iss'])) {
-            return trim((string) $idTokenClaims['iss']);
-        }
-
-        $accessTokenClaims = $this->getAccessTokenClaims($sessionData);
-        if (\is_array($accessTokenClaims) && \is_string($accessTokenClaims['iss'] ?? null) && '' !== trim((string) $accessTokenClaims['iss'])) {
-            return trim((string) $accessTokenClaims['iss']);
-        }
-
-        $profile = $sessionData['oidc_auth_profile'] ?? null;
-        if (\is_array($profile) && \is_string($profile['iss'] ?? null) && '' !== trim((string) $profile['iss'])) {
-            return trim((string) $profile['iss']);
-        }
-
-        return null;
+        return $this->tokenInspector()->getOidcIssuer($sessionData);
     }
 
     public function isMicrosoftIssuer(?string $issuer): bool
     {
-        if (null === $issuer || '' === trim($issuer)) {
-            return false;
-        }
-
-        $host = strtolower((string) (parse_url($issuer, \PHP_URL_HOST) ?: ''));
-        if ('' === $host) {
-            return false;
-        }
-
-        if (\in_array($host, self::MICROSOFT_ISSUER_HOSTS, true)) {
-            return true;
-        }
-
-        return str_ends_with($host, '.microsoftonline.com');
+        return $this->tokenInspector()->isMicrosoftIssuer($issuer);
     }
 
     /**
@@ -504,54 +169,17 @@ class OidcClient
      */
     public function getTokenScopes(array $sessionData): array
     {
-        if (!$this->hasFreshSessionToken($sessionData)) {
-            return [];
-        }
-
-        $scopes = [];
-
-        $tokenData = $sessionData['oidc_auth_token'] ?? null;
-        if (\is_array($tokenData)) {
-            $rawScope = $tokenData['scope'] ?? null;
-            if (\is_string($rawScope)) {
-                $scopes = array_merge($scopes, preg_split('/\s+/', trim($rawScope)) ?: []);
-            } elseif (\is_array($rawScope)) {
-                foreach ($rawScope as $scope) {
-                    if (\is_string($scope) && '' !== trim($scope)) {
-                        $scopes[] = trim($scope);
-                    }
-                }
-            }
-        }
-
-        $accessTokenClaims = $this->getAccessTokenClaims($sessionData);
-        if (\is_array($accessTokenClaims) && \is_string($accessTokenClaims['scp'] ?? null)) {
-            $scopes = array_merge($scopes, preg_split('/\s+/', trim((string) $accessTokenClaims['scp'])) ?: []);
-        }
-
-        return array_values(array_unique(array_filter($scopes, static fn (string $scope): bool => '' !== $scope)));
+        return $this->tokenInspector()->getTokenScopes($sessionData);
     }
 
     public function getEndSessionEndpoint(): ?string
     {
-        $metadata = $this->getServerMetadata();
-        if (!\is_array($metadata)) {
-            return null;
-        }
-
-        $endpoint = $metadata['end_session_endpoint'] ?? null;
-
-        return \is_string($endpoint) && '' !== trim($endpoint) ? trim($endpoint) : null;
+        return $this->logoutUrlBuilder()->getEndSessionEndpoint();
     }
 
     public function getServerMetadataUrl(): ?string
     {
-        $issuer = trim((string) ($this->getConfig()['issuer'] ?? ''));
-        if ('' === $issuer) {
-            return null;
-        }
-
-        return rtrim($issuer, '/').'/.well-known/openid-configuration';
+        return $this->serverMetadataProvider()->getServerMetadataUrl();
     }
 
     /**
@@ -559,19 +187,7 @@ class OidcClient
      */
     public function getRedirectUrisFromSecrets(): array
     {
-        $redirectUris = $this->getConfig()['redirect_uris'] ?? [];
-        if (!\is_array($redirectUris)) {
-            return [];
-        }
-
-        $normalized = [];
-        foreach ($redirectUris as $uri) {
-            if (\is_string($uri) && '' !== trim($uri)) {
-                $normalized[] = trim($uri);
-            }
-        }
-
-        return $normalized;
+        return $this->configuration()->getRedirectUrisFromSecrets();
     }
 
     /**
@@ -581,37 +197,7 @@ class OidcClient
      */
     public function validateIdToken(array $sessionData, string $expectedNonce): void
     {
-        $idToken = $sessionData['oidc_auth_token']['id_token'] ?? null;
-        if (!\is_string($idToken) || '' === trim($idToken)) {
-            throw new \UnexpectedValueException('Missing OIDC ID token.');
-        }
-
-        $clientId = trim((string) ($this->getConfig()['client_id'] ?? ''));
-        if ('' === $clientId) {
-            throw new \UnexpectedValueException('Missing OIDC client ID.');
-        }
-
-        $decoded = JWT::decode($idToken, $this->getValidationKeys($idToken));
-        $claims = json_decode((string) json_encode($decoded, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
-        if (!\is_array($claims)) {
-            throw new \UnexpectedValueException('OIDC ID token claims could not be normalized.');
-        }
-
-        $tokenIssuer = trim((string) ($claims['iss'] ?? ''));
-        $expectedIssuer = trim((string) ($this->getExpectedIssuer() ?? ''));
-        if (!$this->issuerMatchesExpected($expectedIssuer, $tokenIssuer)) {
-            throw new \UnexpectedValueException('Invalid OIDC issuer.');
-        }
-
-        if (!$this->audienceMatchesClientId($claims['aud'] ?? null, $clientId)) {
-            throw new \UnexpectedValueException('Invalid OIDC audience.');
-        }
-
-        $receivedNonce = trim((string) ($claims['nonce'] ?? ''));
-        $normalizedExpectedNonce = trim($expectedNonce);
-        if ('' === $normalizedExpectedNonce || '' === $receivedNonce || !hash_equals($normalizedExpectedNonce, $receivedNonce)) {
-            throw new \UnexpectedValueException('Invalid OIDC nonce.');
-        }
+        $this->tokenInspector()->validateIdToken($sessionData, $expectedNonce);
     }
 
     public function buildEndSessionLogoutUrl(
@@ -620,47 +206,12 @@ class OidcClient
         ?string $idTokenHint = null,
         ?string $clientId = null,
     ): ?string {
-        if (null === $endSessionEndpoint || '' === trim($endSessionEndpoint)) {
-            return null;
-        }
-
-        $parts = parse_url($endSessionEndpoint);
-        if (!\is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
-            return null;
-        }
-
-        $query = [];
-        if (isset($parts['query'])) {
-            parse_str($parts['query'], $query);
-        }
-
-        if (null !== $postLogoutRedirectUri && '' !== $postLogoutRedirectUri) {
-            $query['post_logout_redirect_uri'] = $postLogoutRedirectUri;
-        }
-
-        if (null !== $idTokenHint && '' !== $idTokenHint) {
-            $query['id_token_hint'] = $idTokenHint;
-        }
-
-        if (null !== $clientId && '' !== $clientId) {
-            $query['client_id'] = $clientId;
-        }
-
-        $url = $parts['scheme'].'://'.$parts['host'];
-        if (isset($parts['port'])) {
-            $url .= ':'.$parts['port'];
-        }
-
-        $url .= $parts['path'] ?? '';
-        if ([] !== $query) {
-            $url .= '?'.http_build_query($query);
-        }
-
-        if (isset($parts['fragment'])) {
-            $url .= '#'.$parts['fragment'];
-        }
-
-        return $url;
+        return $this->logoutUrlBuilder()->buildEndSessionLogoutUrl(
+            $endSessionEndpoint,
+            $postLogoutRedirectUri,
+            $idTokenHint,
+            $clientId,
+        );
     }
 
     /**
@@ -668,18 +219,7 @@ class OidcClient
      */
     public function getAccessToken(array $sessionData): ?string
     {
-        if (!$this->hasFreshSessionToken($sessionData)) {
-            return null;
-        }
-
-        $tokenData = $sessionData['oidc_auth_token'] ?? null;
-        if (!\is_array($tokenData)) {
-            return null;
-        }
-
-        $accessToken = $tokenData['access_token'] ?? null;
-
-        return \is_string($accessToken) && '' !== trim($accessToken) ? trim($accessToken) : null;
+        return $this->tokenInspector()->getAccessToken($sessionData);
     }
 
     /**
@@ -687,18 +227,7 @@ class OidcClient
      */
     public function getIdToken(array $sessionData): ?string
     {
-        if (!$this->hasFreshSessionToken($sessionData)) {
-            return null;
-        }
-
-        $tokenData = $sessionData['oidc_auth_token'] ?? null;
-        if (!\is_array($tokenData)) {
-            return null;
-        }
-
-        $idToken = $tokenData['id_token'] ?? null;
-
-        return \is_string($idToken) && '' !== trim($idToken) ? trim($idToken) : null;
+        return $this->tokenInspector()->getIdToken($sessionData);
     }
 
     /**
@@ -707,9 +236,7 @@ class OidcClient
      */
     public function getIdTokenClaims(array $sessionData): ?array
     {
-        $idToken = $this->getIdToken($sessionData);
-
-        return null !== $idToken ? $this->decodeJwtPayload($idToken) : null;
+        return $this->tokenInspector()->getIdTokenClaims($sessionData);
     }
 
     /**
@@ -718,9 +245,7 @@ class OidcClient
      */
     public function getAccessTokenClaims(array $sessionData): ?array
     {
-        $accessToken = $this->getAccessToken($sessionData);
-
-        return null !== $accessToken ? $this->decodeJwtPayload($accessToken) : null;
+        return $this->tokenInspector()->getAccessTokenClaims($sessionData);
     }
 
     /**
@@ -728,250 +253,51 @@ class OidcClient
      */
     public function hasFreshSessionToken(array $sessionData): bool
     {
-        $tokenData = $sessionData['oidc_auth_token'] ?? null;
-        if (!\is_array($tokenData) || [] === $tokenData) {
-            return false;
-        }
-
-        $expires = $tokenData['expires'] ?? null;
-        if (null === $expires || '' === $expires) {
-            return false;
-        }
-
-        if (\is_string($expires) && is_numeric($expires)) {
-            $expires = (int) $expires;
-        }
-
-        if (!\is_int($expires)) {
-            return false;
-        }
-
-        return $expires > time();
+        return $this->tokenInspector()->hasFreshSessionToken($sessionData);
     }
 
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function getServerMetadata(): ?array
+    private function configuration(): OidcConfiguration
     {
-        if (null !== $this->serverMetadata) {
-            return $this->serverMetadata;
-        }
-
-        $metadataUrl = $this->getServerMetadataUrl();
-        if (null === $metadataUrl) {
-            return null;
-        }
-
-        try {
-            $response = $this->httpClient->request('GET', $metadataUrl, ['timeout' => 5]);
-            if (200 !== $response->getStatusCode()) {
-                return null;
-            }
-
-            $metadata = $response->toArray(false);
-        } catch (\Throwable) {
-            return null;
-        }
-
-        if (!\is_array($metadata)) {
-            return null;
-        }
-
-        $this->serverMetadata = $metadata;
-
-        return $this->serverMetadata;
+        return $this->configurationService ??= new OidcConfiguration($this->projectDir);
     }
 
-    /**
-     * @return array<string, \Firebase\JWT\Key>
-     */
-    private function getValidationKeys(string $idToken): array
+    private function roleAccess(): OidcRoleAccess
     {
-        $metadata = $this->getServerMetadata();
-        $jwksUri = \is_array($metadata) ? ($metadata['jwks_uri'] ?? null) : null;
-        if (!\is_string($jwksUri) || '' === trim($jwksUri)) {
-            throw new \UnexpectedValueException('OIDC JWKS URI is missing.');
-        }
-
-        $response = $this->httpClient->request('GET', trim($jwksUri), ['timeout' => 5]);
-        if (200 !== $response->getStatusCode()) {
-            throw new \UnexpectedValueException('OIDC JWKS could not be loaded.');
-        }
-
-        $jwks = $response->toArray(false);
-        if (!\is_array($jwks)) {
-            throw new \UnexpectedValueException('OIDC JWKS payload is invalid.');
-        }
-
-        $defaultAlg = $this->resolveJwksDefaultAlgorithm($idToken);
-
-        return JWK::parseKeySet($jwks, $defaultAlg);
+        return $this->roleAccessService ??= new OidcRoleAccess();
     }
 
-    private function resolveJwksDefaultAlgorithm(string $idToken): ?string
+    private function serverMetadataProvider(): OidcServerMetadataProvider
     {
-        $header = $this->decodeJwtHeader($idToken);
-        $headerAlg = \is_array($header) ? trim((string) ($header['alg'] ?? '')) : '';
-        if ('' === $headerAlg) {
-            return null;
-        }
-
-        $supportedAlgorithms = $this->getSupportedSigningAlgorithmsFromMetadata();
-        if ([] !== $supportedAlgorithms) {
-            if (\in_array($headerAlg, $supportedAlgorithms, true)) {
-                return $headerAlg;
-            }
-
-            throw new \UnexpectedValueException('Unsupported OIDC signing algorithm.');
-        }
-
-        $expectedIssuer = $this->getExpectedIssuer();
-        if (\is_string($expectedIssuer) && '' !== trim($expectedIssuer) && $this->isMicrosoftIssuer($expectedIssuer)) {
-            if ('RS256' === $headerAlg) {
-                return $headerAlg;
-            }
-
-            throw new \UnexpectedValueException('Unsupported OIDC signing algorithm.');
-        }
-
-        if (\in_array($headerAlg, self::SAFE_JWKS_ALGORITHMS, true)) {
-            return $headerAlg;
-        }
-
-        throw new \UnexpectedValueException('Unsupported OIDC signing algorithm.');
+        return $this->serverMetadataProviderService ??= new OidcServerMetadataProvider(
+            $this->httpClient,
+            $this->configuration(),
+        );
     }
 
-    /**
-     * @return string[]
-     */
-    private function getSupportedSigningAlgorithmsFromMetadata(): array
+    private function tokenInspector(): OidcTokenInspector
     {
-        $metadata = $this->getServerMetadata();
-        $rawAlgorithms = \is_array($metadata) ? ($metadata['id_token_signing_alg_values_supported'] ?? null) : null;
-        if (!\is_array($rawAlgorithms)) {
-            return [];
-        }
-
-        $supportedAlgorithms = [];
-        foreach ($rawAlgorithms as $algorithm) {
-            if (!\is_string($algorithm)) {
-                continue;
-            }
-
-            $normalized = trim($algorithm);
-            if ('' === $normalized || !\in_array($normalized, self::SAFE_JWKS_ALGORITHMS, true)) {
-                continue;
-            }
-
-            $supportedAlgorithms[] = $normalized;
-        }
-
-        return array_values(array_unique($supportedAlgorithms));
+        return $this->tokenInspectorService ??= new OidcTokenInspector(
+            $this->httpClient,
+            $this->configuration(),
+            $this->serverMetadataProvider(),
+        );
     }
 
-    private function getExpectedIssuer(): ?string
+    private function userIdentityMapper(): OidcUserIdentityMapper
     {
-        $metadata = $this->getServerMetadata();
-        $metadataIssuer = \is_array($metadata) ? ($metadata['issuer'] ?? null) : null;
-        if (\is_string($metadataIssuer) && '' !== trim($metadataIssuer)) {
-            return trim($metadataIssuer);
-        }
-
-        $configuredIssuer = trim((string) ($this->getConfig()['issuer'] ?? ''));
-
-        return '' !== $configuredIssuer ? $configuredIssuer : null;
+        return $this->userIdentityMapperService ??= new OidcUserIdentityMapper();
     }
 
-    private function issuerMatchesExpected(string $expectedIssuer, string $tokenIssuer): bool
+    private function profilePhotoClient(): OidcProfilePhotoClient
     {
-        $normalizedExpected = rtrim(trim($expectedIssuer), '/');
-        $normalizedToken = rtrim(trim($tokenIssuer), '/');
-        if ('' === $normalizedExpected || '' === $normalizedToken) {
-            return false;
-        }
-
-        if (hash_equals($normalizedExpected, $normalizedToken)) {
-            return true;
-        }
-
-        if (!str_contains($normalizedExpected, '{tenantid}')) {
-            return false;
-        }
-
-        $pattern = preg_quote($normalizedExpected, '#');
-        $pattern = str_replace('\{tenantid\}', '[^/]+', $pattern);
-
-        return 1 === preg_match('#^'.$pattern.'$#', $normalizedToken);
+        return $this->profilePhotoClientService ??= new OidcProfilePhotoClient(
+            $this->httpClient,
+            $this->tokenInspector(),
+        );
     }
 
-    /**
-     * @param mixed $audience
-     */
-    private function audienceMatchesClientId(mixed $audience, string $clientId): bool
+    private function logoutUrlBuilder(): OidcLogoutUrlBuilder
     {
-        if (\is_string($audience)) {
-            $normalizedAudience = trim($audience);
-
-            return '' !== $normalizedAudience && hash_equals($clientId, $normalizedAudience);
-        }
-
-        if (!\is_array($audience)) {
-            return false;
-        }
-
-        foreach ($audience as $value) {
-            if (\is_string($value) && '' !== trim($value) && hash_equals($clientId, trim($value))) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function decodeJwtPayload(string $token): ?array
-    {
-        return $this->decodeJwtSegment($token, 1);
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function decodeJwtHeader(string $token): ?array
-    {
-        return $this->decodeJwtSegment($token, 0);
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function decodeJwtSegment(string $token, int $index): ?array
-    {
-        $parts = explode('.', $token);
-        if (3 !== count($parts)) {
-            return null;
-        }
-
-        if (!isset($parts[$index])) {
-            return null;
-        }
-
-        $segment = $parts[$index];
-        $padding = strlen($segment) % 4;
-        if (0 !== $padding) {
-            $segment .= str_repeat('=', 4 - $padding);
-        }
-
-        $decoded = base64_decode(strtr($segment, '-_', '+/'), true);
-        if (false === $decoded) {
-            return null;
-        }
-
-        $claims = json_decode($decoded, true);
-
-        return \is_array($claims) ? $claims : null;
+        return $this->logoutUrlBuilderService ??= new OidcLogoutUrlBuilder($this->serverMetadataProvider());
     }
 }

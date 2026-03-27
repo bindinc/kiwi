@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
-use App\Oidc\OidcClient;
+use App\Http\JsonRequestDecoder;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\RequestOidcContext;
 use App\Service\PocStateService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,10 +18,13 @@ use Symfony\Component\Routing\Annotation\Route;
 final class CallController extends AbstractApiController
 {
     public function __construct(
-        OidcClient $oidcClient,
+        RequestOidcContext $requestOidcContext,
+        OidcRoleAccess $oidcRoleAccess,
+        OidcConfiguration $oidcConfiguration,
+        JsonRequestDecoder $jsonRequestDecoder,
         private readonly PocStateService $stateService,
     ) {
-        parent::__construct($oidcClient);
+        parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
 
     #[Route('/call-queue', name: 'api_call_queue_read', methods: ['GET'])]
@@ -33,10 +39,7 @@ final class CallController extends AbstractApiController
     public function writeCallQueue(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->writeCallQueue($request->getSession(), $payload));
     }
@@ -53,10 +56,7 @@ final class CallController extends AbstractApiController
     public function debugGenerateQueue(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         $queueSize = $this->parseIntValue($payload['queueSize'] ?? null, 'queueSize', 5, true, 0, 100) ?? 5;
 
@@ -87,10 +87,7 @@ final class CallController extends AbstractApiController
     public function writeCallSession(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->writeCallSession($request->getSession(), $payload));
     }
@@ -99,10 +96,7 @@ final class CallController extends AbstractApiController
     public function startDebugCall(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         $waitTime = $this->parseIntValue($payload['waitTime'] ?? null, 'waitTime', 0, true, 0) ?? 0;
         $customerId = $this->parseIntValue($payload['customerId'] ?? null, 'customerId', null, false, 1);
@@ -116,10 +110,7 @@ final class CallController extends AbstractApiController
     public function identifyCaller(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         $customerId = $this->parseIntValue($payload['customerId'] ?? null, 'customerId', null, true, 1);
 
@@ -146,10 +137,7 @@ final class CallController extends AbstractApiController
     public function endCall(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->endCall(
             $request->getSession(),
@@ -161,10 +149,7 @@ final class CallController extends AbstractApiController
     public function saveDisposition(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         $category = trim((string) ($payload['category'] ?? ''));
         $outcome = trim((string) ($payload['outcome'] ?? ''));

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Oidc\OidcClient;
+use App\Http\JsonRequestDecoder;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\RequestOidcContext;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,10 +18,13 @@ use Symfony\Component\Routing\RouterInterface;
 final class SwaggerController extends AbstractApiController
 {
     public function __construct(
-        OidcClient $oidcClient,
+        RequestOidcContext $requestOidcContext,
+        OidcRoleAccess $oidcRoleAccess,
+        OidcConfiguration $oidcConfiguration,
+        JsonRequestDecoder $jsonRequestDecoder,
         private readonly RouterInterface $router,
     ) {
-        parent::__construct($oidcClient);
+        parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
 
     #[Route('/swagger.json', name: 'api_swagger_json', methods: ['GET'])]

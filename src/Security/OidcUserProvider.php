@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Security;
 
-use App\Oidc\OidcClient;
+use App\Oidc\OidcSessionDataReader;
+use App\Oidc\OidcTokenInspector;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
@@ -14,8 +15,9 @@ use Symfony\Component\Security\Core\User\UserProviderInterface;
 final class OidcUserProvider implements UserProviderInterface
 {
     public function __construct(
-        private readonly OidcClient $oidcClient,
+        private readonly OidcTokenInspector $tokenInspector,
         private readonly RequestStack $requestStack,
+        private readonly OidcSessionDataReader $oidcSessionDataReader,
     ) {
     }
 
@@ -65,7 +67,7 @@ final class OidcUserProvider implements UserProviderInterface
      */
     private function resolveRoles(array $sessionData, ?OidcUser $fallbackUser = null): array
     {
-        $roles = $this->oidcClient->getUserRoles($sessionData);
+        $roles = $this->tokenInspector->getUserRoles($sessionData);
         if ([] !== $roles) {
             return $roles;
         }
@@ -83,20 +85,8 @@ final class OidcUserProvider implements UserProviderInterface
             return [];
         }
 
-        $session = $request->getSession();
-        $sessionData = [];
-
-        $profile = $session->get('oidc_auth_profile');
-        if (\is_array($profile)) {
-            $sessionData['oidc_auth_profile'] = $profile;
-        }
-
-        $token = $session->get('oidc_auth_token');
-        if (\is_array($token)) {
-            $sessionData['oidc_auth_token'] = $token;
-        }
-
-        if (!$this->oidcClient->hasFreshSessionToken($sessionData)) {
+        $sessionData = $this->oidcSessionDataReader->readFromRequest($request);
+        if (!$this->tokenInspector->hasFreshSessionToken($sessionData)) {
             return [];
         }
 

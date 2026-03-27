@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Oidc\OidcClient;
+use App\Http\JsonRequestDecoder;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\RequestOidcContext;
 use App\Service\PocStateService;
 use App\Service\TeamsPresenceSyncService;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,11 +23,14 @@ final class SystemController extends AbstractApiController
     private const SUPPORTED_AGENT_STATUSES = ['ready', 'busy', 'dnd', 'brb', 'away', 'offline', 'acw', 'in_call'];
 
     public function __construct(
-        OidcClient $oidcClient,
+        RequestOidcContext $requestOidcContext,
+        OidcRoleAccess $oidcRoleAccess,
+        OidcConfiguration $oidcConfiguration,
+        JsonRequestDecoder $jsonRequestDecoder,
         private readonly PocStateService $stateService,
         private readonly TeamsPresenceSyncService $teamsPresenceSync,
     ) {
-        parent::__construct($oidcClient);
+        parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
 
     #[Route('/status', name: 'api_status', methods: ['GET'])]
@@ -99,10 +105,7 @@ final class SystemController extends AbstractApiController
     {
         $this->requireApiAccess($request);
 
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new \App\Http\ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         $requestedStatus = $this->normalizeAgentStatus($payload['status'] ?? null);
         if (null === $requestedStatus) {

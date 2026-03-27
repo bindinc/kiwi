@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
-use App\Oidc\OidcClient;
+use App\Http\JsonRequestDecoder;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\RequestOidcContext;
 use App\Service\WebaboOfferCatalogService;
 use App\Service\WebaboSalesCodeCombinationCatalogService;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,11 +19,14 @@ use Symfony\Component\Routing\Annotation\Route;
 final class WebaboOfferController extends AbstractApiController
 {
     public function __construct(
-        OidcClient $oidcClient,
+        RequestOidcContext $requestOidcContext,
+        OidcRoleAccess $oidcRoleAccess,
+        OidcConfiguration $oidcConfiguration,
+        JsonRequestDecoder $jsonRequestDecoder,
         private readonly WebaboOfferCatalogService $webaboOfferCatalog,
         private readonly WebaboSalesCodeCombinationCatalogService $salesCodeCombinationCatalog,
     ) {
-        parent::__construct($oidcClient);
+        parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
 
     #[Route('/offers', name: 'api_webabo_offers', methods: ['GET'])]

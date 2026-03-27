@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
-use App\Oidc\OidcClient;
+use App\Http\JsonRequestDecoder;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\RequestOidcContext;
 use App\SubscriptionApi\AggregatedPersonSearchService;
 use App\SubscriptionApi\PersonDetailService;
 use App\SubscriptionApi\SubscriptionApiResponseException;
@@ -18,12 +21,15 @@ use Symfony\Component\Routing\Annotation\Route;
 final class CustomerController extends AbstractApiController
 {
     public function __construct(
-        OidcClient $oidcClient,
+        RequestOidcContext $requestOidcContext,
+        OidcRoleAccess $oidcRoleAccess,
+        OidcConfiguration $oidcConfiguration,
+        JsonRequestDecoder $jsonRequestDecoder,
         private readonly PocStateService $stateService,
         private readonly AggregatedPersonSearchService $aggregatedPersonSearchService,
         private readonly PersonDetailService $personDetailService,
     ) {
-        parent::__construct($oidcClient);
+        parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
 
     #[Route('', name: 'api_customers_read', methods: ['GET'])]
@@ -76,10 +82,7 @@ final class CustomerController extends AbstractApiController
     public function createCustomer(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->createCustomer($request->getSession(), $payload), 201);
     }
@@ -96,10 +99,7 @@ final class CustomerController extends AbstractApiController
     public function writeCustomerState(Request $request): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         $customers = $payload['customers'] ?? null;
         if (!\is_array($customers)) {
@@ -128,10 +128,7 @@ final class CustomerController extends AbstractApiController
     public function updateCustomer(Request $request, int $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->updateCustomer($request->getSession(), $customerId, $payload));
     }
@@ -150,10 +147,7 @@ final class CustomerController extends AbstractApiController
     public function createContactHistory(Request $request, int $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->createContactHistoryEntry($request->getSession(), $customerId, $payload), 201);
     }
@@ -162,10 +156,7 @@ final class CustomerController extends AbstractApiController
     public function updateDeliveryRemarks(Request $request, int $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->updateDeliveryRemarks(
             $request->getSession(),
@@ -179,10 +170,7 @@ final class CustomerController extends AbstractApiController
     public function createEditorialComplaint(Request $request, int $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->createEditorialComplaint($request->getSession(), $customerId, $payload), 201);
     }

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
-use App\Oidc\OidcClient;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcServerMetadataProvider;
+use App\Oidc\OidcTokenInspector;
+use App\Service\TeamsPresenceGraphClient;
 use App\Service\TeamsPresenceSyncService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -14,9 +17,13 @@ final class TeamsPresenceSyncServiceTest extends TestCase
 {
     private function createService(MockHttpClient $httpClient = new MockHttpClient()): TeamsPresenceSyncService
     {
+        $configuration = new OidcConfiguration(dirname(__DIR__, 2));
+        $serverMetadataProvider = new OidcServerMetadataProvider($httpClient, $configuration);
+        $tokenInspector = new OidcTokenInspector($httpClient, $configuration, $serverMetadataProvider);
+
         return new TeamsPresenceSyncService(
-            new OidcClient($httpClient, dirname(__DIR__, 2)),
-            $httpClient,
+            $tokenInspector,
+            new TeamsPresenceGraphClient($httpClient),
         );
     }
 

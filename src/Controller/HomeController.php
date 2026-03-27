@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Oidc\OidcClient;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcLogoutUrlBuilder;
+use App\Oidc\OidcProfilePhotoClient;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\OidcTokenInspector;
+use App\Oidc\RequestOidcContext;
 use App\Security\OidcUser;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -12,16 +17,21 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 final class HomeController extends AbstractController
 {
     private const LOGOUT_CSRF_TOKEN_ID = 'app_logout';
 
     public function __construct(
-        private readonly OidcClient $oidcClient,
+        private readonly RequestOidcContext $requestOidcContext,
+        private readonly OidcRoleAccess $oidcRoleAccess,
+        private readonly OidcConfiguration $oidcConfiguration,
+        private readonly OidcTokenInspector $oidcTokenInspector,
+        private readonly OidcProfilePhotoClient $oidcProfilePhotoClient,
+        private readonly OidcLogoutUrlBuilder $oidcLogoutUrlBuilder,
         private readonly TokenStorageInterface $tokenStorage,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
     ) {
@@ -30,28 +40,29 @@ final class HomeController extends AbstractController
     #[Route('/', name: 'app_home', methods: ['GET'])]
     public function index(Request $request): Response
     {
-        if (!$this->isLoggedIn($request)) {
+        $authenticatedUser = $this->getAuthenticatedUser();
+        if (!$this->requestOidcContext->isAuthenticated($request, $authenticatedUser)) {
             return $this->redirectToRoute('app_login', ['next' => $request->getUri()]);
         }
 
-        $sessionData = $this->getSessionData($request);
-        $profile = \is_array($sessionData['oidc_auth_profile'] ?? null) ? $sessionData['oidc_auth_profile'] : [];
-        $roles = $this->oidcClient->getUserRoles($sessionData);
-        $identity = $this->oidcClient->buildUserIdentity($profile);
+        $sessionData = $this->requestOidcContext->getSessionData($request, $authenticatedUser);
+        $currentUserContext = $this->requestOidcContext->getCurrentUserContext($request, $authenticatedUser);
+        $roles = $currentUserContext['roles'];
+        $identity = $currentUserContext['identity'];
         $logoutUrl = $this->generateUrl('app_logout');
 
-        if (!$this->oidcClient->userHasAccess($roles)) {
+        if (!$this->oidcRoleAccess->userHasAccess($roles)) {
             return $this->render('base/access_denied.html.twig', [
                 'user_full_name' => $identity['full_name'],
                 'user_email' => $identity['email'],
                 'user_roles' => $roles,
-                'allowed_roles' => $this->oidcClient->getAllowedRoles(),
+                'allowed_roles' => $this->oidcRoleAccess->getAllowedRoles(),
                 'logout_url' => $logoutUrl,
             ], new Response('', 403));
         }
 
         $session = $request->getSession();
-        $profileImage = $this->oidcClient->getProfileImage($sessionData);
+        $profileImage = $this->oidcProfilePhotoClient->getProfileImage($sessionData);
         if (null !== $profileImage) {
             $session->set('oidc_profile_photo', $profileImage);
         }
@@ -79,20 +90,20 @@ final class HomeController extends AbstractController
         }
 
         $session = $request->getSession();
-        $sessionData = $this->getSessionData($request);
-        $idTokenHint = $this->oidcClient->getIdToken($sessionData);
-        $loggedOutUrl = $this->oidcClient->buildLoggedOutUri($request);
-        $knownRedirectUris = $this->oidcClient->getRedirectUrisFromSecrets();
+        $sessionData = $this->requestOidcContext->getSessionData($request, $this->getAuthenticatedUser());
+        $idTokenHint = $this->oidcTokenInspector->getIdToken($sessionData);
+        $loggedOutUrl = $this->oidcLogoutUrlBuilder->buildLoggedOutUri($request);
+        $knownRedirectUris = $this->oidcConfiguration->getRedirectUrisFromSecrets();
         $configuredPostLogoutRedirectUri = trim((string) (getenv('OIDC_POST_LOGOUT_REDIRECT_URI') ?: $loggedOutUrl));
         $postLogoutRedirectUri = \in_array($configuredPostLogoutRedirectUri, $knownRedirectUris, true)
             ? $configuredPostLogoutRedirectUri
             : null;
 
-        $providerLogoutUrl = $this->oidcClient->buildEndSessionLogoutUrl(
-            $this->oidcClient->getEndSessionEndpoint(),
+        $providerLogoutUrl = $this->oidcLogoutUrlBuilder->buildEndSessionLogoutUrl(
+            $this->oidcLogoutUrlBuilder->getEndSessionEndpoint(),
             $postLogoutRedirectUri,
             $idTokenHint,
-            $this->oidcClient->getConfig()['client_id'] ?? null,
+            $this->oidcConfiguration->getClientId(),
         );
 
         $this->tokenStorage->setToken(null);
@@ -111,44 +122,10 @@ final class HomeController extends AbstractController
         ]);
     }
 
-    private function isLoggedIn(Request $request): bool
+    private function getAuthenticatedUser(): ?OidcUser
     {
-        if ($this->getUser() instanceof OidcUser) {
-            return true;
-        }
+        $user = $this->getUser();
 
-        $sessionData = $this->getSessionData($request);
-
-        return isset($sessionData['oidc_auth_profile']) || isset($sessionData['oidc_auth_token']);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function getSessionData(Request $request): array
-    {
-        $session = $request->getSession();
-        $sessionData = [];
-
-        $profile = $session->get('oidc_auth_profile');
-        if (\is_array($profile)) {
-            $sessionData['oidc_auth_profile'] = $profile;
-        }
-
-        $token = $session->get('oidc_auth_token');
-        if (\is_array($token)) {
-            $sessionData['oidc_auth_token'] = $token;
-        }
-
-        $photo = $session->get('oidc_profile_photo');
-        if (\is_string($photo) && '' !== $photo) {
-            $sessionData['oidc_profile_photo'] = $photo;
-        }
-
-        if (!isset($sessionData['oidc_auth_profile']) && $this->getUser() instanceof OidcUser) {
-            $sessionData['oidc_auth_profile'] = $this->getUser()->getProfile();
-        }
-
-        return $sessionData;
+        return $user instanceof OidcUser ? $user : null;
     }
 }

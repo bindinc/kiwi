@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
-use App\Oidc\OidcClient;
+use App\Http\JsonRequestDecoder;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcRoleAccess;
+use App\Oidc\RequestOidcContext;
 use App\Service\PocStateService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,20 +18,20 @@ use Symfony\Component\Routing\Annotation\Route;
 final class SubscriptionController extends AbstractApiController
 {
     public function __construct(
-        OidcClient $oidcClient,
+        RequestOidcContext $requestOidcContext,
+        OidcRoleAccess $oidcRoleAccess,
+        OidcConfiguration $oidcConfiguration,
+        JsonRequestDecoder $jsonRequestDecoder,
         private readonly PocStateService $stateService,
     ) {
-        parent::__construct($oidcClient);
+        parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
 
     #[Route('/{customerId}/{subscriptionId}', name: 'api_subscription_update', methods: ['PATCH'], requirements: ['customerId' => '\d+', 'subscriptionId' => '\d+'])]
     public function updateSubscription(Request $request, int $customerId, int $subscriptionId): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->updateSubscription($request->getSession(), $customerId, $subscriptionId, $payload));
     }
@@ -37,10 +40,7 @@ final class SubscriptionController extends AbstractApiController
     public function createComplaint(Request $request, int $customerId, int $subscriptionId): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->createSubscriptionComplaint(
             $request->getSession(),
@@ -54,10 +54,7 @@ final class SubscriptionController extends AbstractApiController
     public function completeWinback(Request $request, int $customerId, int $subscriptionId): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->completeWinback(
             $request->getSession(),
@@ -72,10 +69,7 @@ final class SubscriptionController extends AbstractApiController
     public function processDeceasedActions(Request $request, int $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         $actions = \is_array($payload['actions'] ?? null) ? $payload['actions'] : [];
 
@@ -86,10 +80,7 @@ final class SubscriptionController extends AbstractApiController
     public function completeRestitutionTransfer(Request $request, int $customerId, int $subscriptionId): JsonResponse
     {
         $this->requireApiAccess($request);
-        $payload = json_decode($request->getContent(), true);
-        if (!\is_array($payload)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'JSON object expected');
-        }
+        $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->completeRestitutionTransfer(
             $request->getSession(),

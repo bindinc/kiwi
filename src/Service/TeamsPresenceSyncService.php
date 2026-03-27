@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Oidc\OidcClient;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Oidc\OidcTokenInspector;
 
 final class TeamsPresenceSyncService
 {
-    private const GRAPH_API_BASE_URL = 'https://graph.microsoft.com/v1.0';
-
     /**
      * @var string[]
      */
@@ -52,8 +48,8 @@ final class TeamsPresenceSyncService
     ];
 
     public function __construct(
-        private readonly OidcClient $oidcClient,
-        private readonly HttpClientInterface $httpClient,
+        private readonly OidcTokenInspector $tokenInspector,
+        private readonly TeamsPresenceGraphClient $graphClient,
     ) {
     }
 
@@ -85,10 +81,10 @@ final class TeamsPresenceSyncService
     public function getSyncCapability(array $sessionData, array $appConfig): array
     {
         $featureEnabled = $this->isPresenceSyncEnabled($appConfig);
-        $issuer = $this->oidcClient->getOidcIssuer($sessionData);
-        $isMicrosoftSession = $this->oidcClient->isMicrosoftIssuer($issuer);
-        $accessToken = $this->oidcClient->getAccessToken($sessionData);
-        $tokenScopes = $this->oidcClient->getTokenScopes($sessionData);
+        $issuer = $this->tokenInspector->getOidcIssuer($sessionData);
+        $isMicrosoftSession = $this->tokenInspector->isMicrosoftIssuer($issuer);
+        $accessToken = $this->tokenInspector->getAccessToken($sessionData);
+        $tokenScopes = $this->tokenInspector->getTokenScopes($sessionData);
 
         $hasReadScope = $this->containsAnyScope($tokenScopes, self::READ_SCOPES);
         $hasWriteScope = $this->containsAnyScope($tokenScopes, self::WRITE_SCOPES);
@@ -124,8 +120,8 @@ final class TeamsPresenceSyncService
      */
     public function getGraphUserIdentifier(array $sessionData): ?string
     {
-        $accessClaims = $this->oidcClient->getAccessTokenClaims($sessionData) ?? [];
-        $idClaims = $this->oidcClient->getIdTokenClaims($sessionData) ?? [];
+        $accessClaims = $this->tokenInspector->getAccessTokenClaims($sessionData) ?? [];
+        $idClaims = $this->tokenInspector->getIdTokenClaims($sessionData) ?? [];
         $profile = \is_array($sessionData['oidc_auth_profile'] ?? null) ? $sessionData['oidc_auth_profile'] : [];
 
         $candidates = [
@@ -163,8 +159,8 @@ final class TeamsPresenceSyncService
             return trim($oidcClientId);
         }
 
-        $accessClaims = $this->oidcClient->getAccessTokenClaims($sessionData) ?? [];
-        $idClaims = $this->oidcClient->getIdTokenClaims($sessionData) ?? [];
+        $accessClaims = $this->tokenInspector->getAccessTokenClaims($sessionData) ?? [];
+        $idClaims = $this->tokenInspector->getIdTokenClaims($sessionData) ?? [];
         foreach (['azp', 'appid'] as $candidateKey) {
             $candidate = $accessClaims[$candidateKey] ?? $idClaims[$candidateKey] ?? null;
             if (\is_string($candidate) && '' !== trim($candidate)) {
@@ -247,144 +243,55 @@ final class TeamsPresenceSyncService
     {
         $capability = $this->getSyncCapability($sessionData, $appConfig);
         if (true !== ($capability['can_write'] ?? false)) {
-            return [
-                'attempted' => false,
-                'synced' => false,
-                'reason' => $capability['reason'] ?? 'write_scope_unavailable',
-                'capability' => $capability,
-            ];
+            return $this->buildSyncSkippedResult(
+                $capability,
+                $capability['reason'] ?? 'write_scope_unavailable',
+            );
         }
 
         $userIdentifier = $this->getGraphUserIdentifier($sessionData);
         if (null === $userIdentifier) {
-            return [
-                'attempted' => false,
-                'synced' => false,
-                'reason' => 'missing_user_identifier',
-                'capability' => $capability,
-            ];
+            return $this->buildSyncSkippedResult($capability, 'missing_user_identifier');
         }
 
-        $accessToken = $this->oidcClient->getAccessToken($sessionData);
+        $accessToken = $this->tokenInspector->getAccessToken($sessionData);
         if (null === $accessToken) {
-            return [
-                'attempted' => false,
-                'synced' => false,
-                'reason' => 'missing_access_token',
-                'capability' => $capability,
-            ];
+            return $this->buildSyncSkippedResult($capability, 'missing_access_token');
         }
-
-        $encodedIdentifier = rawurlencode($userIdentifier);
-        $headers = [
-            'Authorization' => 'Bearer '.$accessToken,
-            'Content-Type' => 'application/json',
-        ];
 
         if ('in_call' === $kiwiStatus) {
             $sessionPresencePayload = $this->mapKiwiStatusToTeamsSessionPresence($kiwiStatus);
             if (null === $sessionPresencePayload) {
-                return [
-                    'attempted' => false,
-                    'synced' => false,
-                    'reason' => 'unsupported_kiwi_status',
-                    'capability' => $capability,
-                ];
+                return $this->buildSyncSkippedResult($capability, 'unsupported_kiwi_status');
             }
 
             $sessionId = $this->getPresenceSessionId($sessionData, $appConfig);
             if (null === $sessionId) {
-                return [
-                    'attempted' => false,
-                    'synced' => false,
-                    'reason' => 'missing_presence_session_id',
-                    'capability' => $capability,
-                ];
+                return $this->buildSyncSkippedResult($capability, 'missing_presence_session_id');
             }
 
-            $clearEndpoint = sprintf('%s/users/%s/presence/clearUserPreferredPresence', self::GRAPH_API_BASE_URL, $encodedIdentifier);
-            $clearStatus = null;
+            $clearStatus = $this->graphClient->clearUserPreferredPresence($accessToken, $userIdentifier);
+            $statusCode = $this->graphClient->setSessionPresence(
+                $accessToken,
+                $userIdentifier,
+                $sessionPresencePayload + ['sessionId' => $sessionId],
+            );
 
-            try {
-                $response = $this->httpClient->request('POST', $clearEndpoint, [
-                    'headers' => $headers,
-                    'json' => [],
-                    'timeout' => 5,
-                ]);
-                $clearStatus = $response->getStatusCode();
-            } catch (TransportExceptionInterface) {
-                $clearStatus = null;
-            }
-
-            $sessionEndpoint = sprintf('%s/users/%s/presence/setPresence', self::GRAPH_API_BASE_URL, $encodedIdentifier);
-            $sessionPayload = $sessionPresencePayload + ['sessionId' => $sessionId];
-
-            try {
-                $response = $this->httpClient->request('POST', $sessionEndpoint, [
-                    'headers' => $headers,
-                    'json' => $sessionPayload,
-                    'timeout' => 5,
-                ]);
-                $statusCode = $response->getStatusCode();
-            } catch (TransportExceptionInterface) {
-                return [
-                    'attempted' => true,
-                    'synced' => false,
-                    'reason' => 'request_failed',
-                    'capability' => $capability,
-                    'mode' => 'session',
-                    'clear_preferred_status' => $clearStatus,
-                ];
-            }
-
-            return [
-                'attempted' => true,
-                'synced' => \in_array($statusCode, [200, 204], true),
-                'reason' => \in_array($statusCode, [200, 204], true) ? null : 'request_failed',
-                'capability' => $capability,
-                'mode' => 'session',
-                'clear_preferred_status' => $clearStatus,
-                'status_code' => $statusCode,
-            ];
+            return $this->buildSyncRequestResult($capability, 'session', $statusCode, $clearStatus);
         }
 
         $preferredPresencePayload = $this->mapKiwiStatusToTeamsPreferredPresence($kiwiStatus);
         if (null === $preferredPresencePayload) {
-            return [
-                'attempted' => false,
-                'synced' => false,
-                'reason' => 'unsupported_kiwi_status',
-                'capability' => $capability,
-            ];
+            return $this->buildSyncSkippedResult($capability, 'unsupported_kiwi_status');
         }
 
-        $endpoint = sprintf('%s/users/%s/presence/setUserPreferredPresence', self::GRAPH_API_BASE_URL, $encodedIdentifier);
+        $statusCode = $this->graphClient->setUserPreferredPresence(
+            $accessToken,
+            $userIdentifier,
+            $preferredPresencePayload,
+        );
 
-        try {
-            $response = $this->httpClient->request('POST', $endpoint, [
-                'headers' => $headers,
-                'json' => $preferredPresencePayload,
-                'timeout' => 5,
-            ]);
-            $statusCode = $response->getStatusCode();
-        } catch (TransportExceptionInterface) {
-            return [
-                'attempted' => true,
-                'synced' => false,
-                'reason' => 'request_failed',
-                'capability' => $capability,
-                'mode' => 'preferred',
-            ];
-        }
-
-        return [
-            'attempted' => true,
-            'synced' => \in_array($statusCode, [200, 204], true),
-            'reason' => \in_array($statusCode, [200, 204], true) ? null : 'request_failed',
-            'capability' => $capability,
-            'mode' => 'preferred',
-            'status_code' => $statusCode,
-        ];
+        return $this->buildSyncRequestResult($capability, 'preferred', $statusCode);
     }
 
     /**
@@ -396,49 +303,20 @@ final class TeamsPresenceSyncService
     {
         $capability = $this->getSyncCapability($sessionData, $appConfig);
         if (true !== ($capability['can_read'] ?? false)) {
-            return [
-                'attempted' => false,
-                'status' => null,
-                'reason' => $capability['reason'] ?? 'read_scope_unavailable',
-                'capability' => $capability,
-            ];
+            return $this->buildReadSkippedResult(
+                $capability,
+                $capability['reason'] ?? 'read_scope_unavailable',
+            );
         }
 
-        $accessToken = $this->oidcClient->getAccessToken($sessionData);
+        $accessToken = $this->tokenInspector->getAccessToken($sessionData);
         if (null === $accessToken) {
-            return [
-                'attempted' => false,
-                'status' => null,
-                'reason' => 'missing_access_token',
-                'capability' => $capability,
-            ];
+            return $this->buildReadSkippedResult($capability, 'missing_access_token');
         }
 
-        try {
-            $response = $this->httpClient->request('GET', self::GRAPH_API_BASE_URL.'/me/presence', [
-                'headers' => [
-                    'Authorization' => 'Bearer '.$accessToken,
-                ],
-                'timeout' => 5,
-            ]);
-            $statusCode = $response->getStatusCode();
-            $payload = $response->toArray(false);
-        } catch (\Throwable) {
-            return [
-                'attempted' => true,
-                'status' => null,
-                'reason' => 'request_failed',
-                'capability' => $capability,
-            ];
-        }
-
-        if (200 !== $statusCode || !\is_array($payload)) {
-            return [
-                'attempted' => true,
-                'status' => null,
-                'reason' => 'request_failed',
-                'capability' => $capability,
-            ];
+        $payload = $this->graphClient->fetchMyPresence($accessToken);
+        if (null === $payload) {
+            return $this->buildReadFailureResult($capability);
         }
 
         $availability = \is_string($payload['availability'] ?? null) ? $payload['availability'] : null;
@@ -466,5 +344,78 @@ final class TeamsPresenceSyncService
         }
 
         return false;
+    }
+
+    /**
+     * @param array<string, mixed> $capability
+     * @return array<string, mixed>
+     */
+    private function buildSyncSkippedResult(array $capability, string $reason): array
+    {
+        return [
+            'attempted' => false,
+            'synced' => false,
+            'reason' => $reason,
+            'capability' => $capability,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $capability
+     * @return array<string, mixed>
+     */
+    private function buildSyncRequestResult(
+        array $capability,
+        string $mode,
+        ?int $statusCode,
+        ?int $clearStatus = null,
+    ): array {
+        $synced = null !== $statusCode && \in_array($statusCode, [200, 204], true);
+
+        $result = [
+            'attempted' => true,
+            'synced' => $synced,
+            'reason' => $synced ? null : 'request_failed',
+            'capability' => $capability,
+            'mode' => $mode,
+        ];
+
+        if (null !== $clearStatus) {
+            $result['clear_preferred_status'] = $clearStatus;
+        }
+
+        if (null !== $statusCode) {
+            $result['status_code'] = $statusCode;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $capability
+     * @return array<string, mixed>
+     */
+    private function buildReadSkippedResult(array $capability, string $reason): array
+    {
+        return [
+            'attempted' => false,
+            'status' => null,
+            'reason' => $reason,
+            'capability' => $capability,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $capability
+     * @return array<string, mixed>
+     */
+    private function buildReadFailureResult(array $capability): array
+    {
+        return [
+            'attempted' => true,
+            'status' => null,
+            'reason' => 'request_failed',
+            'capability' => $capability,
+        ];
     }
 }

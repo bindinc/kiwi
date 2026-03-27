@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
-use App\Oidc\OidcClient;
+use App\Oidc\OidcConfiguration;
+use App\Oidc\OidcServerMetadataProvider;
+use App\Oidc\OidcSessionDataReader;
+use App\Oidc\OidcTokenInspector;
 use App\Security\OidcUser;
 use App\Security\OidcUserProvider;
 use PHPUnit\Framework\TestCase;
@@ -105,8 +108,11 @@ final class OidcUserProviderTest extends TestCase
         $requestStack = new RequestStack();
         $requestStack->push($request);
 
-        $oidcClient = new OidcClient(new MockHttpClient(), dirname(__DIR__, 2));
+        $httpClient = new MockHttpClient();
+        $configuration = new OidcConfiguration(dirname(__DIR__, 2));
+        $serverMetadataProvider = new OidcServerMetadataProvider($httpClient, $configuration);
+        $tokenInspector = new OidcTokenInspector($httpClient, $configuration, $serverMetadataProvider);
 
-        return new OidcUserProvider($oidcClient, $requestStack);
+        return new OidcUserProvider($tokenInspector, $requestStack, new OidcSessionDataReader());
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Oidc\OidcClient;
+use App\Oidc\OidcConfiguration;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,15 +17,15 @@ final class AuthController extends AbstractController
     private const AUTH_NONCE_KEY = 'oidc_auth_nonce';
 
     public function __construct(
-        private readonly OidcClient $oidcClient,
+        private readonly OidcConfiguration $oidcConfiguration,
     ) {
     }
 
     #[Route('/login', name: 'app_login', methods: ['GET'])]
     public function login(Request $request): RedirectResponse
     {
-        $provider = $this->oidcClient->createProvider($request);
-        $authorizationScope = $this->oidcClient->getAuthorizationScope();
+        $provider = $this->oidcConfiguration->createProvider($request);
+        $authorizationScope = $this->oidcConfiguration->getAuthorizationScope();
         $nonce = bin2hex(random_bytes(16));
         $authorizationUrl = $provider->getAuthorizationUrl([
             'scope' => $authorizationScope,
