@@ -432,7 +432,8 @@ const nl = {
     "common": {
         "unknown": "Onbekend",
         "unknownDuration": "Looptijd onbekend",
-        "personWithId": "persoon #{id}"
+        "personWithId": "persoon #{id}",
+        "personWithoutReference": "persoon"
     },
     "calls": {
         "ended": "Gesprek beëindigd",
@@ -567,6 +568,7 @@ const nl = {
         "transferFailed": "Overzetten via backend mislukt",
         "deceasedProcessFailed": "Verwerken overlijden via backend mislukt",
         "requestedPaidByPerson": "Aangevraagd/betaald door persoon #{personId}",
+        "personReference": "Abon.nr {personId}",
         "none": "Geen abonnementen",
         "noneAvailable": "Geen abonnementen beschikbaar",
         "groupActive": "Actieve Abonnementen",
@@ -599,7 +601,7 @@ const nl = {
             "useExisting": "Gebruik bestaande",
             "createAnyway": "Toch nieuwe persoon",
             "submitAdvisory": "Controleer mogelijke bestaande {roleLabel} voordat u doorgaat.",
-            "apiFallback": "Controle via backend tijdelijk niet beschikbaar. Lokale controle blijft actief.",
+            "apiFallback": "Controle via backend tijdelijk niet beschikbaar. Er worden nu geen matches opgehaald.",
             "personNotFoundControlList": "Geselecteerde persoon niet gevonden in controlelijst"
         },
         "search": {

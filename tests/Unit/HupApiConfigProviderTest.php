@@ -30,11 +30,13 @@ final class HupApiConfigProviderTest extends TestCase
 
         self::assertSame('AVROTROS', $credential->title);
         self::assertSame('AVROTROS', $credential->mandant);
+        self::assertSame('14', $credential->divisionId);
         self::assertTrue($credential->supportsPersonLookup);
         self::assertSame([
             'credentialKey' => 'avrotros',
             'credentialTitle' => 'AVROTROS',
             'mandant' => 'AVROTROS',
+            'divisionId' => '14',
             'supportsPersonLookup' => true,
             'sourceSystem' => 'webabo-api',
         ], $config->getCredentialContext('avrotros', 'webabo-api'));
@@ -55,6 +57,7 @@ final class HupApiConfigProviderTest extends TestCase
                     'avrotros' => [
                         'title' => 'AVROTROS',
                         'client' => 'AVROTROS',
+                        'divisionid' => '14',
                         'client_search' => 'yes',
                         'username' => 'demo-user',
                         'password' => 'demo-password',

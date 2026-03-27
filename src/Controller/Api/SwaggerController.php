@@ -104,8 +104,6 @@ HTML;
             }
 
             $openApiPath = rtrim($path, '/') ?: '/';
-            $normalizedPath = rtrim($path, '/') ?: '/';
-            $isPublic = '/api/v1/status' === $normalizedPath;
             $methods = array_values(array_filter(
                 $route->getMethods() ?: ['GET'],
                 static fn (string $method): bool => !\in_array($method, ['HEAD', 'OPTIONS'], true),
@@ -128,13 +126,11 @@ HTML;
                     'operationId' => strtolower($method).'_'.$name,
                     'summary' => sprintf('%s %s', $method, str_replace('_', ' ', $name)),
                     'tags' => [$this->resolveTag($path)],
-                    'responses' => $this->buildResponses($isPublic),
+                    'responses' => $this->buildResponses(),
+                    'security' => [['cookieAuth' => []]],
                 ];
                 if ([] !== $pathParameters) {
                     $operation['parameters'] = $pathParameters;
-                }
-                if (!$isPublic) {
-                    $operation['security'] = [['cookieAuth' => []]];
                 }
 
                 $paths[$openApiPath][strtolower($method)] = $operation;
@@ -167,13 +163,11 @@ HTML;
     /**
      * @return array<string, array<string, string>>
      */
-    private function buildResponses(bool $isPublic): array
+    private function buildResponses(): array
     {
         $responses = ['200' => ['description' => 'Successful response']];
-        if (!$isPublic) {
-            $responses['401'] = ['description' => 'Authentication required'];
-            $responses['403'] = ['description' => 'Insufficient permissions'];
-        }
+        $responses['401'] = ['description' => 'Authentication required'];
+        $responses['403'] = ['description' => 'Insufficient permissions'];
 
         return $responses;
     }

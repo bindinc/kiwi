@@ -5,19 +5,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+### Added
+- Add a reusable Subscription API personsearch client on top of `ppa_base_url` that reuses the existing HUP/WebAbo bearer-token flow, including retry-on-`401` behavior, so the later KIWI customer-search migration can switch to the upstream backend in phases.
+- Add a multi-credential Subscription API personsearch service that fans out searches only over HUP credentials with `client_search: "yes"` and merges those credential-scoped result sets for KIWI customer search.
+- Add a personsearch result normalizer that maps subscription API search hits onto the KIWI person model, including credential context, badge-ready mandant resolution, and empty KIWI collections for fields that will be hydrated in later phases.
+- Add an aggregated `/api/v1/persons` search path that merges normalized Subscription API personsearch results across eligible credentials while keeping the existing frontend request shape intact.
+- Add a subscription-api detail hydration path for `GET /api/v1/persons/{id}` that loads `/public/persons/{personid}` with explicit credential context and maps the upstream person payload back onto the KIWI customer model.
+- Add subscription-api order hydration for selected customers so `GET /api/v1/persons/{id}` enriches the detail response with `/public/orders?customerPersonId=...` results instead of loading subscriptions during search.
+- Add deterministic functional coverage for the subscription-api-backed `/api/v1/persons` and `/api/v1/persons/{id}` routes, including scoped search queries, detail hydration, and API-problem mappings for upstream failures.
+- Add security-hardening regression coverage that asserts every `/api/v1/*` route rejects unauthenticated calls, keeps `/api/v1/status` behind authorization, and checks that Swagger advertises the full API namespace as protected.
+
 ### Changed
 - Parse mandant and person-lookup metadata from named HUP credentials, expose that context on Webabo offer responses, and carry the same credential context through subscription queue payloads so upcoming API-backed person retrieval can switch over without another contract change.
 - Render AVROTROS and KRO-NCRV logo badges for werfsleutels and subscription person lookups based on HUP credential `client` metadata, while keeping `client_search` available for the later full API-backed person lookup flow.
+- Let subscription person badges prefer `divisionId` when available and otherwise fall back to `mandant`, while preserving the existing HMC -> AVROTROS and KRONCRV -> KRO-NCRV branding rules.
+- Switch `GET /api/v1/persons` to the new subscription-api aggregator when searchable HUP credentials are configured, while keeping a local cached-result fallback for customer selection until the dedicated detail hydration route lands in the next phase.
+- Keep subscription-api customers readonly in unsupported detail actions by hiding legacy edit/editorial buttons and blocking customer edits, article orders, and delivery-remark mutations while those data domains still lack upstream API coverage.
+- Carry a selected subscription-api person's hydrated snapshot through the subscription workflow so queued requests stay stateless, preserve credential context, and can reuse the selected customer's primary IBAN when it is already available via `ppa_base_url`.
+- Show the selected customer's `personId` in the `Klant Zoeken` result table, append the same reference to the detail header, and surface that abon.nr consistently in `Nieuw Abonnement Aanmaken` search results and selected-person blocks.
+- Let the `Nieuwe persoon` duplicate-check rely only on backend `/api/v1/persons` matches so it follows the same subscription-api-backed source as regular KIWI person search instead of mixing in local session/PoC customers.
+- Gate `Nieuw Abonnement Aanmaken` person search and duplicate-checks behind the selected werfsleutel scope, disable the recipient/requester inputs until a werfsleutel is chosen, and forward both configured `divisionId` and `mandant` context from HUP credentials into offer-driven person lookup requests.
+
+### Fixed
+- Keep `Klant Zoeken` working when the upstream `personsearch` endpoint returns `HTTP 500` for `divisionid`-filtered requests by searching each enabled credential without that broken filter and still returning partial results when one credential fails.
+- Preserve badge and workflow mandant context from the configured HUP credential even when upstream search results expose numeric `divisionId` codes instead of the expected brand keys.
+- Show the same AVROTROS and KRO-NCRV mandant badges in the regular `Klant Zoeken` result list that subscription role search results already render.
+- Keep subscription-api customer selection stateless by letting the detailcall carry `credentialKey` and merge hydrated detail fields with the cached search result instead of depending on pod-local lookup state.
+- Keep subscription-api customer detail usable when order enrichment fails by returning the hydrated person data with an empty `subscriptions` list instead of failing the whole selection flow.
+- Keep `Klant Zoeken` interface feedback aligned with the actual request by including phone and e-mail filters in the visible search summary instead of making those searches look like an unfiltered `"alle klanten"` query.
+- Keep subscription-api `Klant Zoeken` result sets strict when upstream `personsearch` responds fuzzily, by reapplying postcode, house number, name, phone, and e-mail filters locally before KIWI shows the aggregated customer list.
+- Read search-result e-mail addresses from both live `eMail` payloads and documented `geteMail` payloads so subscription-api e-mail filtering and result rendering stay compatible across response variants.
+- Keep `subscription-api` customers' contact history truly empty/read-only by skipping local history writes for that source system, rendering the empty-state timeline, and falling back to visible toasts instead of silently logging messages as contact moments.
+- Document the known subscription API OpenAPI mismatch where `personId` is modeled as a string in the schema even though the live/domain contract uses a numeric customer id.
+- Use the configured per-credential `divisionid` again for subscription-api personsearch, while limiting the credential fan-out to the currently selected werfsleutel mandants/divisions instead of searching every enabled tenant.
+- Keep the legacy API workflow contract test on the PoC customer dataset even when a local `client_secrets.json` is present, so functional tests stay stable across CI and external-mode developer machines.
+- Move the public health response to `/status` so container checks stay available without leaving any `/api/v1/*` endpoint publicly callable.
 
 ## [v1.0.14]
-
-### Added
-- Add the `sc-187755` queue-first subscription ordering flow with PostgreSQL-backed `subscription_orders` and `outbox_events`, idempotency on `submissionId`, order status lookup endpoints, and a frontend queue infobox.
 
 ### Changed
 - Let the HUP/Webabo integration read named credential sets from `hup.credentials`, keep legacy single-credential config as a fallback, sync werfsleutel offers by looping over every configured credential, and persist each offer's `credentialKey` so queued subscription requests can reuse the matching credential downstream.
 - Drive subscription channel combinations from Webabo `GET /offers/salescodecombinations` per cached offer credential/product and let agents add multiple subscriptions or memberships in one signup flow.
-- Refine the werfsleutel selection cards so completed items no longer show a redundant `Compleet` badge and title, price, sales code, and channel badges align more consistently across multiple selections.
+- Refine the werfsleutel selection cards so completed items no longer show a redundant `Compleet` badge and title, remove the extra success toast on offer selection, and align price, sales code, and channel badges more consistently across multiple selections.
+
+### Fixed
+- Prefer HUP password credentials over cached refresh tokens when acquiring access tokens, so named credential sets recover more reliably after token expiry.
+
+## [v1.0.13]
+
+### Fixed
+- Make `/app-logout` explicitly reject `GET` requests with `405 Method Not Allowed` and `Allow: POST`, while keeping the CSRF-protected `POST` logout flow intact.
+
+## [v1.0.12]
+
+### Added
+- Add the `sc-187755` queue-first subscription ordering flow with PostgreSQL-backed `subscription_orders` and `outbox_events`, idempotency on `submissionId`, order status lookup endpoints, and a frontend queue infobox.
+- Add a dedicated subscription queue display formatter plus PHPUnit and frontend coverage so queued order summaries render consistently across the workflow UI.
+
+### Changed
+- Normalize subscription signup payloads into explicit recipient, requester, offer, subscription, and contact-entry snapshots before queueing, so downstream processing and status views can rely on a stable queued contract.
+- Refine the queue infobox layout and queued-order summary rendering so agent, requester, recipient, and offer details stay readable during the subscription workflow.
 
 ## [v1.0.11]
 

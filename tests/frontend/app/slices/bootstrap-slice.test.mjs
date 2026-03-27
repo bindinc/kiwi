@@ -189,10 +189,18 @@ async function testSaveCustomers() {
 
 function testUpdateCustomerActionButtons() {
     const slice = createBootstrapSlice({ logger: createSilentLogger() });
+    const editCustomerButton = createElement();
+    const editorialComplaintButton = createElement();
     const resendButton = createElement();
     const winbackButton = createElement();
     const documentRef = {
         getElementById(id) {
+            if (id === 'editCustomerBtn') {
+                return editCustomerButton;
+            }
+            if (id === 'editorialComplaintBtn') {
+                return editorialComplaintButton;
+            }
             if (id === 'resendMagazineBtn') {
                 return resendButton;
             }
@@ -207,6 +215,8 @@ function testUpdateCustomerActionButtons() {
         documentRef,
         currentCustomer: null
     });
+    assert.equal(editCustomerButton.style.display, 'none');
+    assert.equal(editorialComplaintButton.style.display, 'none');
     assert.equal(resendButton.style.display, 'none');
     assert.equal(winbackButton.style.display, 'none');
 
@@ -214,8 +224,19 @@ function testUpdateCustomerActionButtons() {
         documentRef,
         currentCustomer: { id: 1 }
     });
+    assert.equal(editCustomerButton.style.display, 'inline-flex');
+    assert.equal(editorialComplaintButton.style.display, 'inline-flex');
     assert.equal(resendButton.style.display, 'inline-flex');
     assert.equal(winbackButton.style.display, 'inline-flex');
+
+    slice.updateCustomerActionButtons({
+        documentRef,
+        currentCustomer: { id: 1, sourceSystem: 'subscription-api' }
+    });
+    assert.equal(editCustomerButton.style.display, 'none');
+    assert.equal(editorialComplaintButton.style.display, 'none');
+    assert.equal(resendButton.style.display, 'none');
+    assert.equal(winbackButton.style.display, 'none');
 }
 
 function testUpdateTime() {

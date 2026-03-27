@@ -89,6 +89,23 @@ function showToast(dependencies, message, type = 'success') {
     }
 }
 
+function isSubscriptionApiCustomer(customer) {
+    return String(customer && customer.sourceSystem || '').trim() === 'subscription-api';
+}
+
+function showReadonlySubscriptionApiToast(dependencies) {
+    showToast(
+        dependencies,
+        translateLabel(
+            dependencies,
+            'customer.subscriptionApiReadonly',
+            {},
+            'Deze klant gebruikt nog subscription-api detaildata; bezorgvoorkeuren zijn daarom tijdelijk alleen-lezen.'
+        ),
+        'error'
+    );
+}
+
 async function selectCustomer(dependencies, customerId) {
     if (!dependencies || typeof dependencies.selectCustomer !== 'function') {
         return;
@@ -143,6 +160,10 @@ export function editDeliveryRemarks() {
     const dependencies = resolveDependencies();
     const currentCustomer = getCurrentCustomer(dependencies);
     if (!currentCustomer) {
+        return;
+    }
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        showReadonlySubscriptionApiToast(dependencies);
         return;
     }
 
@@ -276,6 +297,10 @@ export async function saveDeliveryRemarks() {
     const dependencies = resolveDependencies();
     const currentCustomer = getCurrentCustomer(dependencies);
     if (!currentCustomer) {
+        return;
+    }
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        showReadonlySubscriptionApiToast(dependencies);
         return;
     }
 

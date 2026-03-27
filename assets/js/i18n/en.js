@@ -432,7 +432,8 @@ const en = {
     "common": {
         "unknown": "Unknown",
         "unknownDuration": "Duration unknown",
-        "personWithId": "person #{id}"
+        "personWithId": "person #{id}",
+        "personWithoutReference": "person"
     },
     "calls": {
         "ended": "Call ended",
@@ -567,6 +568,7 @@ const en = {
         "transferFailed": "Transfer via backend failed",
         "deceasedProcessFailed": "Processing deceased workflow via backend failed",
         "requestedPaidByPerson": "Requested/paid by person #{personId}",
+        "personReference": "Subscription no. {personId}",
         "none": "No subscriptions",
         "noneAvailable": "No subscriptions available",
         "groupActive": "Active Subscriptions",
@@ -599,7 +601,7 @@ const en = {
             "useExisting": "Use existing",
             "createAnyway": "Still a new person",
             "submitAdvisory": "Please check any existing {roleLabel} before continuing.",
-            "apiFallback": "Backend control temporarily unavailable. Local control remains active.",
+            "apiFallback": "Backend control is temporarily unavailable. No matches are loaded right now.",
             "personNotFoundControlList": "Selected person was not found in the check list"
         },
         "search": {

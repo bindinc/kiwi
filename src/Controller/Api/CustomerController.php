@@ -6,6 +6,9 @@ namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
 use App\Oidc\OidcClient;
+use App\SubscriptionApi\AggregatedPersonSearchService;
+use App\SubscriptionApi\PersonDetailService;
+use App\SubscriptionApi\SubscriptionApiResponseException;
 use App\Service\PocStateService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,6 +20,8 @@ final class CustomerController extends AbstractApiController
     public function __construct(
         OidcClient $oidcClient,
         private readonly PocStateService $stateService,
+        private readonly AggregatedPersonSearchService $aggregatedPersonSearchService,
+        private readonly PersonDetailService $personDetailService,
     ) {
         parent::__construct($oidcClient);
     }
@@ -28,14 +33,42 @@ final class CustomerController extends AbstractApiController
 
         $page = $this->parseQueryInt($request, 'page', 1, 1) ?? 1;
         $pageSize = $this->parseQueryInt($request, 'pageSize', 20, 1, 200) ?? 20;
-
-        return $this->json($this->stateService->searchCustomers($request->getSession(), [
+        $filters = [
             'postalCode' => (string) $request->query->get('postalCode', ''),
             'houseNumber' => (string) $request->query->get('houseNumber', ''),
             'name' => (string) $request->query->get('name', ''),
             'phone' => (string) $request->query->get('phone', ''),
             'email' => (string) $request->query->get('email', ''),
-            'sortBy' => (string) $request->query->get('sortBy', 'name'),
+        ];
+        $sortBy = (string) $request->query->get('sortBy', 'name');
+        $allowedDivisionIds = $this->parseCsvQueryList(
+            (string) $request->query->get('divisionIds', $request->query->get('divisionId', ''))
+        );
+        $allowedMandants = $this->parseCsvQueryList(
+            (string) $request->query->get('mandants', $request->query->get('mandant', ''))
+        );
+
+        if ($this->aggregatedPersonSearchService->isAvailable()) {
+            try {
+                return $this->json($this->aggregatedPersonSearchService->search(
+                    $filters,
+                    $page,
+                    $pageSize,
+                    $sortBy,
+                    $allowedDivisionIds,
+                    $allowedMandants,
+                ));
+            } catch (\Throwable $exception) {
+                throw new ApiProblemException(
+                    503,
+                    'customer_search_unavailable',
+                    'Klant zoeken via subscription API is tijdelijk niet beschikbaar.',
+                );
+            }
+        }
+
+        return $this->json($this->stateService->searchCustomers($request->getSession(), $filters + [
+            'sortBy' => $sortBy,
         ], $page, $pageSize));
     }
 
@@ -76,12 +109,19 @@ final class CustomerController extends AbstractApiController
         return $this->json($this->stateService->replaceCustomers($request->getSession(), $customers));
     }
 
-    #[Route('/{customerId}', name: 'api_customer_read', methods: ['GET'], requirements: ['customerId' => '\d+'])]
-    public function readCustomer(Request $request, int $customerId): JsonResponse
+    #[Route('/{customerId}', name: 'api_customer_read', methods: ['GET'], requirements: ['customerId' => '[^/]+' ])]
+    public function readCustomer(Request $request, string $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
 
-        return $this->json($this->stateService->getCustomer($request->getSession(), $customerId));
+        $credentialKey = trim((string) $request->query->get('credentialKey', ''));
+        if ('' !== $credentialKey) {
+            return $this->readSubscriptionApiCustomer($customerId, $credentialKey);
+        }
+
+        $numericCustomerId = $this->parseIntValue($customerId, 'customerId', required: true, errorCode: 'invalid_route_parameter');
+
+        return $this->json($this->stateService->getCustomer($request->getSession(), $numericCustomerId));
     }
 
     #[Route('/{customerId}', name: 'api_customer_update', methods: ['PATCH'], requirements: ['customerId' => '\d+'])]
@@ -153,5 +193,51 @@ final class CustomerController extends AbstractApiController
         $this->requireApiAccess($request);
 
         return $this->json($this->stateService->getArticleOrders($request->getSession(), $customerId));
+    }
+
+    private function readSubscriptionApiCustomer(string $customerId, string $credentialKey): JsonResponse
+    {
+        try {
+            return $this->json($this->personDetailService->getPerson($customerId, $credentialKey));
+        } catch (SubscriptionApiResponseException $exception) {
+            if (404 === $exception->getStatusCode()) {
+                throw new ApiProblemException(404, 'customer_not_found', 'Customer not found');
+            }
+
+            if (400 === $exception->getStatusCode()) {
+                throw new ApiProblemException(400, 'invalid_customer_lookup', 'Customer lookup request is invalid');
+            }
+
+            throw new ApiProblemException(
+                503,
+                'customer_detail_unavailable',
+                'Klantdetail via subscription API is tijdelijk niet beschikbaar.',
+            );
+        } catch (\RuntimeException) {
+            throw new ApiProblemException(
+                503,
+                'customer_detail_unavailable',
+                'Klantdetail via subscription API is tijdelijk niet beschikbaar.',
+            );
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function parseCsvQueryList(string $rawValue): array
+    {
+        $values = [];
+
+        foreach (explode(',', $rawValue) as $value) {
+            $normalizedValue = strtoupper(trim($value));
+            if ('' === $normalizedValue || \in_array($normalizedValue, $values, true)) {
+                continue;
+            }
+
+            $values[] = $normalizedValue;
+        }
+
+        return $values;
     }
 }

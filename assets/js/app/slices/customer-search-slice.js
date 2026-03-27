@@ -1,5 +1,5 @@
 import { getGlobalScope } from '../services.js';
-import { NAME_INSERTION_PREFIXES, generateSubscriptionNumber } from '../subscription-shared-helpers.js';
+import { NAME_INSERTION_PREFIXES } from '../subscription-shared-helpers.js';
 
 const searchState = {
     results: [],
@@ -8,7 +8,94 @@ const searchState = {
     sortBy: 'name'
 };
 
+const MANDANT_BADGE_CONFIG_BY_KEY = {
+    AVROTROS: {
+        brandLabel: 'AVROTROS',
+        assetKey: 'avrotrosLogo',
+        fallbackPath: 'assets/img/avrotros-logo.svg'
+    },
+    HMC: {
+        brandLabel: 'AVROTROS',
+        assetKey: 'avrotrosLogo',
+        fallbackPath: 'assets/img/avrotros-logo.svg'
+    },
+    KRONCRV: {
+        brandLabel: 'KRO-NCRV',
+        assetKey: 'kroncrvLogo',
+        fallbackPath: 'assets/img/kroncrv-logo.svg'
+    }
+};
+
 let compatibilityExportsInstalled = false;
+
+function joinBasePath(basePath, relativePath) {
+    const normalizedBasePath = String(basePath || '').replace(/\/+$/, '');
+    const normalizedRelativePath = String(relativePath || '').replace(/^\/+/, '');
+
+    if (!normalizedRelativePath) {
+        return normalizedBasePath || '/';
+    }
+
+    if (!normalizedBasePath) {
+        return `/${normalizedRelativePath}`;
+    }
+
+    return `${normalizedBasePath}/${normalizedRelativePath}`;
+}
+
+function normalizeMandantKey(value) {
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function resolveMandantBadgeConfig(mandant) {
+    const normalizedMandantKey = normalizeMandantKey(mandant);
+    if (!normalizedMandantKey) {
+        return null;
+    }
+
+    const badgeConfig = MANDANT_BADGE_CONFIG_BY_KEY[normalizedMandantKey];
+    if (!badgeConfig) {
+        return null;
+    }
+
+    const globalScope = getGlobalScope();
+    const mappedAssetPaths = globalScope && typeof globalScope.kiwiAssetPaths === 'object'
+        ? globalScope.kiwiAssetPaths
+        : null;
+    const mappedAssetUrl = mappedAssetPaths && typeof mappedAssetPaths[badgeConfig.assetKey] === 'string'
+        ? mappedAssetPaths[badgeConfig.assetKey].trim()
+        : '';
+    const basePath = globalScope && typeof globalScope.kiwiBasePath === 'string'
+        ? globalScope.kiwiBasePath
+        : '';
+
+    return {
+        brandLabel: badgeConfig.brandLabel,
+        assetUrl: mappedAssetUrl || joinBasePath(basePath, badgeConfig.fallbackPath)
+    };
+}
+
+function resolveCustomerBadgeMandant(customer) {
+    const divisionId = normalizeMandantKey(customer.divisionId);
+    if (divisionId && MANDANT_BADGE_CONFIG_BY_KEY[divisionId]) {
+        return divisionId;
+    }
+
+    return normalizeMandantKey(customer.mandant);
+}
+
+function buildMandantBadgeMarkup(customer) {
+    const badgeConfig = resolveMandantBadgeConfig(resolveCustomerBadgeMandant(customer));
+    if (!badgeConfig) {
+        return '';
+    }
+
+    return `
+        <span class="mandant-logo-badge mandant-logo-badge--compact" title="${badgeConfig.brandLabel}" aria-label="${badgeConfig.brandLabel}">
+            <img src="${badgeConfig.assetUrl}" alt="${badgeConfig.brandLabel}">
+        </span>
+    `;
+}
 
 function getLegacySearchBridge() {
     const globalScope = getGlobalScope();
@@ -170,6 +257,8 @@ function buildSearchQueryLabel() {
     const postalCode = getElementValueById('searchPostalCode').trim();
     const houseNumber = getElementValueById('searchHouseNumber').trim();
     const name = getElementValueById('searchName').trim();
+    const phone = getElementValueById('searchPhone').trim();
+    const email = getElementValueById('searchEmail').trim();
 
     const labelParts = [];
 
@@ -179,6 +268,12 @@ function buildSearchQueryLabel() {
 
     if (name) {
         labelParts.push(translateKey('search.nameFilterLabel', { name }, `Naam: ${name}`));
+    }
+    if (phone) {
+        labelParts.push(translateKey('search.phoneFilterLabel', { phone }, `Telefoon: ${phone}`));
+    }
+    if (email) {
+        labelParts.push(translateKey('search.emailFilterLabel', { email }, `E-mail: ${email}`));
     }
 
     if (labelParts.length === 0) {
@@ -251,6 +346,21 @@ function setSearchResults(results) {
     searchState.sortBy = 'name';
 }
 
+function rememberCustomersInCache(customers) {
+    const globalScope = getGlobalScope();
+    if (!globalScope || typeof globalScope.upsertCustomerInCache !== 'function' || !Array.isArray(customers)) {
+        return;
+    }
+
+    customers.forEach((customer) => {
+        if (!customer || typeof customer !== 'object') {
+            return;
+        }
+
+        globalScope.upsertCustomerInCache(customer);
+    });
+}
+
 function buildSearchParams(filters) {
     const query = new URLSearchParams();
 
@@ -300,6 +410,7 @@ export async function searchCustomer() {
         try {
             const payload = await globalScope.kiwiApi.get(`/api/v1/persons?${query.toString()}`);
             results = Array.isArray(payload && payload.items) ? payload.items : [];
+            rememberCustomersInCache(results);
         } catch (error) {
             console.error('Kon klanten niet zoeken via API', error);
             showToast(translateKey('search.backendFailed', {}, 'Zoeken via backend mislukt'), 'error');
@@ -415,18 +526,21 @@ function buildSubscriptionBadges(customer) {
     return '<span style="color: var(--text-secondary); font-size: 0.875rem;">Geen actief</span>';
 }
 
-function buildSubscriberNumber(customer) {
-    const subscriptions = getCustomerSubscriptions(customer);
-    const activeSubscriptions = subscriptions.filter((subscription) => subscription.status === 'active');
-    const primarySubscription = activeSubscriptions.length > 0
-        ? activeSubscriptions[0]
-        : subscriptions[0];
+function buildCustomerSearchReference(customer) {
+    const referenceCandidates = [
+        customer && customer.personId,
+        customer && customer.personNumber,
+        customer && customer.id
+    ];
 
-    if (!primarySubscription) {
-        return '-';
+    for (const candidate of referenceCandidates) {
+        const normalizedCandidate = String(candidate || '').trim();
+        if (normalizedCandidate) {
+            return normalizedCandidate;
+        }
     }
 
-    return generateSubscriptionNumber(customer.id, primarySubscription.id);
+    return '-';
 }
 
 function shouldShowIdentifyButton() {
@@ -436,15 +550,16 @@ function shouldShowIdentifyButton() {
 
 function renderCustomerRow(customer) {
     const lastNameSection = formatLastNameSection(customer) || '-';
+    const mandantBadgeMarkup = buildMandantBadgeMarkup(customer);
     const initials = getCustomerInitials(customer) || '-';
     const subscriptionBadges = buildSubscriptionBadges(customer);
-    const subscriberNumber = buildSubscriberNumber(customer);
+    const customerReference = buildCustomerSearchReference(customer);
     const showIdentifyButton = shouldShowIdentifyButton();
     const viewActionLabel = translateKey('search.viewAction', {}, 'Bekijken');
 
     return `
         <tr class="result-row" data-action="select-customer" data-arg-customer-id="${customer.id}">
-            <td class="result-row-lastname">${lastNameSection}</td>
+            <td class="result-row-lastname">${lastNameSection}${mandantBadgeMarkup}</td>
             <td class="result-row-initials">
                 <span class="initials-value">${initials}</span>
             </td>
@@ -453,7 +568,7 @@ function renderCustomerRow(customer) {
                 <span>${customer.postalCode} ${customer.city}</span>
             </td>
             <td class="result-row-subscriptions">${subscriptionBadges}</td>
-            <td class="result-row-subscriber-number">${subscriberNumber}</td>
+            <td class="result-row-subscriber-number">${customerReference}</td>
             <td class="result-row-actions">
                 <button class="btn btn-small" type="button" data-action="select-customer" data-arg-customer-id="${customer.id}" data-action-stop-propagation="true">
                     ${viewActionLabel}
@@ -877,6 +992,9 @@ export function registerCustomerSearchSlice(actionRouter) {
 export const __customerSearchTestUtils = {
     getPageNumbers,
     normalizePhone,
+    buildSearchParams,
+    buildSearchQueryLabel,
+    renderCustomerRow,
     resetSearchStateForTests() {
         resetSearchState();
     },

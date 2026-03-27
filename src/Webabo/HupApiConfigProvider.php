@@ -78,6 +78,11 @@ final class HupApiConfigProvider
                     name: $normalizedName,
                     title: $this->normalizeOptionalString($credentialSection['title'] ?? null),
                     mandant: $this->normalizeOptionalString($credentialSection['client'] ?? null),
+                    divisionId: $this->normalizeOptionalString(
+                        $credentialSection['divisionid']
+                        ?? $credentialSection['divisionId']
+                        ?? null
+                    ),
                     supportsPersonLookup: $this->normalizeOptionalBoolean($credentialSection['client_search'] ?? null),
                     username: $this->normalizeOptionalString($credentialSection['username'] ?? null),
                     password: $this->normalizeOptionalString($credentialSection['password'] ?? null),
@@ -100,6 +105,7 @@ final class HupApiConfigProvider
             name: 'default',
             title: null,
             mandant: null,
+            divisionId: null,
             supportsPersonLookup: null,
             username: $this->normalizeOptionalString($section['username'] ?? null),
             password: $this->normalizeOptionalString($section['password'] ?? null),

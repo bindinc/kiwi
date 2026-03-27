@@ -7,6 +7,7 @@
 // ============================================================================
 
 const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
+const WERFSLEUTEL_SELECTIONS_UPDATED_EVENT = 'kiwi:werfsleutel-selections-updated';
 const MANDANT_BADGE_CONFIG_BY_KEY = {
     AVROTROS: {
         brandLabel: 'AVROTROS',
@@ -24,6 +25,101 @@ const MANDANT_BADGE_CONFIG_BY_KEY = {
         fallbackPath: 'assets/img/kroncrv-logo.svg'
     }
 };
+
+function getSubscriptionRuntimeGlobalScope() {
+    if (typeof window !== 'undefined') {
+        return window;
+    }
+
+    if (typeof globalThis !== 'undefined') {
+        return globalThis;
+    }
+
+    return null;
+}
+
+function getWerfsleutelSliceApi() {
+    const globalScope = getSubscriptionRuntimeGlobalScope();
+    const sliceApi = globalScope && typeof globalScope.kiwiWerfsleutelSlice === 'object'
+        ? globalScope.kiwiWerfsleutelSlice
+        : null;
+
+    return sliceApi || null;
+}
+
+function normalizeSubscriptionRoleScopeValue(value) {
+    const normalizedValue = String(value || '').trim().toUpperCase();
+    return normalizedValue || '';
+}
+
+function getSubscriptionRoleSearchSelections() {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    if (!werfsleutelSliceApi || typeof werfsleutelSliceApi.getSelections !== 'function') {
+        return [];
+    }
+
+    const selections = werfsleutelSliceApi.getSelections();
+    return Array.isArray(selections) ? selections : [];
+}
+
+function getSubscriptionRoleSearchScope() {
+    const divisionIds = [];
+    const mandants = [];
+
+    for (const selection of getSubscriptionRoleSearchSelections()) {
+        const selectedOffer = selection && typeof selection === 'object'
+            ? selection.selectedKey
+            : null;
+        if (!selectedOffer || typeof selectedOffer !== 'object') {
+            continue;
+        }
+
+        const divisionId = normalizeSubscriptionRoleScopeValue(selectedOffer.divisionId || selectedOffer.divisionid);
+        if (divisionId && !divisionIds.includes(divisionId)) {
+            divisionIds.push(divisionId);
+        }
+
+        const mandant = normalizeSubscriptionRoleScopeValue(selectedOffer.mandant);
+        if (mandant && !mandants.includes(mandant)) {
+            mandants.push(mandant);
+        }
+    }
+
+    return {
+        hasSelection: divisionIds.length > 0 || mandants.length > 0,
+        divisionIds,
+        mandants
+    };
+}
+
+function appendSubscriptionRoleSearchScope(params, searchScope = getSubscriptionRoleSearchScope()) {
+    if (!params || !searchScope || !searchScope.hasSelection) {
+        return;
+    }
+
+    if (Array.isArray(searchScope.divisionIds) && searchScope.divisionIds.length > 0) {
+        params.set('divisionIds', searchScope.divisionIds.join(','));
+    }
+
+    if (Array.isArray(searchScope.mandants) && searchScope.mandants.length > 0) {
+        params.set('mandants', searchScope.mandants.join(','));
+    }
+}
+
+function buildSubscriptionRoleSearchScopeFingerprint(searchScope = getSubscriptionRoleSearchScope()) {
+    if (!searchScope || !searchScope.hasSelection) {
+        return 'no-werfsleutel';
+    }
+
+    const divisionPart = Array.isArray(searchScope.divisionIds)
+        ? searchScope.divisionIds.join('|')
+        : '';
+    const mandantPart = Array.isArray(searchScope.mandants)
+        ? searchScope.mandants.join('|')
+        : '';
+
+    return `division:${divisionPart};mandant:${mandantPart}`;
+}
 
 function resolveSharedNormalizeNameFragment() {
     const globalScope = typeof window !== 'undefined'
@@ -392,9 +488,23 @@ function buildMandantBadgeMarkup(mandant, className = 'mandant-logo-badge') {
     `;
 }
 
+function resolvePersonBadgeMandant(person) {
+    if (!person || typeof person !== 'object') {
+        return '';
+    }
+
+    const divisionId = normalizeMandantKey(person.divisionId);
+    if (divisionId && MANDANT_BADGE_CONFIG_BY_KEY[divisionId]) {
+        return divisionId;
+    }
+
+    return normalizeMandantKey(person.mandant);
+}
+
 function getSubscriptionRoleConfig(role) {
     if (role === 'recipient') {
         return {
+            panelId: 'recipientRolePanel',
             roleLabel: 'ontvanger',
             prefix: 'subRecipient',
             modeName: 'recipientMode',
@@ -403,6 +513,7 @@ function getSubscriptionRoleConfig(role) {
             createFormContainerId: 'recipientCreateForm',
             duplicateCheckId: 'recipientDuplicateCheck',
             searchQueryId: 'recipientSearchQuery',
+            searchButtonId: 'recipientSearchButton',
             searchResultsId: 'recipientSearchResults',
             selectedPersonId: 'recipientSelectedPerson'
         };
@@ -410,6 +521,7 @@ function getSubscriptionRoleConfig(role) {
 
     if (role === 'requester') {
         return {
+            panelId: 'requesterRolePanel',
             roleLabel: 'aanvrager/betaler',
             prefix: 'subRequester',
             modeName: 'requesterMode',
@@ -418,6 +530,7 @@ function getSubscriptionRoleConfig(role) {
             createFormContainerId: 'requesterCreateForm',
             duplicateCheckId: 'requesterDuplicateCheck',
             searchQueryId: 'requesterSearchQuery',
+            searchButtonId: 'requesterSearchButton',
             searchResultsId: 'requesterSearchResults',
             selectedPersonId: 'requesterSelectedPerson'
         };
@@ -446,8 +559,148 @@ function buildPersonDisplayAddress(person) {
     return `${postalCode} ${city}`.trim();
 }
 
-function formatPersonReference(personId) {
-    return translate('common.personWithId', { id: personId }, `persoon #${personId}`);
+function isSubscriptionApiPerson(person) {
+    return String(person && person.sourceSystem || '').trim() === 'subscription-api';
+}
+
+function syncSubscriptionRecipientIban(person, options = {}) {
+    const ibanInput = document.getElementById('subIBAN');
+    if (!ibanInput || !('value' in ibanInput)) {
+        return;
+    }
+
+    const iban = String(person && person.iban || '').trim();
+    if (!iban) {
+        return;
+    }
+
+    if (options.force !== true && String(ibanInput.value || '').trim() !== '') {
+        return;
+    }
+
+    ibanInput.value = iban;
+}
+
+function buildExistingPersonSnapshot(selectedPerson) {
+    if (!selectedPerson || typeof selectedPerson !== 'object') {
+        return null;
+    }
+
+    return {
+        salutation: String(selectedPerson.salutation || '').trim(),
+        firstName: String(selectedPerson.firstName || '').trim(),
+        middleName: String(selectedPerson.middleName || '').trim(),
+        lastName: String(selectedPerson.lastName || '').trim(),
+        birthday: String(selectedPerson.birthday || '').trim(),
+        personNumber: String(selectedPerson.personNumber || '').trim(),
+        postalCode: String(selectedPerson.postalCode || '').trim(),
+        houseNumber: String(selectedPerson.houseNumber || '').trim(),
+        address: String(selectedPerson.address || '').trim(),
+        city: String(selectedPerson.city || '').trim(),
+        email: String(selectedPerson.email || '').trim(),
+        phone: String(selectedPerson.phone || '').trim(),
+        optinEmail: String(selectedPerson.optinEmail || '').trim(),
+        optinPhone: String(selectedPerson.optinPhone || '').trim(),
+        optinPost: String(selectedPerson.optinPost || '').trim(),
+        iban: String(selectedPerson.iban || '').trim(),
+        credentialKey: String(selectedPerson.credentialKey || '').trim(),
+        credentialTitle: String(selectedPerson.credentialTitle || '').trim(),
+        mandant: String(selectedPerson.mandant || '').trim(),
+        sourceSystem: String(selectedPerson.sourceSystem || '').trim(),
+        supportsPersonLookup: Boolean(selectedPerson.supportsPersonLookup)
+    };
+}
+
+function buildSubscriptionRolePersonDetailUrl(selectedPerson) {
+    if (!selectedPerson || selectedPerson.id === undefined || selectedPerson.id === null || !window.kiwiApi) {
+        return '';
+    }
+
+    const credentialKey = String(selectedPerson.credentialKey || '').trim();
+    if (!credentialKey) {
+        return '';
+    }
+
+    const params = new URLSearchParams({
+        credentialKey
+    });
+    const sourceSystem = String(selectedPerson.sourceSystem || '').trim();
+    if (sourceSystem) {
+        params.set('sourceSystem', sourceSystem);
+    }
+
+    return `${personsApiUrl}/${encodeURIComponent(String(selectedPerson.id))}?${params.toString()}`;
+}
+
+function mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload) {
+    if (!selectedPerson || typeof selectedPerson !== 'object') {
+        return detailPayload;
+    }
+
+    return {
+        ...selectedPerson,
+        ...(detailPayload && typeof detailPayload === 'object' ? detailPayload : {})
+    };
+}
+
+async function hydrateSubscriptionRoleSelectedPerson(role) {
+    const roleState = subscriptionRoleState[role];
+    const selectedPerson = roleState ? roleState.selectedPerson : null;
+    if (!selectedPerson || !isSubscriptionApiPerson(selectedPerson) || !window.kiwiApi) {
+        return;
+    }
+
+    const detailUrl = buildSubscriptionRolePersonDetailUrl(selectedPerson);
+    if (!detailUrl) {
+        return;
+    }
+
+    try {
+        const detailPayload = await window.kiwiApi.get(detailUrl);
+        const hydratedPerson = mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload);
+        subscriptionRoleState[role].selectedPerson = hydratedPerson;
+        upsertCustomerInCache(hydratedPerson);
+        renderSubscriptionRoleSelectedPerson(role);
+
+        if (role === 'recipient') {
+            syncSubscriptionRecipientIban(hydratedPerson);
+            if (subscriptionRoleState.requesterSameAsRecipient) {
+                renderRequesterSameSummary();
+            }
+        }
+    } catch (error) {
+        // Keep the selected person usable even when detail enrichment is unavailable.
+    }
+}
+
+function resolvePersonReferenceValue(personOrId) {
+    if (personOrId && typeof personOrId === 'object') {
+        const referenceCandidates = [
+            personOrId.personId,
+            personOrId.personNumber,
+            personOrId.id
+        ];
+
+        for (const candidate of referenceCandidates) {
+            const normalizedCandidate = String(candidate || '').trim();
+            if (normalizedCandidate) {
+                return normalizedCandidate;
+            }
+        }
+
+        return '';
+    }
+
+    return String(personOrId || '').trim();
+}
+
+function formatPersonReference(personOrId) {
+    const referenceValue = resolvePersonReferenceValue(personOrId);
+    if (!referenceValue) {
+        return translate('common.personWithoutReference', {}, 'persoon');
+    }
+
+    return translate('subscription.personReference', { personId: referenceValue }, `Abon.nr ${referenceValue}`);
 }
 
 function renderSubscriptionRoleSelectedPerson(role) {
@@ -466,11 +719,11 @@ function renderSubscriptionRoleSelectedPerson(role) {
         return;
     }
 
-    const name = escapeHtml(buildPersonDisplayName(selectedPerson) || formatPersonReference(selectedPerson.id));
+    const name = escapeHtml(buildPersonDisplayName(selectedPerson) || formatPersonReference(selectedPerson));
     const address = escapeHtml(buildPersonDisplayAddress(selectedPerson));
-    const personId = escapeHtml(formatPersonReference(selectedPerson.id));
+    const personId = escapeHtml(formatPersonReference(selectedPerson));
     const addressLine = address ? ` · ${address}` : '';
-    const mandantBadgeMarkup = buildMandantBadgeMarkup(selectedPerson.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+    const mandantBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(selectedPerson), 'mandant-logo-badge mandant-logo-badge--compact');
     selectedNode.classList.remove('empty');
     selectedNode.innerHTML = `
         <span class="party-person-main">
@@ -492,14 +745,14 @@ function renderRequesterSameSummary() {
 
     const recipient = subscriptionRoleState.recipient.selectedPerson;
     if (recipient && recipient.id !== undefined && recipient.id !== null) {
-        const name = escapeHtml(buildPersonDisplayName(recipient) || formatPersonReference(recipient.id));
-        const recipientBadgeMarkup = buildMandantBadgeMarkup(recipient.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+        const name = escapeHtml(buildPersonDisplayName(recipient) || formatPersonReference(recipient));
+        const recipientBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(recipient), 'mandant-logo-badge mandant-logo-badge--compact');
         const requesterFollowsRecipientLabel = translate(
             'subscription.requesterFollowsRecipientIntro',
             {},
             'Aanvrager/betaler volgt de ontvanger:'
         );
-        summaryNode.innerHTML = `${escapeHtml(requesterFollowsRecipientLabel)} <span class="party-person-main"><strong>${name}</strong>${recipientBadgeMarkup}</span> · ${escapeHtml(formatPersonReference(recipient.id))}.`;
+        summaryNode.innerHTML = `${escapeHtml(requesterFollowsRecipientLabel)} <span class="party-person-main"><strong>${name}</strong>${recipientBadgeMarkup}</span> · ${escapeHtml(formatPersonReference(recipient))}.`;
         return;
     }
 
@@ -524,6 +777,99 @@ function renderRequesterSameSummary() {
         {},
         'Aanvrager/betaler volgt de geselecteerde ontvanger.'
     );
+}
+
+function collectSubscriptionRoleControls(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) {
+        return [];
+    }
+
+    const controls = [];
+    const seenControls = new Set();
+    const rememberControl = (control) => {
+        if (!control || seenControls.has(control)) {
+            return;
+        }
+
+        seenControls.add(control);
+        controls.push(control);
+    };
+
+    rememberControl(document.getElementById(cfg.searchQueryId));
+    rememberControl(document.getElementById(cfg.searchButtonId));
+    rememberControl(document.querySelector(`input[name="${cfg.modeName}"][value="existing"]`));
+    rememberControl(document.querySelector(`input[name="${cfg.modeName}"][value="create"]`));
+
+    if (role === 'requester') {
+        rememberControl(document.getElementById('requesterSameAsRecipient'));
+    }
+
+    const panelNode = document.getElementById(cfg.panelId);
+    if (panelNode && typeof panelNode.querySelectorAll === 'function') {
+        panelNode.querySelectorAll('input, button, select, textarea').forEach(rememberControl);
+    }
+
+    return controls;
+}
+
+function personMatchesSubscriptionRoleSearchScope(person, searchScope = getSubscriptionRoleSearchScope()) {
+    if (!person || typeof person !== 'object') {
+        return false;
+    }
+
+    if (!isSubscriptionApiPerson(person)) {
+        return true;
+    }
+
+    if (!searchScope || !searchScope.hasSelection) {
+        return false;
+    }
+
+    const personDivisionId = normalizeSubscriptionRoleScopeValue(person.divisionId);
+    const personMandant = normalizeSubscriptionRoleScopeValue(person.mandant);
+    const matchesDivisionScope = searchScope.divisionIds.includes(personDivisionId);
+    const matchesMandantScope = searchScope.mandants.includes(personMandant);
+
+    return matchesDivisionScope || matchesMandantScope;
+}
+
+function updateSubscriptionRoleSearchAvailability() {
+    const searchScope = getSubscriptionRoleSearchScope();
+    const shouldDisableControls = !searchScope.hasSelection;
+
+    for (const role of ['recipient', 'requester']) {
+        const cfg = getSubscriptionRoleConfig(role);
+        if (!cfg) {
+            continue;
+        }
+
+        const panelNode = document.getElementById(cfg.panelId);
+        if (panelNode) {
+            panelNode.setAttribute('aria-disabled', shouldDisableControls ? 'true' : 'false');
+        }
+
+        for (const control of collectSubscriptionRoleControls(role)) {
+            if ('disabled' in control) {
+                control.disabled = shouldDisableControls;
+            }
+        }
+
+        if (shouldDisableControls) {
+            subscriptionRoleState[role].searchResults = [];
+            renderSubscriptionRoleSearchResults(role);
+
+            if (subscriptionRoleState[role].mode === 'create') {
+                resetSubscriptionDuplicateRoleState(role);
+            }
+        } else if (subscriptionRoleState[role].mode === 'create') {
+            void evaluateSubscriptionDuplicateRole(role);
+        }
+    }
+
+    if (subscriptionRoleState.requesterSameAsRecipient) {
+        renderRequesterSameSummary();
+    }
 }
 
 function clearSubscriptionRoleCreateForm(role) {
@@ -554,7 +900,6 @@ function ensureSubscriptionRoleCreateForm(role) {
     }
 
     bindSubscriptionDuplicateListeners(role);
-    void evaluateSubscriptionDuplicateRole(role);
 }
 
 function setSubscriptionRoleMode(role, mode) {
@@ -585,6 +930,8 @@ function setSubscriptionRoleMode(role, mode) {
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
     }
+
+    updateSubscriptionRoleSearchAvailability();
 }
 
 function toggleRequesterSameAsRecipient() {
@@ -610,6 +957,8 @@ function toggleRequesterSameAsRecipient() {
     } else if (subscriptionRoleState.requester.mode === 'create') {
         ensureSubscriptionRoleCreateForm('requester');
     }
+
+    updateSubscriptionRoleSearchAvailability();
 }
 
 function getSelectedSubscriptionRolePersonId(role) {
@@ -802,11 +1151,24 @@ function collectSubscriptionRoleDuplicateInput(role) {
     }
 
     const data = getCustomerFormData(cfg.prefix);
-    return normalizeSubscriptionDuplicateInput(data);
+    const normalizedInput = normalizeSubscriptionDuplicateInput(data);
+    if (normalizedInput.fingerprint === 'none') {
+        return normalizedInput;
+    }
+
+    return {
+        ...normalizedInput,
+        fingerprint: `${normalizedInput.fingerprint}::${buildSubscriptionRoleSearchScopeFingerprint()}`
+    };
 }
 
 function buildSubscriptionDuplicateApiRequest(normalizedInput) {
     if (!normalizedInput || normalizedInput.fingerprint === 'none') {
+        return null;
+    }
+
+    const searchScope = getSubscriptionRoleSearchScope();
+    if (!searchScope.hasSelection) {
         return null;
     }
 
@@ -827,6 +1189,8 @@ function buildSubscriptionDuplicateApiRequest(normalizedInput) {
     } else {
         return null;
     }
+
+    appendSubscriptionRoleSearchScope(params, searchScope);
 
     return {
         fingerprint: normalizedInput.fingerprint,
@@ -949,11 +1313,12 @@ function refreshSubscriptionDuplicateMatches(role, normalizedInput) {
         return [];
     }
 
-    const localStrongMatches = findStrongDuplicateMatches(normalizedInput, customers);
     const cacheEntry = getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, normalizedInput.fingerprint);
     const cachedStrongMatches = cacheEntry ? cacheEntry.matches : [];
 
-    roleDuplicateState.strongMatches = mergeDuplicateMatchLists(localStrongMatches, cachedStrongMatches);
+    // Phase 9: duplicate detection must follow the same backend route/data source
+    // as regular person search instead of mixing in local session/PoC customers.
+    roleDuplicateState.strongMatches = mergeDuplicateMatchLists([], cachedStrongMatches);
     return roleDuplicateState.strongMatches;
 }
 
@@ -1013,7 +1378,7 @@ function renderSubscriptionDuplicateCheck(role) {
         const safeName = escapeHtml(buildPersonDisplayName(person) || `Persoon #${person.id}`);
         const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
         const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
-        const mandantBadgeMarkup = buildMandantBadgeMarkup(person.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+        const mandantBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(person), 'mandant-logo-badge mandant-logo-badge--compact');
         return `
             <div class="subscription-duplicate-item">
                 <div>
@@ -1096,6 +1461,10 @@ function selectSubscriptionDuplicatePerson(role, personId) {
     subscriptionRoleState[role].selectedPerson = selectedPerson;
     setSubscriptionRoleMode(role, 'existing');
     renderSubscriptionRoleSelectedPerson(role);
+    if (role === 'recipient') {
+        syncSubscriptionRecipientIban(selectedPerson);
+        void hydrateSubscriptionRoleSelectedPerson(role);
+    }
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
@@ -1212,7 +1581,7 @@ async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, optio
         roleDuplicateState.apiWarning = translate(
             'subscription.duplicateCheck.apiFallback',
             {},
-            'Controle via backend tijdelijk niet beschikbaar. Lokale controle blijft actief.'
+            'Controle via backend tijdelijk niet beschikbaar. Er worden nu geen matches opgehaald.'
         );
         refreshSubscriptionDuplicateMatches(role, latestInput);
         renderSubscriptionDuplicateCheck(role);
@@ -1416,12 +1785,12 @@ function renderSubscriptionRoleSearchResults(role) {
     }
 
     resultsNode.innerHTML = results.map((person) => {
-        const safeName = escapeHtml(buildPersonDisplayName(person) || formatPersonReference(person.id));
+        const safeName = escapeHtml(buildPersonDisplayName(person) || formatPersonReference(person));
         const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
-        const safeId = escapeHtml(formatPersonReference(person.id));
+        const safeId = escapeHtml(formatPersonReference(person));
         const safeAddressLine = safeAddress ? ` · ${safeAddress}` : '';
         const selectLabel = escapeHtml(translate('subscription.search.selectButton', {}, 'Selecteer'));
-        const mandantBadgeMarkup = buildMandantBadgeMarkup(person.mandant, 'mandant-logo-badge mandant-logo-badge--compact');
+        const mandantBadgeMarkup = buildMandantBadgeMarkup(resolvePersonBadgeMandant(person), 'mandant-logo-badge mandant-logo-badge--compact');
         return `
             <div class="party-search-result">
                 <div>
@@ -1440,6 +1809,20 @@ function renderSubscriptionRoleSearchResults(role) {
 async function searchSubscriptionRolePerson(role) {
     const cfg = getSubscriptionRoleConfig(role);
     if (!cfg) return;
+
+    const searchScope = getSubscriptionRoleSearchScope();
+    if (!searchScope.hasSelection) {
+        showToast(
+            translate(
+                'subscription.search.selectWerfsleutelFirst',
+                {},
+                'Selecteer eerst een werfsleutel voordat u een persoon zoekt.'
+            ),
+            'warning'
+        );
+        updateSubscriptionRoleSearchAvailability();
+        return;
+    }
 
     const query = normalizeRoleSearchQuery(document.getElementById(cfg.searchQueryId)?.value);
     if (!query) {
@@ -1466,6 +1849,8 @@ async function searchSubscriptionRolePerson(role) {
             }
         }
 
+        appendSubscriptionRoleSearchScope(params, searchScope);
+
         try {
             const payload = await window.kiwiApi.get(`${personsApiUrl}?${params.toString()}`);
             results = Array.isArray(payload && payload.items) ? payload.items : [];
@@ -1491,6 +1876,10 @@ function selectSubscriptionRolePerson(role, personId) {
 
     subscriptionRoleState[role].selectedPerson = selected;
     renderSubscriptionRoleSelectedPerson(role);
+    if (role === 'recipient') {
+        syncSubscriptionRecipientIban(selected);
+        void hydrateSubscriptionRoleSelectedPerson(role);
+    }
 
     const cfg = getSubscriptionRoleConfig(role);
     const resultsNode = document.getElementById(cfg.searchResultsId);
@@ -1571,6 +1960,7 @@ function buildExistingPersonCredentialContext(selectedPerson) {
     const credentialKey = String(selectedPerson.credentialKey || '').trim();
     const credentialTitle = String(selectedPerson.credentialTitle || '').trim();
     const mandant = String(selectedPerson.mandant || '').trim();
+    const divisionId = String(selectedPerson.divisionId || '').trim();
     const sourceSystem = String(selectedPerson.sourceSystem || '').trim();
 
     if (credentialKey) {
@@ -1583,6 +1973,10 @@ function buildExistingPersonCredentialContext(selectedPerson) {
 
     if (mandant) {
         context.mandant = mandant;
+    }
+
+    if (divisionId) {
+        context.divisionId = divisionId;
     }
 
     if (typeof selectedPerson.supportsPersonLookup === 'boolean') {
@@ -1617,10 +2011,27 @@ function buildSubscriptionRolePayload(role, options = {}) {
             return null;
         }
 
-        return {
+        if (!personMatchesSubscriptionRoleSearchScope(roleState.selectedPerson)) {
+            showToast(
+                translate(
+                    'subscription.search.personOutsideWerfsleutelScope',
+                    { roleLabel: cfg.roleLabel },
+                    `De geselecteerde ${cfg.roleLabel} past niet bij de gekozen werfsleutel(s). Zoek opnieuw binnen de huidige selectie.`
+                ),
+                'error'
+            );
+            return null;
+        }
+
+        const payload = {
             personId: Number(roleState.selectedPerson.id),
             ...buildExistingPersonCredentialContext(roleState.selectedPerson)
         };
+        if (isSubscriptionApiPerson(roleState.selectedPerson)) {
+            payload.person = buildExistingPersonSnapshot(roleState.selectedPerson);
+        }
+
+        return payload;
     }
 
     if (roleState.mode === 'create') {
@@ -1649,6 +2060,7 @@ function initializeSubscriptionRolesForForm() {
     if (currentCustomer) {
         subscriptionRoleState.recipient.selectedPerson = currentCustomer;
         renderSubscriptionRoleSelectedPerson('recipient');
+        syncSubscriptionRecipientIban(currentCustomer);
     } else {
         setSubscriptionRoleMode('recipient', 'create');
     }
@@ -1660,12 +2072,30 @@ function initializeSubscriptionRolesForForm() {
     toggleRequesterSameAsRecipient();
 }
 
+function installSubscriptionRoleScopeListener() {
+    const globalScope = getSubscriptionRuntimeGlobalScope();
+    if (
+        !globalScope
+        || typeof globalScope.addEventListener !== 'function'
+        || globalScope.__kiwiSubscriptionRoleScopeListenerInstalled === true
+    ) {
+        return;
+    }
+
+    globalScope.__kiwiSubscriptionRoleScopeListenerInstalled = true;
+    globalScope.addEventListener(WERFSLEUTEL_SELECTIONS_UPDATED_EVENT, () => {
+        updateSubscriptionRoleSearchAvailability();
+    });
+}
+
 // ============================================================================
 // End of DRY Component
 // ============================================================================
 
 
 if (typeof window !== 'undefined') {
+    installSubscriptionRoleScopeListener();
+
     window.kiwiSubscriptionRoleRuntime = Object.assign(window.kiwiSubscriptionRoleRuntime || {}, {
         acknowledgeSubscriptionDuplicateWarning,
         bindSubscriptionDuplicateListeners,
@@ -1674,6 +2104,7 @@ if (typeof window !== 'undefined') {
         buildPersonDisplayName,
         buildSubscriptionDuplicateApiRequest,
         buildSubscriptionDuplicateFingerprint,
+        buildSubscriptionRoleSearchScopeFingerprint,
         buildSubscriptionRolePayload,
         clearSubscriptionDuplicateDebounceTimer,
         clearSubscriptionDuplicateUi,
@@ -1690,6 +2121,7 @@ if (typeof window !== 'undefined') {
         getFreshSubscriptionDuplicateCacheEntry,
         getSelectedSubscriptionRolePersonId,
         getSubscriptionDuplicateRoleState,
+        getSubscriptionRoleSearchScope,
         getSubscriptionRoleConfig,
         hasSameSelectedExistingRecipientAndRequester,
         initializeSubscriptionRolesForForm,
@@ -1726,6 +2158,7 @@ if (typeof window !== 'undefined') {
         toggleCustomerFormAddress,
         toggleRequesterSameAsRecipient,
         toggleSubscriptionDuplicateMatches,
+        updateSubscriptionRoleSearchAvailability,
         validateSubscriptionDuplicateSubmitGuard,
         waitForTimeout
     });

@@ -48,6 +48,78 @@ function normalizeCustomerId(customerId) {
     return customerId;
 }
 
+function buildCustomerDetailUrl(baseUrl, customerId, cachedCustomer) {
+    const normalizedBaseUrl = String(baseUrl || '').replace(/\/+$/, '');
+    const normalizedCustomerId = encodeURIComponent(String(customerId || '').trim());
+    const queryParams = new URLSearchParams();
+
+    const credentialKey = String(cachedCustomer && cachedCustomer.credentialKey || '').trim();
+    if (credentialKey) {
+        queryParams.set('credentialKey', credentialKey);
+    }
+
+    const sourceSystem = String(cachedCustomer && cachedCustomer.sourceSystem || '').trim();
+    if (sourceSystem) {
+        queryParams.set('sourceSystem', sourceSystem);
+    }
+
+    const queryString = queryParams.toString();
+
+    return queryString
+        ? `${normalizedBaseUrl}/${normalizedCustomerId}?${queryString}`
+        : `${normalizedBaseUrl}/${normalizedCustomerId}`;
+}
+
+function mergeCustomerDetail(cachedCustomer, detailCustomer) {
+    if (!cachedCustomer || !detailCustomer) {
+        return detailCustomer || cachedCustomer || null;
+    }
+
+    const mergedCustomer = {
+        ...cachedCustomer,
+        ...detailCustomer,
+    };
+    const stringFields = [
+        'personId',
+        'personNumber',
+        'salutation',
+        'firstName',
+        'middleName',
+        'lastName',
+        'initials',
+        'birthday',
+        'address',
+        'postalCode',
+        'houseNumber',
+        'city',
+        'email',
+        'phone',
+        'credentialKey',
+        'credentialTitle',
+        'mandant',
+        'divisionId',
+        'sourceSystem',
+        'matchCode',
+        'iban',
+    ];
+
+    stringFields.forEach((fieldName) => {
+        const detailValue = detailCustomer[fieldName];
+        if (typeof detailValue === 'string') {
+            mergedCustomer[fieldName] = detailValue.trim() !== ''
+                ? detailValue
+                : (cachedCustomer[fieldName] ?? detailValue);
+            return;
+        }
+
+        if (detailValue === undefined || detailValue === null) {
+            mergedCustomer[fieldName] = cachedCustomer[fieldName] ?? detailValue;
+        }
+    });
+
+    return mergedCustomer;
+}
+
 function setElementText(id, value) {
     if (typeof document === 'undefined') {
         return;
@@ -90,6 +162,19 @@ function buildCustomerFullName(customer) {
     return nameParts.join(' ');
 }
 
+function buildCustomerHeader(customer) {
+    const fullName = buildCustomerFullName(customer);
+    const personReference = String(customer && customer.personId || '').trim();
+
+    if (!personReference) {
+        return fullName;
+    }
+
+    return fullName
+        ? `${fullName} (${personReference})`
+        : `(${personReference})`;
+}
+
 function buildCustomerAddressLine(customer) {
     if (!customer) {
         return '';
@@ -120,6 +205,10 @@ function getSubscriptionMetadata(dependencies, subscription) {
     };
 }
 
+function isReadOnlySubscription(subscription) {
+    return String(subscription && subscription.sourceSystem || '').trim() === 'subscription-api';
+}
+
 function renderActiveSubscriptions(subscriptions, dependencies) {
     if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
         return '';
@@ -127,6 +216,13 @@ function renderActiveSubscriptions(subscriptions, dependencies) {
 
     const rows = subscriptions.map((subscription) => {
         const { pricingInfo, requesterMeta } = getSubscriptionMetadata(dependencies, subscription);
+        const actionsMarkup = isReadOnlySubscription(subscription)
+            ? ''
+            : `
+                <button class="icon-btn" type="button" data-action="edit-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.editTitle', 'Bewerken')}">✏️</button>
+                <button class="icon-btn" type="button" data-action="cancel-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.cancelTitle', 'Opzeggen')}">🚫</button>
+            `;
+
         return `
             <div class="subscription-item">
                 <div class="subscription-info">
@@ -139,8 +235,7 @@ function renderActiveSubscriptions(subscriptions, dependencies) {
                 </div>
                 <div class="subscription-actions">
                     <span class="subscription-status status-active">${translateLabel(dependencies, 'subscription.statusActive', 'Actief')}</span>
-                    <button class="icon-btn" type="button" data-action="edit-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.editTitle', 'Bewerken')}">✏️</button>
-                    <button class="icon-btn" type="button" data-action="cancel-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.cancelTitle', 'Opzeggen')}">🚫</button>
+                    ${actionsMarkup}
                 </div>
             </div>
         `;
@@ -168,6 +263,13 @@ function renderEndedSubscriptions(subscriptions, dependencies) {
         const endDateLabel = subscription.endDate
             ? `${translateLabel(dependencies, 'subscription.endLabel', 'Einde')}: ${formatDate(subscription.endDate)} • `
             : '';
+        const actionsMarkup = isReadOnlySubscription(subscription)
+            ? ''
+            : `
+                <button class="btn btn-small btn-winback" type="button" data-action="start-winback-for-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.winbackTitle', 'Winback/Opzegging')}">
+                    ${translateLabel(dependencies, 'subscription.winbackAction', '🎯 Winback/Opzegging')}
+                </button>
+            `;
 
         return `
             <div class="subscription-item subscription-ended">
@@ -182,9 +284,7 @@ function renderEndedSubscriptions(subscriptions, dependencies) {
                 </div>
                 <div class="subscription-actions">
                     <span class="subscription-status ${statusClass}">${statusText}</span>
-                    <button class="btn btn-small btn-winback" type="button" data-action="start-winback-for-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.winbackTitle', 'Winback/Opzegging')}">
-                        ${translateLabel(dependencies, 'subscription.winbackAction', '🎯 Winback/Opzegging')}
-                    </button>
+                    ${actionsMarkup}
                 </div>
             </div>
         `;
@@ -211,6 +311,13 @@ function renderRestitutedSubscriptions(subscriptions, dependencies) {
         const refundInfo = subscription.refundInfo
             ? `<br>${translateLabel(dependencies, 'subscription.refundToLabel', 'Restitutie naar')}: ${subscription.refundInfo.email}`
             : '';
+        const actionsMarkup = isReadOnlySubscription(subscription)
+            ? ''
+            : `
+                <button class="btn btn-small btn-secondary" type="button" data-action="revert-restitution" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.transferToOtherTitle', 'Overzetten naar andere persoon')}">
+                    ${translateLabel(dependencies, 'subscription.transferAction', '🔄 Overzetten')}
+                </button>
+            `;
 
         return `
             <div class="subscription-item subscription-restituted">
@@ -225,9 +332,7 @@ function renderRestitutedSubscriptions(subscriptions, dependencies) {
                 </div>
                 <div class="subscription-actions">
                     <span class="subscription-status status-restituted">${translateLabel(dependencies, 'subscription.statusRestituted', 'Gerestitueerd')}</span>
-                    <button class="btn btn-small btn-secondary" type="button" data-action="revert-restitution" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.transferToOtherTitle', 'Overzetten naar andere persoon')}">
-                        ${translateLabel(dependencies, 'subscription.transferAction', '🔄 Overzetten')}
-                    </button>
+                    ${actionsMarkup}
                 </div>
             </div>
         `;
@@ -387,26 +492,35 @@ export async function selectCustomer(customerId) {
     }
 
     const normalizedCustomerId = normalizeCustomerId(customerId);
-    let customer = dependencies.findCustomerById
+    const cachedCustomer = dependencies.findCustomerById
         ? dependencies.findCustomerById(normalizedCustomerId)
         : null;
+    let customer = cachedCustomer;
     const apiClient = resolveApiClient();
 
     if (apiClient && dependencies.personsApiUrl) {
         try {
-            customer = await apiClient.get(`${dependencies.personsApiUrl}/${normalizedCustomerId}`);
+            const detailUrl = buildCustomerDetailUrl(dependencies.personsApiUrl, normalizedCustomerId, cachedCustomer);
+            customer = await apiClient.get(detailUrl);
+            customer = mergeCustomerDetail(cachedCustomer, customer);
             if (typeof dependencies.upsertCustomerInCache === 'function') {
                 dependencies.upsertCustomerInCache(customer);
             }
         } catch (error) {
-            if (typeof dependencies.showToast === 'function') {
-                dependencies.showToast(
-                    translateLabel(dependencies, 'customer.detailLoadFailed', 'Kon klantdetail niet laden'),
-                    'error'
-                );
+            const canUseCachedCustomer = cachedCustomer
+                && String(cachedCustomer.sourceSystem || '').trim() === 'subscription-api';
+            if (canUseCachedCustomer) {
+                customer = cachedCustomer;
+            } else {
+                if (typeof dependencies.showToast === 'function') {
+                    dependencies.showToast(
+                        translateLabel(dependencies, 'customer.detailLoadFailed', 'Kon klantdetail niet laden'),
+                        'error'
+                    );
+                }
+                console.error('Kon klantdetail niet laden via API', error);
+                return;
             }
-            console.error('Kon klantdetail niet laden via API', error);
-            return;
         }
     }
 
@@ -427,7 +541,7 @@ export async function selectCustomer(customerId) {
     setElementDisplay('searchResultsView', 'none');
     setElementDisplay('customerDetail', 'block');
 
-    setElementText('customerName', buildCustomerFullName(selectedCustomer));
+    setElementText('customerName', buildCustomerHeader(selectedCustomer));
     setElementText('customerAddress', buildCustomerAddressLine(selectedCustomer));
     setElementText('customerEmail', selectedCustomer.email || '');
     setElementText('customerPhone', selectedCustomer.phone || '');
@@ -483,3 +597,8 @@ export function registerCustomerDetailSlice(actionRouter) {
         }
     });
 }
+
+export const __customerDetailTestUtils = {
+    buildCustomerFullName,
+    buildCustomerHeader
+};

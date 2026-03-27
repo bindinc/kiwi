@@ -351,10 +351,10 @@
                                         style="display: none;" data-i18n="indexHtml.text.dit_is_de_persoon_die_belt_8096cd3d">
                                     👤 Dit is de persoon die belt
                                 </button>
-                                <button class="btn btn-small" type="button" data-action="edit-customer" data-i18n="indexHtml.text.bewerken_69177f14">✏️ Bewerken</button>
+                                <button id="editCustomerBtn" class="btn btn-small" type="button" data-action="edit-customer" data-i18n="indexHtml.text.bewerken_69177f14">✏️ Bewerken</button>
                                 <button id="resendMagazineBtn" class="btn btn-small btn-action-inline" type="button" data-action="show-resend-magazine" data-i18n="indexHtml.text.editie_verzenden_f7f6196d">📮 Editie Verzenden</button>
                                 <!-- <button id="winbackFlowBtn" class="btn btn-small btn-action-inline" onclick="showWinbackFlow()">🎯 Winback/Opzegging</button> -->
-                                <button class="btn btn-small btn-action-inline" type="button" data-action="show-editorial-complaint-form" data-i18n="indexHtml.text.klacht_redactie_45bd08ef">✍️ Klacht Redactie</button>
+                                <button id="editorialComplaintBtn" class="btn btn-small btn-action-inline" type="button" data-action="show-editorial-complaint-form" data-i18n="indexHtml.text.klacht_redactie_45bd08ef">✍️ Klacht Redactie</button>
                                 <button class="btn btn-small btn-close-customer" type="button" data-action="close-customer-detail" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">
                                     ✕
                                 </button>
@@ -424,7 +424,7 @@
                                 <div id="recipientExistingSection">
                                     <div class="form-row">
                                         <input type="search" id="recipientSearchQuery" class="form-control" placeholder="Zoek ontvanger op naam" data-i18n-placeholder="indexHtml.placeholder.zoek_ontvanger_op_naam_2046363e">
-                                        <button type="button" class="btn btn-secondary" data-action="search-subscription-role-person" data-arg-role="recipient" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
+                                        <button type="button" class="btn btn-secondary" id="recipientSearchButton" data-action="search-subscription-role-person" data-arg-role="recipient" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
                                     </div>
                                     <div id="recipientSearchResults" class="party-search-results"></div>
                                     <div id="recipientSelectedPerson" class="party-selected-person empty" data-i18n="indexHtml.text.geen_ontvanger_geselecteerd_25f421dc">Geen ontvanger geselecteerd</div>
@@ -454,7 +454,7 @@
                                     <div id="requesterExistingSection">
                                         <div class="form-row">
                                             <input type="search" id="requesterSearchQuery" class="form-control" placeholder="Zoek aanvrager/betaler op naam" data-i18n-placeholder="indexHtml.placeholder.zoek_aanvrager_betaler_op_naam_9636a951">
-                                            <button type="button" class="btn btn-secondary" data-action="search-subscription-role-person" data-arg-role="requester" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
+                                            <button type="button" class="btn btn-secondary" id="requesterSearchButton" data-action="search-subscription-role-person" data-arg-role="requester" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
                                         </div>
                                         <div id="requesterSearchResults" class="party-search-results"></div>
                                         <div id="requesterSelectedPerson" class="party-selected-person empty" data-i18n="indexHtml.text.geen_aanvrager_betaler_geselecteerd_8415de35">Geen aanvrager/betaler geselecteerd</div>
