@@ -45,11 +45,19 @@ final class TeamsPresenceSyncService
      * @var array<string, array<string, string>>
      */
     private const KIWI_TO_TEAMS_SESSION_PRESENCE = [
-        'ready' => ['availability' => 'Available', 'activity' => 'Available', 'expirationDuration' => 'PT4H'],
-        'away' => ['availability' => 'Away', 'activity' => 'Away', 'expirationDuration' => 'PT4H'],
-        'dnd' => ['availability' => 'DoNotDisturb', 'activity' => 'DoNotDisturb', 'expirationDuration' => 'PT4H'],
-        'busy' => ['availability' => 'Busy', 'activity' => 'Busy', 'expirationDuration' => 'PT4H'],
         'in_call' => ['availability' => 'Busy', 'activity' => 'InACall', 'expirationDuration' => 'PT4H'],
+    ];
+
+    /**
+     * A preferred presence is only visible when at least one presence session exists.
+     * Keep a simple Available session alive and layer manual preferred states on top.
+     *
+     * @var array<string, string>
+     */
+    private const PREFERRED_PRESENCE_KEEPALIVE_SESSION = [
+        'availability' => 'Available',
+        'activity' => 'Available',
+        'expirationDuration' => 'PT4H',
     ];
 
     public function __construct(
@@ -306,6 +314,28 @@ final class TeamsPresenceSyncService
             return $result;
         }
 
+        $sessionKeepaliveResult = $this->ensurePreferredPresenceSession($accessToken, $userIdentifier, $sessionData, $appConfig);
+        if (null === $sessionKeepaliveResult) {
+            $result = $this->buildSyncSkippedResult($capability, 'missing_presence_session_id');
+            $this->logWriteSyncResult($kiwiStatus, $result);
+
+            return $result;
+        }
+
+        if (false === ($sessionKeepaliveResult['ok'] ?? false)) {
+            $result = [
+                'attempted' => true,
+                'synced' => false,
+                'reason' => 'request_failed',
+                'capability' => $capability,
+                'mode' => 'preferred',
+            ];
+            $this->appendSessionResult($result, $sessionKeepaliveResult, 'presence_session');
+            $this->logWriteSyncResult($kiwiStatus, $result);
+
+            return $result;
+        }
+
         $graphResult = $this->graphClient->setUserPreferredPresence(
             $accessToken,
             $userIdentifier,
@@ -313,6 +343,7 @@ final class TeamsPresenceSyncService
         );
 
         $result = $this->buildSyncRequestResult($capability, 'preferred', $graphResult);
+        $this->appendSessionResult($result, $sessionKeepaliveResult, 'presence_session');
         $this->logWriteSyncResult($kiwiStatus, $result);
 
         return $result;
@@ -475,6 +506,23 @@ final class TeamsPresenceSyncService
     }
 
     /**
+     * @param array<string, mixed> $result
+     * @param array<string, mixed> $graphResult
+     */
+    private function appendSessionResult(array &$result, array $graphResult, string $fieldPrefix): void
+    {
+        $statusCode = $graphResult['status_code'] ?? null;
+        if (\is_int($statusCode)) {
+            $result[$fieldPrefix.'_status'] = $statusCode;
+        }
+
+        $graphError = $this->buildGraphErrorSummary($graphResult);
+        if (null !== $graphError) {
+            $result[$fieldPrefix.'_graph_error'] = $graphError;
+        }
+    }
+
+    /**
      * @param array<string, mixed> $graphResult
      * @return array<string, string>|null
      */
@@ -552,5 +600,28 @@ final class TeamsPresenceSyncService
             'graph_error_message' => $graphError['message'] ?? null,
             'graph_request_id' => $graphError['request_id'] ?? null,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $sessionData
+     * @param array<string, mixed> $appConfig
+     * @return array<string, mixed>|null
+     */
+    private function ensurePreferredPresenceSession(
+        string $accessToken,
+        string $userIdentifier,
+        array $sessionData,
+        array $appConfig,
+    ): ?array {
+        $sessionId = $this->getPresenceSessionId($sessionData, $appConfig);
+        if (null === $sessionId) {
+            return null;
+        }
+
+        return $this->graphClient->setSessionPresence(
+            $accessToken,
+            $userIdentifier,
+            self::PREFERRED_PRESENCE_KEEPALIVE_SESSION + ['sessionId' => $sessionId],
+        );
     }
 }

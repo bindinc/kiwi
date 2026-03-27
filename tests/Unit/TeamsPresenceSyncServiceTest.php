@@ -126,7 +126,7 @@ final class TeamsPresenceSyncServiceTest extends TestCase
         self::assertSame('session', $result['mode']);
     }
 
-    public function testSyncBusyUsesSessionPresenceToPropagateCrossAppStatus(): void
+    public function testSyncBusyKeepsPresenceSessionAliveBeforeSettingPreferredPresence(): void
     {
         $httpClient = new MockHttpClient([
             new MockResponse('', ['http_code' => 200]),
@@ -154,8 +154,8 @@ final class TeamsPresenceSyncServiceTest extends TestCase
 
         self::assertTrue($result['attempted']);
         self::assertTrue($result['synced']);
-        self::assertSame('session', $result['mode']);
-        self::assertSame(200, $result['clear_preferred_status']);
+        self::assertSame('preferred', $result['mode']);
+        self::assertSame(200, $result['presence_session_status']);
     }
 
     public function testSyncReturnsGraphErrorDetailsWhenRequestFails(): void
@@ -201,6 +201,7 @@ final class TeamsPresenceSyncServiceTest extends TestCase
             'message' => 'Insufficient privileges to complete the operation.',
             'request_id' => 'req-123',
         ], $result['graph_error']);
+        self::assertSame(200, $result['presence_session_status']);
     }
 
     private function makeJwt(array $payload): string

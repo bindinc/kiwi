@@ -197,7 +197,7 @@ TEAMS_PRESENCE_SYNC_ENABLED=true
 ```
 
 During an active Avaya call, Kiwi publishes Teams call activity (`InACall`) via Graph session presence APIs.
-Explicit status changes in Kiwi for `beschikbaar`, `bezet`, `afwezig`, and `niet storen` also update the Graph presence session so other Microsoft 365 apps can pick up the same state more reliably.
+Explicit status changes in Kiwi for `beschikbaar`, `bezet`, `afwezig`, and `niet storen` keep a Graph presence session alive and then apply the manual status as preferred presence, so other Microsoft 365 apps can pick up the same state more reliably.
 Outside active calls, Kiwi still does not auto-switch status values on its own.
 
 For local fallback Keycloak (`OIDC_MODE=fallback`), Teams sync stays intentionally disabled.
