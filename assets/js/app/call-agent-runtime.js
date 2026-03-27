@@ -511,11 +511,22 @@ function resolveTeamsSyncLabel(syncResult) {
     }
 
     const reason = (syncResult && syncResult.reason) || (capability && capability.reason) || null;
+    const statusCode = syncResult && Number.isInteger(syncResult.status_code) ? syncResult.status_code : null;
+    const graphError = syncResult && syncResult.graph_error && typeof syncResult.graph_error === 'object'
+        ? syncResult.graph_error
+        : null;
     if (reason === 'missing_presence_scope' || reason === 'missing_presence_write_scope' || reason === 'write_scope_unavailable') {
         return translate(
             'agent.teamsSyncMissingScope',
             {},
             'Teams sync vereist Graph scope Presence.ReadWrite. Log opnieuw in na consent.'
+        );
+    }
+    if (reason === 'feature_disabled') {
+        return translate(
+            'agent.teamsSyncDisabled',
+            {},
+            'Teams sync is uitgeschakeld in deze omgeving.'
         );
     }
     if (reason === 'unsupported_identity_provider') {
@@ -537,6 +548,35 @@ function resolveTeamsSyncLabel(syncResult) {
             'agent.teamsSyncMissingSession',
             {},
             'Teams call sync is niet beschikbaar: ontbrekende presence session-id.'
+        );
+    }
+    if (reason === 'missing_user_identifier') {
+        return translate(
+            'agent.teamsSyncMissingUser',
+            {},
+            'Teams sync is niet beschikbaar: Microsoft gebruikers-id ontbreekt in de login sessie.'
+        );
+    }
+    if (reason === 'request_failed') {
+        const graphDetails = [];
+        if (statusCode !== null) {
+            graphDetails.push(`HTTP ${statusCode}`);
+        }
+
+        const graphErrorCode = graphError && typeof graphError.code === 'string'
+            ? graphError.code.trim()
+            : '';
+        if (graphErrorCode) {
+            graphDetails.push(graphErrorCode);
+        }
+
+        const detailsLabel = graphDetails.join(', ');
+        return translate(
+            'agent.teamsSyncGraphFailed',
+            { details: detailsLabel },
+            detailsLabel
+                ? `Teams sync via Microsoft Graph mislukt (${detailsLabel}).`
+                : 'Teams sync via Microsoft Graph mislukt.'
         );
     }
 

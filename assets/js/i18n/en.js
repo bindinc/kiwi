@@ -477,9 +477,12 @@ const en = {
         "cannotSetStatusDuringCall": "Cannot change status during active call",
         "teamsSyncActive": "Teams sync active",
         "teamsSyncMissingScope": "Teams sync requires Graph scope Presence.ReadWrite. Log in again after consent.",
+        "teamsSyncDisabled": "Teams sync is disabled in this environment.",
         "teamsSyncUnsupportedProvider": "Teams sync is not available for this OIDC provider.",
         "teamsSyncMissingToken": "Teams sync is unavailable: missing access token.",
         "teamsSyncMissingSession": "Teams call sync is not available: missing presence session ID.",
+        "teamsSyncMissingUser": "Teams sync is unavailable: Microsoft user identifier is missing from the login session.",
+        "teamsSyncGraphFailed": "Teams sync via Microsoft Graph failed (%details%).",
         "teamsSyncTemporarilyUnavailable": "Teams sync is temporarily unavailable."
     },
     "acw": {

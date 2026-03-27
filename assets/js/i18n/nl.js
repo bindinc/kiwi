@@ -477,9 +477,12 @@ const nl = {
         "cannotSetStatusDuringCall": "Kan status niet wijzigen tijdens actief gesprek",
         "teamsSyncActive": "Teams sync actief",
         "teamsSyncMissingScope": "Teams sync vereist Graph scope Presence.ReadWrite. Log opnieuw in na consent.",
+        "teamsSyncDisabled": "Teams sync is uitgeschakeld in deze omgeving.",
         "teamsSyncUnsupportedProvider": "Teams sync is niet beschikbaar voor deze OIDC provider.",
         "teamsSyncMissingToken": "Teams sync is niet beschikbaar: ontbrekende toegangstoken.",
         "teamsSyncMissingSession": "Teams call sync is niet beschikbaar: ontbrekende presence session-id.",
+        "teamsSyncMissingUser": "Teams sync is niet beschikbaar: Microsoft gebruikers-id ontbreekt in de login sessie.",
+        "teamsSyncGraphFailed": "Teams sync via Microsoft Graph mislukt (%details%).",
         "teamsSyncTemporarilyUnavailable": "Teams sync is tijdelijk niet beschikbaar."
     },
     "acw": {

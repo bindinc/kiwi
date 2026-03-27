@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Oidc\OidcTokenInspector;
+use Psr\Log\LoggerInterface;
 
 final class TeamsPresenceSyncService
 {
@@ -50,6 +51,7 @@ final class TeamsPresenceSyncService
     public function __construct(
         private readonly OidcTokenInspector $tokenInspector,
         private readonly TeamsPresenceGraphClient $graphClient,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -243,55 +245,80 @@ final class TeamsPresenceSyncService
     {
         $capability = $this->getSyncCapability($sessionData, $appConfig);
         if (true !== ($capability['can_write'] ?? false)) {
-            return $this->buildSyncSkippedResult(
+            $result = $this->buildSyncSkippedResult(
                 $capability,
                 $capability['reason'] ?? 'write_scope_unavailable',
             );
+
+            $this->logWriteSyncResult($kiwiStatus, $result);
+
+            return $result;
         }
 
         $userIdentifier = $this->getGraphUserIdentifier($sessionData);
         if (null === $userIdentifier) {
-            return $this->buildSyncSkippedResult($capability, 'missing_user_identifier');
+            $result = $this->buildSyncSkippedResult($capability, 'missing_user_identifier');
+            $this->logWriteSyncResult($kiwiStatus, $result);
+
+            return $result;
         }
 
         $accessToken = $this->tokenInspector->getAccessToken($sessionData);
         if (null === $accessToken) {
-            return $this->buildSyncSkippedResult($capability, 'missing_access_token');
+            $result = $this->buildSyncSkippedResult($capability, 'missing_access_token');
+            $this->logWriteSyncResult($kiwiStatus, $result);
+
+            return $result;
         }
 
         if ('in_call' === $kiwiStatus) {
             $sessionPresencePayload = $this->mapKiwiStatusToTeamsSessionPresence($kiwiStatus);
             if (null === $sessionPresencePayload) {
-                return $this->buildSyncSkippedResult($capability, 'unsupported_kiwi_status');
+                $result = $this->buildSyncSkippedResult($capability, 'unsupported_kiwi_status');
+                $this->logWriteSyncResult($kiwiStatus, $result);
+
+                return $result;
             }
 
             $sessionId = $this->getPresenceSessionId($sessionData, $appConfig);
             if (null === $sessionId) {
-                return $this->buildSyncSkippedResult($capability, 'missing_presence_session_id');
+                $result = $this->buildSyncSkippedResult($capability, 'missing_presence_session_id');
+                $this->logWriteSyncResult($kiwiStatus, $result);
+
+                return $result;
             }
 
-            $clearStatus = $this->graphClient->clearUserPreferredPresence($accessToken, $userIdentifier);
-            $statusCode = $this->graphClient->setSessionPresence(
+            $clearResult = $this->graphClient->clearUserPreferredPresence($accessToken, $userIdentifier);
+            $graphResult = $this->graphClient->setSessionPresence(
                 $accessToken,
                 $userIdentifier,
                 $sessionPresencePayload + ['sessionId' => $sessionId],
             );
 
-            return $this->buildSyncRequestResult($capability, 'session', $statusCode, $clearStatus);
+            $result = $this->buildSyncRequestResult($capability, 'session', $graphResult, $clearResult);
+            $this->logWriteSyncResult($kiwiStatus, $result);
+
+            return $result;
         }
 
         $preferredPresencePayload = $this->mapKiwiStatusToTeamsPreferredPresence($kiwiStatus);
         if (null === $preferredPresencePayload) {
-            return $this->buildSyncSkippedResult($capability, 'unsupported_kiwi_status');
+            $result = $this->buildSyncSkippedResult($capability, 'unsupported_kiwi_status');
+            $this->logWriteSyncResult($kiwiStatus, $result);
+
+            return $result;
         }
 
-        $statusCode = $this->graphClient->setUserPreferredPresence(
+        $graphResult = $this->graphClient->setUserPreferredPresence(
             $accessToken,
             $userIdentifier,
             $preferredPresencePayload,
         );
 
-        return $this->buildSyncRequestResult($capability, 'preferred', $statusCode);
+        $result = $this->buildSyncRequestResult($capability, 'preferred', $graphResult);
+        $this->logWriteSyncResult($kiwiStatus, $result);
+
+        return $result;
     }
 
     /**
@@ -314,11 +341,15 @@ final class TeamsPresenceSyncService
             return $this->buildReadSkippedResult($capability, 'missing_access_token');
         }
 
-        $payload = $this->graphClient->fetchMyPresence($accessToken);
-        if (null === $payload) {
-            return $this->buildReadFailureResult($capability);
+        $graphResult = $this->graphClient->fetchMyPresence($accessToken);
+        if (true !== ($graphResult['ok'] ?? false)) {
+            $result = $this->buildReadFailureResult($capability, $graphResult);
+            $this->logReadFailure($result);
+
+            return $result;
         }
 
+        $payload = \is_array($graphResult['payload'] ?? null) ? $graphResult['payload'] : [];
         $availability = \is_string($payload['availability'] ?? null) ? $payload['availability'] : null;
         $activity = \is_string($payload['activity'] ?? null) ? $payload['activity'] : null;
 
@@ -367,10 +398,10 @@ final class TeamsPresenceSyncService
     private function buildSyncRequestResult(
         array $capability,
         string $mode,
-        ?int $statusCode,
-        ?int $clearStatus = null,
+        array $graphResult,
+        ?array $clearResult = null,
     ): array {
-        $synced = null !== $statusCode && \in_array($statusCode, [200, 204], true);
+        $synced = true === ($graphResult['ok'] ?? false);
 
         $result = [
             'attempted' => true,
@@ -380,12 +411,18 @@ final class TeamsPresenceSyncService
             'mode' => $mode,
         ];
 
-        if (null !== $clearStatus) {
-            $result['clear_preferred_status'] = $clearStatus;
-        }
+        $this->appendGraphResult($result, $graphResult);
 
-        if (null !== $statusCode) {
-            $result['status_code'] = $statusCode;
+        if (null !== $clearResult) {
+            $clearStatusCode = $clearResult['status_code'] ?? null;
+            if (\is_int($clearStatusCode)) {
+                $result['clear_preferred_status'] = $clearStatusCode;
+            }
+
+            $clearGraphError = $this->buildGraphErrorSummary($clearResult);
+            if (null !== $clearGraphError) {
+                $result['clear_preferred_graph_error'] = $clearGraphError;
+            }
         }
 
         return $result;
@@ -409,13 +446,114 @@ final class TeamsPresenceSyncService
      * @param array<string, mixed> $capability
      * @return array<string, mixed>
      */
-    private function buildReadFailureResult(array $capability): array
+    private function buildReadFailureResult(array $capability, array $graphResult): array
     {
-        return [
+        $result = [
             'attempted' => true,
             'status' => null,
             'reason' => 'request_failed',
             'capability' => $capability,
+        ];
+
+        $this->appendGraphResult($result, $graphResult);
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @param array<string, mixed> $graphResult
+     */
+    private function appendGraphResult(array &$result, array $graphResult): void
+    {
+        $statusCode = $graphResult['status_code'] ?? null;
+        if (\is_int($statusCode)) {
+            $result['status_code'] = $statusCode;
+        }
+
+        $graphError = $this->buildGraphErrorSummary($graphResult);
+        if (null !== $graphError) {
+            $result['graph_error'] = $graphError;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $graphResult
+     * @return array<string, string>|null
+     */
+    private function buildGraphErrorSummary(array $graphResult): ?array
+    {
+        $summary = [];
+
+        $code = $graphResult['error_code'] ?? null;
+        if (\is_string($code) && '' !== trim($code)) {
+            $summary['code'] = trim($code);
+        }
+
+        $message = $graphResult['error_message'] ?? null;
+        if (\is_string($message) && '' !== trim($message)) {
+            $summary['message'] = trim($message);
+        }
+
+        $requestId = $graphResult['request_id'] ?? null;
+        if (\is_string($requestId) && '' !== trim($requestId)) {
+            $summary['request_id'] = trim($requestId);
+        }
+
+        return [] !== $summary ? $summary : null;
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     */
+    private function logWriteSyncResult(string $kiwiStatus, array $result): void
+    {
+        $reason = $result['reason'] ?? null;
+        if (!\is_string($reason) || '' === $reason) {
+            return;
+        }
+
+        $context = $this->buildLogContext($result) + [
+            'kiwi_status' => $kiwiStatus,
+        ];
+
+        if ('request_failed' === $reason) {
+            $this->logger->warning('Teams presence sync request failed.', $context);
+
+            return;
+        }
+
+        $this->logger->notice('Teams presence sync skipped.', $context);
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     */
+    private function logReadFailure(array $result): void
+    {
+        $this->logger->warning('Teams presence read request failed.', $this->buildLogContext($result));
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function buildLogContext(array $result): array
+    {
+        $capability = \is_array($result['capability'] ?? null) ? $result['capability'] : [];
+        $graphError = \is_array($result['graph_error'] ?? null) ? $result['graph_error'] : [];
+
+        return [
+            'reason' => $result['reason'] ?? null,
+            'mode' => $result['mode'] ?? null,
+            'status_code' => $result['status_code'] ?? null,
+            'teams_sync_enabled' => $capability['enabled'] ?? null,
+            'can_read' => $capability['can_read'] ?? null,
+            'can_write' => $capability['can_write'] ?? null,
+            'is_microsoft_session' => $capability['is_microsoft_session'] ?? null,
+            'graph_error_code' => $graphError['code'] ?? null,
+            'graph_error_message' => $graphError['message'] ?? null,
+            'graph_request_id' => $graphError['request_id'] ?? null,
         ];
     }
 }

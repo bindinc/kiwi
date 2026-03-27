@@ -181,6 +181,35 @@ function testRemainingAcwSecondsUsesInjectedClock() {
     assert.equal(context.kiwiCallAgentRuntime.getRemainingAcwSeconds(5_000), 90);
 }
 
+function testResolveTeamsSyncLabelExplainsDisabledEnvironment() {
+    const { context } = createRuntimeContext();
+    context.translate = (_key, _params, fallback) => fallback;
+
+    const label = context.kiwiCallAgentRuntime.resolveTeamsSyncLabel({
+        reason: 'feature_disabled',
+        capability: {
+            can_write: false
+        }
+    });
+
+    assert.equal(label, 'Teams sync is uitgeschakeld in deze omgeving.');
+}
+
+function testResolveTeamsSyncLabelIncludesGraphFailureDetails() {
+    const { context } = createRuntimeContext();
+    context.translate = (_key, _params, fallback) => fallback;
+
+    const label = context.kiwiCallAgentRuntime.resolveTeamsSyncLabel({
+        reason: 'request_failed',
+        status_code: 403,
+        graph_error: {
+            code: 'Authorization_RequestDenied'
+        }
+    });
+
+    assert.equal(label, 'Teams sync via Microsoft Graph mislukt (HTTP 403, Authorization_RequestDenied).');
+}
+
 function run() {
     testConfiguredShowToastDependencyTakesPriorityOverGlobalFallback();
     testGlobalFallbackIsNotUsedWithoutConfiguredDependency();
@@ -189,6 +218,8 @@ function run() {
     testRuntimeStartCallSessionWarnsOnceWithoutSliceBridge();
     testResolveDebugWaitTimeUsesInjectedRandom();
     testRemainingAcwSecondsUsesInjectedClock();
+    testResolveTeamsSyncLabelExplainsDisabledEnvironment();
+    testResolveTeamsSyncLabelIncludesGraphFailureDetails();
     console.log('call-agent-runtime dependency wiring tests passed');
 }
 

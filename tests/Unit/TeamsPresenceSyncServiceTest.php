@@ -10,6 +10,7 @@ use App\Oidc\OidcTokenInspector;
 use App\Service\TeamsPresenceGraphClient;
 use App\Service\TeamsPresenceSyncService;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -24,6 +25,7 @@ final class TeamsPresenceSyncServiceTest extends TestCase
         return new TeamsPresenceSyncService(
             $tokenInspector,
             new TeamsPresenceGraphClient($httpClient),
+            new NullLogger(),
         );
     }
 
@@ -122,6 +124,45 @@ final class TeamsPresenceSyncServiceTest extends TestCase
         self::assertTrue($result['attempted']);
         self::assertTrue($result['synced']);
         self::assertSame('session', $result['mode']);
+    }
+
+    public function testSyncReturnsGraphErrorDetailsWhenRequestFails(): void
+    {
+        $httpClient = new MockHttpClient([
+            new MockResponse((string) json_encode([
+                'error' => [
+                    'code' => 'Authorization_RequestDenied',
+                    'message' => 'Insufficient privileges to complete the operation.',
+                    'innerError' => [
+                        'request-id' => 'req-123',
+                    ],
+                ],
+            ], JSON_THROW_ON_ERROR), ['http_code' => 403]),
+        ]);
+        $service = $this->createService($httpClient);
+
+        $result = $service->syncKiwiStatusToTeams('busy', [
+            'oidc_auth_token' => [
+                'expires' => time() + 60,
+                'id_token' => $this->makeJwt([
+                    'iss' => 'https://login.microsoftonline.com/example/v2.0',
+                    'oid' => '11111111-1111-1111-1111-111111111111',
+                ]),
+                'access_token' => $this->makeJwt(['scp' => 'Presence.ReadWrite']),
+            ],
+        ], [
+            'TEAMS_PRESENCE_SYNC_ENABLED' => true,
+        ]);
+
+        self::assertTrue($result['attempted']);
+        self::assertFalse($result['synced']);
+        self::assertSame('request_failed', $result['reason']);
+        self::assertSame(403, $result['status_code']);
+        self::assertSame([
+            'code' => 'Authorization_RequestDenied',
+            'message' => 'Insufficient privileges to complete the operation.',
+            'request_id' => 'req-123',
+        ], $result['graph_error']);
     }
 
     private function makeJwt(array $payload): string
