@@ -601,7 +601,7 @@ const nl = {
             "useExisting": "Gebruik bestaande",
             "createAnyway": "Toch nieuwe persoon",
             "submitAdvisory": "Controleer mogelijke bestaande {roleLabel} voordat u doorgaat.",
-            "apiFallback": "Controle via backend tijdelijk niet beschikbaar. Lokale controle blijft actief.",
+            "apiFallback": "Controle via backend tijdelijk niet beschikbaar. Er worden nu geen matches opgehaald.",
             "personNotFoundControlList": "Geselecteerde persoon niet gevonden in controlelijst"
         },
         "search": {

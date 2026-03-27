@@ -10,6 +10,7 @@ final readonly class HupApiCredential
         public string $name,
         public ?string $title,
         public ?string $mandant,
+        public ?string $divisionId,
         public ?bool $supportsPersonLookup,
         public ?string $username,
         public ?string $password,
@@ -43,6 +44,10 @@ final readonly class HupApiCredential
 
         if (null !== $this->mandant) {
             $payload['mandant'] = $this->mandant;
+        }
+
+        if (null !== $this->divisionId) {
+            $payload['divisionId'] = $this->divisionId;
         }
 
         if (null !== $this->supportsPersonLookup) {

@@ -45,6 +45,7 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                 'password' => 'tvk-password',
                 'client_search' => 'yes',
                 'client' => 'HMC',
+                'divisionid' => '14',
             ],
             'kroncrv' => [
                 'title' => 'KRO-NCRV',
@@ -52,6 +53,7 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                 'password' => 'kro-password',
                 'client_search' => 'yes',
                 'client' => 'KRONCRV',
+                'divisionid' => '6',
             ],
         ]);
 
@@ -111,11 +113,11 @@ final class AggregatedPersonSearchServiceTest extends TestCase
         self::assertSame(['Bakker'], array_column($payload['items'], 'lastName'));
         self::assertSame([150], array_column($payload['items'], 'id'));
         self::assertSame(
-            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=20&postcode=1217AA&houseno=10&name=bakker',
+            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=20&postcode=1217AA&houseno=10&name=bakker&divisionid=14',
             $requests[1]['url'],
         );
         self::assertSame(
-            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=20&postcode=1217AA&houseno=10&name=bakker',
+            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=20&postcode=1217AA&houseno=10&name=bakker&divisionid=6',
             $requests[3]['url'],
         );
     }
@@ -129,6 +131,7 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                 'password' => 'tvk-password',
                 'client_search' => 'yes',
                 'client' => 'HMC',
+                'divisionid' => '14',
             ],
         ]);
 
@@ -190,6 +193,7 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                 'password' => 'tvk-password',
                 'client_search' => 'yes',
                 'client' => 'HMC',
+                'divisionid' => '14',
             ],
             'kroncrv' => [
                 'title' => 'KRO-NCRV',
@@ -197,6 +201,7 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                 'password' => 'kro-password',
                 'client_search' => 'yes',
                 'client' => 'KRONCRV',
+                'divisionid' => '6',
             ],
         ]);
 
@@ -245,12 +250,79 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                 'password' => 'mkg-password',
                 'client_search' => 'no',
                 'client' => 'KRONCRV',
+                'divisionid' => '6',
             ],
         ]);
 
         $service = $this->createService(new MockHttpClient(), dirname($clientSecretsPath));
 
         self::assertFalse($service->isAvailable());
+    }
+
+    public function testSearchRestrictsResultsToSelectedWerfsleutelScope(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFile([
+            'tvk' => [
+                'title' => 'TV Krant',
+                'username' => 'tvk-user',
+                'password' => 'tvk-password',
+                'client_search' => 'yes',
+                'client' => 'HMC',
+                'divisionid' => '14',
+            ],
+            'kroncrv' => [
+                'title' => 'KRO-NCRV',
+                'username' => 'kro-user',
+                'password' => 'kro-password',
+                'client_search' => 'yes',
+                'client' => 'KRONCRV',
+                'divisionid' => '6',
+            ],
+        ]);
+
+        $requests = [];
+        $responses = [
+            $this->createTokenResponse('kro-token'),
+            $this->createSearchResponse([
+                [
+                    'personId' => '150',
+                    'divisionId' => '6',
+                    'name' => 'Bakker',
+                    'firstName' => 'Piet',
+                    'street' => 'Stationsweg',
+                    'houseNo' => '10',
+                    'city' => 'Hilversum',
+                    'postCode' => '1217AA',
+                    'phone' => ['035-1234567'],
+                    'geteMail' => ['piet@example.org'],
+                ],
+            ]),
+        ];
+
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests, &$responses) {
+            $requests[] = compact('method', 'url', 'options');
+
+            return array_shift($responses);
+        });
+
+        $service = $this->createService($httpClient, dirname($clientSecretsPath));
+
+        $payload = $service->search(
+            ['name' => 'bakker'],
+            1,
+            20,
+            'name',
+            ['6'],
+            ['KRONCRV'],
+        );
+
+        self::assertSame(1, $payload['total']);
+        self::assertSame(['KRONCRV'], array_column($payload['items'], 'mandant'));
+        self::assertCount(2, $requests);
+        self::assertSame(
+            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=20&name=bakker&divisionid=6',
+            $requests[1]['url'],
+        );
     }
 
     private function createService(MockHttpClient $httpClient, string $projectDir): AggregatedPersonSearchService

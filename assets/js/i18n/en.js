@@ -601,7 +601,7 @@ const en = {
             "useExisting": "Use existing",
             "createAnyway": "Still a new person",
             "submitAdvisory": "Please check any existing {roleLabel} before continuing.",
-            "apiFallback": "Backend control temporarily unavailable. Local control remains active.",
+            "apiFallback": "Backend control is temporarily unavailable. No matches are loaded right now.",
             "personNotFoundControlList": "Selected person was not found in the check list"
         },
         "search": {

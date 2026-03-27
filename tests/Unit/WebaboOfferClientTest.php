@@ -106,6 +106,7 @@ final class WebaboOfferClientTest extends TestCase
             'mkg' => [
                 'title' => 'Mikrogids',
                 'client' => 'KRONCRV',
+                'divisionid' => '6',
                 'client_search' => 'no',
                 'username' => 'mkg-user',
                 'password' => 'mkg-password',
@@ -113,6 +114,7 @@ final class WebaboOfferClientTest extends TestCase
             'tvz' => [
                 'title' => 'Televizier',
                 'client' => 'AVROTROS',
+                'divisionid' => '14',
                 'client_search' => 'yes',
                 'username' => 'tvz-user',
                 'password' => 'tvz-password',
@@ -158,6 +160,7 @@ final class WebaboOfferClientTest extends TestCase
         self::assertSame(['mkg', 'tvz'], array_column($offers, 'credentialKey'));
         self::assertSame(['Mikrogids', 'Televizier'], array_column($offers, 'credentialTitle'));
         self::assertSame(['KRONCRV', 'AVROTROS'], array_column($offers, 'mandant'));
+        self::assertSame(['6', '14'], array_column($offers, 'divisionId'));
         self::assertSame([false, true], array_column($offers, 'supportsPersonLookup'));
         self::assertSame(['webabo-api', 'webabo-api'], array_column($offers, 'sourceSystem'));
         self::assertCount(4, $requests);

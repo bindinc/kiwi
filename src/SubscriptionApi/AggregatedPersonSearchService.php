@@ -38,17 +38,29 @@ final class AggregatedPersonSearchService
 
     /**
      * @param array<string, string> $filters
+     * @param list<string> $allowedDivisionIds
+     * @param list<string> $allowedMandants
      * @return array<string, mixed>
      */
-    public function search(array $filters, int $page, int $pageSize, string $sortBy = 'name'): array
-    {
+    public function search(
+        array $filters,
+        int $page,
+        int $pageSize,
+        string $sortBy = 'name',
+        array $allowedDivisionIds = [],
+        array $allowedMandants = [],
+    ): array {
         $safePage = max(1, $page);
         $safePageSize = max(1, min($pageSize, 200));
         $upstreamQuery = $this->buildUpstreamQuery($filters, $safePage, $safePageSize);
         $normalizedFilters = $this->normalizeFilters($filters);
 
         $normalizedItems = [];
-        foreach ($this->multiCredentialPersonSearchService->search($upstreamQuery) as $searchResult) {
+        foreach ($this->multiCredentialPersonSearchService->search(
+            $upstreamQuery,
+            $allowedDivisionIds,
+            $allowedMandants,
+        ) as $searchResult) {
             $content = $searchResult->payload['content'] ?? null;
             if (!\is_array($content)) {
                 continue;

@@ -41,10 +41,23 @@ final class CustomerController extends AbstractApiController
             'email' => (string) $request->query->get('email', ''),
         ];
         $sortBy = (string) $request->query->get('sortBy', 'name');
+        $allowedDivisionIds = $this->parseCsvQueryList(
+            (string) $request->query->get('divisionIds', $request->query->get('divisionId', ''))
+        );
+        $allowedMandants = $this->parseCsvQueryList(
+            (string) $request->query->get('mandants', $request->query->get('mandant', ''))
+        );
 
         if ($this->aggregatedPersonSearchService->isAvailable()) {
             try {
-                return $this->json($this->aggregatedPersonSearchService->search($filters, $page, $pageSize, $sortBy));
+                return $this->json($this->aggregatedPersonSearchService->search(
+                    $filters,
+                    $page,
+                    $pageSize,
+                    $sortBy,
+                    $allowedDivisionIds,
+                    $allowedMandants,
+                ));
             } catch (\Throwable $exception) {
                 throw new ApiProblemException(
                     503,
@@ -207,5 +220,24 @@ final class CustomerController extends AbstractApiController
                 'Klantdetail via subscription API is tijdelijk niet beschikbaar.',
             );
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function parseCsvQueryList(string $rawValue): array
+    {
+        $values = [];
+
+        foreach (explode(',', $rawValue) as $value) {
+            $normalizedValue = strtoupper(trim($value));
+            if ('' === $normalizedValue || \in_array($normalizedValue, $values, true)) {
+                continue;
+            }
+
+            $values[] = $normalizedValue;
+        }
+
+        return $values;
     }
 }

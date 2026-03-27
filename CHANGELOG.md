@@ -21,6 +21,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Keep subscription-api customers readonly in unsupported detail actions by hiding legacy edit/editorial buttons and blocking customer edits, article orders, and delivery-remark mutations while those data domains still lack upstream API coverage.
 - Carry a selected subscription-api person's hydrated snapshot through the subscription workflow so queued requests stay stateless, preserve credential context, and can reuse the selected customer's primary IBAN when it is already available via `ppa_base_url`.
 - Show the selected customer's `personId` in the `Klant Zoeken` result table, append the same reference to the detail header, and surface that abon.nr consistently in `Nieuw Abonnement Aanmaken` search results and selected-person blocks.
+- Let the `Nieuwe persoon` duplicate-check rely only on backend `/api/v1/persons` matches so it follows the same subscription-api-backed source as regular KIWI person search instead of mixing in local session/PoC customers.
+- Gate `Nieuw Abonnement Aanmaken` person search and duplicate-checks behind the selected werfsleutel scope, disable the recipient/requester inputs until a werfsleutel is chosen, and forward both configured `divisionId` and `mandant` context from HUP credentials into offer-driven person lookup requests.
 
 ### Fixed
 - Keep `Klant Zoeken` working when the upstream `personsearch` endpoint returns `HTTP 500` for `divisionid`-filtered requests by searching each enabled credential without that broken filter and still returning partial results when one credential fails.
@@ -33,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Read search-result e-mail addresses from both live `eMail` payloads and documented `geteMail` payloads so subscription-api e-mail filtering and result rendering stay compatible across response variants.
 - Keep `subscription-api` customers' contact history truly empty/read-only by skipping local history writes for that source system, rendering the empty-state timeline, and falling back to visible toasts instead of silently logging messages as contact moments.
 - Document the known subscription API OpenAPI mismatch where `personId` is modeled as a string in the schema even though the live/domain contract uses a numeric customer id.
+- Use the configured per-credential `divisionid` again for subscription-api personsearch, while limiting the credential fan-out to the currently selected werfsleutel mandants/divisions instead of searching every enabled tenant.
 
 ## [v1.0.14]
 

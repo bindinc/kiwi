@@ -7,6 +7,7 @@
 // ============================================================================
 
 const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
+const WERFSLEUTEL_SELECTIONS_UPDATED_EVENT = 'kiwi:werfsleutel-selections-updated';
 const MANDANT_BADGE_CONFIG_BY_KEY = {
     AVROTROS: {
         brandLabel: 'AVROTROS',
@@ -24,6 +25,101 @@ const MANDANT_BADGE_CONFIG_BY_KEY = {
         fallbackPath: 'assets/img/kroncrv-logo.svg'
     }
 };
+
+function getSubscriptionRuntimeGlobalScope() {
+    if (typeof window !== 'undefined') {
+        return window;
+    }
+
+    if (typeof globalThis !== 'undefined') {
+        return globalThis;
+    }
+
+    return null;
+}
+
+function getWerfsleutelSliceApi() {
+    const globalScope = getSubscriptionRuntimeGlobalScope();
+    const sliceApi = globalScope && typeof globalScope.kiwiWerfsleutelSlice === 'object'
+        ? globalScope.kiwiWerfsleutelSlice
+        : null;
+
+    return sliceApi || null;
+}
+
+function normalizeSubscriptionRoleScopeValue(value) {
+    const normalizedValue = String(value || '').trim().toUpperCase();
+    return normalizedValue || '';
+}
+
+function getSubscriptionRoleSearchSelections() {
+    const werfsleutelSliceApi = getWerfsleutelSliceApi();
+    if (!werfsleutelSliceApi || typeof werfsleutelSliceApi.getSelections !== 'function') {
+        return [];
+    }
+
+    const selections = werfsleutelSliceApi.getSelections();
+    return Array.isArray(selections) ? selections : [];
+}
+
+function getSubscriptionRoleSearchScope() {
+    const divisionIds = [];
+    const mandants = [];
+
+    for (const selection of getSubscriptionRoleSearchSelections()) {
+        const selectedOffer = selection && typeof selection === 'object'
+            ? selection.selectedKey
+            : null;
+        if (!selectedOffer || typeof selectedOffer !== 'object') {
+            continue;
+        }
+
+        const divisionId = normalizeSubscriptionRoleScopeValue(selectedOffer.divisionId || selectedOffer.divisionid);
+        if (divisionId && !divisionIds.includes(divisionId)) {
+            divisionIds.push(divisionId);
+        }
+
+        const mandant = normalizeSubscriptionRoleScopeValue(selectedOffer.mandant);
+        if (mandant && !mandants.includes(mandant)) {
+            mandants.push(mandant);
+        }
+    }
+
+    return {
+        hasSelection: divisionIds.length > 0 || mandants.length > 0,
+        divisionIds,
+        mandants
+    };
+}
+
+function appendSubscriptionRoleSearchScope(params, searchScope = getSubscriptionRoleSearchScope()) {
+    if (!params || !searchScope || !searchScope.hasSelection) {
+        return;
+    }
+
+    if (Array.isArray(searchScope.divisionIds) && searchScope.divisionIds.length > 0) {
+        params.set('divisionIds', searchScope.divisionIds.join(','));
+    }
+
+    if (Array.isArray(searchScope.mandants) && searchScope.mandants.length > 0) {
+        params.set('mandants', searchScope.mandants.join(','));
+    }
+}
+
+function buildSubscriptionRoleSearchScopeFingerprint(searchScope = getSubscriptionRoleSearchScope()) {
+    if (!searchScope || !searchScope.hasSelection) {
+        return 'no-werfsleutel';
+    }
+
+    const divisionPart = Array.isArray(searchScope.divisionIds)
+        ? searchScope.divisionIds.join('|')
+        : '';
+    const mandantPart = Array.isArray(searchScope.mandants)
+        ? searchScope.mandants.join('|')
+        : '';
+
+    return `division:${divisionPart};mandant:${mandantPart}`;
+}
 
 function resolveSharedNormalizeNameFragment() {
     const globalScope = typeof window !== 'undefined'
@@ -408,6 +504,7 @@ function resolvePersonBadgeMandant(person) {
 function getSubscriptionRoleConfig(role) {
     if (role === 'recipient') {
         return {
+            panelId: 'recipientRolePanel',
             roleLabel: 'ontvanger',
             prefix: 'subRecipient',
             modeName: 'recipientMode',
@@ -416,6 +513,7 @@ function getSubscriptionRoleConfig(role) {
             createFormContainerId: 'recipientCreateForm',
             duplicateCheckId: 'recipientDuplicateCheck',
             searchQueryId: 'recipientSearchQuery',
+            searchButtonId: 'recipientSearchButton',
             searchResultsId: 'recipientSearchResults',
             selectedPersonId: 'recipientSelectedPerson'
         };
@@ -423,6 +521,7 @@ function getSubscriptionRoleConfig(role) {
 
     if (role === 'requester') {
         return {
+            panelId: 'requesterRolePanel',
             roleLabel: 'aanvrager/betaler',
             prefix: 'subRequester',
             modeName: 'requesterMode',
@@ -431,6 +530,7 @@ function getSubscriptionRoleConfig(role) {
             createFormContainerId: 'requesterCreateForm',
             duplicateCheckId: 'requesterDuplicateCheck',
             searchQueryId: 'requesterSearchQuery',
+            searchButtonId: 'requesterSearchButton',
             searchResultsId: 'requesterSearchResults',
             selectedPersonId: 'requesterSelectedPerson'
         };
@@ -679,6 +779,99 @@ function renderRequesterSameSummary() {
     );
 }
 
+function collectSubscriptionRoleControls(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) {
+        return [];
+    }
+
+    const controls = [];
+    const seenControls = new Set();
+    const rememberControl = (control) => {
+        if (!control || seenControls.has(control)) {
+            return;
+        }
+
+        seenControls.add(control);
+        controls.push(control);
+    };
+
+    rememberControl(document.getElementById(cfg.searchQueryId));
+    rememberControl(document.getElementById(cfg.searchButtonId));
+    rememberControl(document.querySelector(`input[name="${cfg.modeName}"][value="existing"]`));
+    rememberControl(document.querySelector(`input[name="${cfg.modeName}"][value="create"]`));
+
+    if (role === 'requester') {
+        rememberControl(document.getElementById('requesterSameAsRecipient'));
+    }
+
+    const panelNode = document.getElementById(cfg.panelId);
+    if (panelNode && typeof panelNode.querySelectorAll === 'function') {
+        panelNode.querySelectorAll('input, button, select, textarea').forEach(rememberControl);
+    }
+
+    return controls;
+}
+
+function personMatchesSubscriptionRoleSearchScope(person, searchScope = getSubscriptionRoleSearchScope()) {
+    if (!person || typeof person !== 'object') {
+        return false;
+    }
+
+    if (!isSubscriptionApiPerson(person)) {
+        return true;
+    }
+
+    if (!searchScope || !searchScope.hasSelection) {
+        return false;
+    }
+
+    const personDivisionId = normalizeSubscriptionRoleScopeValue(person.divisionId);
+    const personMandant = normalizeSubscriptionRoleScopeValue(person.mandant);
+    const matchesDivisionScope = searchScope.divisionIds.includes(personDivisionId);
+    const matchesMandantScope = searchScope.mandants.includes(personMandant);
+
+    return matchesDivisionScope || matchesMandantScope;
+}
+
+function updateSubscriptionRoleSearchAvailability() {
+    const searchScope = getSubscriptionRoleSearchScope();
+    const shouldDisableControls = !searchScope.hasSelection;
+
+    for (const role of ['recipient', 'requester']) {
+        const cfg = getSubscriptionRoleConfig(role);
+        if (!cfg) {
+            continue;
+        }
+
+        const panelNode = document.getElementById(cfg.panelId);
+        if (panelNode) {
+            panelNode.setAttribute('aria-disabled', shouldDisableControls ? 'true' : 'false');
+        }
+
+        for (const control of collectSubscriptionRoleControls(role)) {
+            if ('disabled' in control) {
+                control.disabled = shouldDisableControls;
+            }
+        }
+
+        if (shouldDisableControls) {
+            subscriptionRoleState[role].searchResults = [];
+            renderSubscriptionRoleSearchResults(role);
+
+            if (subscriptionRoleState[role].mode === 'create') {
+                resetSubscriptionDuplicateRoleState(role);
+            }
+        } else if (subscriptionRoleState[role].mode === 'create') {
+            void evaluateSubscriptionDuplicateRole(role);
+        }
+    }
+
+    if (subscriptionRoleState.requesterSameAsRecipient) {
+        renderRequesterSameSummary();
+    }
+}
+
 function clearSubscriptionRoleCreateForm(role) {
     const cfg = getSubscriptionRoleConfig(role);
     if (!cfg) return;
@@ -707,7 +900,6 @@ function ensureSubscriptionRoleCreateForm(role) {
     }
 
     bindSubscriptionDuplicateListeners(role);
-    void evaluateSubscriptionDuplicateRole(role);
 }
 
 function setSubscriptionRoleMode(role, mode) {
@@ -738,6 +930,8 @@ function setSubscriptionRoleMode(role, mode) {
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
     }
+
+    updateSubscriptionRoleSearchAvailability();
 }
 
 function toggleRequesterSameAsRecipient() {
@@ -763,6 +957,8 @@ function toggleRequesterSameAsRecipient() {
     } else if (subscriptionRoleState.requester.mode === 'create') {
         ensureSubscriptionRoleCreateForm('requester');
     }
+
+    updateSubscriptionRoleSearchAvailability();
 }
 
 function getSelectedSubscriptionRolePersonId(role) {
@@ -955,11 +1151,24 @@ function collectSubscriptionRoleDuplicateInput(role) {
     }
 
     const data = getCustomerFormData(cfg.prefix);
-    return normalizeSubscriptionDuplicateInput(data);
+    const normalizedInput = normalizeSubscriptionDuplicateInput(data);
+    if (normalizedInput.fingerprint === 'none') {
+        return normalizedInput;
+    }
+
+    return {
+        ...normalizedInput,
+        fingerprint: `${normalizedInput.fingerprint}::${buildSubscriptionRoleSearchScopeFingerprint()}`
+    };
 }
 
 function buildSubscriptionDuplicateApiRequest(normalizedInput) {
     if (!normalizedInput || normalizedInput.fingerprint === 'none') {
+        return null;
+    }
+
+    const searchScope = getSubscriptionRoleSearchScope();
+    if (!searchScope.hasSelection) {
         return null;
     }
 
@@ -980,6 +1189,8 @@ function buildSubscriptionDuplicateApiRequest(normalizedInput) {
     } else {
         return null;
     }
+
+    appendSubscriptionRoleSearchScope(params, searchScope);
 
     return {
         fingerprint: normalizedInput.fingerprint,
@@ -1102,11 +1313,12 @@ function refreshSubscriptionDuplicateMatches(role, normalizedInput) {
         return [];
     }
 
-    const localStrongMatches = findStrongDuplicateMatches(normalizedInput, customers);
     const cacheEntry = getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, normalizedInput.fingerprint);
     const cachedStrongMatches = cacheEntry ? cacheEntry.matches : [];
 
-    roleDuplicateState.strongMatches = mergeDuplicateMatchLists(localStrongMatches, cachedStrongMatches);
+    // Phase 9: duplicate detection must follow the same backend route/data source
+    // as regular person search instead of mixing in local session/PoC customers.
+    roleDuplicateState.strongMatches = mergeDuplicateMatchLists([], cachedStrongMatches);
     return roleDuplicateState.strongMatches;
 }
 
@@ -1369,7 +1581,7 @@ async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, optio
         roleDuplicateState.apiWarning = translate(
             'subscription.duplicateCheck.apiFallback',
             {},
-            'Controle via backend tijdelijk niet beschikbaar. Lokale controle blijft actief.'
+            'Controle via backend tijdelijk niet beschikbaar. Er worden nu geen matches opgehaald.'
         );
         refreshSubscriptionDuplicateMatches(role, latestInput);
         renderSubscriptionDuplicateCheck(role);
@@ -1598,6 +1810,20 @@ async function searchSubscriptionRolePerson(role) {
     const cfg = getSubscriptionRoleConfig(role);
     if (!cfg) return;
 
+    const searchScope = getSubscriptionRoleSearchScope();
+    if (!searchScope.hasSelection) {
+        showToast(
+            translate(
+                'subscription.search.selectWerfsleutelFirst',
+                {},
+                'Selecteer eerst een werfsleutel voordat u een persoon zoekt.'
+            ),
+            'warning'
+        );
+        updateSubscriptionRoleSearchAvailability();
+        return;
+    }
+
     const query = normalizeRoleSearchQuery(document.getElementById(cfg.searchQueryId)?.value);
     if (!query) {
         showToast(translate('subscription.search.enterQuery', {}, 'Voer eerst een zoekterm in'), 'warning');
@@ -1622,6 +1848,8 @@ async function searchSubscriptionRolePerson(role) {
                 params.set('name', query.toLowerCase());
             }
         }
+
+        appendSubscriptionRoleSearchScope(params, searchScope);
 
         try {
             const payload = await window.kiwiApi.get(`${personsApiUrl}?${params.toString()}`);
@@ -1732,6 +1960,7 @@ function buildExistingPersonCredentialContext(selectedPerson) {
     const credentialKey = String(selectedPerson.credentialKey || '').trim();
     const credentialTitle = String(selectedPerson.credentialTitle || '').trim();
     const mandant = String(selectedPerson.mandant || '').trim();
+    const divisionId = String(selectedPerson.divisionId || '').trim();
     const sourceSystem = String(selectedPerson.sourceSystem || '').trim();
 
     if (credentialKey) {
@@ -1744,6 +1973,10 @@ function buildExistingPersonCredentialContext(selectedPerson) {
 
     if (mandant) {
         context.mandant = mandant;
+    }
+
+    if (divisionId) {
+        context.divisionId = divisionId;
     }
 
     if (typeof selectedPerson.supportsPersonLookup === 'boolean') {
@@ -1775,6 +2008,18 @@ function buildSubscriptionRolePayload(role, options = {}) {
                 ? translate('subscription.selectRecipientOrCreate', {}, 'Selecteer een ontvanger of kies "Nieuwe persoon".')
                 : translate('subscription.selectRequesterOrCreate', {}, 'Selecteer een aanvrager/betaler of kies "Nieuwe persoon".');
             showToast(message, 'error');
+            return null;
+        }
+
+        if (!personMatchesSubscriptionRoleSearchScope(roleState.selectedPerson)) {
+            showToast(
+                translate(
+                    'subscription.search.personOutsideWerfsleutelScope',
+                    { roleLabel: cfg.roleLabel },
+                    `De geselecteerde ${cfg.roleLabel} past niet bij de gekozen werfsleutel(s). Zoek opnieuw binnen de huidige selectie.`
+                ),
+                'error'
+            );
             return null;
         }
 
@@ -1827,12 +2072,30 @@ function initializeSubscriptionRolesForForm() {
     toggleRequesterSameAsRecipient();
 }
 
+function installSubscriptionRoleScopeListener() {
+    const globalScope = getSubscriptionRuntimeGlobalScope();
+    if (
+        !globalScope
+        || typeof globalScope.addEventListener !== 'function'
+        || globalScope.__kiwiSubscriptionRoleScopeListenerInstalled === true
+    ) {
+        return;
+    }
+
+    globalScope.__kiwiSubscriptionRoleScopeListenerInstalled = true;
+    globalScope.addEventListener(WERFSLEUTEL_SELECTIONS_UPDATED_EVENT, () => {
+        updateSubscriptionRoleSearchAvailability();
+    });
+}
+
 // ============================================================================
 // End of DRY Component
 // ============================================================================
 
 
 if (typeof window !== 'undefined') {
+    installSubscriptionRoleScopeListener();
+
     window.kiwiSubscriptionRoleRuntime = Object.assign(window.kiwiSubscriptionRoleRuntime || {}, {
         acknowledgeSubscriptionDuplicateWarning,
         bindSubscriptionDuplicateListeners,
@@ -1841,6 +2104,7 @@ if (typeof window !== 'undefined') {
         buildPersonDisplayName,
         buildSubscriptionDuplicateApiRequest,
         buildSubscriptionDuplicateFingerprint,
+        buildSubscriptionRoleSearchScopeFingerprint,
         buildSubscriptionRolePayload,
         clearSubscriptionDuplicateDebounceTimer,
         clearSubscriptionDuplicateUi,
@@ -1857,6 +2121,7 @@ if (typeof window !== 'undefined') {
         getFreshSubscriptionDuplicateCacheEntry,
         getSelectedSubscriptionRolePersonId,
         getSubscriptionDuplicateRoleState,
+        getSubscriptionRoleSearchScope,
         getSubscriptionRoleConfig,
         hasSameSelectedExistingRecipientAndRequester,
         initializeSubscriptionRolesForForm,
@@ -1893,6 +2158,7 @@ if (typeof window !== 'undefined') {
         toggleCustomerFormAddress,
         toggleRequesterSameAsRecipient,
         toggleSubscriptionDuplicateMatches,
+        updateSubscriptionRoleSearchAvailability,
         validateSubscriptionDuplicateSubmitGuard,
         waitForTimeout
     });

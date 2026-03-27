@@ -34,7 +34,7 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
         parent::tearDown();
     }
 
-    public function testSearchUsesOnlySupportedCredentialsWithoutSendingDivisionId(): void
+    public function testSearchUsesConfiguredDivisionIdForEachSearchableCredential(): void
     {
         $clientSecretsPath = $this->writeClientSecretsFile([
             'mkg' => [
@@ -43,6 +43,7 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
                 'password' => 'mkg-password',
                 'client_search' => 'no',
                 'client' => 'KRONCRV',
+                'divisionid' => '6',
             ],
             'tvk' => [
                 'title' => 'TV Krant',
@@ -50,6 +51,7 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
                 'password' => 'tvk-password',
                 'client_search' => 'yes',
                 'client' => 'HMC',
+                'divisionid' => '14',
             ],
             'avrotros' => [
                 'title' => 'AVROTROS',
@@ -57,6 +59,7 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
                 'password' => 'avrotros-password',
                 'client_search' => 'yes',
                 'client' => 'AVROTROS',
+                'divisionid' => '28',
             ],
         ]);
 
@@ -92,12 +95,62 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
         self::assertSame('avrotros-person', $results[1]->payload['content'][0]['personId'] ?? null);
         self::assertCount(4, $requests);
         self::assertSame(
-            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=10&name=Jane+Doe',
+            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=10&name=Jane+Doe&divisionid=14',
             $requests[1]['url'],
         );
         self::assertSame(
-            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=10&name=Jane+Doe',
+            'https://example.invalid/subscription/public/personsearch?page=0&pagesize=10&name=Jane+Doe&divisionid=28',
             $requests[3]['url'],
+        );
+    }
+
+    public function testSearchRestrictsCredentialFanOutToMatchingWerfsleutelScope(): void
+    {
+        $clientSecretsPath = $this->writeClientSecretsFile([
+            'tvk' => [
+                'title' => 'TV Krant',
+                'username' => 'tvk-user',
+                'password' => 'tvk-password',
+                'client_search' => 'yes',
+                'client' => 'HMC',
+                'divisionid' => '14',
+            ],
+            'avrotros' => [
+                'title' => 'AVROTROS',
+                'username' => 'avrotros-user',
+                'password' => 'avrotros-password',
+                'client_search' => 'yes',
+                'client' => 'AVROTROS',
+                'divisionid' => '28',
+            ],
+        ]);
+
+        $requests = [];
+        $responses = [
+            $this->createTokenResponse('tvk-token'),
+            $this->createSearchResponse('tvk-person'),
+        ];
+
+        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests, &$responses) {
+            $requests[] = compact('method', 'url', 'options');
+
+            return array_shift($responses);
+        });
+
+        $service = $this->createService($httpClient, dirname($clientSecretsPath));
+
+        $results = $service->search(
+            ['name' => 'Jane Doe'],
+            ['14'],
+            ['HMC'],
+        );
+
+        self::assertCount(1, $results);
+        self::assertSame('tvk', $results[0]->credential->name);
+        self::assertCount(2, $requests);
+        self::assertSame(
+            'https://example.invalid/subscription/public/personsearch?name=Jane+Doe&divisionid=14',
+            $requests[1]['url'],
         );
     }
 
@@ -109,12 +162,14 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
                 'password' => 'mkg-password',
                 'client_search' => 'no',
                 'client' => 'KRONCRV',
+                'divisionid' => '6',
             ],
             'tvz' => [
                 'username' => 'tvz-user',
                 'password' => 'tvz-password',
                 'client_search' => 'false',
                 'client' => 'AVROTROS',
+                'divisionid' => '28',
             ],
         ]);
 
@@ -144,6 +199,7 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
                 'password' => 'tvk-password',
                 'client_search' => 'yes',
                 'client' => 'HMC',
+                'divisionid' => '14',
             ],
             'avrotros' => [
                 'title' => 'AVROTROS',
@@ -151,6 +207,7 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
                 'password' => 'avrotros-password',
                 'client_search' => 'yes',
                 'client' => 'AVROTROS',
+                'divisionid' => '28',
             ],
         ]);
 
@@ -185,6 +242,7 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
                 'password' => 'tvk-password',
                 'client_search' => 'yes',
                 'client' => 'HMC',
+                'divisionid' => '14',
             ],
             'avrotros' => [
                 'title' => 'AVROTROS',
@@ -192,6 +250,7 @@ final class MultiCredentialPersonSearchServiceTest extends TestCase
                 'password' => 'avrotros-password',
                 'client_search' => 'yes',
                 'client' => 'AVROTROS',
+                'divisionid' => '28',
             ],
         ]);
 

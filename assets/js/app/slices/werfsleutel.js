@@ -4,6 +4,7 @@ const WERFSLEUTEL_FULL_SYNC_LIMIT = 250;
 const WERFSLEUTEL_SEARCH_DEBOUNCE_MS = 180;
 const WERFSLEUTEL_CACHE_TTL_MS = 15 * 60 * 1000;
 const SALES_CODE_COMBINATION_ENDPOINT_SUFFIX = '/salescodecombinations';
+const WERFSLEUTEL_SELECTIONS_UPDATED_EVENT = 'kiwi:werfsleutel-selections-updated';
 const FALLBACK_APP_LOCALE = 'nl';
 const DATE_LOCALE_BY_APP_LOCALE = {
     nl: 'nl-NL',
@@ -266,6 +267,7 @@ function normalizeWerfsleutelItem(item) {
         barcode: item.barcode === undefined || item.barcode === null ? '' : String(item.barcode),
         magazine: item.magazine === undefined || item.magazine === null ? '' : String(item.magazine),
         mandant: item.mandant === undefined || item.mandant === null ? '' : String(item.mandant).trim(),
+        divisionId: item.divisionId === undefined || item.divisionId === null ? '' : String(item.divisionId).trim(),
         credentialTitle: item.credentialTitle === undefined || item.credentialTitle === null ? '' : String(item.credentialTitle).trim(),
         allowedChannels,
         isActive: item.isActive !== false
@@ -991,6 +993,29 @@ function updateWerfsleutelSummary() {
     summary.classList.add('visible');
 }
 
+function emitWerfsleutelSelectionChange() {
+    const globalScope = getGlobalScope();
+    if (
+        !globalScope
+        || typeof globalScope.dispatchEvent !== 'function'
+        || typeof globalScope.CustomEvent !== 'function'
+    ) {
+        return;
+    }
+
+    globalScope.dispatchEvent(new globalScope.CustomEvent(WERFSLEUTEL_SELECTIONS_UPDATED_EVENT, {
+        detail: {
+            selections: getSelections()
+        }
+    }));
+}
+
+function syncSelectedOfferUi() {
+    renderSelectedOfferList();
+    updateWerfsleutelSummary();
+    emitWerfsleutelSelectionChange();
+}
+
 async function loadSalesCodeCombinationsForOffer(salesCode) {
     const entryIndex = findSelectedOfferEntryIndex(salesCode);
     if (entryIndex < 0) {
@@ -1057,8 +1082,7 @@ async function loadSalesCodeCombinationsForOffer(salesCode) {
         };
     }
 
-    renderSelectedOfferList();
-    updateWerfsleutelSummary();
+    syncSelectedOfferUi();
 }
 
 function addSelectedOffer(salesCode) {
@@ -1098,8 +1122,7 @@ function addSelectedOffer(salesCode) {
 
     werfsleutelSliceState.latestQuery = '';
     renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
-    renderSelectedOfferList();
-    updateWerfsleutelSummary();
+    syncSelectedOfferUi();
 
     void loadSalesCodeCombinationsForOffer(selectedItem.salesCode);
 }
@@ -1111,8 +1134,7 @@ function removeSelectedOffer(salesCode) {
     }
 
     werfsleutelSliceState.selectedOffers.splice(entryIndex, 1);
-    renderSelectedOfferList();
-    updateWerfsleutelSummary();
+    syncSelectedOfferUi();
 }
 
 function validateWerfsleutelBarcode(rawValue) {
@@ -1155,8 +1177,7 @@ function selectWerfsleutelChannel(salesCode, combinationKey) {
         selectedCombinationKey: selectedOption.key,
         isExpanded: false
     };
-    renderSelectedOfferList();
-    updateWerfsleutelSummary();
+    syncSelectedOfferUi();
 }
 
 function handleWerfsleutelQuery(rawValue) {
@@ -1276,8 +1297,7 @@ function resetWerfsleutelPicker() {
     }
 
     renderWerfsleutelSuggestions([], { hideWhenEmpty: true });
-    renderSelectedOfferList();
-    updateWerfsleutelSummary();
+    syncSelectedOfferUi();
 }
 
 function triggerWerfsleutelBackgroundRefreshIfStale() {
@@ -1435,8 +1455,7 @@ function setCatalogMetadata(metadata = {}) {
             preserveActiveIndex: true
         });
     }
-    renderSelectedOfferList();
-    updateWerfsleutelSummary();
+    syncSelectedOfferUi();
 }
 
 function getSelections() {
