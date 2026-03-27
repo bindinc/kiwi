@@ -126,9 +126,42 @@ final class TeamsPresenceSyncServiceTest extends TestCase
         self::assertSame('session', $result['mode']);
     }
 
+    public function testSyncBusyUsesSessionPresenceToPropagateCrossAppStatus(): void
+    {
+        $httpClient = new MockHttpClient([
+            new MockResponse('', ['http_code' => 200]),
+            new MockResponse('', ['http_code' => 200]),
+        ]);
+        $service = $this->createService($httpClient);
+
+        $result = $service->syncKiwiStatusToTeams('busy', [
+            'oidc_auth_token' => [
+                'expires' => time() + 60,
+                'id_token' => $this->makeJwt([
+                    'iss' => 'https://login.microsoftonline.com/example/v2.0',
+                    'oid' => '11111111-1111-1111-1111-111111111111',
+                    'azp' => 'kiwi-client',
+                ]),
+                'access_token' => $this->makeJwt([
+                    'scp' => 'Presence.ReadWrite',
+                    'azp' => 'kiwi-client',
+                ]),
+            ],
+        ], [
+            'TEAMS_PRESENCE_SYNC_ENABLED' => true,
+            'OIDC_CLIENT_ID' => 'kiwi-client',
+        ]);
+
+        self::assertTrue($result['attempted']);
+        self::assertTrue($result['synced']);
+        self::assertSame('session', $result['mode']);
+        self::assertSame(200, $result['clear_preferred_status']);
+    }
+
     public function testSyncReturnsGraphErrorDetailsWhenRequestFails(): void
     {
         $httpClient = new MockHttpClient([
+            new MockResponse('', ['http_code' => 200]),
             new MockResponse((string) json_encode([
                 'error' => [
                     'code' => 'Authorization_RequestDenied',
@@ -147,11 +180,16 @@ final class TeamsPresenceSyncServiceTest extends TestCase
                 'id_token' => $this->makeJwt([
                     'iss' => 'https://login.microsoftonline.com/example/v2.0',
                     'oid' => '11111111-1111-1111-1111-111111111111',
+                    'azp' => 'kiwi-client',
                 ]),
-                'access_token' => $this->makeJwt(['scp' => 'Presence.ReadWrite']),
+                'access_token' => $this->makeJwt([
+                    'scp' => 'Presence.ReadWrite',
+                    'azp' => 'kiwi-client',
+                ]),
             ],
         ], [
             'TEAMS_PRESENCE_SYNC_ENABLED' => true,
+            'OIDC_CLIENT_ID' => 'kiwi-client',
         ]);
 
         self::assertTrue($result['attempted']);

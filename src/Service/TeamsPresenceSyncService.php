@@ -45,6 +45,10 @@ final class TeamsPresenceSyncService
      * @var array<string, array<string, string>>
      */
     private const KIWI_TO_TEAMS_SESSION_PRESENCE = [
+        'ready' => ['availability' => 'Available', 'activity' => 'Available', 'expirationDuration' => 'PT4H'],
+        'away' => ['availability' => 'Away', 'activity' => 'Away', 'expirationDuration' => 'PT4H'],
+        'dnd' => ['availability' => 'DoNotDisturb', 'activity' => 'DoNotDisturb', 'expirationDuration' => 'PT4H'],
+        'busy' => ['availability' => 'Busy', 'activity' => 'Busy', 'expirationDuration' => 'PT4H'],
         'in_call' => ['availability' => 'Busy', 'activity' => 'InACall', 'expirationDuration' => 'PT4H'],
     ];
 
@@ -271,15 +275,8 @@ final class TeamsPresenceSyncService
             return $result;
         }
 
-        if ('in_call' === $kiwiStatus) {
-            $sessionPresencePayload = $this->mapKiwiStatusToTeamsSessionPresence($kiwiStatus);
-            if (null === $sessionPresencePayload) {
-                $result = $this->buildSyncSkippedResult($capability, 'unsupported_kiwi_status');
-                $this->logWriteSyncResult($kiwiStatus, $result);
-
-                return $result;
-            }
-
+        $sessionPresencePayload = $this->mapKiwiStatusToTeamsSessionPresence($kiwiStatus);
+        if (null !== $sessionPresencePayload) {
             $sessionId = $this->getPresenceSessionId($sessionData, $appConfig);
             if (null === $sessionId) {
                 $result = $this->buildSyncSkippedResult($capability, 'missing_presence_session_id');
