@@ -127,7 +127,7 @@ abstract class AbstractApiController extends AbstractController
     protected function getAppConfig(): array
     {
         return [
-            'TEAMS_PRESENCE_SYNC_ENABLED' => getenv('TEAMS_PRESENCE_SYNC_ENABLED') ?: false,
+            'TEAMS_PRESENCE_SYNC_ENABLED' => $this->oidcConfiguration->isPresenceSyncEnabled(),
             'TEAMS_PRESENCE_SESSION_ID' => getenv('TEAMS_PRESENCE_SESSION_ID') ?: null,
             'OIDC_CLIENT_ID' => $this->oidcConfiguration->getClientId(),
         ];

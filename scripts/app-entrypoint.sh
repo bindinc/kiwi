@@ -9,18 +9,86 @@ eval "$resolved"
 
 export OIDC_CLIENT_SECRETS="$OIDC_CLIENT_SECRETS_PATH"
 
+is_truthy_flag() {
+  case "$1" in
+    1|true|TRUE|yes|YES|on|ON)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+uses_microsoft_entra_oidc() {
+  php -r '
+    $path = $argv[1] ?? "";
+    if ("" === $path || !is_file($path)) {
+        exit(1);
+    }
+
+    $raw = file_get_contents($path);
+    if (false === $raw) {
+        exit(1);
+    }
+
+    $decoded = json_decode($raw, true);
+    $web = is_array($decoded["web"] ?? null) ? $decoded["web"] : [];
+    $hosts = [
+        "graph.microsoft.com",
+        "login.microsoftonline.com",
+        "login.windows.net",
+        "sts.windows.net",
+    ];
+
+    foreach (["issuer", "auth_uri", "token_uri", "userinfo_uri"] as $key) {
+        $value = $web[$key] ?? null;
+        if (!is_string($value) || "" === trim($value)) {
+            continue;
+        }
+
+        $host = strtolower((string) parse_url($value, PHP_URL_HOST));
+        if ("" === $host) {
+            continue;
+        }
+
+        if (in_array($host, $hosts, true) || str_ends_with($host, ".microsoftonline.com")) {
+            exit(0);
+        }
+    }
+
+    exit(1);
+  ' -- "$OIDC_CLIENT_SECRETS_PATH"
+}
+
+should_enable_presence_sync() {
+  if [ "$OIDC_MODE" = "fallback" ]; then
+    return 1
+  fi
+
+  if [ "${TEAMS_PRESENCE_SYNC_ENABLED+x}" = "x" ]; then
+    is_truthy_flag "${TEAMS_PRESENCE_SYNC_ENABLED}"
+    return $?
+  fi
+
+  uses_microsoft_entra_oidc
+}
+
+if should_enable_presence_sync; then
+  export TEAMS_PRESENCE_SYNC_ENABLED="${TEAMS_PRESENCE_SYNC_ENABLED:-true}"
+else
+  export TEAMS_PRESENCE_SYNC_ENABLED="${TEAMS_PRESENCE_SYNC_ENABLED:-false}"
+fi
+
 if [ -z "${OIDC_SCOPES:-}" ]; then
   if [ "$OIDC_MODE" = "fallback" ]; then
     export OIDC_SCOPES="${OIDC_FALLBACK_SCOPES:-openid email profile}"
   else
-    case "${TEAMS_PRESENCE_SYNC_ENABLED:-false}" in
-      1|true|TRUE|yes|YES|on|ON)
-        export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read Presence.Read Presence.ReadWrite}"
-        ;;
-      *)
-        export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read}"
-        ;;
-    esac
+    if should_enable_presence_sync; then
+      export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read Presence.Read Presence.ReadWrite}"
+    else
+      export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read}"
+    fi
   fi
 fi
 

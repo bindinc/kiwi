@@ -23,6 +23,16 @@ final class OidcConfiguration
     ];
 
     /**
+     * @var string[]
+     */
+    private const MICROSOFT_OIDC_HOSTS = [
+        'graph.microsoft.com',
+        'login.microsoftonline.com',
+        'login.windows.net',
+        'sts.windows.net',
+    ];
+
+    /**
      * @var array<string, mixed>|null
      */
     private ?array $config = null;
@@ -161,6 +171,20 @@ final class OidcConfiguration
         return $scopes;
     }
 
+    public function isPresenceSyncEnabled(): bool
+    {
+        $configuredValue = getenv('TEAMS_PRESENCE_SYNC_ENABLED');
+        if (false !== $configuredValue) {
+            return $this->normalizeBooleanFlag($configuredValue);
+        }
+
+        if ($this->isFallbackSecretsConfig()) {
+            return false;
+        }
+
+        return $this->isMicrosoftEntraConfig();
+    }
+
     private function isFallbackSecretsConfig(): bool
     {
         $path = $this->getClientSecretsPath();
@@ -171,6 +195,27 @@ final class OidcConfiguration
         $issuer = trim((string) ($this->getConfig()['issuer'] ?? ''));
 
         return str_contains($issuer, '/kiwi-oidc/');
+    }
+
+    private function isMicrosoftEntraConfig(): bool
+    {
+        $config = $this->getConfig();
+        $providerUrls = [
+            $config['issuer'] ?? null,
+            $config['auth_uri'] ?? null,
+            $config['token_uri'] ?? null,
+            $config['userinfo_uri'] ?? null,
+        ];
+
+        foreach ($providerUrls as $providerUrl) {
+            if (!$this->isMicrosoftProviderUrl($providerUrl)) {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -207,10 +252,28 @@ final class OidcConfiguration
         )));
     }
 
-    private function isPresenceSyncEnabled(): bool
+    private function isMicrosoftProviderUrl(mixed $providerUrl): bool
     {
-        $raw = strtolower(trim((string) (getenv('TEAMS_PRESENCE_SYNC_ENABLED') ?: '')));
+        if (!\is_string($providerUrl) || '' === trim($providerUrl)) {
+            return false;
+        }
 
-        return \in_array($raw, ['1', 'true', 'yes', 'on'], true);
+        $host = strtolower((string) (parse_url($providerUrl, \PHP_URL_HOST) ?: ''));
+        if ('' === $host) {
+            return false;
+        }
+
+        if (\in_array($host, self::MICROSOFT_OIDC_HOSTS, true)) {
+            return true;
+        }
+
+        return str_ends_with($host, '.microsoftonline.com');
+    }
+
+    private function normalizeBooleanFlag(string $raw): bool
+    {
+        $normalized = strtolower(trim($raw));
+
+        return \in_array($normalized, ['1', 'true', 'yes', 'on'], true);
     }
 }

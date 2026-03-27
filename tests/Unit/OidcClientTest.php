@@ -78,6 +78,52 @@ final class OidcClientTest extends TestCase
         self::assertSame('openid email profile User.Read Presence.Read Presence.ReadWrite', $scope);
     }
 
+    public function testBuildAuthorizationScopeDefaultsToPresenceScopesForMicrosoftEntraConfig(): void
+    {
+        $client = $this->createClient();
+        $secretsFile = $this->createTemporarySecretsFile([
+            'auth_uri' => 'https://login.microsoftonline.com/example/oauth2/v2.0/authorize',
+            'token_uri' => 'https://login.microsoftonline.com/example/oauth2/v2.0/token',
+            'userinfo_uri' => 'https://graph.microsoft.com/oidc/userinfo',
+            'issuer' => 'https://login.microsoftonline.com/example/v2.0',
+        ]);
+
+        try {
+            $scope = $this->withEnvironment([
+                'OIDC_CLIENT_SECRETS' => $secretsFile,
+                'OIDC_SCOPES' => null,
+                'TEAMS_PRESENCE_SYNC_ENABLED' => null,
+            ], static fn () => $client->getAuthorizationScope());
+        } finally {
+            @unlink($secretsFile);
+        }
+
+        self::assertSame('openid email profile User.Read Presence.Read Presence.ReadWrite', $scope);
+    }
+
+    public function testBuildAuthorizationScopeCanDisablePresenceScopesForMicrosoftEntraConfig(): void
+    {
+        $client = $this->createClient();
+        $secretsFile = $this->createTemporarySecretsFile([
+            'auth_uri' => 'https://login.microsoftonline.com/example/oauth2/v2.0/authorize',
+            'token_uri' => 'https://login.microsoftonline.com/example/oauth2/v2.0/token',
+            'userinfo_uri' => 'https://graph.microsoft.com/oidc/userinfo',
+            'issuer' => 'https://login.microsoftonline.com/example/v2.0',
+        ]);
+
+        try {
+            $scope = $this->withEnvironment([
+                'OIDC_CLIENT_SECRETS' => $secretsFile,
+                'OIDC_SCOPES' => null,
+                'TEAMS_PRESENCE_SYNC_ENABLED' => 'false',
+            ], static fn () => $client->getAuthorizationScope());
+        } finally {
+            @unlink($secretsFile);
+        }
+
+        self::assertSame('openid email profile User.Read', $scope);
+    }
+
     public function testBuildUserIdentity(): void
     {
         $client = $this->createClient();
@@ -459,7 +505,10 @@ final class OidcClientTest extends TestCase
         }
     }
 
-    private function createTemporarySecretsFile(): string
+    /**
+     * @param array<string, mixed> $webOverrides
+     */
+    private function createTemporarySecretsFile(array $webOverrides = []): string
     {
         $path = tempnam(sys_get_temp_dir(), 'kiwi-');
         if (false === $path) {
@@ -467,7 +516,7 @@ final class OidcClientTest extends TestCase
         }
 
         $payload = json_encode([
-            'web' => [
+            'web' => array_merge([
                 'client_id' => 'kiwi-client',
                 'client_secret' => 'kiwi-secret',
                 'auth_uri' => 'https://issuer.example/auth',
@@ -475,7 +524,7 @@ final class OidcClientTest extends TestCase
                 'userinfo_uri' => 'https://issuer.example/userinfo',
                 'issuer' => 'https://issuer.example',
                 'redirect_uris' => ['https://example.org/auth/callback'],
-            ],
+            ], $webOverrides),
         ], JSON_THROW_ON_ERROR);
 
         if (false === file_put_contents($path, $payload)) {
