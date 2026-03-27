@@ -14,6 +14,18 @@ let deliveryCalendarClickHandler = null;
 let deliveryCalendarKeyHandler = null;
 let deliveryCalendarResizeHandlerAttached = false;
 let compatibilityExportsInstalled = false;
+const deliveryDatePickerRuntime = {
+    nowDate: () => new Date()
+};
+
+function getCurrentDate() {
+    const runtimeDate = deliveryDatePickerRuntime.nowDate();
+    if (runtimeDate instanceof Date) {
+        return new Date(runtimeDate.getTime());
+    }
+
+    return new Date(runtimeDate);
+}
 
 function getDocumentRef() {
     const globalScope = getGlobalScope();
@@ -311,7 +323,7 @@ export async function initDeliveryDatePicker() {
         return;
     }
 
-    const today = new Date();
+    const today = getCurrentDate();
     currentCalendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
 
     try {
@@ -569,7 +581,7 @@ export async function findNextAvailableDate(startDate) {
 }
 
 export async function selectNextWeek() {
-    const candidate = new Date();
+    const candidate = getCurrentDate();
     candidate.setDate(candidate.getDate() + 7);
     const nextAvailableDate = await findNextAvailableDate(candidate);
     if (!nextAvailableDate) {
@@ -580,7 +592,7 @@ export async function selectNextWeek() {
 }
 
 export async function selectTwoWeeks() {
-    const candidate = new Date();
+    const candidate = getCurrentDate();
     candidate.setDate(candidate.getDate() + 14);
     const nextAvailableDate = await findNextAvailableDate(candidate);
     if (!nextAvailableDate) {
@@ -632,4 +644,17 @@ export function registerDeliveryDatePickerSlice(actionRouter) {
             selectDeliveryDateByString(payload.date);
         }
     });
+}
+
+export function configureDeliveryDatePickerRuntimeForTests(overrides = {}) {
+    deliveryDatePickerRuntime.nowDate = typeof overrides.nowDate === 'function'
+        ? overrides.nowDate
+        : (() => new Date());
+}
+
+export function __resetDeliveryDatePickerForTests() {
+    deliveryCalendarCache.clear();
+    currentCalendarDate = getCurrentDate();
+    selectedDeliveryDate = null;
+    configureDeliveryDatePickerRuntimeForTests();
 }

@@ -3,8 +3,14 @@
 
 const RUNTIME_COMPATIBILITY_METHOD_NAMES = new Set([
     'addContactMoment',
+    'clearInterval',
+    'clearTimeout',
     'getDispositionCategories',
+    'nowMs',
+    'random',
     'selectCustomer',
+    'setInterval',
+    'setTimeout',
     'showToast'
 ]);
 const runtimeDependencies = {};
@@ -65,6 +71,45 @@ function runtimeShowToast(message, type = 'success') {
     return invokeRuntimeCompatibilityMethod('showToast', [message, type]);
 }
 
+function runtimeNowMs() {
+    const dependencyMethod = resolveRuntimeCompatibilityMethod('nowMs');
+    return dependencyMethod ? dependencyMethod() : Date.now();
+}
+
+function runtimeRandom() {
+    const dependencyMethod = resolveRuntimeCompatibilityMethod('random');
+    return dependencyMethod ? dependencyMethod() : Math.random();
+}
+
+function runtimeSetTimeout(callback, timeout) {
+    const dependencyMethod = resolveRuntimeCompatibilityMethod('setTimeout');
+    return dependencyMethod ? dependencyMethod(callback, timeout) : setTimeout(callback, timeout);
+}
+
+function runtimeSetInterval(callback, timeout) {
+    const dependencyMethod = resolveRuntimeCompatibilityMethod('setInterval');
+    return dependencyMethod ? dependencyMethod(callback, timeout) : setInterval(callback, timeout);
+}
+
+function runtimeClearInterval(intervalId) {
+    const dependencyMethod = resolveRuntimeCompatibilityMethod('clearInterval');
+    if (dependencyMethod) {
+        dependencyMethod(intervalId);
+        return;
+    }
+
+    clearInterval(intervalId);
+}
+
+function resolveDebugWaitTimeSeconds(waitTimeOption) {
+    if (waitTimeOption === 'random') {
+        return Math.floor(runtimeRandom() * (90 - 15 + 1)) + 15;
+    }
+
+    const parsedWaitTime = Number.parseInt(waitTimeOption, 10);
+    return Number.isFinite(parsedWaitTime) ? parsedWaitTime : 0;
+}
+
 function resolveCallSessionSliceStartMethod() {
     if (typeof window === 'undefined') {
         return null;
@@ -102,7 +147,7 @@ function runtimeStartCallSession() {
 async function endCallSession(forcedByCustomer = false) {
     if (!callSession.active) return;
 
-    const callDuration = Math.floor((Date.now() - callSession.startTime) / 1000);
+    const callDuration = Math.floor((runtimeNowMs() - callSession.startTime) / 1000);
     agentStatus.callsHandled += 1;
     updateAgentWorkSummary();
 
@@ -162,7 +207,7 @@ async function endCallSession(forcedByCustomer = false) {
 
     // Stop timer
     if (callSession.durationInterval) {
-        clearInterval(callSession.durationInterval);
+        runtimeClearInterval(callSession.durationInterval);
     }
     callSession.durationInterval = null;
 
@@ -183,7 +228,7 @@ async function endCallSession(forcedByCustomer = false) {
 
     // Na gesprek: check of er meer bellers zijn in queue
     if (callQueue.enabled && callQueue.queue.length > 0 && callQueue.autoAdvance) {
-        setTimeout(() => {
+        runtimeSetTimeout(() => {
             updateQueueDisplay();
         }, 1000);
     }
@@ -308,7 +353,7 @@ async function toggleCallHold() {
         sessionInfo.appendChild(holdIndicator);
         
         if (!window.kiwiApi) {
-            callSession.holdStartTime = Date.now();
+            callSession.holdStartTime = runtimeNowMs();
         }
         
         runtimeShowToast(translate('calls.onHold', {}, 'Gesprek in wacht gezet'), 'info');
@@ -334,7 +379,7 @@ async function toggleCallHold() {
         
         // Calculate hold duration
         const startedAt = previousHoldStart || callSession.holdStartTime;
-        const holdDuration = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+        const holdDuration = startedAt ? Math.floor((runtimeNowMs() - startedAt) / 1000) : 0;
         if (!window.kiwiApi) {
             callSession.totalHoldTime = (callSession.totalHoldTime || 0) + holdDuration;
         }
@@ -370,7 +415,7 @@ function identifyCurrentCustomerAsCaller() {
 function showSuccessIdentificationPrompt(customerId, customerName) {
     if (callSession.active && callSession.callerType === 'anonymous') {
         // Use a timeout to show the prompt after the success toast
-        setTimeout(() => {
+        runtimeSetTimeout(() => {
             const confirmationMessage = translate(
                 'calls.identificationPromptAfterCreate',
                 { customerName },
@@ -408,7 +453,7 @@ function updateAgentWorkSummary() {
     const callsHandledElement = document.getElementById('agentCallsHandled');
 
     if (activeSessionTimeElement) {
-        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - agentStatus.sessionStartTime) / 1000));
+        const elapsedSeconds = Math.max(0, Math.floor((runtimeNowMs() - agentStatus.sessionStartTime) / 1000));
         activeSessionTimeElement.textContent = formatElapsedSessionTime(elapsedSeconds);
     }
 
@@ -421,10 +466,10 @@ function startAgentWorkSessionTimer() {
     updateAgentWorkSummary();
 
     if (agentStatus.sessionTimerInterval) {
-        clearInterval(agentStatus.sessionTimerInterval);
+        runtimeClearInterval(agentStatus.sessionTimerInterval);
     }
 
-    agentStatus.sessionTimerInterval = setInterval(() => {
+    agentStatus.sessionTimerInterval = runtimeSetInterval(() => {
         updateAgentWorkSummary();
     }, 1000);
 }
@@ -731,13 +776,19 @@ function autoSetAgentStatus(callState) {
     }
 }
 
+function getRemainingAcwSeconds(acwStartTime = agentStatus.acwStartTime) {
+    const acwDurationSeconds = typeof ACW_DEFAULT_DURATION === 'number' ? ACW_DEFAULT_DURATION : 120;
+    const acwEndTime = acwStartTime + (acwDurationSeconds * 1000);
+    return Math.max(0, Math.floor((acwEndTime - runtimeNowMs()) / 1000));
+}
+
 // ============================================================================
 // PHASE 5A: AFTER CALL WORK (ACW) & DISPOSITION
 // ============================================================================
 
 // Start ACW (After Call Work)
 function startACW() {
-    agentStatus.acwStartTime = Date.now();
+    agentStatus.acwStartTime = runtimeNowMs();
     
     // Show ACW bar
     const acwBar = document.getElementById('acwBar');
@@ -754,10 +805,8 @@ function startACW() {
 
 // Start ACW Timer
 function startACWTimer() {
-    const acwEndTime = agentStatus.acwStartTime + (ACW_DEFAULT_DURATION * 1000);
-    
-    agentStatus.acwInterval = setInterval(() => {
-        const remaining = Math.max(0, Math.floor((acwEndTime - Date.now()) / 1000));
+    agentStatus.acwInterval = runtimeSetInterval(() => {
+        const remaining = getRemainingAcwSeconds();
         
         // Update timer display in ACW bar
         const acwTimerEl = document.getElementById('acwTimer');
@@ -774,7 +823,7 @@ function startACWTimer() {
 // End ACW
 function endACW(manual = false) {
     if (agentStatus.acwInterval) {
-        clearInterval(agentStatus.acwInterval);
+        runtimeClearInterval(agentStatus.acwInterval);
         agentStatus.acwInterval = null;
     }
     
@@ -1240,7 +1289,7 @@ function startQueueWaitTimeUpdate() {
     }
     
     // Update wait times every second
-    callQueue.waitTimeInterval = setInterval(() => {
+    callQueue.waitTimeInterval = runtimeSetInterval(() => {
         if (!callQueue.enabled || callQueue.queue.length === 0 || callSession.active) {
             stopQueueWaitTimeUpdate();
             return;
@@ -1275,7 +1324,7 @@ function startQueueWaitTimeUpdate() {
  */
 function stopQueueWaitTimeUpdate() {
     if (callQueue.waitTimeInterval) {
-        clearInterval(callQueue.waitTimeInterval);
+        runtimeClearInterval(callQueue.waitTimeInterval);
         callQueue.waitTimeInterval = null;
     }
 }
@@ -1454,7 +1503,7 @@ function startCallFromQueue(queueEntry) {
         callerType: queueEntry.callerType,
         serviceNumber: queueEntry.serviceNumber,
         waitTime: queueEntry.waitTime,
-        startTime: Date.now(),
+        startTime: runtimeNowMs(),
         customerId: queueEntry.customerId,
         customerName: queueEntry.customerName,
         pendingIdentification: null,
@@ -1467,7 +1516,7 @@ function startCallFromQueue(queueEntry) {
     
     // Als het een bekende klant is, open automatisch het klantrecord
     if (queueEntry.callerType === 'known' && queueEntry.customerId) {
-        setTimeout(() => {
+        runtimeSetTimeout(() => {
             runtimeSelectCustomer(queueEntry.customerId);
         }, 500);
     }
@@ -1532,11 +1581,7 @@ async function debugStartCall() {
     
     // Bereken wachttijd
     let waitTime;
-    if (waitTimeOption === 'random') {
-        waitTime = Math.floor(Math.random() * (90 - 15 + 1)) + 15;
-    } else {
-        waitTime = parseInt(waitTimeOption);
-    }
+    waitTime = resolveDebugWaitTimeSeconds(waitTimeOption);
     
     const customerIdValue = document.getElementById('debugKnownCustomer').value;
     const knownCustomerId = customerIdValue ? parseInt(customerIdValue) : null;
@@ -1575,7 +1620,7 @@ async function debugStartCall() {
             callerType: callerType,
             serviceNumber: serviceNumber,
             waitTime: waitTime,
-            startTime: Date.now(),
+            startTime: runtimeNowMs(),
             customerId: null,
             customerName: null,
             pendingIdentification: null,
@@ -1596,7 +1641,7 @@ async function debugStartCall() {
                 callSession.callerType = 'identified';
                 
                 // Automatically open customer record
-                setTimeout(() => {
+                runtimeSetTimeout(() => {
                     runtimeSelectCustomer(knownCustomerId);
                 }, 500);
             }
@@ -1622,7 +1667,7 @@ async function debugStartCall() {
 function debugEndCall() {
     if (!callSession.active) return;
     
-    const callDuration = Math.floor((Date.now() - callSession.startTime) / 1000);
+    const callDuration = Math.floor((runtimeNowMs() - callSession.startTime) / 1000);
     
     if (confirm(translate('calls.endConversationConfirm', { duration: formatTime(callDuration) }, `📞 Het telefoongesprek beëindigen?\n\nGespreksduur: ${formatTime(callDuration)}`))) {
         endCallSession(true);
@@ -1663,7 +1708,7 @@ function fullReset() {
         if (window.kiwiApi) {
             window.kiwiApi.post(debugResetApiUrl, {}).then(() => {
                 runtimeShowToast(translate('storage.cleared', {}, 'Sessiestaat gewist. Pagina wordt herladen...'), 'info');
-                setTimeout(() => {
+                runtimeSetTimeout(() => {
                     window.location.reload();
                 }, 1000);
             }).catch((error) => {
@@ -1673,7 +1718,7 @@ function fullReset() {
         }
 
         runtimeShowToast(translate('storage.cleared', {}, 'Pagina wordt herladen...'), 'info');
-        setTimeout(() => {
+        runtimeSetTimeout(() => {
             window.location.reload();
         }, 1000);
     }
@@ -1699,6 +1744,7 @@ if (typeof window !== 'undefined') {
         formatTime,
         fullReset,
         getCallSession,
+        getRemainingAcwSeconds,
         getOutcomeLabel,
         identifyCallerAsCustomer,
         identifyCurrentCustomerAsCaller,
@@ -1710,6 +1756,7 @@ if (typeof window !== 'undefined') {
         normalizeAgentStatus,
         openDebugModal,
         populateDebugKnownCustomers,
+        resolveDebugWaitTimeSeconds,
         resolveTeamsSyncLabel,
         saveCallSession,
         saveDisposition,

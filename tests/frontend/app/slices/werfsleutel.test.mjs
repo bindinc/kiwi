@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
 import {
+    __setWerfsleutelCatalogSyncStateForTests,
     __resetWerfsleutelSliceForTests,
+    configureWerfsleutelRuntimeForTests,
     detectDurationKeyFromTitle,
     extractDurationLabelFromTitle,
     getWerfsleutelOfferDetails,
+    handleWerfsleutelQuery,
     isWerfsleutelBarcodeQuery,
     registerWerfsleutelActions
 } from '../../../../assets/js/app/slices/werfsleutel.js';
@@ -416,6 +419,63 @@ function testWerfsleutelMandantBadgesUseLogoBranding() {
     assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('kroncrv-logo.svg'), true);
 }
 
+function testDebouncedQueryUsesInjectedTimer() {
+    __resetWerfsleutelSliceForTests();
+    installWerfsleutelDomHarness('nl');
+
+    const scheduledTimers = [];
+    configureWerfsleutelRuntimeForTests({
+        setTimeout(callback, timeout) {
+            scheduledTimers.push({ callback, timeout });
+            return scheduledTimers.length;
+        }
+    });
+
+    handleWerfsleutelQuery('tv');
+
+    assert.equal(scheduledTimers.length, 1);
+    assert.equal(scheduledTimers[0].timeout, 180);
+}
+
+async function testCatalogTtlUsesInjectedClock() {
+    __resetWerfsleutelSliceForTests();
+    installWerfsleutelDomHarness('nl');
+
+    let fetchCount = 0;
+    let nowMs = 1_000_000;
+    const seededCatalog = [
+        {
+            salesCode: 'TVK1',
+            title: 'TV Krant 1 jaar',
+            price: 52,
+            allowedChannels: ['OL'],
+            isActive: true
+        }
+    ];
+    globalThis.kiwiApi = {
+        async get() {
+            fetchCount += 1;
+            return { items: seededCatalog };
+        }
+    };
+
+    configureWerfsleutelRuntimeForTests({
+        nowMs: () => nowMs
+    });
+
+    await globalThis.kiwiWerfsleutelSlice.ensureLoaded();
+    assert.equal(fetchCount, 1);
+
+    __setWerfsleutelCatalogSyncStateForTests({
+        catalog: seededCatalog,
+        catalogSyncedAt: nowMs
+    });
+
+    nowMs += (15 * 60 * 1000) - 1;
+    await globalThis.kiwiWerfsleutelSlice.ensureLoaded();
+    assert.equal(fetchCount, 1);
+}
+
 function run() {
     __resetWerfsleutelSliceForTests();
     testBarcodeDetection();
@@ -428,7 +488,15 @@ function run() {
     testEnglishSingularAndPluralSummaryCopy();
     testSelectingOfferDoesNotShowSuccessToast();
     testWerfsleutelMandantBadgesUseLogoBranding();
-    console.log('werfsleutel slice tests passed');
+    testDebouncedQueryUsesInjectedTimer();
+    return Promise.resolve()
+        .then(testCatalogTtlUsesInjectedClock)
+        .then(() => {
+            console.log('werfsleutel slice tests passed');
+        });
 }
 
-run();
+run().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+});

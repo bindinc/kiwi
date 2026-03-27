@@ -149,12 +149,46 @@ function testRuntimeStartCallSessionWarnsOnceWithoutSliceBridge() {
     assert.equal(missingBridgeWarnings.length, 1);
 }
 
+function testResolveDebugWaitTimeUsesInjectedRandom() {
+    const { context } = createRuntimeContext();
+
+    configureRuntimeDependencies(context, {
+        random() {
+            return 0;
+        }
+    });
+
+    assert.equal(context.kiwiCallAgentRuntime.resolveDebugWaitTimeSeconds('random'), 15);
+
+    configureRuntimeDependencies(context, {
+        random() {
+            return 0.999;
+        }
+    });
+
+    assert.equal(context.kiwiCallAgentRuntime.resolveDebugWaitTimeSeconds('random'), 90);
+}
+
+function testRemainingAcwSecondsUsesInjectedClock() {
+    const { context } = createRuntimeContext();
+
+    configureRuntimeDependencies(context, {
+        nowMs() {
+            return 35_000;
+        }
+    });
+
+    assert.equal(context.kiwiCallAgentRuntime.getRemainingAcwSeconds(5_000), 90);
+}
+
 function run() {
     testConfiguredShowToastDependencyTakesPriorityOverGlobalFallback();
     testGlobalFallbackIsNotUsedWithoutConfiguredDependency();
     testDispositionCategoriesFallsBackToEmptyObjectAndWarnsOnce();
     testConfiguredDependenciesSupportSelectCustomerAndCallSessionSliceBridge();
     testRuntimeStartCallSessionWarnsOnceWithoutSliceBridge();
+    testResolveDebugWaitTimeUsesInjectedRandom();
+    testRemainingAcwSecondsUsesInjectedClock();
     console.log('call-agent-runtime dependency wiring tests passed');
 }
 

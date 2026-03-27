@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
-import { formatDateInputValue, registerDeliveryDatePickerSlice } from '../../../../assets/js/app/slices/delivery-date-picker-slice.js';
+import {
+    __resetDeliveryDatePickerForTests,
+    configureDeliveryDatePickerRuntimeForTests,
+    formatDateInputValue,
+    initDeliveryDatePicker,
+    registerDeliveryDatePickerSlice,
+    selectNextWeek
+} from '../../../../assets/js/app/slices/delivery-date-picker-slice.js';
 
 function createRouter() {
     const root = {
@@ -103,11 +110,186 @@ function testSelectDeliveryDateByStringUpdatesInputs() {
     }
 }
 
+async function testInitDeliveryDatePickerUsesControlledTodayAndRecommendedDate() {
+    __resetDeliveryDatePickerForTests();
+    configureDeliveryDatePickerRuntimeForTests({
+        nowDate: () => new Date('2026-02-10T09:00:00Z')
+    });
+
+    const requestedUrls = [];
+    const hiddenInput = { value: '' };
+    const displayParent = { replaceChild() {} };
+    const displayDiv = {
+        textContent: '',
+        classList: createClassList(),
+        cloneNode() {
+            return this;
+        },
+        addEventListener() {},
+        parentNode: displayParent
+    };
+    const calendarDiv = {
+        style: {},
+        classList: createClassList()
+    };
+    const container = {
+        contains() {
+            return false;
+        }
+    };
+    const previousDocument = globalThis.document;
+    const previousWindow = globalThis.window;
+    const previousKiwiApi = globalThis.kiwiApi;
+
+    try {
+        globalThis.document = {
+            getElementById(elementId) {
+                if (elementId === 'deliveryDatePickerContainer') {
+                    return container;
+                }
+                if (elementId === 'articleDesiredDelivery') {
+                    return hiddenInput;
+                }
+                if (elementId === 'deliveryDateDisplay') {
+                    return displayDiv;
+                }
+                if (elementId === 'deliveryCalendar') {
+                    return calendarDiv;
+                }
+                return null;
+            },
+            addEventListener() {}
+        };
+        globalThis.window = {
+            document: globalThis.document,
+            addEventListener() {}
+        };
+        globalThis.window.kiwiApi = {
+            async get(url) {
+                requestedUrls.push(url);
+                return { recommendedDate: '2026-02-12', days: [], monthLabel: 'februari 2026' };
+            }
+        };
+        globalThis.kiwiApi = globalThis.window.kiwiApi;
+
+        await initDeliveryDatePicker();
+
+        assert.deepEqual(requestedUrls, ['/api/v1/catalog/delivery-calendar?year=2026&month=2']);
+        assert.equal(hiddenInput.value, '2026-02-12');
+        assert.equal(displayDiv.textContent, 'Donderdag 12 februari');
+    } finally {
+        __resetDeliveryDatePickerForTests();
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+        if (previousWindow === undefined) {
+            delete globalThis.window;
+        } else {
+            globalThis.window = previousWindow;
+        }
+        if (previousKiwiApi === undefined) {
+            delete globalThis.kiwiApi;
+        } else {
+            globalThis.kiwiApi = previousKiwiApi;
+        }
+    }
+}
+
+async function testSelectNextWeekScansAcrossMonthBoundaryFromControlledToday() {
+    __resetDeliveryDatePickerForTests();
+    configureDeliveryDatePickerRuntimeForTests({
+        nowDate: () => new Date('2026-01-28T09:00:00Z')
+    });
+
+    const hiddenInput = { value: '' };
+    const displayDiv = {
+        textContent: '',
+        classList: createClassList()
+    };
+    const calendarDiv = {
+        style: {},
+        classList: createClassList(['is-open'])
+    };
+    const previousDocument = globalThis.document;
+    const previousWindow = globalThis.window;
+    const previousKiwiApi = globalThis.kiwiApi;
+
+    try {
+        globalThis.document = {
+            getElementById(elementId) {
+                if (elementId === 'articleDesiredDelivery') {
+                    return hiddenInput;
+                }
+                if (elementId === 'deliveryDateDisplay') {
+                    return displayDiv;
+                }
+                if (elementId === 'deliveryCalendar') {
+                    return calendarDiv;
+                }
+                return null;
+            }
+        };
+        globalThis.window = {
+            document: globalThis.document,
+            kiwiApi: {
+                async get(url) {
+                    if (!url.includes('year=2026&month=2')) {
+                        throw new Error(`unexpected url ${url}`);
+                    }
+
+                    return {
+                        recommendedDate: null,
+                        monthLabel: 'februari 2026',
+                        days: [
+                            { date: '2026-02-03', available: false },
+                            { date: '2026-02-04', available: true }
+                        ]
+                    };
+                }
+            }
+        };
+        globalThis.kiwiApi = globalThis.window.kiwiApi;
+
+        await selectNextWeek();
+
+        assert.equal(hiddenInput.value, '2026-02-04');
+        assert.equal(displayDiv.textContent, 'Woensdag 4 februari');
+    } finally {
+        __resetDeliveryDatePickerForTests();
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+        if (previousWindow === undefined) {
+            delete globalThis.window;
+        } else {
+            globalThis.window = previousWindow;
+        }
+        if (previousKiwiApi === undefined) {
+            delete globalThis.kiwiApi;
+        } else {
+            globalThis.kiwiApi = previousKiwiApi;
+        }
+    }
+}
+
 function run() {
+    __resetDeliveryDatePickerForTests();
     testRegistersDeliveryDatePickerActions();
     testFormatDateInputValueUsesLocalDateParts();
     testSelectDeliveryDateByStringUpdatesInputs();
-    console.log('delivery date picker slice tests passed');
+    return Promise.resolve()
+        .then(testInitDeliveryDatePickerUsesControlledTodayAndRecommendedDate)
+        .then(testSelectNextWeekScansAcrossMonthBoundaryFromControlledToday)
+        .then(() => {
+            console.log('delivery date picker slice tests passed');
+        });
 }
 
-run();
+run().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+});

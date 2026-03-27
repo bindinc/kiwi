@@ -78,12 +78,26 @@ function createRuntimeContext(options = {}) {
         requesterCreateForm: createElementStub(),
         requesterExistingSection: createElementStub(),
         requesterCreateSection: createElementStub(),
+        subRequesterMiddleName: createElementStub(),
+        subRequesterLastName: createElementStub(),
+        subRequesterPostalCode: createElementStub(),
+        subRequesterHouseNumber: createElementStub(),
+        subRequesterHouseExt: createElementStub(),
+        subRequesterPhone: createElementStub(),
+        subRequesterEmail: createElementStub(),
         recipientSelectedPerson: createElementStub(),
         recipientSearchResults: createElementStub(),
         recipientDuplicateCheck: createElementStub(),
         recipientCreateForm: createElementStub(),
         recipientExistingSection: createElementStub(),
-        recipientCreateSection: createElementStub()
+        recipientCreateSection: createElementStub(),
+        subRecipientMiddleName: createElementStub(),
+        subRecipientLastName: createElementStub(),
+        subRecipientPostalCode: createElementStub(),
+        subRecipientHouseNumber: createElementStub(),
+        subRecipientHouseExt: createElementStub(),
+        subRecipientPhone: createElementStub(),
+        subRecipientEmail: createElementStub()
     };
     const recipientSelectedPerson = options.recipientSelectedPerson || null;
     const requesterSelectedPerson = options.requesterSelectedPerson || null;
@@ -208,6 +222,16 @@ function createRuntimeContext(options = {}) {
         checkbox,
         runtime: context.window.kiwiSubscriptionRoleRuntime
     };
+}
+
+function setDuplicateInput(elements, prefix, values) {
+    elements[`${prefix}MiddleName`].value = values.middleName || '';
+    elements[`${prefix}LastName`].value = values.lastName || '';
+    elements[`${prefix}PostalCode`].value = values.postalCode || '';
+    elements[`${prefix}HouseNumber`].value = values.houseNumber || '';
+    elements[`${prefix}HouseExt`].value = values.houseExt || '';
+    elements[`${prefix}Phone`].value = values.phone || '';
+    elements[`${prefix}Email`].value = values.email || '';
 }
 
 function testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester() {
@@ -690,6 +714,79 @@ function testBuildSubscriptionDuplicateApiRequestIncludesWerfsleutelScope() {
     );
 }
 
+function testFreshDuplicateCacheEntryExpiresWithControlledClock() {
+    const { context, runtime } = createRuntimeContext();
+    const fingerprint = 'email:test@example.org';
+    context.subscriptionDuplicateState.recipient.cache[fingerprint] = {
+        cachedAt: 1_000,
+        matches: [{ id: 7 }]
+    };
+    runtime.configureTiming({
+        nowMs: () => 1_000 + (90 * 1000) + 1
+    });
+
+    const cacheEntry = runtime.getFreshSubscriptionDuplicateCacheEntry(
+        context.subscriptionDuplicateState.recipient,
+        fingerprint
+    );
+
+    assert.equal(cacheEntry, null);
+    assert.equal(context.subscriptionDuplicateState.recipient.cache[fingerprint], undefined);
+    runtime.resetTiming();
+}
+
+function testDuplicateApiScheduleUsesCooldownFromControlledClock() {
+    const scheduledTimers = [];
+    const { context, elements, runtime } = createRuntimeContext({
+        werfsleutelSelections: [
+            {
+                selectedKey: {
+                    salesCode: 'TVK1',
+                    mandant: 'HMC',
+                    divisionId: '14'
+                },
+                selectedChannel: 'OL',
+                selectedChannelMeta: { key: 'OL' }
+            }
+        ]
+    });
+
+    context.subscriptionRoleState.recipient.mode = 'create';
+    context.subscriptionDuplicateState.recipient.lastApiStartedAt = 400;
+    setDuplicateInput(elements, 'subRecipient', {
+        lastName: 'Gebruiker',
+        postalCode: '1234 AB',
+        houseNumber: '12'
+    });
+    runtime.configureTiming({
+        nowMs: () => 1_000,
+        setTimeout(callback, timeout) {
+            scheduledTimers.push({ callback, timeout });
+            return scheduledTimers.length;
+        }
+    });
+
+    runtime.scheduleSubscriptionDuplicateApiCheck('recipient', 'test-fingerprint');
+
+    assert.equal(scheduledTimers.length, 1);
+    assert.equal(scheduledTimers[0].timeout, 900);
+    runtime.resetTiming();
+}
+
+function testDuplicateApiIdentifiesStaleResponsesByRequestVersion() {
+    const { context, runtime } = createRuntimeContext();
+    context.subscriptionDuplicateState.recipient.requestVersion = 4;
+
+    assert.equal(
+        runtime.isLatestSubscriptionDuplicateRequest(context.subscriptionDuplicateState.recipient, 3),
+        false
+    );
+    assert.equal(
+        runtime.isLatestSubscriptionDuplicateRequest(context.subscriptionDuplicateState.recipient, 4),
+        true
+    );
+}
+
 async function run() {
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
@@ -706,6 +803,9 @@ async function run() {
     await testSearchSubscriptionRolePersonRequiresWerfsleutelSelection();
     await testSearchSubscriptionRolePersonIncludesWerfsleutelScopeInApiRequest();
     testBuildSubscriptionDuplicateApiRequestIncludesWerfsleutelScope();
+    testFreshDuplicateCacheEntryExpiresWithControlledClock();
+    testDuplicateApiScheduleUsesCooldownFromControlledClock();
+    testDuplicateApiIdentifiesStaleResponsesByRequestVersion();
     console.log('subscription role runtime tests passed');
 }
 

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add security-hardening regression coverage that asserts every `/api/v1/*` route rejects unauthenticated calls, keeps `/api/v1/status` behind authorization, and checks that Swagger advertises the full API namespace as protected.
 
 ### Changed
+- Make the delivery-date picker, werfsleutel cache refresh, subscription duplicate guard, and call-agent runtime read their time/random behavior through small test hooks so calendar boundaries, TTL/cooldown logic, ACW timing, and out-of-order duplicate responses can be covered deterministically in the frontend suite.
 - Parse mandant and person-lookup metadata from named HUP credentials, expose that context on Webabo offer responses, and carry the same credential context through subscription queue payloads so upcoming API-backed person retrieval can switch over without another contract change.
 - Render AVROTROS and KRO-NCRV logo badges for werfsleutels and subscription person lookups based on HUP credential `client` metadata, while keeping `client_search` available for the later full API-backed person lookup flow.
 - Let subscription person badges prefer `divisionId` when available and otherwise fall back to `mandant`, while preserving the existing HMC -> AVROTROS and KRONCRV -> KRO-NCRV branding rules.

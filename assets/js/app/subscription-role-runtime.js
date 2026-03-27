@@ -25,6 +25,18 @@ const MANDANT_BADGE_CONFIG_BY_KEY = {
         fallbackPath: 'assets/img/kroncrv-logo.svg'
     }
 };
+const defaultSubscriptionRuntimeTimeoutScheduler = (callback, timeout) => {
+    const globalScope = getSubscriptionRuntimeGlobalScope();
+    if (globalScope && typeof globalScope.setTimeout === 'function') {
+        return globalScope.setTimeout(callback, timeout);
+    }
+
+    return setTimeout(callback, timeout);
+};
+const subscriptionRuntimeTiming = {
+    nowMs: () => Date.now(),
+    setTimeout: defaultSubscriptionRuntimeTimeoutScheduler
+};
 
 function getSubscriptionRuntimeGlobalScope() {
     if (typeof window !== 'undefined') {
@@ -186,7 +198,7 @@ function populateBirthdayFields(prefix) {
 
     // Populate Years
     if (yearSelect.options.length <= 1) {
-        const currentYear = new Date().getFullYear();
+        const currentYear = new Date(subscriptionRuntimeTiming.nowMs()).getFullYear();
         const startYear = currentYear - 120;
         for (let year = currentYear; year >= startYear; year--) {
             const option = document.createElement('option');
@@ -1299,7 +1311,7 @@ function getFreshSubscriptionDuplicateCacheEntry(roleDuplicateState, fingerprint
         return null;
     }
 
-    if (Date.now() - cacheEntry.cachedAt > DUPLICATE_CHECK_CACHE_TTL_MS) {
+    if (subscriptionRuntimeTiming.nowMs() - cacheEntry.cachedAt > DUPLICATE_CHECK_CACHE_TTL_MS) {
         delete roleDuplicateState.cache[fingerprint];
         return null;
     }
@@ -1480,8 +1492,12 @@ function waitForTimeout(milliseconds) {
         return Promise.resolve();
     }
     return new Promise((resolve) => {
-        window.setTimeout(resolve, milliseconds);
+        subscriptionRuntimeTiming.setTimeout(resolve, milliseconds);
     });
+}
+
+function isLatestSubscriptionDuplicateRequest(roleDuplicateState, requestVersion) {
+    return Boolean(roleDuplicateState) && requestVersion === roleDuplicateState.requestVersion;
 }
 
 async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, options = {}) {
@@ -1525,7 +1541,7 @@ async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, optio
         return;
     }
 
-    const elapsedSinceLastApi = Date.now() - roleDuplicateState.lastApiStartedAt;
+    const elapsedSinceLastApi = subscriptionRuntimeTiming.nowMs() - roleDuplicateState.lastApiStartedAt;
     const minimumWait = Math.max(0, DUPLICATE_CHECK_MIN_API_INTERVAL_MS - elapsedSinceLastApi);
     await waitForTimeout(minimumWait);
 
@@ -1538,7 +1554,7 @@ async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, optio
 
     const requestVersion = roleDuplicateState.requestVersion + 1;
     roleDuplicateState.requestVersion = requestVersion;
-    roleDuplicateState.lastApiStartedAt = Date.now();
+    roleDuplicateState.lastApiStartedAt = subscriptionRuntimeTiming.nowMs();
     roleDuplicateState.lastApiFingerprint = expectedFingerprint;
     roleDuplicateState.apiWarning = '';
     roleDuplicateState.isChecking = true;
@@ -1546,7 +1562,7 @@ async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, optio
 
     try {
         const payload = await window.kiwiApi.get(`${personsApiUrl}?${apiRequest.params.toString()}`);
-        if (requestVersion !== roleDuplicateState.requestVersion) {
+        if (!isLatestSubscriptionDuplicateRequest(roleDuplicateState, requestVersion)) {
             return;
         }
 
@@ -1558,7 +1574,7 @@ async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, optio
         const items = Array.isArray(payload && payload.items) ? payload.items : [];
         const apiStrongMatches = findStrongDuplicateMatches(latestInput, items);
         roleDuplicateState.cache[expectedFingerprint] = {
-            cachedAt: Date.now(),
+            cachedAt: subscriptionRuntimeTiming.nowMs(),
             matches: apiStrongMatches
         };
         roleDuplicateState.resolvedFingerprints[expectedFingerprint] = true;
@@ -1567,7 +1583,7 @@ async function runSubscriptionDuplicateApiCheck(role, expectedFingerprint, optio
         roleDuplicateState.apiWarning = '';
         renderSubscriptionDuplicateCheck(role);
     } catch (error) {
-        if (requestVersion !== roleDuplicateState.requestVersion) {
+        if (!isLatestSubscriptionDuplicateRequest(roleDuplicateState, requestVersion)) {
             return;
         }
 
@@ -1596,7 +1612,7 @@ function scheduleSubscriptionDuplicateApiCheck(role, expectedFingerprint) {
     }
 
     clearSubscriptionDuplicateDebounceTimer(roleDuplicateState);
-    const elapsedSinceLastApi = Date.now() - roleDuplicateState.lastApiStartedAt;
+    const elapsedSinceLastApi = subscriptionRuntimeTiming.nowMs() - roleDuplicateState.lastApiStartedAt;
     const minimumWait = Math.max(0, DUPLICATE_CHECK_MIN_API_INTERVAL_MS - elapsedSinceLastApi);
     const waitMs = Math.max(DUPLICATE_CHECK_DEBOUNCE_MS, minimumWait);
 
@@ -1604,7 +1620,7 @@ function scheduleSubscriptionDuplicateApiCheck(role, expectedFingerprint) {
     roleDuplicateState.apiWarning = '';
     renderSubscriptionDuplicateCheck(role);
 
-    roleDuplicateState.debounceTimer = window.setTimeout(() => {
+    roleDuplicateState.debounceTimer = subscriptionRuntimeTiming.setTimeout(() => {
         roleDuplicateState.debounceTimer = null;
         void runSubscriptionDuplicateApiCheck(role, expectedFingerprint);
     }, waitMs);
@@ -1907,6 +1923,19 @@ function resetSubscriptionRoleState() {
     resetAllSubscriptionDuplicateStates();
 }
 
+function configureSubscriptionRuntimeTiming(overrides = {}) {
+    subscriptionRuntimeTiming.nowMs = typeof overrides.nowMs === 'function'
+        ? overrides.nowMs
+        : (() => Date.now());
+    subscriptionRuntimeTiming.setTimeout = typeof overrides.setTimeout === 'function'
+        ? overrides.setTimeout
+        : defaultSubscriptionRuntimeTimeoutScheduler;
+}
+
+function resetSubscriptionRuntimeTiming() {
+    configureSubscriptionRuntimeTiming();
+}
+
 function createPersonPayloadFromForm(prefix, optinData = null) {
     const data = getCustomerFormData(prefix);
     const birthday = ensureBirthdayValue(prefix, false);
@@ -2110,6 +2139,7 @@ if (typeof window !== 'undefined') {
         clearSubscriptionDuplicateUi,
         clearSubscriptionRoleCreateForm,
         collectSubscriptionRoleDuplicateInput,
+        configureTiming: configureSubscriptionRuntimeTiming,
         createPersonPayloadFromForm,
         ensureBirthdayValue,
         ensureSubscriptionRoleCreateForm,
@@ -2125,6 +2155,7 @@ if (typeof window !== 'undefined') {
         getSubscriptionRoleConfig,
         hasSameSelectedExistingRecipientAndRequester,
         initializeSubscriptionRolesForForm,
+        isLatestSubscriptionDuplicateRequest,
         isStrongDuplicateCandidate,
         mergeDuplicateMatchLists,
         normalizeCandidateHouseToken,
@@ -2143,6 +2174,7 @@ if (typeof window !== 'undefined') {
         renderSubscriptionDuplicateCheck,
         renderSubscriptionRoleSearchResults,
         renderSubscriptionRoleSelectedPerson,
+        resetTiming: resetSubscriptionRuntimeTiming,
         resetAllSubscriptionDuplicateStates,
         resetSubscriptionDuplicateRoleState,
         resetSubscriptionRoleState,

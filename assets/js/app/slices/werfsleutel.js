@@ -57,6 +57,18 @@ const MANDANT_BADGE_CONFIG_BY_KEY = {
 };
 
 const euroFormattersByLocale = {};
+const defaultWerfsleutelTimeoutScheduler = (callback, timeout) => {
+    const globalScope = getGlobalScope();
+    if (globalScope && typeof globalScope.setTimeout === 'function') {
+        return globalScope.setTimeout(callback, timeout);
+    }
+
+    return setTimeout(callback, timeout);
+};
+const werfsleutelRuntime = {
+    nowMs: () => Date.now(),
+    setTimeout: defaultWerfsleutelTimeoutScheduler
+};
 
 const werfsleutelSliceState = {
     catalog: [],
@@ -241,7 +253,7 @@ function isWerfsleutelCatalogStale() {
     if (!werfsleutelSliceState.catalogSyncedAt) {
         return true;
     }
-    return Date.now() - werfsleutelSliceState.catalogSyncedAt > WERFSLEUTEL_CACHE_TTL_MS;
+    return werfsleutelRuntime.nowMs() - werfsleutelSliceState.catalogSyncedAt > WERFSLEUTEL_CACHE_TTL_MS;
 }
 
 function normalizeWerfsleutelItem(item) {
@@ -342,7 +354,7 @@ function filterWerfsleutelCatalog(query) {
     }).slice(0, WERFSLEUTEL_SEARCH_LIMIT);
 }
 
-async function syncWerfsleutelsCatalog(options = {}) {
+export async function syncWerfsleutelsCatalog(options = {}) {
     const forceRefresh = options.force === true;
     const isBackgroundRefresh = options.background === true;
     const apiClient = getApiClient();
@@ -388,7 +400,7 @@ async function syncWerfsleutelsCatalog(options = {}) {
             if (items.length > 0) {
                 rememberWerfsleutels(items);
             }
-            werfsleutelSliceState.catalogSyncedAt = Date.now();
+            werfsleutelSliceState.catalogSyncedAt = werfsleutelRuntime.nowMs();
             return werfsleutelSliceState.catalog;
         })
         .catch((error) => {
@@ -1180,7 +1192,7 @@ function selectWerfsleutelChannel(salesCode, combinationKey) {
     syncSelectedOfferUi();
 }
 
-function handleWerfsleutelQuery(rawValue) {
+export function handleWerfsleutelQuery(rawValue) {
     const query = String(rawValue || '').trim();
     werfsleutelSliceState.latestQuery = query;
 
@@ -1202,12 +1214,7 @@ function handleWerfsleutelQuery(rawValue) {
         return;
     }
 
-    const globalScope = getGlobalScope();
-    const scheduleTimer = globalScope && typeof globalScope.setTimeout === 'function'
-        ? globalScope.setTimeout.bind(globalScope)
-        : setTimeout;
-
-    werfsleutelSliceState.searchDebounceTimer = scheduleTimer(async () => {
+    werfsleutelSliceState.searchDebounceTimer = werfsleutelRuntime.setTimeout(async () => {
         const lookupQuery = query;
         try {
             await searchWerfsleutelsViaApi(lookupQuery);
@@ -1591,5 +1598,26 @@ export function __resetWerfsleutelSliceForTests() {
 
     for (const localeKey of Object.keys(euroFormattersByLocale)) {
         delete euroFormattersByLocale[localeKey];
+    }
+
+    configureWerfsleutelRuntimeForTests();
+}
+
+export function configureWerfsleutelRuntimeForTests(overrides = {}) {
+    werfsleutelRuntime.nowMs = typeof overrides.nowMs === 'function'
+        ? overrides.nowMs
+        : (() => Date.now());
+    werfsleutelRuntime.setTimeout = typeof overrides.setTimeout === 'function'
+        ? overrides.setTimeout
+        : defaultWerfsleutelTimeoutScheduler;
+}
+
+export function __setWerfsleutelCatalogSyncStateForTests(state = {}) {
+    if (Array.isArray(state.catalog)) {
+        werfsleutelSliceState.catalog = state.catalog.slice();
+    }
+
+    if (Number.isFinite(state.catalogSyncedAt)) {
+        werfsleutelSliceState.catalogSyncedAt = state.catalogSyncedAt;
     }
 }
