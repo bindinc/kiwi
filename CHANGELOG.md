@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+## [v1.0.15]
+
 ### Added
 - Add a reusable Subscription API personsearch client on top of `ppa_base_url` that reuses the existing HUP/WebAbo bearer-token flow, including retry-on-`401` behavior, so the later KIWI customer-search migration can switch to the upstream backend in phases.
 - Add a multi-credential Subscription API personsearch service that fans out searches only over HUP credentials with `client_search: "yes"` and merges those credential-scoped result sets for KIWI customer search.
