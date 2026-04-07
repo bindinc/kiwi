@@ -105,7 +105,7 @@ if [[ "${login_redirect_ready}" != "1" ]]; then
   exit 1
 fi
 
-session_rows="$(docker compose -f "${compose_file}" exec -T postgres psql -U kiwi -d kiwi -tA \
+session_rows="$(docker compose -f "${compose_file}" exec -T kiwi-postgres psql -U kiwi -d kiwi -tA \
   -c "SELECT count(*) FROM public.kiwi_http_sessions;")"
 
 if [[ ! "${session_rows}" =~ ^[1-9][0-9]*$ ]]; then
