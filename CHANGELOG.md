@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+### Changed
+- Rename the local Docker Compose PostgreSQL service from `postgres` to `kiwi-postgres` so Kiwi matches the app-specific database naming used in GitOps.
+
 ## [v1.0.15]
 
 ### Added

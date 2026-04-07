@@ -59,7 +59,7 @@ services:
       timeout: 1s
       retries: 10
 
-  postgres:
+  kiwi-postgres:
     image: postgres:18.2-alpine
     environment:
       POSTGRES_DB: kiwi
@@ -88,13 +88,13 @@ services:
         condition: service_completed_successfully
       fallback-oidc:
         condition: service_healthy
-      postgres:
+      kiwi-postgres:
         condition: service_healthy
     environment:
       APP_ENV: dev
       APP_DEBUG: 1
       APP_SECRET: kiwi-local-compose-session-secret
-      SESSION_DB_HOST: postgres
+      SESSION_DB_HOST: kiwi-postgres
       SESSION_DB_PORT: "5432"
       SESSION_DB_NAME: kiwi
       SESSION_DB_USER: kiwi
