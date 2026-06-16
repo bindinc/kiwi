@@ -133,8 +133,10 @@ HTML;
                     'summary' => sprintf('%s %s', $method, str_replace('_', ' ', $name)),
                     'tags' => [$this->resolveTag($path)],
                     'responses' => $this->buildResponses(),
-                    'security' => [['cookieAuth' => []]],
                 ];
+                if ('api_development_feedback_screenshot' !== $name) {
+                    $operation['security'] = [['cookieAuth' => []]];
+                }
                 if ([] !== $pathParameters) {
                     $operation['parameters'] = $pathParameters;
                 }

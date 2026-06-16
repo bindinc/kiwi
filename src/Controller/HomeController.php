@@ -11,6 +11,7 @@ use App\Oidc\OidcRoleAccess;
 use App\Oidc\OidcTokenInspector;
 use App\Oidc\RequestOidcContext;
 use App\Security\OidcUser;
+use App\Service\DevelopmentFeedback\DevelopmentFeedbackSettings;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,6 +35,7 @@ final class HomeController extends AbstractController
         private readonly OidcLogoutUrlBuilder $oidcLogoutUrlBuilder,
         private readonly TokenStorageInterface $tokenStorage,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
+        private readonly DevelopmentFeedbackSettings $developmentFeedbackSettings,
     ) {
     }
 
@@ -74,6 +76,9 @@ final class HomeController extends AbstractController
             'user_initials' => $identity['initials'],
             'user_profile_image' => $profileImage,
             'logout_url' => $logoutUrl,
+            'contextual_feedback_available' => $this->developmentFeedbackSettings->isAllowedForRoles($roles),
+            'contextual_feedback_enabled' => $this->developmentFeedbackSettings->isEnabled(),
+            'contextual_feedback_settings_enabled' => $this->developmentFeedbackSettings->canManageSettings($roles),
         ]);
     }
 
