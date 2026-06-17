@@ -248,6 +248,11 @@ app state as a PNG, draws the selected-element marker and manual annotations on
 the image, stores the report and screenshot in PostgreSQL, and posts an Adaptive
 Card to Microsoft Teams through a Teams Workflows webhook.
 
+Before Kiwi renders the PNG, the browser sanitizes the captured page by hiding
+visible page text, form values, media, embedded frames, canvases, SVGs, and CSS
+background images. This preserves the page layout for debugging while keeping
+customer and account data out of feedback screenshots.
+
 Screenshots are stored in PostgreSQL rather than pod-local files so image
 serving remains compatible with multiple Kiwi replicas and `sessionAffinity:
 None`. Teams receives a signed expiring image URL, not a base64 screenshot.

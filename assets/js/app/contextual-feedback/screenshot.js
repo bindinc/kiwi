@@ -1,14 +1,5 @@
 import { toBlob } from 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/+esm';
-
-const SENSITIVE_FIELD_SELECTOR = [
-    'input[type="password"]',
-    'input[name*="token" i]',
-    'input[name*="secret" i]',
-    'input[name*="password" i]',
-    'textarea[name*="token" i]',
-    'textarea[name*="secret" i]',
-    '[data-feedback-mask]'
-].join(',');
+import { redactScreenshotDom } from './screenshot-redaction.js';
 
 export async function captureViewportScreenshot({
     documentRef = document,
@@ -19,7 +10,7 @@ export async function captureViewportScreenshot({
     const viewportWidth = Math.max(1, Math.round(windowRef.innerWidth || root.clientWidth || 1));
     const viewportHeight = Math.max(1, Math.round(windowRef.innerHeight || root.clientHeight || 1));
 
-    const restoreSensitiveFields = maskSensitiveFields(documentRef);
+    const restoreScreenshotDom = redactScreenshotDom(documentRef, { root });
     try {
         const blob = await toBlob(root, {
             cacheBust: true,
@@ -45,35 +36,8 @@ export async function captureViewportScreenshot({
 
         return downscalePngBlob(blob, maxDimension);
     } finally {
-        restoreSensitiveFields();
+        restoreScreenshotDom();
     }
-}
-
-function maskSensitiveFields(documentRef) {
-    const fields = Array.from(documentRef.querySelectorAll(SENSITIVE_FIELD_SELECTOR));
-    const previousValues = fields.map((field) => ({
-        field,
-        value: 'value' in field ? field.value : field.textContent
-    }));
-
-    for (const field of fields) {
-        if ('value' in field) {
-            field.value = '';
-            field.placeholder = 'redacted';
-        } else {
-            field.textContent = 'redacted';
-        }
-    }
-
-    return () => {
-        for (const item of previousValues) {
-            if ('value' in item.field) {
-                item.field.value = item.value;
-            } else {
-                item.field.textContent = item.value;
-            }
-        }
-    };
 }
 
 async function downscalePngBlob(blob, maxDimension) {
