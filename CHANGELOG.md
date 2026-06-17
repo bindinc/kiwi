@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Gate `Nieuw Abonnement Aanmaken` person search and duplicate-checks behind the selected werfsleutel scope, disable the recipient/requester inputs until a werfsleutel is chosen, and forward both configured `divisionId` and `mandant` context from HUP credentials into offer-driven person lookup requests.
 
 ### Fixed
+- Keep local Compose gateway slash redirects relative so browser sessions stay on the configured HTTPS port.
 - Keep `Klant Zoeken` working when the upstream `personsearch` endpoint returns `HTTP 500` for `divisionid`-filtered requests by searching each enabled credential without that broken filter and still returning partial results when one credential fails.
 - Preserve badge and workflow mandant context from the configured HUP credential even when upstream search results expose numeric `divisionId` codes instead of the expected brand keys.
 - Show the same AVROTROS and KRO-NCRV mandant badges in the regular `Klant Zoeken` result list that subscription role search results already render.
