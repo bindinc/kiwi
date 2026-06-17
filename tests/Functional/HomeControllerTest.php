@@ -6,12 +6,31 @@ namespace App\Tests\Functional;
 
 use App\Oidc\OidcClient;
 use App\Security\OidcUser;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class HomeControllerTest extends WebTestCase
 {
     use AuthenticatedClientTrait;
+
+    protected function tearDown(): void
+    {
+        try {
+            $container = static::getContainer();
+            if ($container->has(EntityManagerInterface::class)) {
+                /** @var EntityManagerInterface $entityManager */
+                $entityManager = $container->get(EntityManagerInterface::class);
+                $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS development_feedback_screenshots');
+                $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS development_feedback_reports');
+                $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS development_feedback_configuration');
+                $entityManager->getConnection()->close();
+            }
+        } catch (\Throwable) {
+        }
+
+        parent::tearDown();
+    }
 
     public function testRedirectsToLoginWhenUserIsNotLoggedIn(): void
     {
@@ -140,5 +159,25 @@ final class HomeControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('Kiwi User', (string) $client->getResponse()->getContent());
+    }
+
+    public function testFeedbackSettingsCogOnlyRendersForAdministratorsAndSupervisors(): void
+    {
+        $developer = $this->createAuthenticatedClient(['bink8s.app.kiwi.dev']);
+        $developer->request('GET', '/');
+        self::assertResponseIsSuccessful();
+        self::assertStringNotContainsString('id="contextualFeedbackSettingsButton"', (string) $developer->getResponse()->getContent());
+
+        self::ensureKernelShutdown();
+        $administrator = $this->createAuthenticatedClient(['bink8s.app.kiwi.admin']);
+        $administrator->request('GET', '/');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('id="contextualFeedbackSettingsButton"', (string) $administrator->getResponse()->getContent());
+
+        self::ensureKernelShutdown();
+        $supervisor = $this->createAuthenticatedClient(['bink8s.app.kiwi.supervisor']);
+        $supervisor->request('GET', '/');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('id="contextualFeedbackSettingsButton"', (string) $supervisor->getResponse()->getContent());
     }
 }

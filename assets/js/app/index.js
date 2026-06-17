@@ -19,6 +19,7 @@ import { registerDeliveryDatePickerSlice, initDeliveryDatePicker } from './slice
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
 import { getSharedState, markLegacyScriptLoaded, setLegacyLoadPromise } from './state.js';
 import { installLegacySubscriptionHelpers } from './subscription-shared-helpers.js';
+import { initContextualFeedbackFeature } from './contextual-feedback/index.js';
 
 const sharedState = getSharedState();
 const LEGACY_RUNTIME_SCRIPT_ID = 'kiwi-legacy-call-agent-runtime-script';
@@ -217,6 +218,7 @@ async function bootstrapApplication() {
         await ensureRuntimeScriptsLoaded();
         wireCallAgentRuntimeDependencies();
         await runBootstrapInitialization();
+        initContextualFeedbackFeature();
     } catch (error) {
         if (typeof console !== 'undefined' && typeof console.error === 'function') {
             console.error('Kon applicatie niet volledig initialiseren.', error);

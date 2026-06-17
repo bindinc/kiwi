@@ -26,6 +26,10 @@ final class ApiSecurityHardeningTest extends WebTestCase
                 continue;
             }
 
+            if ('api_development_feedback_screenshot' === $routeName) {
+                continue;
+            }
+
             foreach ($this->resolveRouteMethods($route) as $method) {
                 $client->request(
                     $method,

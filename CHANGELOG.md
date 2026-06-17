@@ -5,7 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+### Added
+- Add first-party contextual feedback with an element picker, required marked PNG screenshots, PostgreSQL-backed report/screenshot storage, signed public screenshot URLs, Teams Workflows Adaptive Card delivery, and admin/supervisor-only settings for the global feedback toggle and Microsoft Teams connector.
+
 ### Changed
+- Sanitize contextual feedback screenshots before capture by hiding visible page text, form values, media, embedded frames, canvases, SVGs, and CSS background images so Teams screenshots cannot include sensitive customer or account data.
 - Rename the local Docker Compose PostgreSQL service from `postgres` to `kiwi-postgres` so Kiwi matches the app-specific database naming used in GitOps.
 
 ## [v1.0.15]

@@ -239,6 +239,66 @@ Kiwi now stores server-side Symfony sessions in PostgreSQL.
 
 `make compose-smoke-oidc` now boots the local `kiwi-postgres` service, runs `app:sessions:bootstrap`, hits `/kiwi/login`, and verifies that `public.kiwi_http_sessions` receives session rows.
 
+## Contextual feedback
+
+Kiwi includes a first-party contextual feedback flow for development feedback.
+When enabled, permitted users see a `Contextual feedback` button in the app
+header. The flow lets the user pick a real page element, captures the visible
+app state as a PNG, draws the selected-element marker and manual annotations on
+the image, stores the report and screenshot in PostgreSQL, and posts an Adaptive
+Card to Microsoft Teams through a Teams Workflows webhook.
+
+Before Kiwi renders the PNG, the browser sanitizes the captured page by hiding
+visible page text, form values, media, embedded frames, canvases, SVGs, and CSS
+background images. This preserves the page layout for debugging while keeping
+customer and account data out of feedback screenshots.
+
+Screenshots are stored in PostgreSQL rather than pod-local files so image
+serving remains compatible with multiple Kiwi replicas and `sessionAffinity:
+None`. Teams receives a signed expiring image URL, not a base64 screenshot.
+
+Runtime defaults are controlled by:
+
+```dotenv
+CONTEXTUAL_FEEDBACK_ENABLED=0
+CONTEXTUAL_FEEDBACK_ALLOWED_ROLES="admin,dev,supervisor"
+CONTEXTUAL_FEEDBACK_WEBHOOK_URL=
+CONTEXTUAL_FEEDBACK_PUBLIC_BASE_URL="https://bdc.rtvmedia.org/kiwi"
+CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS=30
+CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES=3145728
+```
+
+Kiwi administrators and supervisors also see a settings cog immediately left of
+the outbox icon. That modal manages the global feedback-button toggle and the
+Microsoft Teams connector settings. The webhook URL is never sent back to
+browser JavaScript; the modal only shows whether a webhook is configured and
+whether the value comes from the database or the runtime environment.
+
+To create the Teams Workflows webhook:
+
+1. Open Microsoft Teams.
+2. Go to the `KIWI` team and the `development feedback` channel.
+3. Open `Workflows`.
+4. Choose a channel incoming webhook template such as `Send webhook alerts to a channel`, or create a flow with the `When a Teams webhook request is received` trigger.
+5. Configure the message action to post the incoming Adaptive Card payload to the channel.
+6. Save the workflow and copy the generated webhook URL.
+7. Store the webhook in the Kiwi runtime secret store as `CONTEXTUAL_FEEDBACK_WEBHOOK_URL`, or paste it into the admin/supervisor settings modal.
+8. Add at least one co-owner to the workflow so delivery does not depend on one owner account.
+
+For local testing, Teams cannot fetch images from
+`bdc.rtvmedia.org.local` unless a tunnel or reachable preview URL is used. Local
+validation should still confirm that Kiwi stores the PNG and sends an Adaptive
+Card payload with a signed screenshot URL.
+
+Expired screenshot links and old feedback rows can be cleaned with:
+
+```bash
+make console ARGS='app:development-feedback:cleanup'
+```
+
+Use `--report-retention-days=<days>` to override the default 180-day report
+retention.
+
 ## Cluster follow-up
 
 The cluster-side follow-up for `sc-187732` now lives in [docs/CLUSTER_FOLLOW_UP.md](docs/CLUSTER_FOLLOW_UP.md).

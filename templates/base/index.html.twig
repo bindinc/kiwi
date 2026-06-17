@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
     <link rel="stylesheet" href="{{ asset('css/delivery-date-picker.css') }}">
     <link rel="stylesheet" href="{{ asset('css/article-search.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/contextual-feedback.css') }}">
 </head>
 <body>
     <div class="container">
@@ -82,6 +83,18 @@
                                 </div>
                             </div>
                         </div>
+                        {% if contextual_feedback_settings_enabled %}
+                            <button
+                                type="button"
+                                id="contextualFeedbackSettingsButton"
+                                class="contextual-feedback-header-button contextual-feedback-settings-button"
+                                data-feedback-ignore
+                                data-contextual-feedback-settings-url="{{ path('api_development_feedback_settings_read') }}"
+                                aria-label="Settings"
+                                title="Settings">
+                                <span aria-hidden="true">⚙</span>
+                            </button>
+                        {% endif %}
                         <button
                             type="button"
                             id="subscriptionQueueToggle"
@@ -95,6 +108,19 @@
                             <span id="subscriptionQueueToggleCount" class="workbox-toggle-count" style="display: none;">0</span>
                             <span class="sr-only">Aanvraagqueue</span>
                         </button>
+                        {% if contextual_feedback_available %}
+                            <button
+                                type="button"
+                                id="contextualFeedbackButton"
+                                class="contextual-feedback-header-button contextual-feedback-button"
+                                data-feedback-ignore
+                                data-contextual-feedback-api-url="{{ path('api_development_feedback_submit') }}"
+                                aria-label="Contextual feedback"
+                                title="Contextual feedback"
+                                {% if not contextual_feedback_enabled %}hidden{% endif %}>
+                                <span aria-hidden="true">!</span>
+                            </button>
+                        {% endif %}
 
                         <div class="user-info">
                             <span class="time" id="currentTime"></span>
