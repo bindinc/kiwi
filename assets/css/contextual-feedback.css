@@ -92,15 +92,15 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-panel {
     width: min(1360px, 100%);
     min-height: 0;
-    background: #ececec;
+    background: #e7f0f2;
     color: #111827;
-    border: 1px solid #8f8f8f;
+    border: 1px solid #6f929a;
     border-radius: 4px;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     box-shadow:
         0 22px 70px rgba(15, 23, 42, 0.38),
-        inset 0 1px 0 #ffffff;
+        inset 0 1px 0 #f8ffff;
 }
 
 .contextual-feedback-settings-panel {
@@ -116,9 +116,9 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     justify-content: space-between;
     gap: 16px;
     padding: 10px 12px;
-    border-bottom: 1px solid #a9a9a9;
-    background: #dcdcdc;
-    box-shadow: inset 0 1px 0 #ffffff;
+    border-bottom: 1px solid #7fa0a8;
+    background: #d4e5e8;
+    box-shadow: inset 0 1px 0 #f8ffff;
 }
 
 .contextual-feedback-panel-header h2,
@@ -147,12 +147,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-close {
     width: 32px;
     height: 32px;
-    border: 1px solid #8f8f8f;
+    border: 1px solid #6f929a;
     border-radius: 3px;
-    background: #efefef;
+    background: #edf6f7;
     box-shadow:
         inset 1px 1px 0 #ffffff,
-        inset -1px -1px 0 #b5b5b5;
+        inset -1px -1px 0 #a8c0c5;
     cursor: pointer;
 }
 
@@ -163,10 +163,10 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-toolbar {
-    border-right: 1px solid #9e9e9e;
+    border-right: 1px solid #789aa2;
     padding: 10px 8px;
-    background: #d6d6d6;
-    box-shadow: inset -1px 0 0 #f8f8f8;
+    background: #c9dde1;
+    box-shadow: inset -1px 0 0 #f5ffff;
     display: grid;
     align-content: start;
     gap: 6px;
@@ -177,14 +177,14 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-form button[type="submit"] {
     min-height: 34px;
     padding-inline: 10px;
-    border: 1px solid #8f8f8f;
+    border: 1px solid #6f929a;
     border-radius: 3px;
-    background: #eeeeee;
+    background: #eef7f8;
     color: #0f172a;
     cursor: pointer;
     box-shadow:
         inset 1px 1px 0 #ffffff,
-        inset -1px -1px 0 #b8b8b8;
+        inset -1px -1px 0 #aac2c7;
 }
 
 .contextual-feedback-tool {
@@ -199,23 +199,23 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-tool.is-active {
-    border-color: #707070;
-    background: #d0d0d0;
+    border-color: #2f7280;
+    background: #b9d8dc;
     box-shadow:
-        inset 1px 1px 2px #9c9c9c,
-        inset -1px -1px 0 #f5f5f5;
+        inset 1px 1px 2px #7ca7af,
+        inset -1px -1px 0 #f1ffff;
 }
 
 .contextual-feedback-canvas-wrap {
     position: relative;
     min-height: 0;
     overflow: auto;
-    background: #b9b9b9;
+    background: #8ea9af;
     display: flex;
     align-items: flex-start;
     justify-content: center;
     padding: 44px 12px 12px;
-    box-shadow: inset 0 0 0 1px #8f8f8f;
+    box-shadow: inset 0 0 0 1px #5f7f86;
 }
 
 .contextual-feedback-privacy-status {
@@ -250,9 +250,9 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     max-width: 100%;
     height: auto;
     background: #ffffff;
-    border: 1px solid #707070;
+    border: 1px solid #4f6f76;
     box-shadow:
-        0 1px 0 #f8f8f8,
+        0 1px 0 #f8ffff,
         0 10px 22px rgba(15, 23, 42, 0.22);
 }
 
@@ -269,12 +269,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-form {
-    border-top: 1px solid #a9a9a9;
+    border-top: 1px solid #7fa0a8;
     padding: 12px;
-    background: #e5e5e5;
+    background: #dce9ec;
     display: grid;
     gap: 10px;
-    box-shadow: inset 0 1px 0 #ffffff;
+    box-shadow: inset 0 1px 0 #f8ffff;
 }
 
 .contextual-feedback-settings-form {
@@ -323,12 +323,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-form select,
 .contextual-feedback-settings-form input {
     width: 100%;
-    border: 1px solid #8f8f8f;
+    border: 1px solid #6f929a;
     border-radius: 3px;
     padding: 8px 10px;
     background: #ffffff;
     font: inherit;
-    box-shadow: inset 1px 1px 2px #d0d0d0;
+    box-shadow: inset 1px 1px 2px #bed0d4;
 }
 
 .contextual-feedback-switch {
@@ -396,12 +396,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-form button[type="submit"] {
-    background: #3f3f3f;
-    border-color: #2f2f2f;
+    background: #174f5c;
+    border-color: #0e3b45;
     color: #ffffff;
     padding-inline: 18px;
     box-shadow:
-        inset 1px 1px 0 rgba(255, 255, 255, 0.24),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.28),
         inset -1px -1px 0 rgba(0, 0, 0, 0.28);
 }
 
