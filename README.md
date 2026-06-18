@@ -2,6 +2,7 @@
 [![Version](https://img.shields.io/github/v/tag/bindinc/kiwi?sort=semver)](https://github.com/bindinc/kiwi/tags)
 [![Last commit](https://img.shields.io/github/last-commit/bindinc/kiwi?display_timestamp=committer)](https://github.com/bindinc/kiwi/commits)
 [![Release date](https://img.shields.io/github/release-date/bindinc/kiwi?display_date=published_at)](https://github.com/bindinc/kiwi/releases)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 # Customer Service Portal - Magazine Subscriptions
 
@@ -491,7 +492,7 @@ The local image build uses the Dockerfile `prod` target so it matches the releas
 
 ## License
 
-This is a Proof of Concept for internal use.
+Kiwi is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full license text.
 
 ## Support
 
