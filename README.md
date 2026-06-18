@@ -65,7 +65,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Runs as a Symfony 7.4 LTS application on FrankenPHP with PHP 8.4.
 - Twig templates live under `templates/`.
 - Frontend source assets live under `assets/`.
-- The migration contract is documented in `docs/SYMFONY_MIGRATION_CONTRACT_MATRIX.md`.
+- The migration contract is documented in `docs/reference/symfony-migration-contract-matrix.md`.
 - `.env` is the committed default configuration for local development.
 - `.env.local` is the local-only override file.
 
@@ -301,7 +301,7 @@ retention.
 
 ## Cluster follow-up
 
-The cluster-side follow-up for `sc-187732` now lives in [docs/CLUSTER_FOLLOW_UP.md](docs/CLUSTER_FOLLOW_UP.md).
+The cluster-side follow-up for `sc-187732` now lives in [docs/explanation/cluster-follow-up.md](docs/explanation/cluster-follow-up.md).
 
 That document captures the remaining GitOps work, including the requirement to validate and roll out with 3 replicas per active and preview track.
 
@@ -335,7 +335,7 @@ Use the guardrail script before opening/refining refactor PRs:
 script/check
 ```
 
-Convention details are documented in `docs/ACTION_ROUTER_CONVENTIONS.md`.
+Convention details are documented in `docs/reference/action-router-conventions.md`.
 
 ## Container Images
 
@@ -423,7 +423,7 @@ The local image build uses the Dockerfile `prod` target so it matches the releas
 - Prefer vertical slices: a small, end-to-end change you can demo in 2-3 steps.
 - Use feature flags to land partial work safely when needed.
 - Optional: use `git worktree` for parallel local checkouts without switching branches.
-- Details and examples live in `docs/BRANCHING.md`.
+- Details and examples live in `docs/how-to/branching.md`.
 
 ## Usage Scenarios
 
