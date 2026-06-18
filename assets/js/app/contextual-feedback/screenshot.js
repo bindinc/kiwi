@@ -1,32 +1,40 @@
 import { toBlob } from 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/+esm';
-import { redactScreenshotDom } from './screenshot-redaction.js';
+import { createPseudonymContext, pseudonymizeSelectedElement, redactScreenshotDom } from './screenshot-redaction.js';
 
-export async function captureViewportScreenshot({
+export async function captureElementScreenshot({
+    element,
+    selectedElement,
     documentRef = document,
-    windowRef = window,
     maxDimension = 1600
 } = {}) {
-    const root = documentRef.body;
-    const viewportWidth = Math.max(1, Math.round(windowRef.innerWidth || root.clientWidth || 1));
-    const viewportHeight = Math.max(1, Math.round(windowRef.innerHeight || root.clientHeight || 1));
+    if (!element) {
+        throw new Error('No element selected for screenshot capture.');
+    }
 
-    const restoreScreenshotDom = redactScreenshotDom(documentRef, { root });
+    const rect = element.getBoundingClientRect();
+    const captureWidth = Math.max(1, Math.round(rect.width || element.scrollWidth || 1));
+    const captureHeight = Math.max(1, Math.round(rect.height || element.scrollHeight || 1));
+    const context = createPseudonymContext();
+
+    const restoreScreenshotDom = redactScreenshotDom(documentRef, { root: documentRef.body, context });
     try {
-        const blob = await toBlob(root, {
+        const safeSelectedElement = pseudonymizeSelectedElement(selectedElement, context);
+        const blob = await toBlob(element, {
             cacheBust: true,
             pixelRatio: 1,
-            width: viewportWidth,
-            height: viewportHeight,
-            canvasWidth: viewportWidth,
-            canvasHeight: viewportHeight,
+            width: captureWidth,
+            height: captureHeight,
+            canvasWidth: captureWidth,
+            canvasHeight: captureHeight,
             backgroundColor: '#ffffff',
             filter(node) {
                 return !(node instanceof Element) || !node.closest('[data-feedback-ignore]');
             },
             style: {
-                width: `${viewportWidth}px`,
-                height: `${viewportHeight}px`,
-                overflow: 'hidden'
+                width: `${captureWidth}px`,
+                minWidth: `${captureWidth}px`,
+                height: `${captureHeight}px`,
+                minHeight: `${captureHeight}px`
             }
         });
 
@@ -34,7 +42,11 @@ export async function captureViewportScreenshot({
             throw new Error('Screenshot capture returned no image.');
         }
 
-        return downscalePngBlob(blob, maxDimension);
+        return {
+            ...await downscalePngBlob(blob, maxDimension),
+            selectedElement: safeSelectedElement,
+            privacySummary: { ...context.privacySummary }
+        };
     } finally {
         restoreScreenshotDom();
     }

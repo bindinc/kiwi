@@ -1,34 +1,36 @@
 import { AnnotationCanvas } from './annotation-canvas.js';
 
 const TOOLS = [
-    ['pointer', 'Pointer', 'Select'],
-    ['rectangle', 'Rect', 'Rectangle'],
-    ['arrow', 'Arrow', 'Arrow'],
-    ['pin', 'Pin', 'Pin'],
-    ['text', 'Text', 'Text'],
-    ['blur', 'Redact', 'Redact']
+    ['pointer', '↖', 'Select'],
+    ['rectangle', '□', 'Rectangle'],
+    ['arrow', '↗', 'Arrow'],
+    ['pin', '!', 'Pin'],
+    ['text', 'T', 'Text'],
+    ['blur', '■', 'Redact']
 ];
 
 export async function openFeedbackDialog({
     documentRef = document,
     screenshotBlob,
-    selectedRect,
     selectedElement,
+    privacySummary = {},
     onSubmit,
-    onCancel
+    onCancel,
+    onRetake
 }) {
     const modal = documentRef.createElement('div');
     modal.className = 'contextual-feedback-modal';
     modal.dataset.feedbackIgnore = 'true';
-    modal.innerHTML = dialogTemplate(selectedElement);
+    modal.innerHTML = dialogTemplate(selectedElement, privacySummary);
     documentRef.body.append(modal);
+    documentRef.body.classList.add('contextual-feedback-reviewing');
 
     const canvas = modal.querySelector('[data-feedback-canvas]');
     const form = modal.querySelector('[data-feedback-form]');
     const errorBox = modal.querySelector('[data-feedback-error]');
     const statusBox = modal.querySelector('[data-feedback-status]');
     const submitButton = modal.querySelector('[data-feedback-submit]');
-    const annotationCanvas = new AnnotationCanvas({ canvas, screenshotBlob, selectedRect });
+    const annotationCanvas = new AnnotationCanvas({ canvas, screenshotBlob });
     await annotationCanvas.initialize();
 
     modal.querySelector('[data-feedback-close]').addEventListener('click', () => {
@@ -48,6 +50,10 @@ export async function openFeedbackDialog({
 
     modal.querySelector('[data-feedback-undo]').addEventListener('click', () => annotationCanvas.undo());
     modal.querySelector('[data-feedback-clear]').addEventListener('click', () => annotationCanvas.clear());
+    modal.querySelector('[data-feedback-retake]').addEventListener('click', () => {
+        cleanup();
+        onRetake?.();
+    });
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -84,13 +90,18 @@ export async function openFeedbackDialog({
     function cleanup() {
         annotationCanvas.destroy();
         modal.remove();
+        documentRef.body.classList.remove('contextual-feedback-reviewing');
     }
 }
 
-function dialogTemplate(selectedElement) {
+function dialogTemplate(selectedElement, privacySummary) {
     const toolButtons = TOOLS.map(([tool, label, title], index) => `
-        <button type="button" class="contextual-feedback-tool${index === 0 ? ' is-active' : ''}" data-feedback-tool="${tool}" title="${escapeHtml(title)}">${escapeHtml(label)}</button>
+        <button type="button" class="contextual-feedback-tool${index === 0 ? ' is-active' : ''}" data-feedback-tool="${tool}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(label)}</button>
     `).join('');
+    const hiddenElements = Number(privacySummary.hiddenElements || 0);
+    const hiddenWarning = hiddenElements > 0
+        ? `<p class="contextual-feedback-warning">Some media or marked regions were hidden because they cannot be pseudonymized reliably.</p>`
+        : '';
 
     return `
         <div class="contextual-feedback-panel" role="dialog" aria-modal="true" aria-labelledby="contextualFeedbackTitle">
@@ -104,6 +115,11 @@ function dialogTemplate(selectedElement) {
             <div class="contextual-feedback-workspace">
                 <div class="contextual-feedback-toolbar">${toolButtons}</div>
                 <div class="contextual-feedback-canvas-wrap">
+                    <div class="contextual-feedback-privacy-status" aria-label="Screenshot privacy status">
+                        <span>Pseudo data applied</span>
+                        <span>${hiddenElements > 0 ? 'Media hidden' : 'No hidden regions'}</span>
+                        <span>Manual redaction available</span>
+                    </div>
                     <canvas data-feedback-canvas></canvas>
                 </div>
             </div>
@@ -134,9 +150,11 @@ function dialogTemplate(selectedElement) {
                         </select>
                     </label>
                 </div>
-                <p class="contextual-feedback-note">The marked screenshot replaces sensitive page data with pseudo data and hides media before it is posted to the KIWI Teams channel.</p>
+                <p class="contextual-feedback-note">The modal shows only the selected element crop with pseudo data. Teams receives the annotated crop, your comment, severity, category, page route, viewport, and the sanitized selected-element selector.</p>
+                ${hiddenWarning}
                 <div class="contextual-feedback-actions">
                     <div>
+                        <button type="button" data-feedback-retake>Retake screenshot</button>
                         <button type="button" data-feedback-undo>Undo</button>
                         <button type="button" data-feedback-clear>Clear</button>
                     </div>

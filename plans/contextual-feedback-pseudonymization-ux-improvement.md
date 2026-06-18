@@ -27,6 +27,26 @@ Key finding: the screenshot canvas now contains pseudo data, but the user-visibl
 
 ## Problems to fix
 
+### 0. Screenshot captures full page instead of cropping to the selected element
+
+The current implementation takes a full-page screenshot and draws an orange outline box around the selected element, rather than cropping the screenshot to the selected element's bounds. This is the inverse of the intended behavior, which should work like Firefox's built-in `Ctrl+Shift+S` element screenshot: the captured image is cropped to exactly the selected element, with no surrounding page content included.
+
+Current behavior:
+- A full-page screenshot is captured.
+- An orange border box is rendered on top to mark the selected area.
+- The modal canvas shows the entire page with a misplaced overlay marker.
+
+Expected behavior:
+- The screenshot is cropped to the bounding box of the selected element.
+- No orange marker box is drawn; the crop itself communicates the selection boundary.
+- The modal canvas shows only the selected element's region, matching the Firefox `Ctrl+Shift+S` crop UX.
+
+Acceptance criteria:
+
+- Selecting `#customerName` produces a canvas that contains only the customer name element region, not the full page.
+- No orange outline box appears on the canvas.
+- The crop dimensions match the element's `getBoundingClientRect()` output.
+
 ### 1. Real sensitive text leaks outside the captured canvas
 
 The modal header currently shows the selected element label as real data:
@@ -80,6 +100,21 @@ The frontend unit tests verify pseudonymization and restore behavior, but they d
 - the feature still works in the real compose/OIDC flow.
 
 ## Recommended implementation plan
+
+### Phase 0: fix screenshot crop behavior
+
+Replace the full-page-plus-overlay approach with an element-cropped capture, matching the Firefox `Ctrl+Shift+S` UX.
+
+- Use `html2canvas` (or the existing capture library) scoped to the selected element's bounding box instead of the full document.
+- Alternatively, capture the full page and crop the resulting canvas to `getBoundingClientRect()` coordinates before displaying it in the modal.
+- Remove the orange outline box rendering entirely; the crop boundary makes the selection self-evident.
+- Pseudonymization must still be applied before the crop, so the captured region already contains pseudo data.
+
+Acceptance criteria:
+
+- The modal canvas shows only the selected element region, not the full page.
+- No orange border box appears in any captured image.
+- Capturing `#customerName` yields a canvas whose dimensions are within a few pixels of the element's rendered size.
 
 ### Phase 1: sanitize the whole feedback review surface
 
@@ -200,10 +235,11 @@ Acceptance criteria:
 
 ## Suggested priority
 
-1. Fix modal/header/background leaks first.
-2. Add customer-scoped pseudo profiles.
-3. Improve long-text/domain-specific pseudonymization.
-4. Refine annotation UI and privacy status affordances.
-5. Add compose-backed Playwright coverage.
+1. Fix screenshot crop (element-crop instead of full-page + orange box marker).
+2. Fix modal/header/background leaks.
+3. Add customer-scoped pseudo profiles.
+4. Improve long-text/domain-specific pseudonymization.
+5. Refine annotation UI and privacy status affordances.
+6. Add compose-backed Playwright coverage.
 
 The current implementation proves that DOM pseudonymization can work, but the product should not be considered privacy-complete until the full feedback review surface, not only the canvas, is sanitized.

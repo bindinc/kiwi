@@ -25,27 +25,64 @@ const REDACTION_STYLES = `
     }
 `;
 
+const PSEUDO_PROFILES = [
+    {
+        name: 'Sophie de Vries',
+        initials: 'S.',
+        lastName: 'de Vries',
+        email: 'sophie.devries@example.test',
+        phone: '0612345678',
+        address: 'Dorpsstraat 12',
+        postalCode: '1234 AB',
+        city: 'Utrecht',
+        personReference: '10012345',
+        date: '14-03-1986'
+    },
+    {
+        name: 'Nora Bakker',
+        initials: 'N.',
+        lastName: 'Bakker',
+        email: 'nora.bakker@example.test',
+        phone: '0201234567',
+        address: 'Stationsweg 8',
+        postalCode: '2345 CD',
+        city: 'Amersfoort',
+        personReference: '10067890',
+        date: '22-09-1978'
+    },
+    {
+        name: 'Daan Visser',
+        initials: 'D.',
+        lastName: 'Visser',
+        email: 'daan.visser@example.test',
+        phone: '0307654321',
+        address: 'Voorbeeldstraat 24',
+        postalCode: '3456 EF',
+        city: 'Rotterdam',
+        personReference: '10024680',
+        date: '05-11-1991'
+    }
+];
+
 const PSEUDO_VALUES = {
-    name: ['Sophie de Vries', 'Mark Jansen', 'Nora Bakker', 'Daan Visser'],
-    email: ['sophie.devries@example.test', 'mark.jansen@example.test', 'nora.bakker@example.test'],
-    phone: ['0612345678', '0201234567', '0307654321'],
-    address: ['Dorpsstraat 12, 1234 AB Utrecht', 'Stationsweg 8, 2345 CD Amersfoort'],
-    'postal-code': ['1234 AB', '2345 CD', '3456 EF'],
+    name: [],
+    email: [],
+    phone: [],
+    address: [],
+    'postal-code': [],
     iban: ['NL91 ABNA 0417 1643 00', 'BE68 5390 0754 7034'],
-    id: ['10012345', '10067890', '10024680'],
-    date: ['14-03-1986', '22-09-1978', '05-11-1991'],
+    id: [],
+    date: [],
     'free-text': ['Klantnotitie met testgegevens', 'Contactmoment met voorbeeldtekst']
 };
 
-export function redactScreenshotDom(documentRef = document, { root = documentRef.body } = {}) {
+export function redactScreenshotDom(documentRef = document, { root = documentRef.body, context = createPseudonymContext() } = {}) {
     if (!root) {
         return () => {};
     }
 
     const restores = [];
     const elements = collectElements(root);
-    const context = createPseudonymContext();
-
     installRedactionStyles(documentRef, restores);
 
     for (const element of elements) {
@@ -60,13 +97,56 @@ export function redactScreenshotDom(documentRef = document, { root = documentRef
         }
 
         if (isMediaElement(element) || isRedactedElement(element)) {
-            hideElement(element, restores);
+            hideElement(element, restores, context);
         }
     }
 
     redactTextNodes(root, context, restores);
 
     return () => restoreAll(restores);
+}
+
+export function createPseudonymContext() {
+    const nextIndexByType = {};
+    for (const type of Object.keys(PSEUDO_VALUES)) {
+        nextIndexByType[type] = 0;
+    }
+
+    return {
+        replacements: new Map(),
+        profileBySourceKey: new Map(),
+        nextProfileIndex: 0,
+        currentProfile: PSEUDO_PROFILES[0],
+        nextIndexByType,
+        privacySummary: {
+            pseudoValues: 0,
+            hiddenElements: 0
+        }
+    };
+}
+
+export function pseudonymizeFeedbackText(value, sensitivityType = '', context = createPseudonymContext()) {
+    const originalValue = String(value || '');
+    if (!originalValue.trim()) {
+        return originalValue;
+    }
+
+    const normalizedType = normalizeSensitivityType(sensitivityType) || inferSensitivityType(originalValue) || 'free-text';
+    return pseudonymizeValue(originalValue, normalizedType, context);
+}
+
+export function pseudonymizeSelectedElement(selectedElement, context = createPseudonymContext()) {
+    if (!selectedElement) {
+        return selectedElement;
+    }
+
+    return {
+        ...selectedElement,
+        label: pseudonymizeFeedbackText(selectedElement.label || '', inferTypeFromName(selectedElement.selector || '') || 'free-text', context),
+        textSample: selectedElement.textSample
+            ? pseudonymizeFeedbackText(selectedElement.textSample, inferTypeFromName(selectedElement.selector || '') || 'free-text', context)
+            : selectedElement.textSample
+    };
 }
 
 function installRedactionStyles(documentRef, restores) {
@@ -320,11 +400,11 @@ function inferTypeFromName(value) {
     if (/(birthday|birth|geboorte|datum|date)/.test(normalizedValue)) {
         return 'date';
     }
-    if (/(customer|klant|person|persoon|subscriber|abon|id|nummer|nr)/.test(normalizedValue)) {
-        return 'id';
-    }
     if (/(name|naam|initial|voorletter|tussenvoegsel|achternaam|voornaam)/.test(normalizedValue)) {
         return 'name';
+    }
+    if (/(customer|klant|person|persoon|subscriber|abon|id|nummer|nr)/.test(normalizedValue)) {
+        return 'id';
     }
     if (/(note|remark|description|opmerking|notitie|omschrijving)/.test(normalizedValue)) {
         return 'free-text';
@@ -351,23 +431,151 @@ function pseudonymizeValue(value, sensitivityType, context) {
         return existingValue;
     }
 
+    if (usesCustomerProfile(normalizedType)) {
+        const nextValue = pseudonymizeProfileValue(originalValue, normalizedType, context);
+        context.replacements.set(key, nextValue);
+        context.privacySummary.pseudoValues += 1;
+        return nextValue;
+    }
+
+    if (normalizedType === 'free-text') {
+        const nextValue = pseudonymizeFreeText(originalValue, context);
+        context.replacements.set(key, nextValue);
+        context.privacySummary.pseudoValues += 1;
+        return nextValue;
+    }
+
     const values = PSEUDO_VALUES[normalizedType] || PSEUDO_VALUES['free-text'];
     const nextValue = values[context.nextIndexByType[normalizedType] % values.length];
     context.nextIndexByType[normalizedType] += 1;
     context.replacements.set(key, nextValue);
+    context.privacySummary.pseudoValues += 1;
     return nextValue;
 }
 
-function createPseudonymContext() {
-    const nextIndexByType = {};
-    for (const type of Object.keys(PSEUDO_VALUES)) {
-        nextIndexByType[type] = 0;
+function usesCustomerProfile(sensitivityType) {
+    return ['name', 'email', 'phone', 'address', 'postal-code', 'id', 'date'].includes(sensitivityType);
+}
+
+function pseudonymizeProfileValue(value, sensitivityType, context) {
+    const profile = resolveProfile(value, sensitivityType, context);
+
+    if (sensitivityType === 'name') {
+        return pseudoNameForValue(value, profile);
+    }
+    if (sensitivityType === 'email') {
+        return profile.email;
+    }
+    if (sensitivityType === 'phone') {
+        return profile.phone;
+    }
+    if (sensitivityType === 'address') {
+        return `${profile.address}, ${profile.postalCode} ${profile.city}`;
+    }
+    if (sensitivityType === 'postal-code') {
+        return profile.postalCode;
+    }
+    if (sensitivityType === 'id') {
+        return profile.personReference;
+    }
+    if (sensitivityType === 'date') {
+        return profile.date;
     }
 
-    return {
-        replacements: new Map(),
-        nextIndexByType
-    };
+    return profile.name;
+}
+
+function resolveProfile(value, sensitivityType, context) {
+    const sourceKey = sourceKeyForValue(value, sensitivityType, context);
+    if (sourceKey) {
+        const existingProfile = context.profileBySourceKey.get(sourceKey);
+        if (existingProfile) {
+            context.currentProfile = existingProfile;
+            return existingProfile;
+        }
+
+        const nextProfile = PSEUDO_PROFILES[context.nextProfileIndex % PSEUDO_PROFILES.length];
+        context.nextProfileIndex += 1;
+        context.profileBySourceKey.set(sourceKey, nextProfile);
+        context.currentProfile = nextProfile;
+        return nextProfile;
+    }
+
+    return context.currentProfile || PSEUDO_PROFILES[0];
+}
+
+function sourceKeyForValue(value, sensitivityType, context) {
+    const normalizedValue = String(value || '').toLowerCase();
+    if (!normalizedValue) {
+        return '';
+    }
+
+    for (const sourceKey of context.profileBySourceKey.keys()) {
+        if (sourceKey && normalizedValue.includes(sourceKey)) {
+            return sourceKey;
+        }
+    }
+
+    if (sensitivityType === 'name') {
+        const nameKey = extractNameKey(normalizedValue);
+        return nameKey || '';
+    }
+
+    return '';
+}
+
+function extractNameKey(value) {
+    const ignoredWords = new Set(['dhr', 'mevr', 'mw', 'mr', 'mrs', 'ms', 'de', 'den', 'der', 'het', 'van']);
+    const words = String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z\s]/g, ' ')
+        .split(/\s+/)
+        .filter((word) => word.length > 1 && !ignoredWords.has(word));
+
+    return words.at(-1) || '';
+}
+
+function pseudoNameForValue(value, profile) {
+    const normalizedValue = String(value || '').trim();
+    if (/^[A-Z]\.?$/i.test(normalizedValue)) {
+        return profile.initials;
+    }
+    if (!/\s/.test(normalizedValue) && normalizedValue.length > 1) {
+        return profile.lastName;
+    }
+
+    return profile.name;
+}
+
+function pseudonymizeFreeText(value, context) {
+    let nextValue = String(value || '');
+    nextValue = nextValue.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, () => pseudonymizeValue('email-in-text', 'email', context));
+    nextValue = nextValue.replace(/\b(?:\+31|0031|0)[1-9][0-9\s-]{7,12}\b/g, () => pseudonymizeValue('phone-in-text', 'phone', context));
+    nextValue = nextValue.replace(/\b[1-9][0-9]{3}\s?[A-Z]{2}\b/gi, () => pseudonymizeValue('postal-in-text', 'postal-code', context));
+    nextValue = nextValue.replace(/\b(?:NL|BE)\d{2}[A-Z0-9 ]{8,24}\b/gi, () => pseudonymizeValue('iban-in-text', 'iban', context));
+    nextValue = nextValue.replace(/\b[A-ZÀ-ſ][A-Za-zÀ-ſ'-]+(?:straat|weg|laan|plein|pad|dijk|hof|kade|singel)\s+\d+[A-Z]?\b/gi, () => {
+        const profile = context.currentProfile || PSEUDO_PROFILES[0];
+        return profile.address;
+    });
+    nextValue = nextValue.replace(/\b(?:persoon|klant|abon\.?nr|id)\s*#?\d{5,}\b/gi, () => `persoon ${pseudonymizeValue('person-reference-in-text', 'id', context)}`);
+
+    if (nextValue !== value) {
+        return nextValue;
+    }
+
+    if (/factur|invoice|incasso|betaling|betaal|payment/i.test(value)) {
+        return 'Vraag over facturatie. Uitleg gegeven over betaalwijze.';
+    }
+    if (/adres|verhuis/i.test(value)) {
+        const profile = context.currentProfile || PSEUDO_PROFILES[0];
+        return `Adres gewijzigd naar ${profile.address}, ${profile.postalCode} ${profile.city}.`;
+    }
+
+    const values = PSEUDO_VALUES['free-text'];
+    const nextIndex = context.nextIndexByType['free-text'] % values.length;
+    context.nextIndexByType['free-text'] += 1;
+    return values[nextIndex];
 }
 
 function describeElement(element) {
@@ -380,7 +588,11 @@ function describeElement(element) {
     ].join(' ');
 }
 
-function hideElement(element, restores) {
+function hideElement(element, restores, context = null) {
+    if (context?.privacySummary) {
+        context.privacySummary.hiddenElements += 1;
+    }
+
     setStyleProperty(element, 'visibility', 'hidden', restores);
 }
 

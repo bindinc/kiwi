@@ -167,6 +167,29 @@ sandbox after explicit approval.
 
 ## Run the contextual feedback privacy smoke test
 
+Use the repo-native smoke command when a local Compose stack is already running:
+
+```bash
+make compose-smoke-feedback-privacy
+```
+
+The command loads Playwright from
+`/home/bartdeijkers/emailtemplates/node_modules/playwright` by default because
+this repository does not vendor Playwright. Override that path when needed:
+
+```bash
+PLAYWRIGHT_MODULE_PATH=/path/to/node_modules/playwright make compose-smoke-feedback-privacy
+```
+
+The smoke test maps `bdc.rtvmedia.org.local` to `127.0.0.1`, ignores local CA
+certificate errors, writes failure screenshots to
+`/tmp/kiwi-feedback-privacy-smoke`, and fails when real Jansen data appears in
+the feedback modal text, when the live page behind the modal is not strongly
+hidden, or when the captured canvas is blank or not cropped to the selected
+element.
+
+## Manual contextual feedback privacy scenario
+
 Use this scenario to test the feedback screenshot privacy behavior:
 
 1. Log in as `kiwi-admin`.
@@ -231,6 +254,12 @@ Run these after code or docs changes:
 make js-test
 make guardrail
 git diff --check
+```
+
+Run the browser smoke test for contextual feedback screenshot/privacy changes:
+
+```bash
+make compose-smoke-feedback-privacy
 ```
 
 Run `make phpunit` when backend behavior, API contracts, or persistence are

@@ -1,5 +1,4 @@
 const TOOL_COLORS = {
-    selected: '#f97316',
     rectangle: '#ef4444',
     arrow: '#ef4444',
     pin: '#f97316',
@@ -8,11 +7,10 @@ const TOOL_COLORS = {
 };
 
 export class AnnotationCanvas {
-    constructor({ canvas, screenshotBlob, selectedRect }) {
+    constructor({ canvas, screenshotBlob }) {
         this.canvas = canvas;
         this.context = canvas.getContext('2d');
         this.screenshotBlob = screenshotBlob;
-        this.selectedRect = selectedRect;
         this.tool = 'pointer';
         this.annotations = [];
         this.draft = null;
@@ -29,14 +27,7 @@ export class AnnotationCanvas {
         this.image = await loadImage(this.screenshotBlob);
         this.canvas.width = this.image.width;
         this.canvas.height = this.image.height;
-        this.annotations = [{
-            type: 'rectangle',
-            x: this.selectedRect.x,
-            y: this.selectedRect.y,
-            width: this.selectedRect.width,
-            height: this.selectedRect.height,
-            color: TOOL_COLORS.selected
-        }];
+        this.annotations = [];
         this.canvas.addEventListener('pointerdown', this.handlePointerDown);
         this.canvas.addEventListener('pointermove', this.handlePointerMove);
         this.canvas.addEventListener('pointerup', this.handlePointerUp);
@@ -54,7 +45,7 @@ export class AnnotationCanvas {
     }
 
     undo() {
-        if (this.annotations.length <= 1) {
+        if (this.annotations.length === 0) {
             return;
         }
 
@@ -64,7 +55,7 @@ export class AnnotationCanvas {
     }
 
     clear() {
-        this.annotations = this.annotations.slice(0, 1);
+        this.annotations = [];
         this.render();
         this.changeHandler?.(this.getAnnotations());
     }

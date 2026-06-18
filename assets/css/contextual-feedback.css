@@ -64,11 +64,17 @@
     position: fixed;
     inset: 0;
     z-index: 10010;
-    background: rgba(15, 23, 42, 0.72);
+    background: rgba(15, 23, 42, 0.86);
+    backdrop-filter: blur(14px);
     display: flex;
     align-items: stretch;
     justify-content: center;
-    padding: 24px;
+    padding: 16px;
+}
+
+body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-feedback-ignore]) {
+    filter: blur(18px);
+    opacity: 0.08;
 }
 
 .contextual-feedback-settings-modal {
@@ -84,7 +90,7 @@
 }
 
 .contextual-feedback-panel {
-    width: min(1180px, 100%);
+    width: min(1360px, 100%);
     min-height: 0;
     background: #ffffff;
     color: #111827;
@@ -145,7 +151,7 @@
 .contextual-feedback-workspace {
     min-height: 0;
     display: grid;
-    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-columns: 96px minmax(0, 1fr);
 }
 
 .contextual-feedback-toolbar {
@@ -167,19 +173,52 @@
     cursor: pointer;
 }
 
+.contextual-feedback-tool {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    justify-self: center;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1;
+}
+
 .contextual-feedback-tool.is-active {
     border-color: #f97316;
     background: #fff7ed;
 }
 
 .contextual-feedback-canvas-wrap {
+    position: relative;
     min-height: 0;
     overflow: auto;
     background: #e2e8f0;
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 16px;
+    padding: 44px 12px 12px;
+}
+
+.contextual-feedback-privacy-status {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    pointer-events: none;
+}
+
+.contextual-feedback-privacy-status span {
+    padding: 4px 8px;
+    border: 1px solid #bbf7d0;
+    border-radius: 999px;
+    background: #f0fdf4;
+    color: #166534;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
 }
 
 .contextual-feedback-canvas-wrap canvas {
@@ -283,6 +322,7 @@
 }
 
 .contextual-feedback-note,
+.contextual-feedback-warning,
 .contextual-feedback-status,
 .contextual-feedback-error {
     margin: 0;
@@ -291,6 +331,14 @@
 
 .contextual-feedback-note {
     color: #475569;
+}
+
+.contextual-feedback-warning {
+    padding: 8px 10px;
+    border: 1px solid #fed7aa;
+    border-radius: 6px;
+    background: #fff7ed;
+    color: #9a3412;
 }
 
 .contextual-feedback-status {

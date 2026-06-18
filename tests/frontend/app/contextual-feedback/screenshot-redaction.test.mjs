@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { redactScreenshotDom } from '../../../../assets/js/app/contextual-feedback/screenshot-redaction.js';
+import {
+    createPseudonymContext,
+    pseudonymizeSelectedElement,
+    redactScreenshotDom
+} from '../../../../assets/js/app/contextual-feedback/screenshot-redaction.js';
 
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
@@ -139,9 +143,9 @@ function testTypedPseudoValuesAndFormRestore() {
     const restore = redactScreenshotDom({ body: root });
 
     assert.equal(emailInput.value, 'sophie.devries@example.test');
-    assert.equal(emailInput.placeholder, 'mark.jansen@example.test');
+    assert.equal(emailInput.placeholder, 'sophie.devries@example.test');
     assert.equal(phoneInput.value, '0612345678');
-    assert.equal(notes.value, 'Klantnotitie met testgegevens');
+    assert.equal(notes.value, 'Vraag over facturatie. Uitleg gegeven over betaalwijze.');
 
     restore();
 
@@ -185,6 +189,59 @@ function testRepeatedValuesUseStableReplacement() {
     assert.equal(secondEmail.nodeValue, 'sophie.devries@example.test');
 
     restore();
+}
+
+function testCustomerProfileKeepsRelatedValuesConsistent() {
+    const searchValue = new FakeElement('input', { 'data-feedback-sensitive': 'name' }, {
+        type: 'search',
+        value: 'Jansen'
+    });
+    const customerName = new FakeText('Mevr. M. Jansen');
+    const customerInitials = new FakeText('M.');
+    const customerEmail = new FakeText('maria.jansen@email.nl');
+    const customerPhone = new FakeText('06-87654321');
+    const customerAddress = new FakeText('Wijnhaven 15');
+    const customerPostalCode = new FakeText('3011BD');
+    const root = new FakeElement('main', {}, {
+        children: [
+            searchValue,
+            new FakeElement('h2', { id: 'customerName', 'data-feedback-sensitive': 'name' }, { children: [customerName] }),
+            new FakeElement('span', { 'data-feedback-sensitive': 'name' }, { children: [customerInitials] }),
+            new FakeElement('span', { 'data-feedback-sensitive': 'email' }, { children: [customerEmail] }),
+            new FakeElement('span', { 'data-feedback-sensitive': 'phone' }, { children: [customerPhone] }),
+            new FakeElement('span', { 'data-feedback-sensitive': 'address' }, { children: [customerAddress] }),
+            new FakeElement('span', { 'data-feedback-sensitive': 'postal-code' }, { children: [customerPostalCode] })
+        ]
+    });
+
+    const restore = redactScreenshotDom({ body: root });
+
+    assert.equal(searchValue.value, 'de Vries');
+    assert.equal(customerName.nodeValue, 'Sophie de Vries');
+    assert.equal(customerInitials.nodeValue, 'S.');
+    assert.equal(customerEmail.nodeValue, 'sophie.devries@example.test');
+    assert.equal(customerPhone.nodeValue, '0612345678');
+    assert.equal(customerAddress.nodeValue, 'Dorpsstraat 12, 1234 AB Utrecht');
+    assert.equal(customerPostalCode.nodeValue, '1234 AB');
+
+    restore();
+
+    assert.equal(searchValue.value, 'Jansen');
+    assert.equal(customerName.nodeValue, 'Mevr. M. Jansen');
+}
+
+function testSelectedElementDescriptionIsPseudonymized() {
+    const context = createPseudonymContext();
+    const safeElement = pseudonymizeSelectedElement({
+        tag: 'h2',
+        label: 'Mevr. M. Jansen',
+        selector: '#customerName',
+        textSample: 'Mevr. M. Jansen'
+    }, context);
+
+    assert.equal(safeElement.label, 'Sophie de Vries');
+    assert.equal(safeElement.selector, '#customerName');
+    assert.equal(safeElement.textSample, 'Sophie de Vries');
 }
 
 function testPatternFallbackCatchesUnmarkedSensitiveValues() {
@@ -255,12 +312,50 @@ function testMediaMaskAndBackgroundsAreHiddenAndRestored() {
     assert.equal(root.style.backgroundImage, 'none');
     assert.equal(accountPanel.style.visibility, 'hidden');
     assert.equal(profilePhoto.style.visibility, 'hidden');
+    assert.equal(restore.privacySummary?.hiddenElements, undefined);
 
     restore();
 
     assert.equal(root.style.backgroundImage, 'url(customer-card.png)');
     assert.equal(accountPanel.style.visibility, '');
     assert.equal(profilePhoto.style.visibility, 'visible');
+}
+
+function testPrivacySummaryCountsPseudoValuesAndHiddenElements() {
+    const context = createPseudonymContext();
+    const customerName = new FakeText('Jane Sensitive');
+    const nameElement = new FakeElement('h2', { 'data-feedback-sensitive': 'name' }, {
+        children: [customerName]
+    });
+    const profilePhoto = new FakeElement('img');
+    const root = new FakeElement('main', {}, { children: [nameElement, profilePhoto] });
+
+    const restore = redactScreenshotDom({ body: root }, { context });
+
+    assert.equal(context.privacySummary.pseudoValues, 1);
+    assert.equal(context.privacySummary.hiddenElements, 1);
+
+    restore();
+}
+
+function testFreeTextKeepsDomainContextAndReplacesPii() {
+    const contactHistory = new FakeText('Vraag over facturatie voor maria.jansen@email.nl. Uitleg gegeven over automatische incasso.');
+    const addressHistory = new FakeText('Adres gewijzigd van Kerkstraat 10 naar Damstraat 42.');
+    const root = new FakeElement('main', {}, {
+        children: [
+            new FakeElement('div', { 'data-feedback-sensitive': 'free-text' }, { children: [contactHistory] }),
+            new FakeElement('div', { 'data-feedback-sensitive': 'free-text' }, { children: [addressHistory] })
+        ]
+    });
+
+    const restore = redactScreenshotDom({ body: root });
+
+    assert.equal(contactHistory.nodeValue, 'Vraag over facturatie voor sophie.devries@example.test. Uitleg gegeven over automatische incasso.');
+    assert.equal(addressHistory.nodeValue, 'Adres gewijzigd van Dorpsstraat 12 naar Dorpsstraat 12.');
+
+    restore();
+
+    assert.equal(contactHistory.nodeValue, 'Vraag over facturatie voor maria.jansen@email.nl. Uitleg gegeven over automatische incasso.');
 }
 
 function testRedactionInstallsAndRemovesTemporaryStylesheet() {
@@ -306,7 +401,11 @@ testSensitiveTextIsPseudonymizedAndRestored();
 testTypedPseudoValuesAndFormRestore();
 testSensitiveScopeKeepsPublicCopy();
 testRepeatedValuesUseStableReplacement();
+testCustomerProfileKeepsRelatedValuesConsistent();
+testSelectedElementDescriptionIsPseudonymized();
 testPatternFallbackCatchesUnmarkedSensitiveValues();
 testRedactionSkipsFeedbackUi();
 testMediaMaskAndBackgroundsAreHiddenAndRestored();
+testPrivacySummaryCountsPseudoValuesAndHiddenElements();
+testFreeTextKeepsDomainContextAndReplacesPii();
 testRedactionInstallsAndRemovesTemporaryStylesheet();
