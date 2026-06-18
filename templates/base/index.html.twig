@@ -43,7 +43,7 @@
                             </button>
                             <div class="agent-profile-menu" id="agentStatusMenu" hidden>
                                 <div class="profile-menu-section">
-                                    <div class="profile-menu-user-name">
+                                    <div class="profile-menu-user-name" data-feedback-sensitive="name">
                                         {% if user_first_name or user_last_name %}
                                             {{ user_first_name }} {{ user_last_name }}
                                         {% else %}
@@ -361,11 +361,11 @@
                     <div class="card">
                         <div class="customer-header">
                             <div class="customer-info">
-                                <h2 id="customerName"></h2>
+                                <h2 id="customerName" data-feedback-sensitive="name"></h2>
                                 <p class="customer-meta">
-                                    <span id="customerAddress"></span> • 
-                                    <span id="customerEmail"></span> • 
-                                    <span id="customerPhone"></span>
+                                    <span id="customerAddress" data-feedback-sensitive="address"></span> •
+                                    <span id="customerEmail" data-feedback-sensitive="email"></span> •
+                                    <span id="customerPhone" data-feedback-sensitive="phone"></span>
                                 </p>
                             </div>
                             <div class="customer-actions">
@@ -409,7 +409,7 @@
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="newSubscriptionForm">✕</button>
                         </div>
                         <form id="subscriptionForm" class="form-section" data-action="create-subscription" data-action-event="submit" data-action-prevent-default="true">
-                            <input type="hidden" id="subscriptionSubmissionId">
+                            <input type="hidden" id="subscriptionSubmissionId" data-feedback-sensitive="id">
                             <div class="werfsleutel-fieldset">
                                 <div class="fieldset-heading">
                                     <label for="werfsleutelInput" data-i18n="indexHtml.text.werfsleutel_c5732867">Werfsleutel *</label>
@@ -449,7 +449,7 @@
                                 </div>
                                 <div id="recipientExistingSection">
                                     <div class="form-row">
-                                        <input type="search" id="recipientSearchQuery" class="form-control" placeholder="Zoek ontvanger op naam" data-i18n-placeholder="indexHtml.placeholder.zoek_ontvanger_op_naam_2046363e">
+                                        <input type="search" id="recipientSearchQuery" class="form-control" placeholder="Zoek ontvanger op naam" data-feedback-sensitive="name" data-i18n-placeholder="indexHtml.placeholder.zoek_ontvanger_op_naam_2046363e">
                                         <button type="button" class="btn btn-secondary" id="recipientSearchButton" data-action="search-subscription-role-person" data-arg-role="recipient" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
                                     </div>
                                     <div id="recipientSearchResults" class="party-search-results"></div>
@@ -479,7 +479,7 @@
                                     </div>
                                     <div id="requesterExistingSection">
                                         <div class="form-row">
-                                            <input type="search" id="requesterSearchQuery" class="form-control" placeholder="Zoek aanvrager/betaler op naam" data-i18n-placeholder="indexHtml.placeholder.zoek_aanvrager_betaler_op_naam_9636a951">
+                                            <input type="search" id="requesterSearchQuery" class="form-control" placeholder="Zoek aanvrager/betaler op naam" data-feedback-sensitive="name" data-i18n-placeholder="indexHtml.placeholder.zoek_aanvrager_betaler_op_naam_9636a951">
                                             <button type="button" class="btn btn-secondary" id="requesterSearchButton" data-action="search-subscription-role-person" data-arg-role="requester" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
                                         </div>
                                         <div id="requesterSearchResults" class="party-search-results"></div>
@@ -508,6 +508,7 @@
                                         </label>
                                         <div class="additional-input">
                                             <input type="text" id="subIBAN" placeholder="IBAN rekeningnummer" 
+                                                data-feedback-sensitive="iban"
                                                 pattern="^(NL[0-9]{2}[A-Z]{4}[0-9]{10}|BE[0-9]{2}[0-9]{12})$" 
                                                 title="Vul hier een geldig IBAN nummer in. Alleen Nederlandse (NL) en Belgische (BE) rekeningen worden ondersteund." data-i18n-placeholder="indexHtml.placeholder.iban_rekeningnummer_f6244ddc" data-i18n-title="indexHtml.title.vul_hier_een_geldig_iban_nummer_in_alleen_nederlandse_nl_en_belgische_be_5e253df9">
                                         </div>
@@ -518,7 +519,7 @@
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.abonnementsgegevens_dc22841d">Abonnementsgegevens</h3>
                                 <label class="datepicker-label" data-i18n="indexHtml.text.subStartDate_ce0234ea">Start:</label>
                                 <div class="form-row">
-                                    <input type="date" id="subStartDate" required>
+                                    <input type="date" id="subStartDate" data-feedback-sensitive="date" required>
                                 </div>
                             
                            
@@ -575,25 +576,25 @@
                             </div>
                             
                             <div class="form-row">
-                                <input type="text" id="articleInitials" placeholder="Voorletters*" required data-i18n-placeholder="indexHtml.placeholder.voorletters_e69bf1c6">
-                                <input type="text" id="articleMiddleName" placeholder="Tussenvoegsel" data-i18n-placeholder="indexHtml.placeholder.tussenvoegsel_621ce8f0">
-                                <input type="text" id="articleLastName" placeholder="Achternaam*" required data-i18n-placeholder="indexHtml.placeholder.achternaam_9db9e9c5">
+                                <input type="text" id="articleInitials" placeholder="Voorletters*" data-feedback-sensitive="name" required data-i18n-placeholder="indexHtml.placeholder.voorletters_e69bf1c6">
+                                <input type="text" id="articleMiddleName" placeholder="Tussenvoegsel" data-feedback-sensitive="name" data-i18n-placeholder="indexHtml.placeholder.tussenvoegsel_621ce8f0">
+                                <input type="text" id="articleLastName" placeholder="Achternaam*" data-feedback-sensitive="name" required data-i18n-placeholder="indexHtml.placeholder.achternaam_9db9e9c5">
                             </div>
 
                             <div class="form-row">
-                                <input type="text" id="articlePostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44" data-i18n-title="indexHtml.title.voer_een_geldige_postcode_in_bijv_1234ab_5781c72b">
-                                <input type="text" id="articleHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required data-i18n-placeholder="indexHtml.placeholder.huisnr_en_letter_2865c592" data-i18n-title="indexHtml.title.voer_een_geldig_huisnummer_in_bijv_123_of_123a_fc80f369">
-                                <input type="text" id="articleHouseExt" placeholder="Toevoeging" maxlength="10" data-i18n-placeholder="indexHtml.placeholder.toevoeging_26fd8370">
+                                <input type="text" id="articlePostalCode" placeholder="Postcode*" data-feedback-sensitive="postal-code" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44" data-i18n-title="indexHtml.title.voer_een_geldige_postcode_in_bijv_1234ab_5781c72b">
+                                <input type="text" id="articleHouseNumber" placeholder="Huisnr. (en letter)*" data-feedback-sensitive="address" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required data-i18n-placeholder="indexHtml.placeholder.huisnr_en_letter_2865c592" data-i18n-title="indexHtml.title.voer_een_geldig_huisnummer_in_bijv_123_of_123a_fc80f369">
+                                <input type="text" id="articleHouseExt" placeholder="Toevoeging" data-feedback-sensitive="address" maxlength="10" data-i18n-placeholder="indexHtml.placeholder.toevoeging_26fd8370">
                             </div>
                             
                             <div class="form-row">
-                                <input type="text" id="articleAddress" placeholder="Straat*" required data-i18n-placeholder="indexHtml.placeholder.straat_e57ebd14">
-                                <input type="text" id="articleCity" placeholder="Plaats*" required data-i18n-placeholder="indexHtml.placeholder.plaats_abe00810">
+                                <input type="text" id="articleAddress" placeholder="Straat*" data-feedback-sensitive="address" required data-i18n-placeholder="indexHtml.placeholder.straat_e57ebd14">
+                                <input type="text" id="articleCity" placeholder="Plaats*" data-feedback-sensitive="address" required data-i18n-placeholder="indexHtml.placeholder.plaats_abe00810">
                             </div>
 
                             <div class="form-row">
-                                <input type="tel" id="articlePhone" placeholder="Telefoonnummer*" required data-i18n-placeholder="indexHtml.placeholder.telefoonnummer_069b377b">
-                                <input type="email" id="articleEmail" placeholder="E-mailadres*" required data-i18n-placeholder="indexHtml.placeholder.e_mailadres_9e94dd29">
+                                <input type="tel" id="articlePhone" placeholder="Telefoonnummer*" data-feedback-sensitive="phone" required data-i18n-placeholder="indexHtml.placeholder.telefoonnummer_069b377b">
+                                <input type="email" id="articleEmail" placeholder="E-mailadres*" data-feedback-sensitive="email" required data-i18n-placeholder="indexHtml.placeholder.e_mailadres_9e94dd29">
                             </div>
 
                             <div class="form-group">
@@ -615,7 +616,7 @@
                                 <div class="form-group">
                                     <label for="articleDesiredDelivery" data-i18n="indexHtml.text.gewenste_leverdatum_5bace022">Gewenste leverdatum *</label>
                                     <div id="deliveryDatePickerContainer" class="delivery-date-picker-container">
-                                        <input type="hidden" id="articleDesiredDelivery" required>
+                                        <input type="hidden" id="articleDesiredDelivery" data-feedback-sensitive="date" required>
                                         <div class="delivery-date-display" id="deliveryDateDisplay" data-i18n="indexHtml.text.selecteer_een_datum_1e065486">
                                             Selecteer een datum...
                                         </div>
@@ -667,7 +668,7 @@
                                             ⚠️ Breekbaar
                                         </button>
                                     </div>
-                                    <textarea id="articleNotes" placeholder="Bezorginstructies of opmerkingen (optioneel)" rows="3" data-i18n-placeholder="indexHtml.placeholder.bezorginstructies_of_opmerkingen_optioneel_f8b242bb"></textarea>
+                                    <textarea id="articleNotes" placeholder="Bezorginstructies of opmerkingen (optioneel)" data-feedback-sensitive="free-text" rows="3" data-i18n-placeholder="indexHtml.placeholder.bezorginstructies_of_opmerkingen_optioneel_f8b242bb"></textarea>
                                 </div>
                             </div>
                             
@@ -792,7 +793,7 @@
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="editCustomerForm">✕</button>
                         </div>
                         <form id="customerEditForm" class="form-section" data-action="save-customer-edit" data-action-event="submit" data-action-prevent-default="true">
-                            <input type="hidden" id="editCustomerId">
+                            <input type="hidden" id="editCustomerId" data-feedback-sensitive="id">
                             
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.aanhef_1833dec8">Aanhef *</h3>
                             <div class="aanhef-row">
@@ -802,25 +803,25 @@
                             </div>
                             
                             <div class="form-row">
-                                <input type="text" id="editInitials" placeholder="Voorletters*" required data-i18n-placeholder="indexHtml.placeholder.voorletters_e69bf1c6">
-                                <input type="text" id="editMiddleName" placeholder="Tussenvoegsel" data-i18n-placeholder="indexHtml.placeholder.tussenvoegsel_621ce8f0">
-                                <input type="text" id="editLastName" placeholder="Achternaam*" required data-i18n-placeholder="indexHtml.placeholder.achternaam_9db9e9c5">
+                                <input type="text" id="editInitials" placeholder="Voorletters*" data-feedback-sensitive="name" required data-i18n-placeholder="indexHtml.placeholder.voorletters_e69bf1c6">
+                                <input type="text" id="editMiddleName" placeholder="Tussenvoegsel" data-feedback-sensitive="name" data-i18n-placeholder="indexHtml.placeholder.tussenvoegsel_621ce8f0">
+                                <input type="text" id="editLastName" placeholder="Achternaam*" data-feedback-sensitive="name" required data-i18n-placeholder="indexHtml.placeholder.achternaam_9db9e9c5">
                             </div>
 
                             <div class="form-row">
-                                <input type="text" id="editPostalCode" placeholder="Postcode*" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44" data-i18n-title="indexHtml.title.voer_een_geldige_postcode_in_bijv_1234ab_5781c72b">
-                                <input type="text" id="editHouseNumber" placeholder="Huisnr. (en letter)*" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in" required data-i18n-placeholder="indexHtml.placeholder.huisnr_en_letter_2865c592" data-i18n-title="indexHtml.title.voer_een_geldig_huisnummer_in_98a34b45">
-                                <input type="text" id="editHouseExt" placeholder="Toevoeging" maxlength="10" data-i18n-placeholder="indexHtml.placeholder.toevoeging_26fd8370">
+                                <input type="text" id="editPostalCode" placeholder="Postcode*" data-feedback-sensitive="postal-code" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44" data-i18n-title="indexHtml.title.voer_een_geldige_postcode_in_bijv_1234ab_5781c72b">
+                                <input type="text" id="editHouseNumber" placeholder="Huisnr. (en letter)*" data-feedback-sensitive="address" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in" required data-i18n-placeholder="indexHtml.placeholder.huisnr_en_letter_2865c592" data-i18n-title="indexHtml.title.voer_een_geldig_huisnummer_in_98a34b45">
+                                <input type="text" id="editHouseExt" placeholder="Toevoeging" data-feedback-sensitive="address" maxlength="10" data-i18n-placeholder="indexHtml.placeholder.toevoeging_26fd8370">
                             </div>
                             
                             <div class="form-row">
-                                <input type="text" id="editAddress" placeholder="Straat*" required data-i18n-placeholder="indexHtml.placeholder.straat_e57ebd14">
-                                <input type="text" id="editCity" placeholder="Plaats*" required data-i18n-placeholder="indexHtml.placeholder.plaats_abe00810">
+                                <input type="text" id="editAddress" placeholder="Straat*" data-feedback-sensitive="address" required data-i18n-placeholder="indexHtml.placeholder.straat_e57ebd14">
+                                <input type="text" id="editCity" placeholder="Plaats*" data-feedback-sensitive="address" required data-i18n-placeholder="indexHtml.placeholder.plaats_abe00810">
                             </div>
 
                             <div class="form-row">
-                                <input type="tel" id="editPhone" placeholder="Telefoonnummer" data-i18n-placeholder="indexHtml.placeholder.telefoonnummer_80ab4353">
-                                <input type="email" id="editEmail" placeholder="E-mailadres*" required data-i18n-placeholder="indexHtml.placeholder.e_mailadres_9e94dd29">
+                                <input type="tel" id="editPhone" placeholder="Telefoonnummer" data-feedback-sensitive="phone" data-i18n-placeholder="indexHtml.placeholder.telefoonnummer_80ab4353">
+                                <input type="email" id="editEmail" placeholder="E-mailadres*" data-feedback-sensitive="email" required data-i18n-placeholder="indexHtml.placeholder.e_mailadres_9e94dd29">
                             </div>
 
                             <div class="form-group">
@@ -1074,11 +1075,11 @@
                             </div>
                             <div class="form-group">
                                 <label for="restitutionTransferEmail" data-i18n="indexHtml.text.e_mail_3ddc6c6e">E-mail *</label>
-                                <input type="email" id="restitutionTransferEmail" class="form-control" required>
+                                <input type="email" id="restitutionTransferEmail" class="form-control" data-feedback-sensitive="email" required>
                             </div>
                             <div class="form-group">
                                 <label for="restitutionTransferPhone" data-i18n="indexHtml.text.telefoonnummer_1749a119">Telefoonnummer *</label>
-                                <input type="tel" id="restitutionTransferPhone" class="form-control" required>
+                                <input type="tel" id="restitutionTransferPhone" class="form-control" data-feedback-sensitive="phone" required>
                             </div>
                             
                             <div class="form-group">
@@ -1092,20 +1093,20 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="restitutionTransferPostalCode" data-i18n="indexHtml.text.postcode_a4d0ac68">Postcode *</label>
-                                        <input type="text" id="restitutionTransferPostalCode" class="form-control" required>
+                                        <input type="text" id="restitutionTransferPostalCode" class="form-control" data-feedback-sensitive="postal-code" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="restitutionTransferHouseNumber" data-i18n="indexHtml.text.huisnummer_86db3120">Huisnummer *</label>
-                                        <input type="text" id="restitutionTransferHouseNumber" class="form-control" required>
+                                        <input type="text" id="restitutionTransferHouseNumber" class="form-control" data-feedback-sensitive="address" required>
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label for="restitutionTransferAddress" data-i18n="indexHtml.text.straat_en_nummer_dda17a89">Straat en nummer *</label>
-                                    <input type="text" id="restitutionTransferAddress" class="form-control" required>
+                                    <input type="text" id="restitutionTransferAddress" class="form-control" data-feedback-sensitive="address" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="restitutionTransferCity" data-i18n="indexHtml.text.plaats_33c59bec">Plaats *</label>
-                                    <input type="text" id="restitutionTransferCity" class="form-control" required>
+                                    <input type="text" id="restitutionTransferCity" class="form-control" data-feedback-sensitive="address" required>
                                 </div>
                             </div>
                             
@@ -1198,12 +1199,12 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="refundEmail" data-i18n="indexHtml.text.e_mailadres_voor_bevestiging_8c34275a">E-mailadres voor bevestiging:</label>
-                                    <input type="email" id="refundEmail" class="form-control" placeholder="naam@email.nl" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
+                                    <input type="email" id="refundEmail" class="form-control" placeholder="naam@email.nl" data-feedback-sensitive="email" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
                                     <small class="form-text" data-i18n="indexHtml.text.de_opzegbevestiging_en_restitutie_informatie_wordt_naar_dit_adres_gestuu_3a20ffcd">De opzegbevestiging en restitutie-informatie wordt naar dit adres gestuurd</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="refundNotes" data-i18n="indexHtml.text.notities_optioneel_aff41798">Notities (optioneel):</label>
-                                    <textarea id="refundNotes" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc." data-i18n-placeholder="indexHtml.placeholder.bijv_rekeningnummer_voor_restitutie_contactpersoon_etc_6544b433"></textarea>
+                                    <textarea id="refundNotes" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc." data-feedback-sensitive="free-text" data-i18n-placeholder="indexHtml.placeholder.bijv_rekeningnummer_voor_restitutie_contactpersoon_etc_6544b433"></textarea>
                                 </div>
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1b" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
@@ -1247,12 +1248,12 @@
                                 <h4 data-i18n="indexHtml.text.restitutie_gegevens_dfe16101">Restitutie gegevens</h4>
                                 <div class="form-group">
                                     <label for="refundEmail2" data-i18n="indexHtml.text.e_mailadres_voor_bevestiging_8c34275a">E-mailadres voor bevestiging:</label>
-                                    <input type="email" id="refundEmail2" class="form-control" placeholder="naam@email.nl" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
+                                    <input type="email" id="refundEmail2" class="form-control" placeholder="naam@email.nl" data-feedback-sensitive="email" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
                                     <small class="form-text" data-i18n="indexHtml.text.de_opzegbevestiging_en_restitutie_informatie_wordt_naar_dit_adres_gestuu_3a20ffcd">De opzegbevestiging en restitutie-informatie wordt naar dit adres gestuurd</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="refundNotes2" data-i18n="indexHtml.text.notities_optioneel_aff41798">Notities (optioneel):</label>
-                                    <textarea id="refundNotes2" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc." data-i18n-placeholder="indexHtml.placeholder.bijv_rekeningnummer_voor_restitutie_contactpersoon_etc_6544b433"></textarea>
+                                    <textarea id="refundNotes2" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc." data-feedback-sensitive="free-text" data-i18n-placeholder="indexHtml.placeholder.bijv_rekeningnummer_voor_restitutie_contactpersoon_etc_6544b433"></textarea>
                                 </div>
                                 
                                 <div class="form-actions">

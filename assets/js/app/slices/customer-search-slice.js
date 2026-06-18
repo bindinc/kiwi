@@ -559,16 +559,16 @@ function renderCustomerRow(customer) {
 
     return `
         <tr class="result-row" data-action="select-customer" data-arg-customer-id="${customer.id}">
-            <td class="result-row-lastname">${lastNameSection}${mandantBadgeMarkup}</td>
+            <td class="result-row-lastname" data-feedback-sensitive="name">${lastNameSection}${mandantBadgeMarkup}</td>
             <td class="result-row-initials">
-                <span class="initials-value">${initials}</span>
+                <span class="initials-value" data-feedback-sensitive="name">${initials}</span>
             </td>
-            <td class="result-row-address">
+            <td class="result-row-address" data-feedback-sensitive="address">
                 <span>${customer.address}</span><br>
                 <span>${customer.postalCode} ${customer.city}</span>
             </td>
             <td class="result-row-subscriptions">${subscriptionBadges}</td>
-            <td class="result-row-subscriber-number">${customerReference}</td>
+            <td class="result-row-subscriber-number" data-feedback-sensitive="id">${customerReference}</td>
             <td class="result-row-actions">
                 <button class="btn btn-small" type="button" data-action="select-customer" data-arg-customer-id="${customer.id}" data-action-stop-propagation="true">
                     ${viewActionLabel}

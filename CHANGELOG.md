@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [unreleased]
 
 - fixed docker-compose
+- Replace blanket contextual feedback screenshot text hiding with DOM-marked pseudonymization so sensitive customer data becomes realistic pseudo data while screenshots stay readable.
 
 ## [v1.0.16]
 

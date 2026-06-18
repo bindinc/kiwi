@@ -134,7 +134,7 @@ function dialogTemplate(selectedElement) {
                         </select>
                     </label>
                 </div>
-                <p class="contextual-feedback-note">The marked screenshot hides page text and media before it is posted to the KIWI Teams channel.</p>
+                <p class="contextual-feedback-note">The marked screenshot replaces sensitive page data with pseudo data and hides media before it is posted to the KIWI Teams channel.</p>
                 <div class="contextual-feedback-actions">
                     <div>
                         <button type="button" data-feedback-undo>Undo</button>
