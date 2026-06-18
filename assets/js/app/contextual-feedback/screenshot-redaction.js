@@ -403,6 +403,9 @@ function inferTypeFromName(value) {
     if (/(name|naam|initial|voorletter|tussenvoegsel|achternaam|voornaam)/.test(normalizedValue)) {
         return 'name';
     }
+    if (/(search|zoek)/.test(normalizedValue)) {
+        return 'name';
+    }
     if (/(customer|klant|person|persoon|subscriber|abon|id|nummer|nr)/.test(normalizedValue)) {
         return 'id';
     }
@@ -470,7 +473,7 @@ function pseudonymizeProfileValue(value, sensitivityType, context) {
         return profile.phone;
     }
     if (sensitivityType === 'address') {
-        return `${profile.address}, ${profile.postalCode} ${profile.city}`;
+        return pseudoAddressForValue(value, profile);
     }
     if (sensitivityType === 'postal-code') {
         return profile.postalCode;
@@ -546,6 +549,21 @@ function pseudoNameForValue(value, profile) {
     }
 
     return profile.name;
+}
+
+function pseudoAddressForValue(value, profile) {
+    const originalValue = String(value || '').trim();
+    const hasPostalCode = /\b[1-9][0-9]{3}\s?[A-Z]{2}\b/i.test(originalValue);
+    const hasCity = hasPostalCode && /\b[1-9][0-9]{3}\s?[A-Z]{2}\s+[A-Za-zÀ-ſ][A-Za-zÀ-ſ '-]+$/i.test(originalValue);
+
+    if (hasPostalCode && hasCity) {
+        return `${profile.address}, ${profile.postalCode} ${profile.city}`;
+    }
+    if (hasPostalCode) {
+        return `${profile.address}, ${profile.postalCode}`;
+    }
+
+    return profile.address;
 }
 
 function pseudonymizeFreeText(value, context) {

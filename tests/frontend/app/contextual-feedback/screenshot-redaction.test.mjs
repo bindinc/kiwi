@@ -196,6 +196,10 @@ function testCustomerProfileKeepsRelatedValuesConsistent() {
         type: 'search',
         value: 'Jansen'
     });
+    const unmarkedSearchValue = new FakeElement('input', { id: 'searchName' }, {
+        type: 'text',
+        value: 'Jansen'
+    });
     const customerName = new FakeText('Mevr. M. Jansen');
     const customerInitials = new FakeText('M.');
     const customerEmail = new FakeText('maria.jansen@email.nl');
@@ -205,6 +209,7 @@ function testCustomerProfileKeepsRelatedValuesConsistent() {
     const root = new FakeElement('main', {}, {
         children: [
             searchValue,
+            unmarkedSearchValue,
             new FakeElement('h2', { id: 'customerName', 'data-feedback-sensitive': 'name' }, { children: [customerName] }),
             new FakeElement('span', { 'data-feedback-sensitive': 'name' }, { children: [customerInitials] }),
             new FakeElement('span', { 'data-feedback-sensitive': 'email' }, { children: [customerEmail] }),
@@ -217,17 +222,49 @@ function testCustomerProfileKeepsRelatedValuesConsistent() {
     const restore = redactScreenshotDom({ body: root });
 
     assert.equal(searchValue.value, 'de Vries');
+    assert.equal(unmarkedSearchValue.value, 'de Vries');
     assert.equal(customerName.nodeValue, 'Sophie de Vries');
     assert.equal(customerInitials.nodeValue, 'S.');
     assert.equal(customerEmail.nodeValue, 'sophie.devries@example.test');
     assert.equal(customerPhone.nodeValue, '0612345678');
-    assert.equal(customerAddress.nodeValue, 'Dorpsstraat 12, 1234 AB Utrecht');
+    assert.equal(customerAddress.nodeValue, 'Dorpsstraat 12');
     assert.equal(customerPostalCode.nodeValue, '1234 AB');
 
     restore();
 
     assert.equal(searchValue.value, 'Jansen');
+    assert.equal(unmarkedSearchValue.value, 'Jansen');
     assert.equal(customerName.nodeValue, 'Mevr. M. Jansen');
+}
+
+function testEmptyFieldsStayEmptyAndAddressShapeIsPreserved() {
+    const emptyName = new FakeElement('input', { 'data-feedback-sensitive': 'name' }, {
+        type: 'text',
+        value: ''
+    });
+    const emptyEmail = new FakeElement('input', { 'data-feedback-sensitive': 'email' }, {
+        type: 'email',
+        value: ''
+    });
+    const emptyText = new FakeText('');
+    const fullAddress = new FakeText('Wijnhaven 15, 3011BD Rotterdam');
+    const root = new FakeElement('main', {}, {
+        children: [
+            emptyName,
+            emptyEmail,
+            new FakeElement('span', { 'data-feedback-sensitive': 'phone' }, { children: [emptyText] }),
+            new FakeElement('span', { 'data-feedback-sensitive': 'address' }, { children: [fullAddress] })
+        ]
+    });
+
+    const restore = redactScreenshotDom({ body: root });
+
+    assert.equal(emptyName.value, '');
+    assert.equal(emptyEmail.value, '');
+    assert.equal(emptyText.nodeValue, '');
+    assert.equal(fullAddress.nodeValue, 'Dorpsstraat 12, 1234 AB Utrecht');
+
+    restore();
 }
 
 function testSelectedElementDescriptionIsPseudonymized() {
@@ -402,6 +439,7 @@ testTypedPseudoValuesAndFormRestore();
 testSensitiveScopeKeepsPublicCopy();
 testRepeatedValuesUseStableReplacement();
 testCustomerProfileKeepsRelatedValuesConsistent();
+testEmptyFieldsStayEmptyAndAddressShapeIsPreserved();
 testSelectedElementDescriptionIsPseudonymized();
 testPatternFallbackCatchesUnmarkedSensitiveValues();
 testRedactionSkipsFeedbackUi();
