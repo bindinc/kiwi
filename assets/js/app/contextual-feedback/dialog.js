@@ -1,7 +1,7 @@
 import { AnnotationCanvas } from './annotation-canvas.js';
 
 const TOOLS = [
-    ['hand', 'H', 'Hand'],
+    ['hand', '✥', 'Hand'],
     ['rectangle', '□', 'Rectangle'],
     ['arrow', '↗', 'Arrow'],
     ['pin', '!', 'Pin'],

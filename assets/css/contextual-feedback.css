@@ -176,6 +176,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-actions button,
 .contextual-feedback-form button[type="submit"] {
     min-height: 34px;
+    padding-inline: 10px;
     border: 1px solid #8f8f8f;
     border-radius: 3px;
     background: #eeeeee;
@@ -190,6 +191,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     width: 40px;
     height: 40px;
     min-height: 40px;
+    padding-inline: 0;
     justify-self: center;
     font-size: 18px;
     font-weight: 800;
