@@ -85,7 +85,7 @@ for attempt in $(seq 1 60); do
     continue
   fi
 
-  if [[ "${login_redirect}" != https://bdc.rtvmedia.org.local/kiwi-oidc/* ]]; then
+  if [[ "${login_redirect}" != "${gateway_base_url}/kiwi-oidc/"* ]]; then
     echo "[compose-smoke-oidc] Unexpected fallback login redirect target: ${login_redirect}"
     exit 1
   fi

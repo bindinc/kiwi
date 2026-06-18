@@ -28,11 +28,11 @@ fail() {
   exit 1
 }
 
-if [ ! -x "$resolve_script" ]; then
-  fail "Missing executable resolver script: $resolve_script."
+if [ ! -f "$resolve_script" ]; then
+  fail "Missing resolver script: $resolve_script."
 fi
 
-if ! resolved="$("$resolve_script" 2>&1)"; then
+if ! resolved="$(/bin/sh "$resolve_script" 2>&1)"; then
   fail "$resolved"
 fi
 
@@ -43,4 +43,4 @@ if [ "$OIDC_MODE" = "external" ]; then
   exit 0
 fi
 
-printf '[compose-preflight] Compose prerequisites OK. client_secrets.json is missing, using fallback OIDC.\n'
+printf '[compose-preflight] Compose prerequisites OK. No external OIDC web section configured, using fallback OIDC.\n'

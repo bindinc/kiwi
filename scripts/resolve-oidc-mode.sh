@@ -4,12 +4,6 @@ set -eu
 mounted_secrets="/etc/kiwi/oidc-client-secrets/client_secrets.json"
 mounted_legacy_secrets="/etc/kiwi/oidc-client-secrets"
 
-if [ -f "$mounted_secrets" ] && [ -s "$mounted_secrets" ]; then
-  printf 'OIDC_MODE=external\n'
-  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$mounted_secrets"
-  exit 0
-fi
-
 if [ -n "${COMPOSE_PROJECT_ROOT:-}" ]; then
   project_root="$COMPOSE_PROJECT_ROOT"
 else
@@ -19,10 +13,23 @@ fi
 
 external_secrets="$project_root/client_secrets.json"
 fallback_secrets="$project_root/infra/docker/oidc/client_secrets.fallback.json"
+resolved_secrets_file=""
 
 fail() {
   printf '%s\n' "$1" >&2
   exit 1
+}
+
+has_oidc_web_config() {
+  candidate="$1"
+
+  grep -Eq '"web"[[:space:]]*:[[:space:]]*\{' "$candidate" || return 1
+  grep -Eq '"client_id"[[:space:]]*:[[:space:]]*"[^"]+"' "$candidate" || return 1
+  grep -Eq '"auth_uri"[[:space:]]*:[[:space:]]*"[^"]+"' "$candidate" || return 1
+  grep -Eq '"token_uri"[[:space:]]*:[[:space:]]*"[^"]+"' "$candidate" || return 1
+  grep -Eq '"userinfo_uri"[[:space:]]*:[[:space:]]*"[^"]+"' "$candidate" || return 1
+
+  return 0
 }
 
 resolve_existing_secrets_file() {
@@ -48,34 +55,38 @@ resolve_existing_secrets_file() {
     fail "File is empty: $candidate."
   fi
 
-  printf '%s\n' "$candidate"
+  resolved_secrets_file="$candidate"
+  return 0
 }
 
-explicit_secrets="$(resolve_existing_secrets_file "${OIDC_CLIENT_SECRETS:-}" || true)"
-if [ -n "$explicit_secrets" ]; then
+use_external_oidc_if_present() {
+  resolved_secrets_file=""
+  if ! resolve_existing_secrets_file "$1"; then
+    return 1
+  fi
+
+  if ! has_oidc_web_config "$resolved_secrets_file"; then
+    return 1
+  fi
+
   printf 'OIDC_MODE=external\n'
-  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$explicit_secrets"
+  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$resolved_secrets_file"
+  exit 0
+}
+
+if use_external_oidc_if_present "${OIDC_CLIENT_SECRETS:-}"; then
   exit 0
 fi
 
-mounted_file="$(resolve_existing_secrets_file "$mounted_secrets" || true)"
-if [ -n "$mounted_file" ]; then
-  printf 'OIDC_MODE=external\n'
-  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$mounted_file"
+if use_external_oidc_if_present "$mounted_secrets"; then
   exit 0
 fi
 
-mounted_legacy_file="$(resolve_existing_secrets_file "$mounted_legacy_secrets" || true)"
-if [ -n "$mounted_legacy_file" ]; then
-  printf 'OIDC_MODE=external\n'
-  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$mounted_legacy_file"
+if use_external_oidc_if_present "$mounted_legacy_secrets"; then
   exit 0
 fi
 
-external_file="$(resolve_existing_secrets_file "$external_secrets" || true)"
-if [ -n "$external_file" ]; then
-  printf 'OIDC_MODE=external\n'
-  printf 'OIDC_CLIENT_SECRETS_PATH=%s\n' "$external_file"
+if use_external_oidc_if_present "$external_secrets"; then
   exit 0
 fi
 

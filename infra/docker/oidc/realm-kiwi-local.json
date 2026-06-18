@@ -47,16 +47,21 @@
             "implicitFlowEnabled": false,
             "fullScopeAllowed": true,
             "redirectUris": [
+                "https://bdc.rtvmedia.org.local:8443/kiwi/auth/callback",
+                "https://bdc.rtvmedia.org.local:8443/kiwi/logged-out",
                 "https://bdc.rtvmedia.org.local/kiwi/auth/callback",
                 "https://bdc.rtvmedia.org.local/kiwi/logged-out",
                 "https://bdc.rtvmedia.org/kiwi/auth/callback",
                 "https://bdc.rtvmedia.org/kiwi/logged-out",
+                "https://bdc.rtvmedia.org.local:8443/kiwi-preview/auth/callback",
+                "https://bdc.rtvmedia.org.local:8443/kiwi-preview/logged-out",
                 "https://bdc.rtvmedia.org.local/kiwi-preview/auth/callback",
                 "https://bdc.rtvmedia.org.local/kiwi-preview/logged-out",
                 "https://bdc.rtvmedia.org/kiwi-preview/auth/callback",
                 "https://bdc.rtvmedia.org/kiwi-preview/logged-out"
             ],
             "webOrigins": [
+                "https://bdc.rtvmedia.org.local:8443",
                 "https://bdc.rtvmedia.org.local",
                 "https://bdc.rtvmedia.org"
             ],

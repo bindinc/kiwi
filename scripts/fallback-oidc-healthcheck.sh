@@ -4,7 +4,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "${script_dir}/.." && pwd)"
 
-resolved="$(COMPOSE_PROJECT_ROOT="${project_root}" "${script_dir}/resolve-oidc-mode.sh")"
+resolved="$(COMPOSE_PROJECT_ROOT="${project_root}" /bin/sh "${script_dir}/resolve-oidc-mode.sh")"
 eval "$resolved"
 
 if [[ "$OIDC_MODE" != "fallback" ]]; then

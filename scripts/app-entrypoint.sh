@@ -3,7 +3,7 @@ set -eu
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 app_root="$(cd "$script_dir/.." && pwd)"
-resolved="$(COMPOSE_PROJECT_ROOT="$app_root" "$script_dir/resolve-oidc-mode.sh")"
+resolved="$(COMPOSE_PROJECT_ROOT="$app_root" /bin/sh "$script_dir/resolve-oidc-mode.sh")"
 
 eval "$resolved"
 

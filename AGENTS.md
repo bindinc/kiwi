@@ -45,7 +45,7 @@ if isValid && isAllowed && isSecure {
 ## Mandatory default
 Whenever I ask for a **new PR** (or any task that should result in a PR), you must **always** follow the workflow below. Deviating from this process is not allowed.
 
-## Step 1 — Initialize PR + worktree (mandatory)
+## Step 1 — Initialize PR + worktree (standard, but user can override)
 - Always start from an English PR title.
 - The default base branch is `main`, unless I explicitly specify otherwise.
 - Derive a branch name in the format `codex/<kebab-case-title>`.
