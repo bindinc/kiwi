@@ -143,7 +143,7 @@ function testTypedPseudoValuesAndFormRestore() {
     const restore = redactScreenshotDom({ body: root });
 
     assert.equal(emailInput.value, 'sophie.devries@example.test');
-    assert.equal(emailInput.placeholder, 'sophie.devries@example.test');
+    assert.equal(emailInput.placeholder, 'real@example.org');
     assert.equal(phoneInput.value, '0612345678');
     assert.equal(notes.value, 'Vraag over facturatie. Uitleg gegeven over betaalwijze.');
 
@@ -235,6 +235,39 @@ function testCustomerProfileKeepsRelatedValuesConsistent() {
     assert.equal(searchValue.value, 'Jansen');
     assert.equal(unmarkedSearchValue.value, 'Jansen');
     assert.equal(customerName.nodeValue, 'Mevr. M. Jansen');
+}
+
+function testSearchNameIsAnonymizedWithoutPopulatingEmptyAdditionalFilters() {
+    const searchName = new FakeElement('input', { id: 'searchName', 'data-feedback-sensitive': 'name', placeholder: 'Achternaam, Voornaam' }, {
+        type: 'text',
+        value: 'Jansen'
+    });
+    const searchPhone = new FakeElement('input', { id: 'searchPhone', placeholder: 'Bijv. 0612345678' }, {
+        type: 'text',
+        value: ''
+    });
+    const searchEmail = new FakeElement('input', { id: 'searchEmail', placeholder: 'naam@email.nl' }, {
+        type: 'email',
+        value: ''
+    });
+    const root = new FakeElement('main', {}, {
+        children: [searchName, searchPhone, searchEmail]
+    });
+
+    const restore = redactScreenshotDom({ body: root });
+
+    assert.equal(searchName.value, 'de Vries');
+    assert.equal(searchName.placeholder, 'Achternaam, Voornaam');
+    assert.equal(searchPhone.value, '');
+    assert.equal(searchPhone.placeholder, 'Bijv. 0612345678');
+    assert.equal(searchEmail.value, '');
+    assert.equal(searchEmail.placeholder, 'naam@email.nl');
+
+    restore();
+
+    assert.equal(searchName.value, 'Jansen');
+    assert.equal(searchPhone.value, '');
+    assert.equal(searchEmail.value, '');
 }
 
 function testEmptyFieldsStayEmptyAndAddressShapeIsPreserved() {
@@ -439,6 +472,7 @@ testTypedPseudoValuesAndFormRestore();
 testSensitiveScopeKeepsPublicCopy();
 testRepeatedValuesUseStableReplacement();
 testCustomerProfileKeepsRelatedValuesConsistent();
+testSearchNameIsAnonymizedWithoutPopulatingEmptyAdditionalFilters();
 testEmptyFieldsStayEmptyAndAddressShapeIsPreserved();
 testSelectedElementDescriptionIsPseudonymized();
 testPatternFallbackCatchesUnmarkedSensitiveValues();

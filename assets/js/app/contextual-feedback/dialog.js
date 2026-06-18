@@ -99,9 +99,9 @@ function dialogTemplate(selectedElement, privacySummary) {
         <button type="button" class="contextual-feedback-tool${index === 0 ? ' is-active' : ''}" data-feedback-tool="${tool}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(label)}</button>
     `).join('');
     const hiddenElements = Number(privacySummary.hiddenElements || 0);
-    const hiddenWarning = hiddenElements > 0
-        ? `<p class="contextual-feedback-warning">Some media or marked regions were hidden because they cannot be pseudonymized reliably.</p>`
-        : '';
+    const hiddenBadge = hiddenElements > 0
+        ? '<span class="is-warning">Some media hidden</span>'
+        : '<span>No hidden regions</span>';
 
     return `
         <div class="contextual-feedback-panel" role="dialog" aria-modal="true" aria-labelledby="contextualFeedbackTitle">
@@ -117,7 +117,7 @@ function dialogTemplate(selectedElement, privacySummary) {
                 <div class="contextual-feedback-canvas-wrap">
                     <div class="contextual-feedback-privacy-status" aria-label="Screenshot privacy status">
                         <span>Pseudo data applied</span>
-                        <span>${hiddenElements > 0 ? 'Media hidden' : 'No hidden regions'}</span>
+                        ${hiddenBadge}
                         <span>Manual redaction available</span>
                     </div>
                     <canvas data-feedback-canvas></canvas>
@@ -151,7 +151,6 @@ function dialogTemplate(selectedElement, privacySummary) {
                     </label>
                 </div>
                 <p class="contextual-feedback-note">The modal shows only the selected element crop with pseudo data. Teams receives the annotated crop, your comment, severity, category, page route, viewport, and the sanitized selected-element selector.</p>
-                ${hiddenWarning}
                 <div class="contextual-feedback-actions">
                     <div>
                         <button type="button" data-feedback-retake>Retake screenshot</button>

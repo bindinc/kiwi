@@ -263,13 +263,6 @@ function redactTextControl(element, context, restores, fallbackType) {
             setElementProperty(element, 'value', pseudonymizeValue(element.value, sensitivityType, context), restores);
         }
     }
-
-    if (typeof element.placeholder === 'string' && element.placeholder.trim()) {
-        const placeholderType = getFieldSensitivityType(element, element.placeholder) || fallbackType || inferSensitivityType(element.placeholder);
-        if (placeholderType) {
-            setElementProperty(element, 'placeholder', pseudonymizeValue(element.placeholder, placeholderType, context), restores);
-        }
-    }
 }
 
 function redactOption(element, context, restores) {

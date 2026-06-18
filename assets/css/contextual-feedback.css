@@ -221,6 +221,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     line-height: 1.2;
 }
 
+.contextual-feedback-privacy-status span.is-warning {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #9a3412;
+}
+
 .contextual-feedback-canvas-wrap canvas {
     max-width: 100%;
     height: auto;
@@ -322,7 +328,6 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-note,
-.contextual-feedback-warning,
 .contextual-feedback-status,
 .contextual-feedback-error {
     margin: 0;
@@ -331,14 +336,6 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 
 .contextual-feedback-note {
     color: #475569;
-}
-
-.contextual-feedback-warning {
-    padding: 8px 10px;
-    border: 1px solid #fed7aa;
-    border-radius: 6px;
-    background: #fff7ed;
-    color: #9a3412;
 }
 
 .contextual-feedback-status {
