@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Request;
 final class DevelopmentFeedbackSubmitter
 {
     private const ALLOWED_SEVERITIES = ['low', 'normal', 'high', 'blocking'];
-    private const ALLOWED_CATEGORIES = ['bug', 'copy', 'layout', 'data', 'workflow', 'idea'];
+    private const ALLOWED_CATEGORIES = ['bug', 'chore', 'feature_request', 'regression'];
     private const RATE_LIMIT_COUNT = 10;
     private const RATE_LIMIT_WINDOW = '-10 minutes';
 

@@ -52,7 +52,7 @@ final class TeamsFeedbackCardFactoryTest extends TestCase
             [['type' => 'rectangle']],
             'The button overlaps the date picker.',
             'normal',
-            'layout',
+            'bug',
         );
     }
 }

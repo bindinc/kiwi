@@ -394,7 +394,7 @@ export function displayContactHistory() {
                 <span class="timeline-expand expanded" id="expand-${entryDomId}">▼</span>
                 <span class="timeline-date">${formatDateTime(item.date)}</span>
             </div>
-            <div class="timeline-content expanded" id="content-${entryDomId}">
+            <div class="timeline-content expanded" id="content-${entryDomId}" data-feedback-sensitive="free-text">
                 ${descriptionHtml}
             </div>
         </div>

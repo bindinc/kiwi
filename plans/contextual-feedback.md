@@ -619,7 +619,7 @@ inside Kiwi would be high-risk and not useful product work.
 - `README.md`: feature purpose, env vars, local limitations, Teams Workflows
   setup, and secret handling.
 - `CHANGELOG.md`: one unreleased entry when implementation is done in a PR.
-- Optional `docs/CONTEXTUAL_FEEDBACK.md`: deeper operator and troubleshooting
+- Optional `docs/how-to/contextual-feedback.md`: deeper operator and troubleshooting
   guide if README becomes too large.
 
 ## Initial file checklist
