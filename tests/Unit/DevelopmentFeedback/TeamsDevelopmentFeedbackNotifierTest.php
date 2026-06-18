@@ -112,7 +112,7 @@ final class TeamsDevelopmentFeedbackNotifierTest extends TestCase
             [],
             'Feedback comment.',
             'normal',
-            'layout',
+            'bug',
         );
     }
 }

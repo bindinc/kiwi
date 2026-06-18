@@ -120,7 +120,8 @@ export function createPseudonymContext() {
         nextIndexByType,
         privacySummary: {
             pseudoValues: 0,
-            hiddenElements: 0
+            hiddenElements: 0,
+            hiddenElementTypes: new Set()
         }
     };
 }
@@ -602,9 +603,32 @@ function describeElement(element) {
 function hideElement(element, restores, context = null) {
     if (context?.privacySummary) {
         context.privacySummary.hiddenElements += 1;
+        context.privacySummary.hiddenElementTypes.add(describeHiddenElementType(element));
     }
 
     setStyleProperty(element, 'visibility', 'hidden', restores);
+}
+
+function describeHiddenElementType(element) {
+    if (isRedactedElement(element)) {
+        return 'marked private regions';
+    }
+
+    const tagName = normalizedTagName(element);
+    if (tagName === 'IMG' || tagName === 'PICTURE' || tagName === 'SVG') {
+        return 'images';
+    }
+    if (tagName === 'IFRAME' || tagName === 'EMBED' || tagName === 'OBJECT') {
+        return 'embedded frames';
+    }
+    if (tagName === 'VIDEO') {
+        return 'videos';
+    }
+    if (tagName === 'CANVAS') {
+        return 'canvas content';
+    }
+
+    return 'media';
 }
 
 function isFormField(element) {

@@ -100,8 +100,12 @@ function dialogTemplate(selectedElement, privacySummary) {
         <button type="button" class="contextual-feedback-tool${index === 0 ? ' is-active' : ''}" data-feedback-tool="${tool}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(label)}</button>
     `).join('');
     const hiddenElements = Number(privacySummary.hiddenElements || 0);
+    const hiddenTypes = Array.isArray(privacySummary.hiddenElementTypes) && privacySummary.hiddenElementTypes.length > 0
+        ? privacySummary.hiddenElementTypes.join(', ')
+        : 'media or marked private regions';
+    const hiddenTooltip = `${hiddenElements} hidden: ${hiddenTypes}. These are hidden because they cannot be pseudonymized reliably.`;
     const hiddenBadge = hiddenElements > 0
-        ? '<span class="is-warning">Some media hidden</span>'
+        ? `<span class="is-warning" title="${escapeHtml(hiddenTooltip)}">Some media hidden</span>`
         : '<span>No hidden regions</span>';
 
     return `
@@ -143,11 +147,9 @@ function dialogTemplate(selectedElement, privacySummary) {
                         <span>Category</span>
                         <select name="category">
                             <option value="bug">Bug</option>
-                            <option value="layout">Layout</option>
-                            <option value="copy">Copy</option>
-                            <option value="data">Data</option>
-                            <option value="workflow">Workflow</option>
-                            <option value="idea">Idea</option>
+                            <option value="chore">Chore</option>
+                            <option value="feature_request">Feature Request</option>
+                            <option value="regression">Regression</option>
                         </select>
                     </label>
                 </div>

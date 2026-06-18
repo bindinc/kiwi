@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [unreleased]
 
 - fixed docker-compose
+- Refine contextual feedback with KIWI-aligned controls, movable/editable text callouts, reliable screenshot pan/zoom behavior, detailed hidden-media hints, and the Bug/Chore/Feature Request/Regression category set.
 - Crop contextual feedback screenshots to the selected element, sanitize feedback modal metadata/backgrounds, keep customer pseudo data coherent, and add a local feedback privacy smoke command.
 - Replace blanket contextual feedback screenshot text hiding with DOM-marked pseudonymization so sensitive customer data becomes realistic pseudo data while screenshots stay readable.
 - Reorganize `docs/` into lower-kebab-case Diataxis-style folders with a central documentation index.

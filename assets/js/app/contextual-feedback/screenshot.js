@@ -45,11 +45,19 @@ export async function captureElementScreenshot({
         return {
             ...await downscalePngBlob(blob, maxDimension),
             selectedElement: safeSelectedElement,
-            privacySummary: { ...context.privacySummary }
+            privacySummary: serializePrivacySummary(context.privacySummary)
         };
     } finally {
         restoreScreenshotDom();
     }
+}
+
+function serializePrivacySummary(privacySummary) {
+    return {
+        pseudoValues: privacySummary.pseudoValues,
+        hiddenElements: privacySummary.hiddenElements,
+        hiddenElementTypes: Array.from(privacySummary.hiddenElementTypes || [])
+    };
 }
 
 async function downscalePngBlob(blob, maxDimension) {

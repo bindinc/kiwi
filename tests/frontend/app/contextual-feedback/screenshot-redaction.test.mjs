@@ -404,6 +404,7 @@ function testPrivacySummaryCountsPseudoValuesAndHiddenElements() {
 
     assert.equal(context.privacySummary.pseudoValues, 1);
     assert.equal(context.privacySummary.hiddenElements, 1);
+    assert.deepEqual(Array.from(context.privacySummary.hiddenElementTypes), ['images']);
 
     restore();
 }

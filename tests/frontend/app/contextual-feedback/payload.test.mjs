@@ -5,7 +5,7 @@ function testPayloadUsesRuntimeMetadata() {
     const payload = buildFeedbackPayload({
         comment: 'Button overlaps.',
         severity: 'normal',
-        category: 'layout',
+        category: 'bug',
         selectedElement: {
             tag: 'button',
             label: 'Create subscription',
@@ -37,7 +37,7 @@ function testPayloadUsesRuntimeMetadata() {
     assert.deepEqual(payload, {
         comment: 'Button overlaps.',
         severity: 'normal',
-        category: 'layout',
+        category: 'bug',
         pageUrl: 'https://bdc.rtvmedia.org.local/kiwi/customer?id=1',
         routePath: '/kiwi/customer?id=1',
         userAgent: 'node-test',

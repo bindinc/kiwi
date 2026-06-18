@@ -230,7 +230,7 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
         return [
             'comment' => 'The start date picker overlaps the submit button.',
             'severity' => 'normal',
-            'category' => 'layout',
+            'category' => 'bug',
             'pageUrl' => 'https://bdc.rtvmedia.org.local/kiwi/customer',
             'routePath' => '/kiwi/customer',
             'userAgent' => 'phpunit',
