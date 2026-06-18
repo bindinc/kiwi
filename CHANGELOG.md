@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Add GPL v3 licensing with a repository LICENSE file and README license documentation.
 - fixed docker-compose
 
 ## [v1.0.16]
