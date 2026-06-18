@@ -92,12 +92,15 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-panel {
     width: min(1360px, 100%);
     min-height: 0;
-    background: #ffffff;
+    background: #ececec;
     color: #111827;
-    border-radius: 8px;
+    border: 1px solid #8f8f8f;
+    border-radius: 4px;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
-    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
+    box-shadow:
+        0 22px 70px rgba(15, 23, 42, 0.38),
+        inset 0 1px 0 #ffffff;
 }
 
 .contextual-feedback-settings-panel {
@@ -112,8 +115,10 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     display: flex;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 18px;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 10px 12px;
+    border-bottom: 1px solid #a9a9a9;
+    background: #dcdcdc;
+    box-shadow: inset 0 1px 0 #ffffff;
 }
 
 .contextual-feedback-panel-header h2,
@@ -142,9 +147,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-close {
     width: 32px;
     height: 32px;
-    border: 0;
-    border-radius: 6px;
-    background: #f1f5f9;
+    border: 1px solid #8f8f8f;
+    border-radius: 3px;
+    background: #efefef;
+    box-shadow:
+        inset 1px 1px 0 #ffffff,
+        inset -1px -1px 0 #b5b5b5;
     cursor: pointer;
 }
 
@@ -155,22 +163,27 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-toolbar {
-    border-right: 1px solid #e5e7eb;
-    padding: 12px;
+    border-right: 1px solid #9e9e9e;
+    padding: 10px 8px;
+    background: #d6d6d6;
+    box-shadow: inset -1px 0 0 #f8f8f8;
     display: grid;
     align-content: start;
-    gap: 8px;
+    gap: 6px;
 }
 
 .contextual-feedback-tool,
 .contextual-feedback-actions button,
 .contextual-feedback-form button[type="submit"] {
     min-height: 34px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    background: #ffffff;
+    border: 1px solid #8f8f8f;
+    border-radius: 3px;
+    background: #eeeeee;
     color: #0f172a;
     cursor: pointer;
+    box-shadow:
+        inset 1px 1px 0 #ffffff,
+        inset -1px -1px 0 #b8b8b8;
 }
 
 .contextual-feedback-tool {
@@ -184,19 +197,23 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-tool.is-active {
-    border-color: #f97316;
-    background: #fff7ed;
+    border-color: #707070;
+    background: #d0d0d0;
+    box-shadow:
+        inset 1px 1px 2px #9c9c9c,
+        inset -1px -1px 0 #f5f5f5;
 }
 
 .contextual-feedback-canvas-wrap {
     position: relative;
     min-height: 0;
     overflow: auto;
-    background: #e2e8f0;
+    background: #b9b9b9;
     display: flex;
     align-items: flex-start;
     justify-content: center;
     padding: 44px 12px 12px;
+    box-shadow: inset 0 0 0 1px #8f8f8f;
 }
 
 .contextual-feedback-privacy-status {
@@ -231,14 +248,31 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     max-width: 100%;
     height: auto;
     background: #ffffff;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
+    border: 1px solid #707070;
+    box-shadow:
+        0 1px 0 #f8f8f8,
+        0 10px 22px rgba(15, 23, 42, 0.22);
+}
+
+.contextual-feedback-canvas-wrap canvas.is-zoomable {
+    max-width: none;
+}
+
+.contextual-feedback-canvas-wrap canvas.is-hand-tool {
+    cursor: grab;
+}
+
+.contextual-feedback-canvas-wrap canvas.is-panning {
+    cursor: grabbing;
 }
 
 .contextual-feedback-form {
-    border-top: 1px solid #e5e7eb;
-    padding: 14px 18px 16px;
+    border-top: 1px solid #a9a9a9;
+    padding: 12px;
+    background: #e5e5e5;
     display: grid;
     gap: 10px;
+    box-shadow: inset 0 1px 0 #ffffff;
 }
 
 .contextual-feedback-settings-form {
@@ -287,10 +321,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-form select,
 .contextual-feedback-settings-form input {
     width: 100%;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border: 1px solid #8f8f8f;
+    border-radius: 3px;
     padding: 8px 10px;
+    background: #ffffff;
     font: inherit;
+    box-shadow: inset 1px 1px 2px #d0d0d0;
 }
 
 .contextual-feedback-switch {
@@ -358,10 +394,13 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-form button[type="submit"] {
-    background: #0f172a;
-    border-color: #0f172a;
+    background: #3f3f3f;
+    border-color: #2f2f2f;
     color: #ffffff;
     padding-inline: 18px;
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.24),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.28);
 }
 
 @media (max-width: 760px) {

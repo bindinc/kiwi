@@ -6,31 +6,44 @@ const TOOL_COLORS = {
     blur: '#111827'
 };
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 4;
+const ZOOM_STEP = 1.12;
+
 export class AnnotationCanvas {
-    constructor({ canvas, screenshotBlob }) {
+    constructor({ canvas, screenshotBlob, viewport = null }) {
         this.canvas = canvas;
+        this.viewport = viewport;
         this.context = canvas.getContext('2d');
         this.screenshotBlob = screenshotBlob;
-        this.tool = 'pointer';
+        this.tool = 'hand';
+        this.zoom = 1;
         this.annotations = [];
         this.draft = null;
         this.image = null;
         this.dragStart = null;
+        this.panStart = null;
         this.changeHandler = null;
 
         this.handlePointerDown = this.handlePointerDown.bind(this);
         this.handlePointerMove = this.handlePointerMove.bind(this);
         this.handlePointerUp = this.handlePointerUp.bind(this);
+        this.handleWheel = this.handleWheel.bind(this);
     }
 
     async initialize() {
         this.image = await loadImage(this.screenshotBlob);
         this.canvas.width = this.image.width;
         this.canvas.height = this.image.height;
+        this.canvas.classList.add('is-zoomable');
+        this.applyZoom();
+        this.updateCursor();
         this.annotations = [];
         this.canvas.addEventListener('pointerdown', this.handlePointerDown);
         this.canvas.addEventListener('pointermove', this.handlePointerMove);
         this.canvas.addEventListener('pointerup', this.handlePointerUp);
+        this.canvas.addEventListener('pointercancel', this.handlePointerUp);
+        this.viewport?.addEventListener('wheel', this.handleWheel, { passive: false });
         this.render();
     }
 
@@ -38,10 +51,14 @@ export class AnnotationCanvas {
         this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
         this.canvas.removeEventListener('pointermove', this.handlePointerMove);
         this.canvas.removeEventListener('pointerup', this.handlePointerUp);
+        this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
+        this.viewport?.removeEventListener('wheel', this.handleWheel);
+        this.canvas.classList.remove('is-zoomable', 'is-panning');
     }
 
     setTool(tool) {
         this.tool = tool;
+        this.updateCursor();
     }
 
     undo() {
@@ -79,7 +96,8 @@ export class AnnotationCanvas {
     }
 
     handlePointerDown(event) {
-        if (this.tool === 'pointer') {
+        if (this.tool === 'hand') {
+            this.beginPan(event);
             return;
         }
 
@@ -118,6 +136,11 @@ export class AnnotationCanvas {
     }
 
     handlePointerMove(event) {
+        if (this.panStart) {
+            this.panTo(event);
+            return;
+        }
+
         if (!this.dragStart || !this.draft) {
             return;
         }
@@ -127,6 +150,11 @@ export class AnnotationCanvas {
     }
 
     handlePointerUp(event) {
+        if (this.panStart) {
+            this.endPan(event);
+            return;
+        }
+
         if (!this.dragStart || !this.draft) {
             return;
         }
@@ -144,6 +172,16 @@ export class AnnotationCanvas {
         this.annotations.push(finalShape);
         this.render();
         this.changeHandler?.(this.getAnnotations());
+    }
+
+    handleWheel(event) {
+        if (!event.ctrlKey) {
+            return;
+        }
+
+        event.preventDefault();
+        const direction = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
+        this.zoomAt(event.clientX, event.clientY, this.zoom * direction);
     }
 
     createShape(start, end) {
@@ -179,6 +217,71 @@ export class AnnotationCanvas {
         if (includeDraft && this.draft) {
             drawAnnotation(this.context, this.draft);
         }
+    }
+
+    beginPan(event) {
+        if (!this.viewport) {
+            return;
+        }
+
+        event.preventDefault();
+        this.canvas.setPointerCapture?.(event.pointerId);
+        this.panStart = {
+            clientX: event.clientX,
+            clientY: event.clientY,
+            scrollLeft: this.viewport.scrollLeft,
+            scrollTop: this.viewport.scrollTop
+        };
+        this.canvas.classList.add('is-panning');
+    }
+
+    panTo(event) {
+        if (!this.viewport || !this.panStart) {
+            return;
+        }
+
+        event.preventDefault();
+        this.viewport.scrollLeft = this.panStart.scrollLeft + this.panStart.clientX - event.clientX;
+        this.viewport.scrollTop = this.panStart.scrollTop + this.panStart.clientY - event.clientY;
+    }
+
+    endPan(event) {
+        this.canvas.releasePointerCapture?.(event.pointerId);
+        this.panStart = null;
+        this.canvas.classList.remove('is-panning');
+    }
+
+    zoomAt(clientX, clientY, nextZoom) {
+        if (!this.viewport) {
+            return;
+        }
+
+        const previousZoom = this.zoom;
+        const normalizedZoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+        if (normalizedZoom === previousZoom) {
+            return;
+        }
+
+        const viewportRect = this.viewport.getBoundingClientRect();
+        const viewportX = clientX - viewportRect.left;
+        const viewportY = clientY - viewportRect.top;
+        const imageX = viewportX + this.viewport.scrollLeft;
+        const imageY = viewportY + this.viewport.scrollTop;
+        const zoomRatio = normalizedZoom / previousZoom;
+
+        this.zoom = normalizedZoom;
+        this.applyZoom();
+        this.viewport.scrollLeft = imageX * zoomRatio - viewportX;
+        this.viewport.scrollTop = imageY * zoomRatio - viewportY;
+    }
+
+    applyZoom() {
+        this.canvas.style.width = `${Math.round(this.canvas.width * this.zoom)}px`;
+        this.canvas.style.height = `${Math.round(this.canvas.height * this.zoom)}px`;
+    }
+
+    updateCursor() {
+        this.canvas.classList.toggle('is-hand-tool', this.tool === 'hand');
     }
 }
 
@@ -264,4 +367,8 @@ function loadImage(blob) {
         }, { once: true });
         image.src = url;
     });
+}
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
 }

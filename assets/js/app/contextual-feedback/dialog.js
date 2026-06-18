@@ -1,7 +1,7 @@
 import { AnnotationCanvas } from './annotation-canvas.js';
 
 const TOOLS = [
-    ['pointer', '↖', 'Select'],
+    ['hand', 'H', 'Hand'],
     ['rectangle', '□', 'Rectangle'],
     ['arrow', '↗', 'Arrow'],
     ['pin', '!', 'Pin'],
@@ -26,11 +26,12 @@ export async function openFeedbackDialog({
     documentRef.body.classList.add('contextual-feedback-reviewing');
 
     const canvas = modal.querySelector('[data-feedback-canvas]');
+    const canvasViewport = modal.querySelector('[data-feedback-canvas-wrap]');
     const form = modal.querySelector('[data-feedback-form]');
     const errorBox = modal.querySelector('[data-feedback-error]');
     const statusBox = modal.querySelector('[data-feedback-status]');
     const submitButton = modal.querySelector('[data-feedback-submit]');
-    const annotationCanvas = new AnnotationCanvas({ canvas, screenshotBlob });
+    const annotationCanvas = new AnnotationCanvas({ canvas, screenshotBlob, viewport: canvasViewport });
     await annotationCanvas.initialize();
 
     modal.querySelector('[data-feedback-close]').addEventListener('click', () => {
@@ -114,7 +115,7 @@ function dialogTemplate(selectedElement, privacySummary) {
             </header>
             <div class="contextual-feedback-workspace">
                 <div class="contextual-feedback-toolbar">${toolButtons}</div>
-                <div class="contextual-feedback-canvas-wrap">
+                <div class="contextual-feedback-canvas-wrap" data-feedback-canvas-wrap>
                     <div class="contextual-feedback-privacy-status" aria-label="Screenshot privacy status">
                         <span>Pseudo data applied</span>
                         ${hiddenBadge}
