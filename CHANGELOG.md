@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Add the KIWI customer search field order requested by KCC, including customer number, IBAN, birth date, phone, and a multi-select mandant filter, and reuse the same search field set for recipient/requester lookup in new subscription creation.
 - Add a contextual feedback screenshot pseudonymization toggle, store both pseudo-data and original-data annotated screenshots, and route original-data screenshots through a separate Teams workflow webhook.
 - Add GPL v3 licensing with a repository LICENSE file and README license documentation.
 - fixed docker-compose

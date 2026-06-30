@@ -43,8 +43,11 @@ final class CustomerController extends AbstractApiController
             'postalCode' => (string) $request->query->get('postalCode', ''),
             'houseNumber' => (string) $request->query->get('houseNumber', ''),
             'name' => (string) $request->query->get('name', ''),
-            'phone' => (string) $request->query->get('phone', ''),
+            'customerNumber' => (string) $request->query->get('customerNumber', ''),
             'email' => (string) $request->query->get('email', ''),
+            'iban' => (string) $request->query->get('iban', ''),
+            'birthDate' => (string) $request->query->get('birthDate', ''),
+            'phone' => (string) $request->query->get('phone', ''),
         ];
         $sortBy = (string) $request->query->get('sortBy', 'name');
         $allowedDivisionIds = $this->parseCsvQueryList(
@@ -74,6 +77,7 @@ final class CustomerController extends AbstractApiController
         }
 
         return $this->json($this->stateService->searchCustomers($request->getSession(), $filters + [
+            'mandants' => implode(',', $allowedMandants),
             'sortBy' => $sortBy,
         ], $page, $pageSize));
     }
