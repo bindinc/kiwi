@@ -11,7 +11,7 @@ const TOOLS = [
 
 export async function openFeedbackDialog({
     documentRef = document,
-    screenshotBlob,
+    screenshots,
     selectedElement,
     privacySummary = {},
     onSubmit,
@@ -31,7 +31,13 @@ export async function openFeedbackDialog({
     const errorBox = modal.querySelector('[data-feedback-error]');
     const statusBox = modal.querySelector('[data-feedback-status]');
     const submitButton = modal.querySelector('[data-feedback-submit]');
-    const annotationCanvas = new AnnotationCanvas({ canvas, screenshotBlob, viewport: canvasViewport });
+    const pseudonymizedScreenshot = screenshots?.pseudonymized?.blob;
+    const originalScreenshot = screenshots?.original?.blob;
+    if (!pseudonymizedScreenshot || !originalScreenshot) {
+        throw new Error('Both pseudonymized and original screenshots are required.');
+    }
+
+    const annotationCanvas = new AnnotationCanvas({ canvas, screenshotBlob: pseudonymizedScreenshot, viewport: canvasViewport });
     await annotationCanvas.initialize();
 
     modal.querySelector('[data-feedback-close]').addEventListener('click', () => {
@@ -51,6 +57,20 @@ export async function openFeedbackDialog({
 
     modal.querySelector('[data-feedback-undo]').addEventListener('click', () => annotationCanvas.undo());
     modal.querySelector('[data-feedback-clear]').addEventListener('click', () => annotationCanvas.clear());
+    modal.querySelector('[data-feedback-pseudonymized]').addEventListener('change', async (event) => {
+        const usePseudonymizedScreenshot = event.target.checked;
+        submitButton.disabled = true;
+        statusBox.textContent = 'Switching screenshot...';
+        try {
+            await annotationCanvas.setScreenshotBlob(usePseudonymizedScreenshot ? pseudonymizedScreenshot : originalScreenshot);
+            modal.querySelector('[data-feedback-visible-privacy]').textContent = usePseudonymizedScreenshot
+                ? 'Pseudo data visible'
+                : 'Original data visible';
+        } finally {
+            submitButton.disabled = false;
+            statusBox.textContent = '';
+        }
+    });
     modal.querySelector('[data-feedback-retake]').addEventListener('click', () => {
         cleanup();
         onRetake?.();
@@ -71,13 +91,17 @@ export async function openFeedbackDialog({
         statusBox.textContent = 'Uploading...';
 
         try {
-            const finalBlob = await annotationCanvas.exportFinalPngBlob();
+            const pseudonymizedBlob = await annotationCanvas.exportFinalPngBlobFor(pseudonymizedScreenshot);
+            const originalBlob = await annotationCanvas.exportFinalPngBlobFor(originalScreenshot);
             await onSubmit({
                 comment,
                 severity: String(formData.get('severity') || 'normal'),
                 category: String(formData.get('category') || 'bug'),
                 annotations: annotationCanvas.getAnnotations(),
-                screenshotBlob: finalBlob
+                screenshots: {
+                    pseudonymized: pseudonymizedBlob,
+                    original: originalBlob
+                }
             });
             statusBox.textContent = 'Delivered.';
             cleanup();
@@ -121,7 +145,10 @@ function dialogTemplate(selectedElement, privacySummary) {
                 <div class="contextual-feedback-toolbar">${toolButtons}</div>
                 <div class="contextual-feedback-canvas-wrap" data-feedback-canvas-wrap>
                     <div class="contextual-feedback-privacy-status" aria-label="Screenshot privacy status">
-                        <span>Pseudo data applied</span>
+                        <label class="contextual-feedback-screenshot-toggle">
+                            <input type="checkbox" data-feedback-pseudonymized checked>
+                            <span data-feedback-visible-privacy>Pseudo data visible</span>
+                        </label>
                         ${hiddenBadge}
                         <span>Manual redaction available</span>
                     </div>
@@ -153,7 +180,7 @@ function dialogTemplate(selectedElement, privacySummary) {
                         </select>
                     </label>
                 </div>
-                <p class="contextual-feedback-note">The modal shows only the selected element crop with pseudo data. Teams receives the annotated crop, your comment, severity, category, page route, viewport, and the sanitized selected-element selector.</p>
+                <p class="contextual-feedback-note">Kiwi stores both annotated screenshot variants. The regular Teams workflow receives the pseudo-data screenshot; the original-data workflow receives the screenshot with real visible data when that connector is configured.</p>
                 <div class="contextual-feedback-actions">
                     <div>
                         <button type="button" data-feedback-retake>Retake screenshot</button>

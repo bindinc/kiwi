@@ -78,6 +78,19 @@ final class DevelopmentFeedbackSettings
         return '' === $url ? null : $url;
     }
 
+    public function getOriginalDataWebhookUrl(): ?string
+    {
+        $configuration = $this->readConfiguration();
+        $configuredWebhookUrl = $configuration?->getOriginalDataWebhookUrl();
+        if (null !== $configuredWebhookUrl) {
+            return $configuredWebhookUrl;
+        }
+
+        $url = trim((string) (getenv('CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL') ?: ''));
+
+        return '' === $url ? null : $url;
+    }
+
     public function getPublicBaseUrl(Request $request): string
     {
         $configuration = $this->readConfiguration();
@@ -142,12 +155,15 @@ final class DevelopmentFeedbackSettings
     {
         $configuration = $this->readConfiguration();
         $webhookUrl = $this->getWebhookUrl();
+        $originalDataWebhookUrl = $this->getOriginalDataWebhookUrl();
 
         return [
             'feedbackEnabled' => $this->isEnabled(),
             'allowedRoles' => $this->getAllowedRoleAliases(),
             'teamsWebhookConfigured' => null !== $webhookUrl,
             'teamsWebhookSource' => null !== $configuration?->getWebhookUrl() ? 'database' : (null !== $webhookUrl ? 'environment' : 'none'),
+            'originalDataWebhookConfigured' => null !== $originalDataWebhookUrl,
+            'originalDataWebhookSource' => null !== $configuration?->getOriginalDataWebhookUrl() ? 'database' : (null !== $originalDataWebhookUrl ? 'environment' : 'none'),
             'publicBaseUrl' => $this->getPublicBaseUrl($request),
             'imageTtlDays' => $this->getImageTtlDays(),
             'maxImageBytes' => $this->getMaxImageBytes(),

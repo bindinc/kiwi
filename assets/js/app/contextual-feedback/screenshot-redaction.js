@@ -76,7 +76,11 @@ const PSEUDO_VALUES = {
     'free-text': ['Klantnotitie met testgegevens', 'Contactmoment met voorbeeldtekst']
 };
 
-export function redactScreenshotDom(documentRef = document, { root = documentRef.body, context = createPseudonymContext() } = {}) {
+export function redactScreenshotDom(documentRef = document, {
+    root = documentRef.body,
+    context = createPseudonymContext(),
+    pseudonymizeText = true
+} = {}) {
     if (!root) {
         return () => {};
     }
@@ -92,7 +96,7 @@ export function redactScreenshotDom(documentRef = document, { root = documentRef
 
         removeBackgroundImage(element, restores);
 
-        if (isFormField(element)) {
+        if (pseudonymizeText && isFormField(element)) {
             redactFormField(element, context, restores);
         }
 
@@ -101,7 +105,9 @@ export function redactScreenshotDom(documentRef = document, { root = documentRef
         }
     }
 
-    redactTextNodes(root, context, restores);
+    if (pseudonymizeText) {
+        redactTextNodes(root, context, restores);
+    }
 
     return () => restoreAll(restores);
 }

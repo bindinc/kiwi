@@ -15,10 +15,51 @@ export async function captureElementScreenshot({
     const captureWidth = Math.max(1, Math.round(rect.width || element.scrollWidth || 1));
     const captureHeight = Math.max(1, Math.round(rect.height || element.scrollHeight || 1));
     const context = createPseudonymContext();
+    const originalContext = createPseudonymContext();
 
-    const restoreScreenshotDom = redactScreenshotDom(documentRef, { root: documentRef.body, context });
+    const original = await captureScreenshotVariant({
+        element,
+        documentRef,
+        captureWidth,
+        captureHeight,
+        maxDimension,
+        context: originalContext,
+        pseudonymizeText: false
+    });
+    const pseudonymized = await captureScreenshotVariant({
+        element,
+        documentRef,
+        captureWidth,
+        captureHeight,
+        maxDimension,
+        context,
+        pseudonymizeText: true
+    });
+
+    return {
+        original,
+        pseudonymized,
+        selectedElement: pseudonymizeSelectedElement(selectedElement, context),
+        privacySummary: serializePrivacySummary(context.privacySummary)
+    };
+}
+
+async function captureScreenshotVariant({
+    element,
+    documentRef,
+    captureWidth,
+    captureHeight,
+    maxDimension,
+    context,
+    pseudonymizeText
+}) {
+    const restoreScreenshotDom = redactScreenshotDom(documentRef, {
+        root: documentRef.body,
+        context,
+        pseudonymizeText
+    });
+
     try {
-        const safeSelectedElement = pseudonymizeSelectedElement(selectedElement, context);
         const blob = await toBlob(element, {
             cacheBust: true,
             pixelRatio: 1,
@@ -42,11 +83,7 @@ export async function captureElementScreenshot({
             throw new Error('Screenshot capture returned no image.');
         }
 
-        return {
-            ...await downscalePngBlob(blob, maxDimension),
-            selectedElement: safeSelectedElement,
-            privacySummary: serializePrivacySummary(context.privacySummary)
-        };
+        return downscalePngBlob(blob, maxDimension);
     } finally {
         restoreScreenshotDom();
     }

@@ -132,6 +132,8 @@ async function assertFeedbackReviewSurfaceIsPrivate(page) {
         throw new Error(`Feedback modal text leaks real values: ${leakedModalValues.join(', ')}`);
     }
 
+    await assertScreenshotPrivacyToggle(page);
+
     const backgroundState = await page.evaluate(() => {
         const modal = document.querySelector('.contextual-feedback-modal');
         const reviewedElement = Array.from(document.body.children).find((child) => child !== modal);
@@ -179,6 +181,27 @@ async function assertFeedbackReviewSurfaceIsPrivate(page) {
         await saveFailureEvidence(page, 'canvas-not-cropped');
         throw new Error(`Feedback canvas is not cropped to selected element: canvas=${JSON.stringify(canvasState)} target=${JSON.stringify(targetRect)}`);
     }
+}
+
+async function assertScreenshotPrivacyToggle(page) {
+    const toggle = page.locator('[data-feedback-pseudonymized]');
+    await toggle.waitFor({ timeout: 10000 });
+    if (!await toggle.isChecked()) {
+        await saveFailureEvidence(page, 'pseudonymization-toggle-off');
+        throw new Error('Pseudonymization toggle is not enabled by default.');
+    }
+
+    const pseudoCanvas = await page.locator('.contextual-feedback-modal canvas').evaluate((canvas) => canvas.toDataURL('image/png'));
+    await toggle.uncheck();
+    await page.waitForFunction(() => document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes('Original data visible'), null, { timeout: 10000 });
+    const originalCanvas = await page.locator('.contextual-feedback-modal canvas').evaluate((canvas) => canvas.toDataURL('image/png'));
+    if (pseudoCanvas === originalCanvas) {
+        await saveFailureEvidence(page, 'pseudonymization-toggle-no-change');
+        throw new Error('Pseudonymization toggle did not switch the visible screenshot variant.');
+    }
+
+    await toggle.check();
+    await page.waitForFunction(() => document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes('Pseudo data visible'), null, { timeout: 10000 });
 }
 
 async function saveFailureEvidence(page, name) {

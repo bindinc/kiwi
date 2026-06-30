@@ -20,6 +20,9 @@ final class DevelopmentFeedbackConfiguration
     #[ORM\Column(name: 'webhook_url', type: 'text', nullable: true)]
     private ?string $webhookUrl = null;
 
+    #[ORM\Column(name: 'original_data_webhook_url', type: 'text', nullable: true)]
+    private ?string $originalDataWebhookUrl = null;
+
     #[ORM\Column(name: 'public_base_url', length: 2048, nullable: true)]
     private ?string $publicBaseUrl = null;
 
@@ -62,6 +65,18 @@ final class DevelopmentFeedbackConfiguration
     {
         $webhookUrl = null !== $webhookUrl ? trim($webhookUrl) : null;
         $this->webhookUrl = '' === $webhookUrl ? null : $webhookUrl;
+        $this->touch();
+    }
+
+    public function getOriginalDataWebhookUrl(): ?string
+    {
+        return $this->originalDataWebhookUrl;
+    }
+
+    public function setOriginalDataWebhookUrl(?string $originalDataWebhookUrl): void
+    {
+        $originalDataWebhookUrl = null !== $originalDataWebhookUrl ? trim($originalDataWebhookUrl) : null;
+        $this->originalDataWebhookUrl = '' === $originalDataWebhookUrl ? null : $originalDataWebhookUrl;
         $this->touch();
     }
 

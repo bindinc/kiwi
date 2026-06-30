@@ -248,10 +248,11 @@ app state as a PNG, draws the selected-element marker and manual annotations on
 the image, stores the report and screenshot in PostgreSQL, and posts an Adaptive
 Card to Microsoft Teams through a Teams Workflows webhook.
 
-Before Kiwi renders the PNG, the browser sanitizes the captured page by hiding
-visible page text, form values, media, embedded frames, canvases, SVGs, and CSS
-background images. This preserves the page layout for debugging while keeping
-customer and account data out of feedback screenshots.
+Kiwi captures two annotated PNG variants for each report. The default visible
+variant uses coherent pseudo data for marked customer fields, while the
+checkbox in the screenshot tool lets the reviewer switch to the original visible
+data variant before submitting. Media, embedded frames, canvases, SVGs, and CSS
+background images remain hidden because Kiwi cannot pseudonymize them reliably.
 
 Screenshots are stored in PostgreSQL rather than pod-local files so image
 serving remains compatible with multiple Kiwi replicas and `sessionAffinity:
@@ -263,15 +264,17 @@ Runtime defaults are controlled by:
 CONTEXTUAL_FEEDBACK_ENABLED=0
 CONTEXTUAL_FEEDBACK_ALLOWED_ROLES="admin,dev,supervisor"
 CONTEXTUAL_FEEDBACK_WEBHOOK_URL=
+CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL=
 CONTEXTUAL_FEEDBACK_PUBLIC_BASE_URL="https://bdc.rtvmedia.org/kiwi"
 CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS=30
 CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES=3145728
 ```
 
 Kiwi administrators and supervisors also see a settings cog immediately left of
-the outbox icon. That modal manages the global feedback-button toggle and the
-Microsoft Teams connector settings. The webhook URL is never sent back to
-browser JavaScript; the modal only shows whether a webhook is configured and
+the outbox icon. That modal manages the global feedback-button toggle, the
+regular Microsoft Teams connector for pseudo-data screenshots, and the
+separate original-data workflow connector. Webhook URLs are never sent back to
+browser JavaScript; the modal only shows whether each webhook is configured and
 whether the value comes from the database or the runtime environment.
 
 To create the Teams Workflows webhook:
@@ -282,8 +285,13 @@ To create the Teams Workflows webhook:
 4. Choose a channel incoming webhook template such as `Send webhook alerts to a channel`, or create a flow with the `When a Teams webhook request is received` trigger.
 5. Configure the message action to post the incoming Adaptive Card payload to the channel.
 6. Save the workflow and copy the generated webhook URL.
-7. Store the webhook in the Kiwi runtime secret store as `CONTEXTUAL_FEEDBACK_WEBHOOK_URL`, or paste it into the admin/supervisor settings modal.
+7. Store the regular webhook in the Kiwi runtime secret store as `CONTEXTUAL_FEEDBACK_WEBHOOK_URL`, or paste it into the admin/supervisor settings modal.
 8. Add at least one co-owner to the workflow so delivery does not depend on one owner account.
+
+Use a different Teams channel or workflow for original-data screenshots and
+store that webhook as `CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL`. Kiwi
+will send the pseudo-data screenshot to the regular webhook and the original
+visible-data screenshot only to the original-data webhook when it is configured.
 
 For local testing, Teams cannot fetch images from
 `bdc.rtvmedia.org.local` unless a tunnel or reachable preview URL is used. Local

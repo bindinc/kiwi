@@ -185,8 +185,8 @@ The smoke test maps `bdc.rtvmedia.org.local` to `127.0.0.1`, ignores local CA
 certificate errors, writes failure screenshots to
 `/tmp/kiwi-feedback-privacy-smoke`, and fails when real Jansen data appears in
 the feedback modal text, when the live page behind the modal is not strongly
-hidden, or when the captured canvas is blank or not cropped to the selected
-element.
+hidden, when the pseudonymization checkbox does not switch screenshot variants,
+or when the captured canvas is blank or not cropped to the selected element.
 
 ## Manual contextual feedback privacy scenario
 
@@ -213,8 +213,10 @@ Use this scenario to test the feedback screenshot privacy behavior:
 10. Save:
    - a full-page modal screenshot,
    - `canvas.toDataURL('image/png')` as a PNG.
-11. Check that the canvas uses pseudo data.
-12. Check that the modal header and visible background do not leak real customer
+11. Check that the canvas uses pseudo data by default.
+12. Uncheck the pseudonymization checkbox and confirm the canvas switches to the
+    original visible data variant.
+13. Check that the modal header and visible background do not leak real customer
     data. If they do, record it as a privacy/UX finding.
 
 The picker overlay intentionally intercepts normal element clicks. In automated

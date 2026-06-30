@@ -22,8 +22,12 @@ final class ScreenshotStore
     /**
      * @return array{screenshot: DevelopmentFeedbackScreenshot, token: string}
      */
-    public function storePng(DevelopmentFeedbackReport $report, UploadedFile $file, \DateTimeImmutable $now): array
+    public function storePng(DevelopmentFeedbackReport $report, UploadedFile $file, \DateTimeImmutable $now, string $variant = DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED): array
     {
+        if (!\in_array($variant, [DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED, DevelopmentFeedbackScreenshot::VARIANT_ORIGINAL], true)) {
+            throw new \InvalidArgumentException(sprintf('Unsupported screenshot variant "%s".', $variant));
+        }
+
         if (!$file->isValid()) {
             throw new ApiProblemException(400, 'invalid_screenshot', 'screenshot upload is invalid');
         }
@@ -44,9 +48,10 @@ final class ScreenshotStore
         [$width, $height] = $this->readPngDimensions($bytes);
         $token = $this->urlGenerator->createToken();
         $expiresAt = $now->modify(sprintf('+%d days', $this->settings->getImageTtlDays()));
-        $storagePath = sprintf('postgresql://development-feedback/screenshots/%s.png', $report->getPublicId());
+        $storagePath = sprintf('postgresql://development-feedback/screenshots/%s/%s.png', $report->getPublicId(), $variant);
 
         $screenshot = new DevelopmentFeedbackScreenshot(
+            $variant,
             $storagePath,
             'image/png',
             $byteSize,
@@ -58,7 +63,7 @@ final class ScreenshotStore
             $now,
             $bytes,
         );
-        $report->setScreenshot($screenshot);
+        $report->addScreenshot($screenshot);
 
         return [
             'screenshot' => $screenshot,

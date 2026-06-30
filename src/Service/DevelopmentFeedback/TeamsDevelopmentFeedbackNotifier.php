@@ -24,15 +24,48 @@ final class TeamsDevelopmentFeedbackNotifier
      */
     public function notify(DevelopmentFeedbackReport $report, string $screenshotUrl): array
     {
-        $webhookUrl = $this->settings->getWebhookUrl();
+        return $this->sendToWebhook(
+            $report,
+            $screenshotUrl,
+            $this->settings->getWebhookUrl(),
+            false,
+            'CONTEXTUAL_FEEDBACK_WEBHOOK_URL',
+        );
+    }
+
+    /**
+     * @return array{status: string, error: string|null}
+     */
+    public function notifyOriginalData(DevelopmentFeedbackReport $report, string $screenshotUrl): array
+    {
+        return $this->sendToWebhook(
+            $report,
+            $screenshotUrl,
+            $this->settings->getOriginalDataWebhookUrl(),
+            true,
+            'CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL',
+        );
+    }
+
+    /**
+     * @return array{status: string, error: string|null}
+     */
+    private function sendToWebhook(
+        DevelopmentFeedbackReport $report,
+        string $screenshotUrl,
+        ?string $webhookUrl,
+        bool $containsOriginalData,
+        string $settingName,
+    ): array {
         if (null === $webhookUrl) {
             $this->logger->warning('Skipping contextual feedback Teams delivery because no webhook URL is configured.', [
                 'feedback_public_id' => $report->getPublicId(),
+                'contains_original_data' => $containsOriginalData,
             ]);
 
             return [
                 'status' => 'not_configured',
-                'error' => 'CONTEXTUAL_FEEDBACK_WEBHOOK_URL is not configured',
+                'error' => $settingName.' is not configured',
             ];
         }
 
@@ -41,7 +74,7 @@ final class TeamsDevelopmentFeedbackNotifier
                 'headers' => [
                     'Content-Type' => 'application/json',
                 ],
-                'json' => $this->cardFactory->createCard($report, $screenshotUrl),
+                'json' => $this->cardFactory->createCard($report, $screenshotUrl, $containsOriginalData),
                 'timeout' => 8,
             ]);
             $statusCode = $response->getStatusCode();
@@ -49,6 +82,7 @@ final class TeamsDevelopmentFeedbackNotifier
         } catch (TransportExceptionInterface $exception) {
             $this->logger->warning('Contextual feedback Teams delivery failed with a transport error.', [
                 'feedback_public_id' => $report->getPublicId(),
+                'contains_original_data' => $containsOriginalData,
                 'error' => $this->truncateError($exception->getMessage()),
             ]);
 
@@ -68,6 +102,7 @@ final class TeamsDevelopmentFeedbackNotifier
         $error = $this->truncateError(sprintf('Teams webhook returned HTTP %d: %s', $statusCode, trim($body)));
         $this->logger->warning('Contextual feedback Teams delivery failed with a non-success status code.', [
             'feedback_public_id' => $report->getPublicId(),
+            'contains_original_data' => $containsOriginalData,
             'status_code' => $statusCode,
             'error' => $error,
         ]);

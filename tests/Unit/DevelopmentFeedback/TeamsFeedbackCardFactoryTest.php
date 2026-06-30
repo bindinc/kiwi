@@ -15,17 +15,29 @@ final class TeamsFeedbackCardFactoryTest extends TestCase
         $report = $this->createReport();
         $card = (new TeamsFeedbackCardFactory())->createCard($report, 'https://example.org/kiwi/api/v1/development-feedback/screenshots/id/token.png');
         $content = $card['attachments'][0]['content'];
-        $facts = $content['body'][2]['facts'];
+        $facts = $content['body'][3]['facts'];
 
         self::assertSame('message', $card['type']);
         self::assertSame('New Kiwi contextual feedback', $content['body'][0]['text']);
-        self::assertSame('The button overlaps the date picker.', $content['body'][1]['text']);
-        self::assertSame('https://example.org/kiwi/api/v1/development-feedback/screenshots/id/token.png', $content['body'][3]['url']);
+        self::assertSame('Screenshot contains pseudo data.', $content['body'][1]['text']);
+        self::assertSame('The button overlaps the date picker.', $content['body'][2]['text']);
+        self::assertSame('https://example.org/kiwi/api/v1/development-feedback/screenshots/id/token.png', $content['body'][4]['url']);
         self::assertContains(['title' => 'Reporter', 'value' => 'Test User <test@example.org>'], $facts);
         self::assertContains(['title' => 'Environment', 'value' => 'preview'], $facts);
         self::assertContains(['title' => 'Page', 'value' => '/kiwi/customer'], $facts);
         self::assertContains(['title' => 'Element', 'value' => 'Create subscription'], $facts);
         self::assertContains(['title' => 'Selector', 'value' => '[data-feedback-id="create"]'], $facts);
+    }
+
+    public function testOriginalDataCardLabelsScreenshotSensitivity(): void
+    {
+        $report = $this->createReport();
+        $card = (new TeamsFeedbackCardFactory())->createCard($report, 'https://example.org/original.png', true);
+        $content = $card['attachments'][0]['content'];
+
+        self::assertSame('New Kiwi contextual feedback with original data', $content['body'][0]['text']);
+        self::assertSame('Screenshot contains original visible customer data.', $content['body'][1]['text']);
+        self::assertSame('Attention', $content['body'][1]['color']);
     }
 
     private function createReport(): DevelopmentFeedbackReport

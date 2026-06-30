@@ -11,7 +11,7 @@ final class TeamsFeedbackCardFactory
     /**
      * @return array<string, mixed>
      */
-    public function createCard(DevelopmentFeedbackReport $report, string $screenshotUrl): array
+    public function createCard(DevelopmentFeedbackReport $report, string $screenshotUrl, bool $containsOriginalData = false): array
     {
         return [
             'type' => 'message',
@@ -25,9 +25,16 @@ final class TeamsFeedbackCardFactory
                         'body' => [
                             [
                                 'type' => 'TextBlock',
-                                'text' => 'New Kiwi contextual feedback',
+                                'text' => $containsOriginalData ? 'New Kiwi contextual feedback with original data' : 'New Kiwi contextual feedback',
                                 'weight' => 'Bolder',
                                 'size' => 'Medium',
+                            ],
+                            [
+                                'type' => 'TextBlock',
+                                'text' => $containsOriginalData ? 'Screenshot contains original visible customer data.' : 'Screenshot contains pseudo data.',
+                                'wrap' => true,
+                                'color' => $containsOriginalData ? 'Attention' : 'Default',
+                                'weight' => $containsOriginalData ? 'Bolder' : 'Default',
                             ],
                             [
                                 'type' => 'TextBlock',
@@ -41,7 +48,7 @@ final class TeamsFeedbackCardFactory
                             [
                                 'type' => 'Image',
                                 'url' => $screenshotUrl,
-                                'altText' => 'Marked screenshot for Kiwi feedback',
+                                'altText' => $containsOriginalData ? 'Marked screenshot with original visible data for Kiwi feedback' : 'Marked screenshot with pseudo data for Kiwi feedback',
                             ],
                         ],
                         'actions' => [

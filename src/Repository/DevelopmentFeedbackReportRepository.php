@@ -33,7 +33,7 @@ final class DevelopmentFeedbackReportRepository extends ServiceEntityRepository
     public function findWithScreenshotByPublicId(string $publicId): ?DevelopmentFeedbackReport
     {
         return $this->createQueryBuilder('report')
-            ->leftJoin('report.screenshot', 'screenshot')
+            ->leftJoin('report.screenshots', 'screenshot')
             ->addSelect('screenshot')
             ->andWhere('report.publicId = :publicId')
             ->setParameter('publicId', $publicId)

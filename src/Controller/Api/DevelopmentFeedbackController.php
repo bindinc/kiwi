@@ -78,7 +78,12 @@ final class DevelopmentFeedbackController extends AbstractApiController
             throw new ApiProblemException(400, 'invalid_screenshot', 'screenshot is required');
         }
 
-        return $this->json($this->submitter->submit($request, $payload, $screenshot, $currentUserContext), 201);
+        $originalScreenshot = $request->files->get('originalScreenshot');
+        if (!$originalScreenshot instanceof UploadedFile) {
+            throw new ApiProblemException(400, 'invalid_screenshot', 'originalScreenshot is required');
+        }
+
+        return $this->json($this->submitter->submit($request, $payload, $screenshot, $originalScreenshot, $currentUserContext), 201);
     }
 
     #[Route('/screenshots/{publicId}/{token}.png', name: 'api_development_feedback_screenshot', methods: ['GET'])]
@@ -89,7 +94,8 @@ final class DevelopmentFeedbackController extends AbstractApiController
         }
 
         $report = $this->repository->findWithScreenshotByPublicId($publicId);
-        $screenshot = $report?->getScreenshot();
+        $tokenHash = $this->urlGenerator->hashToken($token);
+        $screenshot = $report?->findScreenshotByAccessTokenHash($tokenHash);
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
         if (null === $screenshot || $screenshot->getAccessTokenExpiresAt() <= $now) {

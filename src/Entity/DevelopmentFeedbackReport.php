@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\DevelopmentFeedbackReportRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: DevelopmentFeedbackReportRepository::class)]
@@ -99,8 +101,11 @@ final class DevelopmentFeedbackReport
     #[ORM\Column(name: 'teams_delivered_at', type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $teamsDeliveredAt = null;
 
-    #[ORM\OneToOne(mappedBy: 'report', targetEntity: DevelopmentFeedbackScreenshot::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
-    private ?DevelopmentFeedbackScreenshot $screenshot = null;
+    /**
+     * @var Collection<int, DevelopmentFeedbackScreenshot>
+     */
+    #[ORM\OneToMany(mappedBy: 'report', targetEntity: DevelopmentFeedbackScreenshot::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $screenshots;
 
     /**
      * @param array<string, int|float> $selectedElementRectJson
@@ -130,6 +135,7 @@ final class DevelopmentFeedbackReport
         string $severity,
         string $category,
     ) {
+        $this->screenshots = new ArrayCollection();
         $this->publicId = $publicId;
         $this->createdAt = $createdAt;
         $this->createdByUserId = $createdByUserId;
@@ -299,12 +305,61 @@ final class DevelopmentFeedbackReport
 
     public function getScreenshot(): ?DevelopmentFeedbackScreenshot
     {
-        return $this->screenshot;
+        $pseudonymizedScreenshot = $this->getScreenshotByVariant(DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED);
+        if (null !== $pseudonymizedScreenshot) {
+            return $pseudonymizedScreenshot;
+        }
+
+        $firstScreenshot = $this->screenshots->first();
+
+        return $firstScreenshot instanceof DevelopmentFeedbackScreenshot ? $firstScreenshot : null;
     }
 
     public function setScreenshot(DevelopmentFeedbackScreenshot $screenshot): void
     {
-        $this->screenshot = $screenshot;
+        $this->addScreenshot($screenshot);
+    }
+
+    /**
+     * @return Collection<int, DevelopmentFeedbackScreenshot>
+     */
+    public function getScreenshots(): Collection
+    {
+        return $this->screenshots;
+    }
+
+    public function getScreenshotByVariant(string $variant): ?DevelopmentFeedbackScreenshot
+    {
+        foreach ($this->screenshots as $screenshot) {
+            if ($screenshot->getVariant() === $variant) {
+                return $screenshot;
+            }
+        }
+
+        return null;
+    }
+
+    public function findScreenshotByAccessTokenHash(string $accessTokenHash): ?DevelopmentFeedbackScreenshot
+    {
+        foreach ($this->screenshots as $screenshot) {
+            if (hash_equals($screenshot->getAccessTokenHash(), $accessTokenHash)) {
+                return $screenshot;
+            }
+        }
+
+        return null;
+    }
+
+    public function addScreenshot(DevelopmentFeedbackScreenshot $screenshot): void
+    {
+        foreach ($this->screenshots as $existingScreenshot) {
+            if ($existingScreenshot->getVariant() === $screenshot->getVariant()) {
+                $this->screenshots->removeElement($existingScreenshot);
+                break;
+            }
+        }
+
+        $this->screenshots->add($screenshot);
         $screenshot->setReport($this);
     }
 }

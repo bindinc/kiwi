@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Add a contextual feedback screenshot pseudonymization toggle, store both pseudo-data and original-data annotated screenshots, and route original-data screenshots through a separate Teams workflow webhook.
 - fixed docker-compose
 - Refine contextual feedback with KIWI-aligned controls, movable/editable text callouts, reliable screenshot pan/zoom behavior, detailed hidden-media hints, and the Bug/Chore/Feature Request/Regression category set.
 - Crop contextual feedback screenshots to the selected element, sanitize feedback modal metadata/backgrounds, keep customer pseudo data coherent, and add a local feedback privacy smoke command.

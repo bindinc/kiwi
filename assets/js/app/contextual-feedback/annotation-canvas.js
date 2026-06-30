@@ -37,9 +37,7 @@ export class AnnotationCanvas {
     }
 
     async initialize() {
-        this.image = await loadImage(this.screenshotBlob);
-        this.canvas.width = this.image.width;
-        this.canvas.height = this.image.height;
+        await this.loadScreenshot(this.screenshotBlob);
         this.canvas.classList.add('is-zoomable');
         this.applyZoom();
         this.updateCursor();
@@ -51,6 +49,13 @@ export class AnnotationCanvas {
         this.viewport?.addEventListener('wheel', this.handleWheel, { passive: false });
         window.addEventListener('keydown', this.handleKeyDown);
         window.addEventListener('keyup', this.handleKeyUp);
+        this.render();
+    }
+
+    async setScreenshotBlob(screenshotBlob) {
+        this.screenshotBlob = screenshotBlob;
+        await this.loadScreenshot(screenshotBlob);
+        this.applyZoom();
         this.render();
     }
 
@@ -104,7 +109,34 @@ export class AnnotationCanvas {
         });
     }
 
+    async exportFinalPngBlobFor(screenshotBlob) {
+        const image = await loadImage(screenshotBlob);
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0);
+
+        for (const annotation of this.annotations) {
+            drawAnnotation(context, annotation);
+        }
+
+        return new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    resolve(blob);
+                } else {
+                    reject(new Error('Could not render annotated screenshot.'));
+                }
+            }, 'image/png');
+        });
+    }
+
     handlePointerDown(event) {
+        if (event.target !== this.canvas && isInteractiveControl(event.target)) {
+            return;
+        }
+
         if (this.tool === 'hand') {
             this.beginPan(event);
             return;
@@ -378,6 +410,12 @@ export class AnnotationCanvas {
         this.canvas.style.height = `${Math.round(this.canvas.height * this.zoom)}px`;
     }
 
+    async loadScreenshot(screenshotBlob) {
+        this.image = await loadImage(screenshotBlob);
+        this.canvas.width = this.image.width;
+        this.canvas.height = this.image.height;
+    }
+
     updateCursor() {
         this.canvas.classList.toggle('is-hand-tool', this.tool === 'hand');
     }
@@ -390,6 +428,10 @@ export class AnnotationCanvas {
         annotation.x = clamp(annotation.x, 0, maxX);
         annotation.y = clamp(annotation.y, minY, this.canvas.height);
     }
+}
+
+function isInteractiveControl(target) {
+    return target instanceof Element && Boolean(target.closest('a, button, input, label, select, textarea'));
 }
 
 function drawAnnotation(context, annotation) {

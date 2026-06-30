@@ -234,7 +234,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 .contextual-feedback-privacy-status span {
@@ -246,6 +246,29 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     font-size: 12px;
     font-weight: 700;
     line-height: 1.2;
+    pointer-events: none;
+}
+
+.contextual-feedback-screenshot-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    pointer-events: auto;
+    white-space: nowrap;
+}
+
+.contextual-feedback-screenshot-toggle input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
 }
 
 .contextual-feedback-privacy-status span.is-warning {

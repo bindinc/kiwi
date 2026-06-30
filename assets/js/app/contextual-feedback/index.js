@@ -51,7 +51,10 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
             });
             await openFeedbackDialog({
                 documentRef,
-                screenshotBlob: screenshot.blob,
+                screenshots: {
+                    pseudonymized: screenshot.pseudonymized,
+                    original: screenshot.original
+                },
                 selectedElement: screenshot.selectedElement,
                 privacySummary: screenshot.privacySummary,
                 onCancel() {
@@ -60,7 +63,7 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
                 onRetake() {
                     openPicker();
                 },
-                async onSubmit({ comment, severity, category, annotations, screenshotBlob }) {
+                async onSubmit({ comment, severity, category, annotations, screenshots }) {
                     const payload = buildFeedbackPayload({
                         comment,
                         severity,
@@ -76,7 +79,7 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
                     await submitFeedback({
                         apiUrl: button.dataset.contextualFeedbackApiUrl || '/api/v1/development-feedback',
                         payload,
-                        screenshotBlob
+                        screenshots
                     });
                     resetButton(button);
                 }
@@ -88,10 +91,11 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
     }
 }
 
-async function submitFeedback({ apiUrl, payload, screenshotBlob }) {
+async function submitFeedback({ apiUrl, payload, screenshots }) {
     const formData = new FormData();
     formData.set('payload', JSON.stringify(payload));
-    formData.set('screenshot', screenshotBlob, 'kiwi-contextual-feedback.png');
+    formData.set('screenshot', screenshots.pseudonymized, 'kiwi-contextual-feedback-pseudonymized.png');
+    formData.set('originalScreenshot', screenshots.original, 'kiwi-contextual-feedback-original.png');
 
     const response = await fetch(apiUrl, {
         method: 'POST',

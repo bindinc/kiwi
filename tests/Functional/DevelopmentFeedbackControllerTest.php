@@ -23,10 +23,12 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
         $this->previousEnv = [
             'CONTEXTUAL_FEEDBACK_ENABLED' => getenv('CONTEXTUAL_FEEDBACK_ENABLED') ?: null,
             'CONTEXTUAL_FEEDBACK_WEBHOOK_URL' => getenv('CONTEXTUAL_FEEDBACK_WEBHOOK_URL') ?: null,
+            'CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL' => getenv('CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL') ?: null,
             'CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES' => getenv('CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES') ?: null,
         ];
         putenv('CONTEXTUAL_FEEDBACK_ENABLED=1');
         putenv('CONTEXTUAL_FEEDBACK_WEBHOOK_URL');
+        putenv('CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL');
         putenv('CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES=3145728');
     }
 
@@ -84,6 +86,7 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
         $client->request('PUT', '/api/v1/development-feedback/settings', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'feedbackEnabled' => false,
             'webhookUrl' => 'https://workflow.example/webhook',
+            'originalDataWebhookUrl' => 'https://workflow.example/original-data',
             'publicBaseUrl' => 'https://bdc.rtvmedia.org/kiwi-preview',
             'imageTtlDays' => 14,
             'maxImageBytes' => 2097152,
@@ -94,6 +97,8 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
         self::assertFalse($payload['feedbackEnabled']);
         self::assertTrue($payload['teamsWebhookConfigured']);
         self::assertSame('database', $payload['teamsWebhookSource']);
+        self::assertTrue($payload['originalDataWebhookConfigured']);
+        self::assertSame('database', $payload['originalDataWebhookSource']);
         self::assertSame('https://bdc.rtvmedia.org/kiwi-preview', $payload['publicBaseUrl']);
         self::assertSame(14, $payload['imageTtlDays']);
         self::assertSame(2097152, $payload['maxImageBytes']);
@@ -108,6 +113,7 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
             'payload' => json_encode($this->validPayload(), \JSON_THROW_ON_ERROR),
         ], [
             'screenshot' => $this->createUploadedFile('not png', 'text/plain'),
+            'originalScreenshot' => $this->createUploadedFile($this->pngBytes(), 'image/png'),
         ]);
 
         self::assertResponseStatusCodeSame(400);
@@ -124,6 +130,7 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
             'payload' => json_encode($this->validPayload(), \JSON_THROW_ON_ERROR),
         ], [
             'screenshot' => $this->createUploadedFile($this->pngBytes(), 'image/png'),
+            'originalScreenshot' => $this->createUploadedFile($this->pngBytes(), 'image/png'),
         ]);
 
         self::assertResponseStatusCodeSame(413);
@@ -137,17 +144,21 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
             'payload' => json_encode($this->validPayload(), \JSON_THROW_ON_ERROR),
         ], [
             'screenshot' => $this->createUploadedFile($this->pngBytes(), 'image/png'),
+            'originalScreenshot' => $this->createUploadedFile($this->pngBytes(), 'image/png'),
         ]);
 
         self::assertResponseStatusCodeSame(201);
         $responsePayload = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertSame('stored_with_warning', $responsePayload['status']);
         self::assertSame('not_configured', $responsePayload['teamsDeliveryStatus']);
+        self::assertSame('not_configured', $responsePayload['originalDataDeliveryStatus']);
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
         self::assertSame(1, (int) $entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM development_feedback_reports'));
-        self::assertSame(1, (int) $entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM development_feedback_screenshots'));
+        self::assertSame(2, (int) $entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM development_feedback_screenshots'));
+        self::assertSame(1, (int) $entityManager->getConnection()->fetchOne("SELECT COUNT(*) FROM development_feedback_screenshots WHERE variant = 'pseudonymized'"));
+        self::assertSame(1, (int) $entityManager->getConnection()->fetchOne("SELECT COUNT(*) FROM development_feedback_screenshots WHERE variant = 'original'"));
     }
 
     public function testScreenshotEndpointServesValidTokenAndRejectsInvalidOrExpiredTokens(): void
@@ -205,6 +216,7 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
             'bug',
         );
         $screenshot = new DevelopmentFeedbackScreenshot(
+            DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED,
             'postgresql://development-feedback/screenshots/'.$publicId.'.png',
             'image/png',
             strlen($this->pngBytes()),
