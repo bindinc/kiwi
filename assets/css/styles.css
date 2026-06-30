@@ -858,7 +858,8 @@ body {
     gap: 0.5rem;
 }
 
-.form-group label {
+.form-group label,
+.form-label {
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--text-secondary);
@@ -985,6 +986,31 @@ select option {
 
 .additional-filters-panel .form-group {
     margin: 0;
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+}
+
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.checkbox-option input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    flex: 0 0 auto;
 }
 
 /* Buttons */

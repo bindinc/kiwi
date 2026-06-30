@@ -267,12 +267,45 @@
                                     <input type="text" id="searchName" placeholder="Achternaam, Voornaam" data-feedback-sensitive="name" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.achternaam_voornaam_9d9db834">
                                 </div>
                                 <div class="form-group">
-                                    <label for="searchPhone" data-i18n="indexHtml.text.telefoon_1888b353">Telefoon</label>
-                                    <input type="text" id="searchPhone" placeholder="Bijv. 0612345678" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.bijv_0612345678_e5ee02a0">
+                                    <label for="searchCustomerNumber">Klantnummer</label>
+                                    <input type="text" id="searchCustomerNumber" placeholder="Bijv. 11860448" data-feedback-sensitive="id" data-action="search-handle-keypress" data-action-event="keydown">
                                 </div>
                                 <div class="form-group">
                                     <label for="searchEmail" data-i18n="indexHtml.text.e_mail_31bb94b0">E-mail</label>
                                     <input type="email" id="searchEmail" placeholder="naam@email.nl" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
+                                </div>
+                                <div class="form-group">
+                                    <label for="searchIban">IBAN</label>
+                                    <input type="text" id="searchIban" placeholder="NL00BANK0123456789" data-feedback-sensitive="id" data-action="search-handle-keypress" data-action-event="keydown">
+                                </div>
+                                <div class="form-group">
+                                    <label for="searchBirthDate">Geboortedatum</label>
+                                    <input type="date" id="searchBirthDate" data-feedback-sensitive="date" data-action="search-handle-keypress" data-action-event="keydown">
+                                </div>
+                                <div class="form-group">
+                                    <label for="searchPhone" data-i18n="indexHtml.text.telefoon_1888b353">Telefoon</label>
+                                    <input type="text" id="searchPhone" placeholder="Bijv. 0612345678" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.bijv_0612345678_e5ee02a0">
+                                </div>
+                                <div class="form-group">
+                                    <span class="form-label">Mandant</span>
+                                    <div class="checkbox-grid" role="group" aria-label="Mandant filter">
+                                        <label class="checkbox-option">
+                                            <input type="checkbox" name="searchMandants" value="KRONCRV" data-action="search-customer" data-action-event="change">
+                                            <span>KRO-NCRV</span>
+                                        </label>
+                                        <label class="checkbox-option">
+                                            <input type="checkbox" name="searchMandants" value="AVROTROS" data-action="search-customer" data-action-event="change">
+                                            <span>AVROTROS</span>
+                                        </label>
+                                        <label class="checkbox-option">
+                                            <input type="checkbox" name="searchMandants" value="HMC" data-action="search-customer" data-action-event="change">
+                                            <span>HMC</span>
+                                        </label>
+                                        <label class="checkbox-option">
+                                            <input type="checkbox" name="searchMandants" value="BINDINC TITELS" data-action="search-customer" data-action-event="change">
+                                            <span>BINDINC TITELS</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>

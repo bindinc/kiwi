@@ -140,6 +140,7 @@ final class AggregatedPersonSearchServiceTest extends TestCase
             $this->createSearchResponse([
                 [
                     'personId' => '200',
+                    'personNumber' => 'K-200',
                     'divisionId' => 'HMC',
                     'name' => 'deijkers',
                     'firstName' => 'Bart',
@@ -147,11 +148,18 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                     'houseNo' => '80',
                     'city' => 'Hilversum',
                     'postCode' => '1217EW',
+                    'birthDay' => '1980-07-22',
                     'phone' => ['035-1234567'],
                     'eMail' => ['bart.deijkers@bindinc.nl'],
+                    'payments' => [
+                        'ibanItems' => [
+                            ['iban' => 'NL00 BANK 0123 4567 89'],
+                        ],
+                    ],
                 ],
                 [
                     'personId' => '201',
+                    'personNumber' => 'K-201',
                     'divisionId' => 'HMC',
                     'name' => 'deijkers',
                     'firstName' => 'Bart',
@@ -159,8 +167,14 @@ final class AggregatedPersonSearchServiceTest extends TestCase
                     'houseNo' => '80',
                     'city' => 'Hilversum',
                     'postCode' => '1217EW',
+                    'birthDay' => '1980-07-22',
                     'phone' => ['035-1234567'],
                     'eMail' => ['ictservices@bindinc.nl'],
+                    'payments' => [
+                        'ibanItems' => [
+                            ['iban' => 'NL00BANK0000000000'],
+                        ],
+                    ],
                 ],
             ]),
         ];
@@ -176,7 +190,10 @@ final class AggregatedPersonSearchServiceTest extends TestCase
             'houseNumber' => '80',
             'name' => '',
             'phone' => '',
+            'customerNumber' => 'K-200',
             'email' => 'bart.deijkers@bindinc.nl',
+            'iban' => 'NL00BANK0123',
+            'birthDate' => '1980-07-22',
         ], 1, 20, 'name');
 
         self::assertSame(1, $payload['total']);

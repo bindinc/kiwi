@@ -172,13 +172,68 @@ function testBuildSearchParamsIncludesEmailFilter() {
         postalCode: '',
         houseNumber: '',
         name: '',
+        customerNumber: '11860448',
+        email: 'klant@example.org',
+        iban: 'NL00BANK0123456789',
+        birthDate: '1980-07-22',
         phone: '',
-        email: 'klant@example.org'
+        mandants: ['KRONCRV', 'HMC']
     });
 
+    assert.equal(params.get('customerNumber'), '11860448');
     assert.equal(params.get('email'), 'klant@example.org');
+    assert.equal(params.get('iban'), 'NL00BANK0123456789');
+    assert.equal(params.get('birthDate'), '1980-07-22');
+    assert.equal(params.get('mandants'), 'KRONCRV,HMC');
     assert.equal(params.get('page'), '1');
     assert.equal(params.get('pageSize'), '200');
+}
+
+function testFilterCustomersLocallyUsesMandantAndAdditionalFields() {
+    const customers = [
+        {
+            id: 1,
+            personId: '11860448',
+            firstName: 'Jane',
+            middleName: 'van',
+            lastName: 'Dijk',
+            postalCode: '1217AA',
+            houseNumber: '12',
+            email: 'jane@example.org',
+            iban: 'NL00 BANK 0123 4567 89',
+            birthday: '1980-07-22',
+            phone: '0612345678',
+            mandant: 'HMC'
+        },
+        {
+            id: 2,
+            personId: '200',
+            firstName: 'Piet',
+            middleName: '',
+            lastName: 'Bakker',
+            postalCode: '1217AA',
+            houseNumber: '12',
+            email: 'piet@example.org',
+            iban: 'NL00BANK0000000000',
+            birthday: '1980-07-22',
+            phone: '0612345678',
+            mandant: 'KRONCRV'
+        }
+    ];
+
+    const results = __customerSearchTestUtils.filterCustomersLocally(customers, {
+        postalCode: '1217AA',
+        houseNumber: '12',
+        name: 'jane',
+        customerNumber: '118604',
+        email: 'jane@example.org',
+        iban: 'NL00BANK0123',
+        birthDate: '1980-07-22',
+        phone: '061234',
+        mandants: ['HMC']
+    });
+
+    assert.deepEqual(results.map((customer) => customer.id), [1]);
 }
 
 function testBuildSearchQueryLabelIncludesEmailAndPhone() {
@@ -186,11 +241,24 @@ function testBuildSearchQueryLabelIncludesEmailAndPhone() {
 
     try {
         globalThis.document = {
+            querySelectorAll(selector) {
+                if (selector !== 'input[name="searchMandants"]:checked') {
+                    return [];
+                }
+
+                return [
+                    { value: 'KRONCRV' },
+                    { value: 'HMC' }
+                ];
+            },
             getElementById(id) {
                 const values = {
                     searchPostalCode: { value: '' },
                     searchHouseNumber: { value: '' },
-                    searchName: { value: '' },
+                    searchName: { value: 'Bakker' },
+                    searchCustomerNumber: { value: '11860448' },
+                    searchIban: { value: 'NL00BANK0123456789' },
+                    searchBirthDate: { value: '1980-07-22' },
                     searchPhone: { value: '0612345678' },
                     searchEmail: { value: 'klant@example.org' }
                 };
@@ -200,8 +268,13 @@ function testBuildSearchQueryLabelIncludesEmailAndPhone() {
         };
 
         const label = __customerSearchTestUtils.buildSearchQueryLabel();
+        assert.equal(label.includes('Naam: Bakker'), true);
+        assert.equal(label.includes('Klantnummer: 11860448'), true);
         assert.equal(label.includes('Telefoon: 0612345678'), true);
         assert.equal(label.includes('E-mail: klant@example.org'), true);
+        assert.equal(label.includes('IBAN: NL00BANK0123456789'), true);
+        assert.equal(label.includes('Geboortedatum: 1980-07-22'), true);
+        assert.equal(label.includes('Mandant: KRO-NCRV, HMC'), true);
     } finally {
         if (previousDocument === undefined) {
             delete globalThis.document;
@@ -218,6 +291,7 @@ function run() {
     testSortResultsList();
     testRenderCustomerRowShowsMandantBadgeForRecognizedMandant();
     testBuildSearchParamsIncludesEmailFilter();
+    testFilterCustomersLocallyUsesMandantAndAdditionalFields();
     testBuildSearchQueryLabelIncludesEmailAndPhone();
     console.log('customer search slice tests passed');
 }
