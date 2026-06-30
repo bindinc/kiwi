@@ -47,6 +47,22 @@ export function registerSubscriptionRoleSlice(actionRouter, options = {}) {
             }
             runtime.searchSubscriptionRolePerson(payload.role);
         },
+        'search-subscription-role-person-keypress': (payload, context) => {
+            if (!isSupportedRole(payload.role)) {
+                return;
+            }
+
+            const event = context && context.event ? context.event : null;
+            const pressedEnter = event && (event.key === 'Enter' || event.keyCode === 13);
+            if (!pressedEnter) {
+                return;
+            }
+
+            if (typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+            runtime.searchSubscriptionRolePerson(payload.role);
+        },
         'toggle-requester-same-as-recipient': () => {
             runtime.toggleRequesterSameAsRecipient();
         },

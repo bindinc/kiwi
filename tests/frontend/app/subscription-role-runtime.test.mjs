@@ -65,9 +65,23 @@ function createRuntimeContext(options = {}) {
         requesterSameAsRecipient: checkbox,
         requesterRolePanel: createElementStub(),
         recipientRolePanel: createElementStub(),
+        recipientSearchPostalCode: createElementStub(),
+        recipientSearchHouseNumber: createElementStub(),
         recipientSearchQuery: createElementStub(),
+        recipientSearchCustomerNumber: createElementStub(),
+        recipientSearchEmail: createElementStub(),
+        recipientSearchIban: createElementStub(),
+        recipientSearchBirthDate: createElementStub(),
+        recipientSearchPhone: createElementStub(),
         recipientSearchButton: createElementStub(),
+        requesterSearchPostalCode: createElementStub(),
+        requesterSearchHouseNumber: createElementStub(),
         requesterSearchQuery: createElementStub(),
+        requesterSearchCustomerNumber: createElementStub(),
+        requesterSearchEmail: createElementStub(),
+        requesterSearchIban: createElementStub(),
+        requesterSearchBirthDate: createElementStub(),
+        requesterSearchPhone: createElementStub(),
         requesterSearchButton: createElementStub(),
         requesterRoleDetails,
         requesterSameSummary,
@@ -681,6 +695,45 @@ async function testSearchSubscriptionRolePersonIncludesWerfsleutelScopeInApiRequ
     );
 }
 
+async function testSearchSubscriptionRolePersonUsesExpandedCustomerSearchFields() {
+    let requestedUrl = '';
+    const { elements, runtime } = createRuntimeContext({
+        kiwiApi: {
+            get(url) {
+                requestedUrl = url;
+                return Promise.resolve({ items: [] });
+            }
+        },
+        werfsleutelSelections: [
+            {
+                selectedKey: {
+                    salesCode: 'KRO1',
+                    mandant: 'KRONCRV',
+                    divisionId: '6'
+                },
+                selectedChannel: 'OL',
+                selectedChannelMeta: { key: 'OL' }
+            }
+        ]
+    });
+
+    elements.requesterSearchPostalCode.value = '1217 AA';
+    elements.requesterSearchHouseNumber.value = '12A';
+    elements.requesterSearchQuery.value = 'Jane Doe';
+    elements.requesterSearchCustomerNumber.value = '11860448';
+    elements.requesterSearchEmail.value = 'Jane@example.org';
+    elements.requesterSearchIban.value = 'NL00 BANK 0123 4567 89';
+    elements.requesterSearchBirthDate.value = '1980-07-22';
+    elements.requesterSearchPhone.value = '06-12345678';
+
+    await runtime.searchSubscriptionRolePerson('requester');
+
+    assert.equal(
+        requestedUrl,
+        '/api/v1/persons?page=1&pageSize=10&sortBy=name&postalCode=1217AA&houseNumber=12A&name=jane+doe&customerNumber=11860448&email=jane%40example.org&iban=NL00BANK0123456789&birthDate=1980-07-22&phone=0612345678&divisionIds=6&mandants=KRONCRV'
+    );
+}
+
 function testBuildSubscriptionDuplicateApiRequestIncludesWerfsleutelScope() {
     const { runtime } = createRuntimeContext({
         werfsleutelSelections: [
@@ -802,6 +855,7 @@ async function run() {
     testUpdateSubscriptionRoleSearchAvailabilityTracksWerfsleutelSelection();
     await testSearchSubscriptionRolePersonRequiresWerfsleutelSelection();
     await testSearchSubscriptionRolePersonIncludesWerfsleutelScopeInApiRequest();
+    await testSearchSubscriptionRolePersonUsesExpandedCustomerSearchFields();
     testBuildSubscriptionDuplicateApiRequestIncludesWerfsleutelScope();
     testFreshDuplicateCacheEntryExpiresWithControlledClock();
     testDuplicateApiScheduleUsesCooldownFromControlledClock();
