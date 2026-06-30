@@ -5,8 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Add a contextual feedback screenshot pseudonymization toggle, store both pseudo-data and original-data annotated screenshots, and route original-data screenshots through a separate Teams workflow webhook.
 - Add GPL v3 licensing with a repository LICENSE file and README license documentation.
 - fixed docker-compose
+- Refine contextual feedback with KIWI-aligned controls, movable/editable text callouts, reliable screenshot pan/zoom behavior, detailed hidden-media hints, and the Bug/Chore/Feature Request/Regression category set.
+- Crop contextual feedback screenshots to the selected element, sanitize feedback modal metadata/backgrounds, keep customer pseudo data coherent, and add a local feedback privacy smoke command.
+- Replace blanket contextual feedback screenshot text hiding with DOM-marked pseudonymization so sensitive customer data becomes realistic pseudo data while screenshots stay readable.
+- Reorganize `docs/` into lower-kebab-case Diataxis-style folders with a central documentation index.
 
 ## [v1.0.16]
 
@@ -157,7 +162,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Replaced the remaining monolithic frontend flow with module-first architecture: `app/static/assets/js/app/index.js` now owns bootstrap/runtime orchestration and legacy state is centralized in `app/static/assets/js/app/legacy-app-state.js`.
 - Completed the slice migration across core domains: app shell, localization, bootstrap/state, customer search/detail/contact history, subscription role/workflow flows, winback, article search/order, delivery remarks/date picker, werfsleutel, and call/queue/agent/disposition/debug.
 - Removed migration-era compatibility layers after slice ownership stabilized: deleted `legacy-loader.js`, deleted `legacy-actions-customer-subscription.js`, removed proxy/facade wrappers, and replaced `window` fallback lookups with explicit dependency wiring.
-- Standardized UI interaction handling on delegated `data-action` routing and added maintainability guardrails via `script/check` plus `docs/ACTION_ROUTER_CONVENTIONS.md`.
+- Standardized UI interaction handling on delegated `data-action` routing and added maintainability guardrails via `script/check` plus `docs/reference/action-router-conventions.md`.
 - Reorganized frontend JS asset layout into clearer module folders (`app/`, `i18n/`, and temporary `legacy/` during transition), then removed obsolete legacy files and updated template script references.
 - Expanded i18n coverage from templates to dynamic runtime UI: added full English parity, profile locale switching, translated remaining runtime strings, and switched formatting to active-locale date/time/currency behavior.
 - Modernized local development and OIDC behavior with fail-fast preflight checks, automatic fallback mode when `client_secrets.json` is missing, local `/kiwi-oidc/` routing, mode-aware scopes, and health-check gated startup ordering.

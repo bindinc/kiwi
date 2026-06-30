@@ -305,9 +305,9 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         </div>
         
         <div class="form-row">
-            <input type="text" id="${prefix}Initials" placeholder="${translate('forms.initialsPlaceholder', {}, 'Voorletters*')}" required>
-            <input type="text" id="${prefix}MiddleName" placeholder="${translate('forms.middleNamePlaceholder', {}, 'Tussenvoegsel')}">
-            <input type="text" id="${prefix}LastName" placeholder="${translate('forms.lastNamePlaceholder', {}, 'Achternaam*')}" required>
+            <input type="text" id="${prefix}Initials" placeholder="${translate('forms.initialsPlaceholder', {}, 'Voorletters*')}" data-feedback-sensitive="name" required>
+            <input type="text" id="${prefix}MiddleName" placeholder="${translate('forms.middleNamePlaceholder', {}, 'Tussenvoegsel')}" data-feedback-sensitive="name">
+            <input type="text" id="${prefix}LastName" placeholder="${translate('forms.lastNamePlaceholder', {}, 'Achternaam*')}" data-feedback-sensitive="name" required>
         </div>
 
         <div class="form-group">
@@ -326,20 +326,20 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         </div>
 
         <div class="form-row">
-            <input type="text" id="${prefix}PostalCode" placeholder="${translate('forms.postalCodePlaceholder', {}, 'Postcode*')}" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="${translate('forms.postalCodeTitle', {}, 'Voer een geldige postcode in (bijv. 1234AB)')}" required>
-            <input type="text" id="${prefix}HouseNumber" placeholder="${translate('forms.houseNumberPlaceholder', {}, 'Huisnr. (en letter)*')}" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="${translate('forms.houseNumberTitle', {}, 'Voer een geldig huisnummer in (bijv. 123 of 123A)')}" required>
-            <input type="text" id="${prefix}HouseExt" placeholder="${translate('forms.houseExtensionPlaceholder', {}, 'Toevoeging')}" maxlength="10">
+            <input type="text" id="${prefix}PostalCode" placeholder="${translate('forms.postalCodePlaceholder', {}, 'Postcode*')}" data-feedback-sensitive="postal-code" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="${translate('forms.postalCodeTitle', {}, 'Voer een geldige postcode in (bijv. 1234AB)')}" required>
+            <input type="text" id="${prefix}HouseNumber" placeholder="${translate('forms.houseNumberPlaceholder', {}, 'Huisnr. (en letter)*')}" data-feedback-sensitive="address" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="${translate('forms.houseNumberTitle', {}, 'Voer een geldig huisnummer in (bijv. 123 of 123A)')}" required>
+            <input type="text" id="${prefix}HouseExt" placeholder="${translate('forms.houseExtensionPlaceholder', {}, 'Toevoeging')}" data-feedback-sensitive="address" maxlength="10">
         </div>
         
         <div class="form-row">
-            <input type="text" id="${prefix}Address" placeholder="${translate('forms.streetPlaceholder', {}, 'Straat*')}" required>
-            <input type="text" id="${prefix}City" placeholder="${translate('forms.cityPlaceholder', {}, 'Plaats*')}" required>
+            <input type="text" id="${prefix}Address" placeholder="${translate('forms.streetPlaceholder', {}, 'Straat*')}" data-feedback-sensitive="address" required>
+            <input type="text" id="${prefix}City" placeholder="${translate('forms.cityPlaceholder', {}, 'Plaats*')}" data-feedback-sensitive="address" required>
         </div>
         
         ${cfg.includePhone || cfg.includeEmail ? `
         <div class="form-row">
-            ${cfg.includePhone ? `<input type="tel" id="${prefix}Phone" placeholder="${phonePlaceholder}" ${cfg.phoneRequired ? 'required' : ''}>` : ''}
-            ${cfg.includeEmail ? `<input type="email" id="${prefix}Email" placeholder="${emailPlaceholder}" ${cfg.emailRequired ? 'required' : ''}>` : ''}
+            ${cfg.includePhone ? `<input type="tel" id="${prefix}Phone" placeholder="${phonePlaceholder}" data-feedback-sensitive="phone" ${cfg.phoneRequired ? 'required' : ''}>` : ''}
+            ${cfg.includeEmail ? `<input type="email" id="${prefix}Email" placeholder="${emailPlaceholder}" data-feedback-sensitive="email" ${cfg.emailRequired ? 'required' : ''}>` : ''}
         </div>
         ` : ''}
         
@@ -739,10 +739,12 @@ function renderSubscriptionRoleSelectedPerson(role) {
     selectedNode.classList.remove('empty');
     selectedNode.innerHTML = `
         <span class="party-person-main">
-            <strong>${name}</strong>
+            <strong data-feedback-sensitive="name">${name}</strong>
             ${mandantBadgeMarkup}
         </span>
-        <div class="party-selected-person-meta">${personId}${addressLine}</div>
+        <div class="party-selected-person-meta">
+            <span data-feedback-sensitive="id">${personId}</span><span data-feedback-sensitive="address">${addressLine}</span>
+        </div>
     `;
 }
 
@@ -764,7 +766,7 @@ function renderRequesterSameSummary() {
             {},
             'Aanvrager/betaler volgt de ontvanger:'
         );
-        summaryNode.innerHTML = `${escapeHtml(requesterFollowsRecipientLabel)} <span class="party-person-main"><strong>${name}</strong>${recipientBadgeMarkup}</span> · ${escapeHtml(formatPersonReference(recipient))}.`;
+        summaryNode.innerHTML = `${escapeHtml(requesterFollowsRecipientLabel)} <span class="party-person-main"><strong data-feedback-sensitive="name">${name}</strong>${recipientBadgeMarkup}</span> · <span data-feedback-sensitive="id">${escapeHtml(formatPersonReference(recipient))}</span>.`;
         return;
     }
 
@@ -778,7 +780,7 @@ function renderRequesterSameSummary() {
             summaryNode.innerHTML = translate(
                 'subscription.requesterFollowsNewRecipient',
                 { name: safeComposedName },
-                `Aanvrager/betaler volgt de nieuwe ontvanger: <strong>${safeComposedName}</strong>.`
+                `Aanvrager/betaler volgt de nieuwe ontvanger: <strong data-feedback-sensitive="name">${safeComposedName}</strong>.`
             );
             return;
         }
@@ -1395,10 +1397,12 @@ function renderSubscriptionDuplicateCheck(role) {
             <div class="subscription-duplicate-item">
                 <div>
                     <span class="party-person-main">
-                        <strong>${safeName}</strong>
+                        <strong data-feedback-sensitive="name">${safeName}</strong>
                         ${mandantBadgeMarkup}
                     </span>
-                    <div class="subscription-duplicate-item-meta">persoon #${safeId}${safeAddressLine}</div>
+                    <div class="subscription-duplicate-item-meta">
+                        persoon <span data-feedback-sensitive="id">#${safeId}</span><span data-feedback-sensitive="address">${safeAddressLine}</span>
+                    </div>
                 </div>
                 <button type="button" class="subscription-duplicate-action" data-action="select-subscription-duplicate-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}">${escapeHtml(useExistingLabel)}</button>
             </div>
@@ -1811,10 +1815,12 @@ function renderSubscriptionRoleSearchResults(role) {
             <div class="party-search-result">
                 <div>
                     <span class="party-person-main">
-                        <strong>${safeName}</strong>
+                        <strong data-feedback-sensitive="name">${safeName}</strong>
                         ${mandantBadgeMarkup}
                     </span>
-                    <div class="party-search-result-meta">${safeId}${safeAddressLine}</div>
+                    <div class="party-search-result-meta">
+                        <span data-feedback-sensitive="id">${safeId}</span><span data-feedback-sensitive="address">${safeAddressLine}</span>
+                    </div>
                 </div>
                 <button type="button" class="btn btn-small" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}">${selectLabel}</button>
             </div>

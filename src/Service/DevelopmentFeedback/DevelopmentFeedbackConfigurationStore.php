@@ -51,8 +51,16 @@ final class DevelopmentFeedbackConfigurationStore
             $configuration->setWebhookUrl($this->normalizeOptionalUrl($payload['webhookUrl'], 'webhookUrl'));
         }
 
+        if (\array_key_exists('originalDataWebhookUrl', $payload)) {
+            $configuration->setOriginalDataWebhookUrl($this->normalizeOptionalUrl($payload['originalDataWebhookUrl'], 'originalDataWebhookUrl'));
+        }
+
         if (($payload['clearWebhookUrl'] ?? false) === true) {
             $configuration->setWebhookUrl(null);
+        }
+
+        if (($payload['clearOriginalDataWebhookUrl'] ?? false) === true) {
+            $configuration->setOriginalDataWebhookUrl(null);
         }
 
         if (\array_key_exists('publicBaseUrl', $payload)) {
@@ -130,6 +138,11 @@ final class DevelopmentFeedbackConfigurationStore
         $webhookUrl = trim((string) (getenv('CONTEXTUAL_FEEDBACK_WEBHOOK_URL') ?: ''));
         if ('' !== $webhookUrl && filter_var($webhookUrl, \FILTER_VALIDATE_URL)) {
             $configuration->setWebhookUrl($webhookUrl);
+        }
+
+        $originalDataWebhookUrl = trim((string) (getenv('CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL') ?: ''));
+        if ('' !== $originalDataWebhookUrl && filter_var($originalDataWebhookUrl, \FILTER_VALIDATE_URL)) {
+            $configuration->setOriginalDataWebhookUrl($originalDataWebhookUrl);
         }
 
         $publicBaseUrl = trim((string) (getenv('CONTEXTUAL_FEEDBACK_PUBLIC_BASE_URL') ?: ''));

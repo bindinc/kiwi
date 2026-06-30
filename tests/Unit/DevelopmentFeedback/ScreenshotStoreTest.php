@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\DevelopmentFeedback;
 
 use App\Entity\DevelopmentFeedbackReport;
+use App\Entity\DevelopmentFeedbackScreenshot;
 use App\Http\ApiProblemException;
 use App\Service\DevelopmentFeedback\DevelopmentFeedbackSettings;
 use App\Service\DevelopmentFeedback\ScreenshotStore;
@@ -38,6 +39,7 @@ final class ScreenshotStoreTest extends TestCase
         $result = $store->storePng($report, $file, new \DateTimeImmutable('2026-06-16T12:00:00+00:00'));
 
         self::assertSame($report->getScreenshot(), $result['screenshot']);
+        self::assertSame(DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED, $result['screenshot']->getVariant());
         self::assertSame('image/png', $result['screenshot']->getMimeType());
         self::assertSame(1, $result['screenshot']->getWidth());
         self::assertSame(1, $result['screenshot']->getHeight());

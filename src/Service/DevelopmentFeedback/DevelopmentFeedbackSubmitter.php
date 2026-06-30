@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\DevelopmentFeedback;
 
 use App\Entity\DevelopmentFeedbackReport;
+use App\Entity\DevelopmentFeedbackScreenshot;
 use App\Http\ApiProblemException;
 use App\Repository\DevelopmentFeedbackReportRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -14,7 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 final class DevelopmentFeedbackSubmitter
 {
     private const ALLOWED_SEVERITIES = ['low', 'normal', 'high', 'blocking'];
-    private const ALLOWED_CATEGORIES = ['bug', 'copy', 'layout', 'data', 'workflow', 'idea'];
+    private const ALLOWED_CATEGORIES = ['bug', 'chore', 'feature_request', 'regression'];
     private const RATE_LIMIT_COUNT = 10;
     private const RATE_LIMIT_WINDOW = '-10 minutes';
 
@@ -34,7 +35,7 @@ final class DevelopmentFeedbackSubmitter
      * @param array<string, mixed> $userContext
      * @return array<string, mixed>
      */
-    public function submit(Request $request, array $rawPayload, UploadedFile $screenshotFile, array $userContext): array
+    public function submit(Request $request, array $rawPayload, UploadedFile $screenshotFile, UploadedFile $originalScreenshotFile, array $userContext): array
     {
         $this->ensureSchema();
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
@@ -74,7 +75,8 @@ final class DevelopmentFeedbackSubmitter
             $payload['category'],
         );
 
-        $storedScreenshot = $this->screenshotStore->storePng($report, $screenshotFile, $now);
+        $storedScreenshot = $this->screenshotStore->storePng($report, $screenshotFile, $now, DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED);
+        $storedOriginalScreenshot = $this->screenshotStore->storePng($report, $originalScreenshotFile, $now, DevelopmentFeedbackScreenshot::VARIANT_ORIGINAL);
         $this->entityManager->persist($report);
         $this->entityManager->flush();
 
@@ -83,7 +85,13 @@ final class DevelopmentFeedbackSubmitter
             $report->getPublicId(),
             $storedScreenshot['token'],
         );
+        $originalScreenshotUrl = $this->urlGenerator->buildUrl(
+            $this->settings->getPublicBaseUrl($request),
+            $report->getPublicId(),
+            $storedOriginalScreenshot['token'],
+        );
         $delivery = $this->notifier->notify($report, $screenshotUrl);
+        $originalDataDelivery = $this->notifier->notifyOriginalData($report, $originalScreenshotUrl);
         $report->markTeamsDelivery(
             $delivery['status'],
             $delivery['error'],
@@ -95,6 +103,8 @@ final class DevelopmentFeedbackSubmitter
             'id' => $report->getPublicId(),
             'status' => 'sent' === $delivery['status'] ? 'delivered' : 'stored_with_warning',
             'teamsDeliveryStatus' => $report->getTeamsDeliveryStatus(),
+            'originalDataDeliveryStatus' => $originalDataDelivery['status'],
+            'originalDataWarning' => $originalDataDelivery['error'],
             'warning' => $report->getTeamsDeliveryError(),
         ];
     }

@@ -66,7 +66,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 - Runs as a Symfony 7.4 LTS application on FrankenPHP with PHP 8.4.
 - Twig templates live under `templates/`.
 - Frontend source assets live under `assets/`.
-- The migration contract is documented in `docs/SYMFONY_MIGRATION_CONTRACT_MATRIX.md`.
+- The migration contract is documented in `docs/reference/symfony-migration-contract-matrix.md`.
 - `.env` is the committed default configuration for local development.
 - `.env.local` is the local-only override file.
 
@@ -249,10 +249,11 @@ app state as a PNG, draws the selected-element marker and manual annotations on
 the image, stores the report and screenshot in PostgreSQL, and posts an Adaptive
 Card to Microsoft Teams through a Teams Workflows webhook.
 
-Before Kiwi renders the PNG, the browser sanitizes the captured page by hiding
-visible page text, form values, media, embedded frames, canvases, SVGs, and CSS
-background images. This preserves the page layout for debugging while keeping
-customer and account data out of feedback screenshots.
+Kiwi captures two annotated PNG variants for each report. The default visible
+variant uses coherent pseudo data for marked customer fields, while the
+checkbox in the screenshot tool lets the reviewer switch to the original visible
+data variant before submitting. Media, embedded frames, canvases, SVGs, and CSS
+background images remain hidden because Kiwi cannot pseudonymize them reliably.
 
 Screenshots are stored in PostgreSQL rather than pod-local files so image
 serving remains compatible with multiple Kiwi replicas and `sessionAffinity:
@@ -264,15 +265,17 @@ Runtime defaults are controlled by:
 CONTEXTUAL_FEEDBACK_ENABLED=0
 CONTEXTUAL_FEEDBACK_ALLOWED_ROLES="admin,dev,supervisor"
 CONTEXTUAL_FEEDBACK_WEBHOOK_URL=
+CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL=
 CONTEXTUAL_FEEDBACK_PUBLIC_BASE_URL="https://bdc.rtvmedia.org/kiwi"
 CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS=30
 CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES=3145728
 ```
 
 Kiwi administrators and supervisors also see a settings cog immediately left of
-the outbox icon. That modal manages the global feedback-button toggle and the
-Microsoft Teams connector settings. The webhook URL is never sent back to
-browser JavaScript; the modal only shows whether a webhook is configured and
+the outbox icon. That modal manages the global feedback-button toggle, the
+regular Microsoft Teams connector for pseudo-data screenshots, and the
+separate original-data workflow connector. Webhook URLs are never sent back to
+browser JavaScript; the modal only shows whether each webhook is configured and
 whether the value comes from the database or the runtime environment.
 
 To create the Teams Workflows webhook:
@@ -283,8 +286,13 @@ To create the Teams Workflows webhook:
 4. Choose a channel incoming webhook template such as `Send webhook alerts to a channel`, or create a flow with the `When a Teams webhook request is received` trigger.
 5. Configure the message action to post the incoming Adaptive Card payload to the channel.
 6. Save the workflow and copy the generated webhook URL.
-7. Store the webhook in the Kiwi runtime secret store as `CONTEXTUAL_FEEDBACK_WEBHOOK_URL`, or paste it into the admin/supervisor settings modal.
+7. Store the regular webhook in the Kiwi runtime secret store as `CONTEXTUAL_FEEDBACK_WEBHOOK_URL`, or paste it into the admin/supervisor settings modal.
 8. Add at least one co-owner to the workflow so delivery does not depend on one owner account.
+
+Use a different Teams channel or workflow for original-data screenshots and
+store that webhook as `CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL`. Kiwi
+will send the pseudo-data screenshot to the regular webhook and the original
+visible-data screenshot only to the original-data webhook when it is configured.
 
 For local testing, Teams cannot fetch images from
 `bdc.rtvmedia.org.local` unless a tunnel or reachable preview URL is used. Local
@@ -302,7 +310,7 @@ retention.
 
 ## Cluster follow-up
 
-The cluster-side follow-up for `sc-187732` now lives in [docs/CLUSTER_FOLLOW_UP.md](docs/CLUSTER_FOLLOW_UP.md).
+The cluster-side follow-up for `sc-187732` now lives in [docs/explanation/cluster-follow-up.md](docs/explanation/cluster-follow-up.md).
 
 That document captures the remaining GitOps work, including the requirement to validate and roll out with 3 replicas per active and preview track.
 
@@ -336,7 +344,7 @@ Use the guardrail script before opening/refining refactor PRs:
 script/check
 ```
 
-Convention details are documented in `docs/ACTION_ROUTER_CONVENTIONS.md`.
+Convention details are documented in `docs/reference/action-router-conventions.md`.
 
 ## Container Images
 
@@ -424,7 +432,7 @@ The local image build uses the Dockerfile `prod` target so it matches the releas
 - Prefer vertical slices: a small, end-to-end change you can demo in 2-3 steps.
 - Use feature flags to land partial work safely when needed.
 - Optional: use `git worktree` for parallel local checkouts without switching branches.
-- Details and examples live in `docs/BRANCHING.md`.
+- Details and examples live in `docs/how-to/branching.md`.
 
 ## Usage Scenarios
 

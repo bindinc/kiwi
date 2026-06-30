@@ -8,17 +8,24 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'development_feedback_screenshots')]
+#[ORM\UniqueConstraint(name: 'uniq_development_feedback_screenshot_report_variant', columns: ['report_id', 'variant'])]
 #[ORM\Index(name: 'idx_development_feedback_screenshot_token_expiry', columns: ['access_token_expires_at'])]
 final class DevelopmentFeedbackScreenshot
 {
+    public const VARIANT_PSEUDONYMIZED = 'pseudonymized';
+    public const VARIANT_ORIGINAL = 'original';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\OneToOne(inversedBy: 'screenshot', targetEntity: DevelopmentFeedbackReport::class)]
+    #[ORM\ManyToOne(inversedBy: 'screenshots', targetEntity: DevelopmentFeedbackReport::class)]
     #[ORM\JoinColumn(name: 'report_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private DevelopmentFeedbackReport $report;
+
+    #[ORM\Column(length: 32, options: ['default' => self::VARIANT_PSEUDONYMIZED])]
+    private string $variant = self::VARIANT_PSEUDONYMIZED;
 
     #[ORM\Column(name: 'storage_path', type: 'text')]
     private string $storagePath;
@@ -51,6 +58,7 @@ final class DevelopmentFeedbackScreenshot
     private mixed $imageData;
 
     public function __construct(
+        string $variant,
         string $storagePath,
         string $mimeType,
         int $byteSize,
@@ -62,6 +70,11 @@ final class DevelopmentFeedbackScreenshot
         \DateTimeImmutable $createdAt,
         string $imageData,
     ) {
+        if (!\in_array($variant, [self::VARIANT_PSEUDONYMIZED, self::VARIANT_ORIGINAL], true)) {
+            throw new \InvalidArgumentException(sprintf('Unsupported screenshot variant "%s".', $variant));
+        }
+
+        $this->variant = $variant;
         $this->storagePath = $storagePath;
         $this->mimeType = $mimeType;
         $this->byteSize = $byteSize;
@@ -82,6 +95,11 @@ final class DevelopmentFeedbackScreenshot
     public function getReport(): DevelopmentFeedbackReport
     {
         return $this->report;
+    }
+
+    public function getVariant(): string
+    {
+        return $this->variant;
     }
 
     public function setReport(DevelopmentFeedbackReport $report): void

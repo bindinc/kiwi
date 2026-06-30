@@ -1,17 +1,20 @@
 .contextual-feedback-header-button {
-    width: 40px;
-    height: 40px;
-    border: 1px solid rgba(15, 23, 42, 0.16);
-    border-radius: 8px;
-    background: #ffffff;
-    color: #0f172a;
-    font-size: 18px;
-    font-weight: 800;
+    height: 36px;
+    min-width: 36px;
+    padding: 0 10px;
+    gap: 6px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 17px;
+    font-weight: 700;
     line-height: 1;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .contextual-feedback-header-button[hidden] {
@@ -22,9 +25,26 @@
 .contextual-feedback-button.is-active,
 .contextual-feedback-settings-button:hover,
 .contextual-feedback-settings-button.is-active {
-    background: #fff7ed;
-    border-color: #f97316;
-    color: #9a3412;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.contextual-feedback-header-button:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+.contextual-feedback-header-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1;
+}
+
+.contextual-feedback-settings-button {
+    width: 36px;
+    padding: 0;
 }
 
 .contextual-feedback-picker-overlay {
@@ -64,11 +84,17 @@
     position: fixed;
     inset: 0;
     z-index: 10010;
-    background: rgba(15, 23, 42, 0.72);
+    background: rgba(15, 23, 42, 0.86);
+    backdrop-filter: blur(14px);
     display: flex;
     align-items: stretch;
     justify-content: center;
-    padding: 24px;
+    padding: 16px;
+}
+
+body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-feedback-ignore]) {
+    filter: blur(18px);
+    opacity: 0.08;
 }
 
 .contextual-feedback-settings-modal {
@@ -84,11 +110,12 @@
 }
 
 .contextual-feedback-panel {
-    width: min(1180px, 100%);
+    width: min(1360px, 100%);
     min-height: 0;
-    background: #ffffff;
-    color: #111827;
-    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
@@ -107,7 +134,8 @@
     justify-content: space-between;
     gap: 16px;
     padding: 16px 18px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-color);
+    background: #ffffff;
 }
 
 .contextual-feedback-panel-header h2,
@@ -137,20 +165,22 @@
     width: 32px;
     height: 32px;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: #f1f5f9;
+    color: var(--text-primary);
     cursor: pointer;
 }
 
 .contextual-feedback-workspace {
     min-height: 0;
     display: grid;
-    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-columns: 96px minmax(0, 1fr);
 }
 
 .contextual-feedback-toolbar {
-    border-right: 1px solid #e5e7eb;
+    border-right: 1px solid var(--border-color);
     padding: 12px;
+    background: #f8fafc;
     display: grid;
     align-content: start;
     gap: 8px;
@@ -160,38 +190,119 @@
 .contextual-feedback-actions button,
 .contextual-feedback-form button[type="submit"] {
     min-height: 34px;
+    padding-inline: 10px;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: #ffffff;
-    color: #0f172a;
+    color: var(--text-primary);
     cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.contextual-feedback-tool {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding-inline: 0;
+    justify-self: center;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1;
 }
 
 .contextual-feedback-tool.is-active {
-    border-color: #f97316;
-    background: #fff7ed;
+    border-color: var(--primary-color);
+    background: #eff6ff;
+    color: var(--primary-hover);
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.16);
 }
 
 .contextual-feedback-canvas-wrap {
+    position: relative;
     min-height: 0;
     overflow: auto;
-    background: #e2e8f0;
+    background: #eef2f7;
+    display: block;
+    padding: 44px 12px 12px;
+}
+
+.contextual-feedback-privacy-status {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    right: 12px;
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 16px;
+    flex-wrap: wrap;
+    gap: 6px;
+    pointer-events: auto;
+}
+
+.contextual-feedback-privacy-status span {
+    padding: 4px 8px;
+    border: 1px solid #bbf7d0;
+    border-radius: 999px;
+    background: #f0fdf4;
+    color: #166534;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    pointer-events: none;
+}
+
+.contextual-feedback-screenshot-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    pointer-events: auto;
+    white-space: nowrap;
+}
+
+.contextual-feedback-screenshot-toggle input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+}
+
+.contextual-feedback-privacy-status span.is-warning {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #9a3412;
 }
 
 .contextual-feedback-canvas-wrap canvas {
     max-width: 100%;
     height: auto;
+    display: block;
     background: #ffffff;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.contextual-feedback-canvas-wrap canvas.is-zoomable {
+    max-width: none;
+}
+
+.contextual-feedback-canvas-wrap canvas.is-hand-tool {
+    cursor: grab;
+}
+
+.contextual-feedback-canvas-wrap canvas.is-panning {
+    cursor: grabbing;
 }
 
 .contextual-feedback-form {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color);
     padding: 14px 18px 16px;
+    background: #ffffff;
     display: grid;
     gap: 10px;
 }
@@ -243,8 +354,9 @@
 .contextual-feedback-settings-form input {
     width: 100%;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     padding: 8px 10px;
+    background: #ffffff;
     font: inherit;
 }
 
@@ -313,10 +425,15 @@
 }
 
 .contextual-feedback-form button[type="submit"] {
-    background: #0f172a;
-    border-color: #0f172a;
+    background: var(--primary-color);
+    border-color: var(--primary-color);
     color: #ffffff;
     padding-inline: 18px;
+}
+
+.contextual-feedback-form button[type="submit"]:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
 }
 
 @media (max-width: 760px) {

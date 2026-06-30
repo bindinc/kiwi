@@ -82,8 +82,11 @@ function wireSettingsModal({ modal, settingsUrl, documentRef, onClose }) {
             const nextSettings = await saveSettings(settingsUrl, buildSettingsPayload(form));
             statusBox.textContent = 'Saved.';
             form.querySelector('[name="webhookUrl"]').value = '';
+            form.querySelector('[name="originalDataWebhookUrl"]').value = '';
             form.querySelector('[data-webhook-configured]').textContent = nextSettings.teamsWebhookConfigured ? 'Configured' : 'Not configured';
             form.querySelector('[data-webhook-source]').textContent = nextSettings.teamsWebhookSource;
+            form.querySelector('[data-original-data-webhook-configured]').textContent = nextSettings.originalDataWebhookConfigured ? 'Configured' : 'Not configured';
+            form.querySelector('[data-original-data-webhook-source]').textContent = nextSettings.originalDataWebhookSource;
             if (feedbackButton) {
                 feedbackButton.hidden = !nextSettings.feedbackEnabled;
             }
@@ -120,16 +123,22 @@ async function saveSettings(settingsUrl, payload) {
 function buildSettingsPayload(form) {
     const formData = new FormData(form);
     const webhookUrl = String(formData.get('webhookUrl') || '').trim();
+    const originalDataWebhookUrl = String(formData.get('originalDataWebhookUrl') || '').trim();
     const payload = {
         feedbackEnabled: formData.get('feedbackEnabled') === 'on',
         publicBaseUrl: String(formData.get('publicBaseUrl') || '').trim(),
         imageTtlDays: Number(formData.get('imageTtlDays') || 30),
         maxImageBytes: Number(formData.get('maxImageBytes') || 3145728),
-        clearWebhookUrl: formData.get('clearWebhookUrl') === 'on'
+        clearWebhookUrl: formData.get('clearWebhookUrl') === 'on',
+        clearOriginalDataWebhookUrl: formData.get('clearOriginalDataWebhookUrl') === 'on'
     };
 
     if (webhookUrl) {
         payload.webhookUrl = webhookUrl;
+    }
+
+    if (originalDataWebhookUrl) {
+        payload.originalDataWebhookUrl = originalDataWebhookUrl;
     }
 
     return payload;
@@ -171,6 +180,23 @@ function settingsTemplate(settings) {
                     <label class="contextual-feedback-switch">
                         <input type="checkbox" name="clearWebhookUrl">
                         <span>Clear stored webhook URL</span>
+                    </label>
+                    <h3>Original-data workflow</h3>
+                    <div class="contextual-feedback-settings-status-row">
+                        <span>Status</span>
+                        <strong data-original-data-webhook-configured>${settings.originalDataWebhookConfigured ? 'Configured' : 'Not configured'}</strong>
+                    </div>
+                    <div class="contextual-feedback-settings-status-row">
+                        <span>Source</span>
+                        <strong data-original-data-webhook-source>${escapeHtml(settings.originalDataWebhookSource)}</strong>
+                    </div>
+                    <label>
+                        <span>Original-data webhook URL</span>
+                        <input type="password" name="originalDataWebhookUrl" autocomplete="off" placeholder="${settings.originalDataWebhookConfigured ? 'Leave empty to keep existing original-data webhook' : 'Paste Teams Workflows webhook URL for original data'}">
+                    </label>
+                    <label class="contextual-feedback-switch">
+                        <input type="checkbox" name="clearOriginalDataWebhookUrl">
+                        <span>Clear stored original-data webhook URL</span>
                     </label>
                     <label>
                         <span>Public base URL</span>
