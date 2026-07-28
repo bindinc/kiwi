@@ -75,7 +75,7 @@ final class OidcClientTest extends TestCase
             @unlink($secretsFile);
         }
 
-        self::assertSame('openid email profile User.Read Presence.Read Presence.ReadWrite', $scope);
+        self::assertSame('openid email profile User.Read Presence.ReadWrite', $scope);
     }
 
     public function testBuildAuthorizationScopeDefaultsToPresenceScopesForMicrosoftEntraConfig(): void
@@ -98,7 +98,7 @@ final class OidcClientTest extends TestCase
             @unlink($secretsFile);
         }
 
-        self::assertSame('openid email profile User.Read Presence.Read Presence.ReadWrite', $scope);
+        self::assertSame('openid email profile User.Read Presence.ReadWrite', $scope);
     }
 
     public function testBuildAuthorizationScopeCanDisablePresenceScopesForMicrosoftEntraConfig(): void
