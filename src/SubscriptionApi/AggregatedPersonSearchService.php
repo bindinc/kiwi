@@ -112,7 +112,7 @@ final class AggregatedPersonSearchService
 
     /**
      * @param array<string, string> $filters
-     * @return array{postalCode:string, houseNumber:string, name:string, phone:string, email:string}
+     * @return array{postalCode:string, houseNumber:string, name:string, customerNumber:string, email:string, iban:string, birthDate:string, phone:string}
      */
     private function normalizeFilters(array $filters): array
     {
@@ -120,14 +120,17 @@ final class AggregatedPersonSearchService
             'postalCode' => $this->normalizePostalCode($filters['postalCode'] ?? null),
             'houseNumber' => $this->normalizeCaseInsensitiveString($filters['houseNumber'] ?? null),
             'name' => $this->normalizeCaseInsensitiveString($filters['name'] ?? null),
-            'phone' => $this->normalizePhone($filters['phone'] ?? null),
+            'customerNumber' => $this->normalizeCaseInsensitiveString($filters['customerNumber'] ?? null),
             'email' => $this->normalizeCaseInsensitiveString($filters['email'] ?? null),
+            'iban' => $this->normalizeIban($filters['iban'] ?? null),
+            'birthDate' => $this->normalizeCaseInsensitiveString($filters['birthDate'] ?? null),
+            'phone' => $this->normalizePhone($filters['phone'] ?? null),
         ];
     }
 
     /**
      * @param array<string, mixed> $rawPerson
-     * @param array{postalCode:string, houseNumber:string, name:string, phone:string, email:string} $filters
+     * @param array{postalCode:string, houseNumber:string, name:string, customerNumber:string, email:string, iban:string, birthDate:string, phone:string} $filters
      */
     private function matchesRawPersonAgainstFilters(array $rawPerson, array $filters): bool
     {
@@ -136,10 +139,20 @@ final class AggregatedPersonSearchService
         $matchesHouseNumber = '' === $filters['houseNumber']
             || $this->normalizeCaseInsensitiveString($rawPerson['houseNo'] ?? null) === $filters['houseNumber'];
         $matchesName = $this->matchesNameFilter($rawPerson, $filters['name']);
-        $matchesPhone = $this->matchesPhoneFilter($rawPerson['phone'] ?? null, $filters['phone']);
+        $matchesCustomerNumber = $this->matchesCustomerNumberFilter($rawPerson, $filters['customerNumber']);
         $matchesEmail = $this->matchesEmailFilter($rawPerson, $filters['email']);
+        $matchesIban = $this->matchesIbanFilter($rawPerson, $filters['iban']);
+        $matchesBirthDate = $this->matchesBirthDateFilter($rawPerson, $filters['birthDate']);
+        $matchesPhone = $this->matchesPhoneFilter($rawPerson['phone'] ?? null, $filters['phone']);
 
-        return $matchesPostalCode && $matchesHouseNumber && $matchesName && $matchesPhone && $matchesEmail;
+        return $matchesPostalCode
+            && $matchesHouseNumber
+            && $matchesName
+            && $matchesCustomerNumber
+            && $matchesEmail
+            && $matchesIban
+            && $matchesBirthDate
+            && $matchesPhone;
     }
 
     /**
@@ -186,6 +199,30 @@ final class AggregatedPersonSearchService
     /**
      * @param array<string, mixed> $rawPerson
      */
+    private function matchesCustomerNumberFilter(array $rawPerson, string $customerNumberFilter): bool
+    {
+        if ('' === $customerNumberFilter) {
+            return true;
+        }
+
+        $candidates = [
+            $this->normalizeCaseInsensitiveString($rawPerson['personId'] ?? null),
+            $this->normalizeCaseInsensitiveString($rawPerson['personNumber'] ?? null),
+            $this->normalizeCaseInsensitiveString($rawPerson['rId'] ?? null),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ('' !== $candidate && str_contains($candidate, $customerNumberFilter)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, mixed> $rawPerson
+     */
     private function matchesEmailFilter(array $rawPerson, string $emailFilter): bool
     {
         if ('' === $emailFilter) {
@@ -199,6 +236,38 @@ final class AggregatedPersonSearchService
         }
 
         return false;
+    }
+
+    /**
+     * @param array<string, mixed> $rawPerson
+     */
+    private function matchesIbanFilter(array $rawPerson, string $ibanFilter): bool
+    {
+        if ('' === $ibanFilter) {
+            return true;
+        }
+
+        foreach ($this->extractRawIbans($rawPerson) as $iban) {
+            if (str_contains($iban, $ibanFilter)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, mixed> $rawPerson
+     */
+    private function matchesBirthDateFilter(array $rawPerson, string $birthDateFilter): bool
+    {
+        if ('' === $birthDateFilter) {
+            return true;
+        }
+
+        $birthDate = $this->normalizeCaseInsensitiveString($rawPerson['birthDay'] ?? null);
+
+        return $birthDate === $birthDateFilter;
     }
 
     /**
@@ -293,6 +362,15 @@ final class AggregatedPersonSearchService
         return preg_replace('/\D+/', '', $value) ?? '';
     }
 
+    private function normalizeIban(mixed $value): string
+    {
+        if (!\is_string($value)) {
+            return '';
+        }
+
+        return strtoupper(preg_replace('/\s+/', '', trim($value)) ?? '');
+    }
+
     /**
      * @param callable(mixed): string $normalizer
      * @return list<string>
@@ -328,6 +406,32 @@ final class AggregatedPersonSearchService
         );
 
         return array_values(array_unique($emailAddresses));
+    }
+
+    /**
+     * @param array<string, mixed> $rawPerson
+     * @return list<string>
+     */
+    private function extractRawIbans(array $rawPerson): array
+    {
+        $payments = $rawPerson['payments'] ?? null;
+        if (!\is_array($payments) || !\is_array($payments['ibanItems'] ?? null)) {
+            return [];
+        }
+
+        $ibans = [];
+        foreach ($payments['ibanItems'] as $ibanItem) {
+            if (!\is_array($ibanItem)) {
+                continue;
+            }
+
+            $iban = $this->normalizeIban($ibanItem['iban'] ?? null);
+            if ('' !== $iban) {
+                $ibans[] = $iban;
+            }
+        }
+
+        return array_values(array_unique($ibans));
     }
 
     private function normalizeNullableString(mixed $value): ?string

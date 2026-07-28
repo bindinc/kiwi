@@ -229,7 +229,6 @@ final class OidcConfiguration
             $scopes[] = 'User.Read';
 
             if ($this->isPresenceSyncEnabled()) {
-                $scopes[] = 'Presence.Read';
                 $scopes[] = 'Presence.ReadWrite';
             }
         }

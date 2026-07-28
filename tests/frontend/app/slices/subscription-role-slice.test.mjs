@@ -33,7 +33,7 @@ function createActionRouterHarness() {
 
     const router = createActionRouter({
         root,
-        eventTypes: ['click', 'change']
+        eventTypes: ['click', 'change', 'keydown']
     });
 
     registerSubscriptionRoleSlice(router);
@@ -49,6 +49,7 @@ function testSubscriptionRoleSliceRegistersExpectedActions() {
         'toggle-customer-form-address',
         'set-subscription-role-mode',
         'search-subscription-role-person',
+        'search-subscription-role-person-keypress',
         'toggle-requester-same-as-recipient',
         'select-subscription-duplicate-person',
         'toggle-subscription-duplicate-matches',
@@ -102,6 +103,20 @@ function testSubscriptionRoleSliceDispatchesRuntimeMethods() {
                 argRole: 'requester'
             }
         }, 'click'));
+
+        listeners.keydown(createDelegatedEvent({
+            dataset: {
+                action: 'search-subscription-role-person-keypress',
+                argRole: 'recipient'
+            }
+        }, 'keydown', { key: 'Tab' }));
+
+        listeners.keydown(createDelegatedEvent({
+            dataset: {
+                action: 'search-subscription-role-person-keypress',
+                argRole: 'recipient'
+            }
+        }, 'keydown', { key: 'Enter' }));
 
         listeners.click(createDelegatedEvent({
             dataset: {
@@ -160,6 +175,7 @@ function testSubscriptionRoleSliceDispatchesRuntimeMethods() {
             { method: 'toggleCustomerFormAddress', args: ['subRequester'] },
             { method: 'setSubscriptionRoleMode', args: ['recipient', 'create'] },
             { method: 'searchSubscriptionRolePerson', args: ['requester'] },
+            { method: 'searchSubscriptionRolePerson', args: ['recipient'] },
             { method: 'toggleRequesterSameAsRecipient', args: [] },
             { method: 'selectSubscriptionDuplicatePerson', args: ['requester', 82] },
             { method: 'toggleSubscriptionDuplicateMatches', args: ['recipient'] },

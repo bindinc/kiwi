@@ -26,6 +26,13 @@ const MANDANT_BADGE_CONFIG_BY_KEY = {
     }
 };
 
+const CUSTOMER_SEARCH_MANDANT_OPTIONS = [
+    { value: 'KRONCRV', label: 'KRO-NCRV' },
+    { value: 'AVROTROS', label: 'AVROTROS' },
+    { value: 'HMC', label: 'HMC' },
+    { value: 'BINDINC TITELS', label: 'BINDINC TITELS' }
+];
+
 let compatibilityExportsInstalled = false;
 
 function joinBasePath(basePath, relativePath) {
@@ -190,6 +197,16 @@ function getElementValueById(elementId) {
     return input.value;
 }
 
+function getSelectedValuesByName(fieldName) {
+    if (typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') {
+        return [];
+    }
+
+    return Array.from(document.querySelectorAll(`input[name="${fieldName}"]:checked`))
+        .map((input) => String(input.value || '').trim())
+        .filter(Boolean);
+}
+
 function setElementDisplay(element, displayValue) {
     if (!element || !element.style) {
         return;
@@ -202,15 +219,23 @@ function getSearchFilters() {
     const postalCode = getElementValueById('searchPostalCode').toUpperCase().trim();
     const houseNumber = getElementValueById('searchHouseNumber').trim();
     const name = getElementValueById('searchName').toLowerCase().trim();
-    const phone = normalizePhone(getElementValueById('searchPhone'));
+    const customerNumber = getElementValueById('searchCustomerNumber').trim();
     const email = getElementValueById('searchEmail').toLowerCase().trim();
+    const iban = getElementValueById('searchIban').toUpperCase().replace(/\s/g, '');
+    const birthDate = getElementValueById('searchBirthDate').trim();
+    const phone = normalizePhone(getElementValueById('searchPhone'));
+    const mandants = getSelectedValuesByName('searchMandants');
 
     return {
         postalCode,
         houseNumber,
         name,
+        customerNumber,
+        email,
+        iban,
+        birthDate,
         phone,
-        email
+        mandants
     };
 }
 
@@ -253,12 +278,54 @@ function matchesCustomerEmail(customer, emailQuery) {
     return customerEmail.includes(emailQuery);
 }
 
+function matchesCustomerNumber(customer, customerNumberQuery) {
+    if (!customerNumberQuery) {
+        return true;
+    }
+
+    const reference = buildCustomerSearchReference(customer);
+    return String(reference || '').toLowerCase().includes(customerNumberQuery.toLowerCase());
+}
+
+function matchesCustomerIban(customer, ibanQuery) {
+    if (!ibanQuery) {
+        return true;
+    }
+
+    const customerIban = String(customer.iban || '').toUpperCase().replace(/\s/g, '');
+    return customerIban.includes(ibanQuery);
+}
+
+function matchesCustomerBirthDate(customer, birthDateQuery) {
+    if (!birthDateQuery) {
+        return true;
+    }
+
+    return String(customer.birthday || customer.birthDate || '') === birthDateQuery;
+}
+
+function matchesCustomerMandants(customer, mandants) {
+    if (!Array.isArray(mandants) || mandants.length === 0) {
+        return true;
+    }
+
+    const normalizedMandants = mandants.map((mandant) => normalizeMandantKey(mandant));
+    const customerMandant = normalizeMandantKey(customer.mandant);
+    const customerDivisionId = normalizeMandantKey(customer.divisionId);
+
+    return normalizedMandants.includes(customerMandant) || normalizedMandants.includes(customerDivisionId);
+}
+
 function buildSearchQueryLabel() {
     const postalCode = getElementValueById('searchPostalCode').trim();
     const houseNumber = getElementValueById('searchHouseNumber').trim();
     const name = getElementValueById('searchName').trim();
-    const phone = getElementValueById('searchPhone').trim();
+    const customerNumber = getElementValueById('searchCustomerNumber').trim();
     const email = getElementValueById('searchEmail').trim();
+    const iban = getElementValueById('searchIban').trim();
+    const birthDate = getElementValueById('searchBirthDate').trim();
+    const phone = getElementValueById('searchPhone').trim();
+    const mandants = getSelectedValuesByName('searchMandants');
 
     const labelParts = [];
 
@@ -269,11 +336,31 @@ function buildSearchQueryLabel() {
     if (name) {
         labelParts.push(translateKey('search.nameFilterLabel', { name }, `Naam: ${name}`));
     }
-    if (phone) {
-        labelParts.push(translateKey('search.phoneFilterLabel', { phone }, `Telefoon: ${phone}`));
+    if (customerNumber) {
+        labelParts.push(translateKey('search.customerNumberFilterLabel', { customerNumber }, `Klantnummer: ${customerNumber}`));
     }
     if (email) {
         labelParts.push(translateKey('search.emailFilterLabel', { email }, `E-mail: ${email}`));
+    }
+    if (iban) {
+        labelParts.push(translateKey('search.ibanFilterLabel', { iban }, `IBAN: ${iban}`));
+    }
+    if (birthDate) {
+        labelParts.push(translateKey('search.birthDateFilterLabel', { birthDate }, `Geboortedatum: ${birthDate}`));
+    }
+    if (phone) {
+        labelParts.push(translateKey('search.phoneFilterLabel', { phone }, `Telefoon: ${phone}`));
+    }
+    if (mandants.length > 0) {
+        const mandantLabels = CUSTOMER_SEARCH_MANDANT_OPTIONS
+            .filter((option) => mandants.includes(option.value))
+            .map((option) => option.label);
+
+        labelParts.push(translateKey(
+            'search.mandantFilterLabel',
+            { mandants: mandantLabels.join(', ') },
+            `Mandant: ${mandantLabels.join(', ')}`
+        ));
     }
 
     if (labelParts.length === 0) {
@@ -373,11 +460,23 @@ function buildSearchParams(filters) {
     if (filters.name) {
         query.set('name', filters.name);
     }
-    if (filters.phone) {
-        query.set('phone', filters.phone);
+    if (filters.customerNumber) {
+        query.set('customerNumber', filters.customerNumber);
     }
     if (filters.email) {
         query.set('email', filters.email);
+    }
+    if (filters.iban) {
+        query.set('iban', filters.iban);
+    }
+    if (filters.birthDate) {
+        query.set('birthDate', filters.birthDate);
+    }
+    if (filters.phone) {
+        query.set('phone', filters.phone);
+    }
+    if (Array.isArray(filters.mandants) && filters.mandants.length > 0) {
+        query.set('mandants', filters.mandants.join(','));
     }
 
     query.set('sortBy', searchState.sortBy || 'name');
@@ -392,10 +491,22 @@ function filterCustomersLocally(customers, filters) {
         const matchPostal = !filters.postalCode || String(customer.postalCode || '') === filters.postalCode;
         const matchHouse = !filters.houseNumber || String(customer.houseNumber || '') === filters.houseNumber;
         const matchName = matchesCustomerName(customer, filters.name);
-        const matchPhone = matchesCustomerPhone(customer, filters.phone);
+        const matchCustomerNumber = matchesCustomerNumber(customer, filters.customerNumber);
         const matchEmail = matchesCustomerEmail(customer, filters.email);
+        const matchIban = matchesCustomerIban(customer, filters.iban);
+        const matchBirthDate = matchesCustomerBirthDate(customer, filters.birthDate);
+        const matchPhone = matchesCustomerPhone(customer, filters.phone);
+        const matchMandants = matchesCustomerMandants(customer, filters.mandants);
 
-        return matchPostal && matchHouse && matchName && matchPhone && matchEmail;
+        return matchPostal
+            && matchHouse
+            && matchName
+            && matchCustomerNumber
+            && matchEmail
+            && matchIban
+            && matchBirthDate
+            && matchPhone
+            && matchMandants;
     });
 }
 
@@ -818,8 +929,17 @@ export function clearSearchResults() {
     clearSearchInputValue('searchName');
     clearSearchInputValue('searchPostalCode');
     clearSearchInputValue('searchHouseNumber');
+    clearSearchInputValue('searchCustomerNumber');
     clearSearchInputValue('searchPhone');
     clearSearchInputValue('searchEmail');
+    clearSearchInputValue('searchIban');
+    clearSearchInputValue('searchBirthDate');
+
+    if (typeof document.querySelectorAll === 'function') {
+        document.querySelectorAll('input[name="searchMandants"]:checked').forEach((input) => {
+            input.checked = false;
+        });
+    }
 
     setAdditionalFiltersOpen(false);
 
@@ -994,6 +1114,7 @@ export const __customerSearchTestUtils = {
     normalizePhone,
     buildSearchParams,
     buildSearchQueryLabel,
+    filterCustomersLocally,
     renderCustomerRow,
     resetSearchStateForTests() {
         resetSearchState();

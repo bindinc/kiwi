@@ -41,8 +41,12 @@ final class PocStateService
             $filters['postalCode'] ?? '',
             $filters['houseNumber'] ?? '',
             $filters['name'] ?? '',
-            $filters['phone'] ?? '',
+            $filters['customerNumber'] ?? '',
             $filters['email'] ?? '',
+            $filters['iban'] ?? '',
+            $filters['birthDate'] ?? '',
+            $filters['phone'] ?? '',
+            $filters['mandants'] ?? '',
             $filters['sortBy'] ?? 'name',
         );
 
@@ -1156,22 +1160,37 @@ final class PocStateService
         string $postalCode,
         string $houseNumber,
         string $name,
-        string $phone,
+        string $customerNumber,
         string $email,
+        string $iban,
+        string $birthDate,
+        string $phone,
+        string $mandants,
         string $sortBy,
     ): array {
         $normalizedPostal = strtoupper(trim($postalCode));
         $normalizedHouse = trim($houseNumber);
         $normalizedName = strtolower(trim($name));
-        $normalizedPhone = preg_replace('/\D+/', '', $phone) ?? '';
+        $normalizedCustomerNumber = strtolower(trim($customerNumber));
         $normalizedEmail = strtolower(trim($email));
+        $normalizedIban = strtoupper(preg_replace('/\s+/', '', trim($iban)) ?? '');
+        $normalizedBirthDate = strtolower(trim($birthDate));
+        $normalizedPhone = preg_replace('/\D+/', '', $phone) ?? '';
+        $normalizedMandants = array_filter(array_map(
+            static fn (string $mandant): string => strtoupper(preg_replace('/[^A-Z0-9]/', '', trim($mandant)) ?? ''),
+            explode(',', $mandants),
+        ));
 
         $filtered = array_values(array_filter($customers, static function (array $customer) use (
             $normalizedPostal,
             $normalizedHouse,
             $normalizedName,
-            $normalizedPhone,
+            $normalizedCustomerNumber,
             $normalizedEmail,
+            $normalizedIban,
+            $normalizedBirthDate,
+            $normalizedPhone,
+            $normalizedMandants,
         ): bool {
             if ('' !== $normalizedPostal && strtoupper((string) ($customer['postalCode'] ?? '')) !== $normalizedPostal) {
                 return false;
@@ -1207,6 +1226,43 @@ final class PocStateService
                 }
             }
 
+            if ('' !== $normalizedCustomerNumber) {
+                $customerNumberCandidates = [
+                    (string) ($customer['personId'] ?? ''),
+                    (string) ($customer['personNumber'] ?? ''),
+                    (string) ($customer['id'] ?? ''),
+                ];
+                $matched = false;
+                foreach ($customerNumberCandidates as $candidate) {
+                    if (str_contains(strtolower($candidate), $normalizedCustomerNumber)) {
+                        $matched = true;
+                        break;
+                    }
+                }
+
+                if (!$matched) {
+                    return false;
+                }
+            }
+
+            if ('' !== $normalizedEmail && !str_contains(strtolower((string) ($customer['email'] ?? '')), $normalizedEmail)) {
+                return false;
+            }
+
+            if ('' !== $normalizedIban) {
+                $customerIban = strtoupper(preg_replace('/\s+/', '', (string) ($customer['iban'] ?? '')) ?? '');
+                if (!str_contains($customerIban, $normalizedIban)) {
+                    return false;
+                }
+            }
+
+            if ('' !== $normalizedBirthDate) {
+                $customerBirthDate = strtolower((string) (($customer['birthday'] ?? null) ?? ($customer['birthDate'] ?? '')));
+                if ($customerBirthDate !== $normalizedBirthDate) {
+                    return false;
+                }
+            }
+
             if ('' !== $normalizedPhone) {
                 $customerPhone = preg_replace('/\D+/', '', (string) ($customer['phone'] ?? '')) ?? '';
                 if (!str_contains($customerPhone, $normalizedPhone)) {
@@ -1214,8 +1270,12 @@ final class PocStateService
                 }
             }
 
-            if ('' !== $normalizedEmail && !str_contains(strtolower((string) ($customer['email'] ?? '')), $normalizedEmail)) {
-                return false;
+            if ([] !== $normalizedMandants) {
+                $customerMandant = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) ($customer['mandant'] ?? '')) ?? '');
+                $customerDivisionId = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) ($customer['divisionId'] ?? '')) ?? '');
+                if (!\in_array($customerMandant, $normalizedMandants, true) && !\in_array($customerDivisionId, $normalizedMandants, true)) {
+                    return false;
+                }
             }
 
             return true;

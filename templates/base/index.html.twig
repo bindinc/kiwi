@@ -267,12 +267,45 @@
                                     <input type="text" id="searchName" placeholder="Achternaam, Voornaam" data-feedback-sensitive="name" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.achternaam_voornaam_9d9db834">
                                 </div>
                                 <div class="form-group">
-                                    <label for="searchPhone" data-i18n="indexHtml.text.telefoon_1888b353">Telefoon</label>
-                                    <input type="text" id="searchPhone" placeholder="Bijv. 0612345678" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.bijv_0612345678_e5ee02a0">
+                                    <label for="searchCustomerNumber">Klantnummer</label>
+                                    <input type="text" id="searchCustomerNumber" placeholder="Bijv. 11860448" data-feedback-sensitive="id" data-action="search-handle-keypress" data-action-event="keydown">
                                 </div>
                                 <div class="form-group">
                                     <label for="searchEmail" data-i18n="indexHtml.text.e_mail_31bb94b0">E-mail</label>
                                     <input type="email" id="searchEmail" placeholder="naam@email.nl" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
+                                </div>
+                                <div class="form-group">
+                                    <label for="searchIban">IBAN</label>
+                                    <input type="text" id="searchIban" placeholder="NL00BANK0123456789" data-feedback-sensitive="id" data-action="search-handle-keypress" data-action-event="keydown">
+                                </div>
+                                <div class="form-group">
+                                    <label for="searchBirthDate">Geboortedatum</label>
+                                    <input type="date" id="searchBirthDate" data-feedback-sensitive="date" data-action="search-handle-keypress" data-action-event="keydown">
+                                </div>
+                                <div class="form-group">
+                                    <label for="searchPhone" data-i18n="indexHtml.text.telefoon_1888b353">Telefoon</label>
+                                    <input type="text" id="searchPhone" placeholder="Bijv. 0612345678" data-action="search-handle-keypress" data-action-event="keydown" data-i18n-placeholder="indexHtml.placeholder.bijv_0612345678_e5ee02a0">
+                                </div>
+                                <div class="form-group">
+                                    <span class="form-label">Mandant</span>
+                                    <div class="checkbox-grid" role="group" aria-label="Mandant filter">
+                                        <label class="checkbox-option">
+                                            <input type="checkbox" name="searchMandants" value="KRONCRV" data-action="search-customer" data-action-event="change">
+                                            <span>KRO-NCRV</span>
+                                        </label>
+                                        <label class="checkbox-option">
+                                            <input type="checkbox" name="searchMandants" value="AVROTROS" data-action="search-customer" data-action-event="change">
+                                            <span>AVROTROS</span>
+                                        </label>
+                                        <label class="checkbox-option">
+                                            <input type="checkbox" name="searchMandants" value="HMC" data-action="search-customer" data-action-event="change">
+                                            <span>HMC</span>
+                                        </label>
+                                        <label class="checkbox-option">
+                                            <input type="checkbox" name="searchMandants" value="BINDINC TITELS" data-action="search-customer" data-action-event="change">
+                                            <span>BINDINC TITELS</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -449,9 +482,27 @@
                                     <label><input type="radio" name="recipientMode" value="create" data-action="set-subscription-role-mode" data-action-event="change" data-arg-role="recipient"> <span data-i18n="indexHtml.text.nieuwe_persoon_c574b0f2">Nieuwe persoon</span></label>
                                 </div>
                                 <div id="recipientExistingSection">
-                                    <div class="form-row">
-                                        <input type="search" id="recipientSearchQuery" class="form-control" placeholder="Zoek ontvanger op naam" data-feedback-sensitive="name" data-i18n-placeholder="indexHtml.placeholder.zoek_ontvanger_op_naam_2046363e">
-                                        <button type="button" class="btn btn-secondary" id="recipientSearchButton" data-action="search-subscription-role-person" data-arg-role="recipient" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
+                                    <div class="subscription-person-search" data-action="search-subscription-role-person-keypress" data-action-event="keydown" data-arg-role="recipient">
+                                        <div class="subscription-person-search-primary">
+                                            <div class="form-row subscription-person-address-row">
+                                                <input type="text" id="recipientSearchPostalCode" class="form-control" placeholder="Postcode" data-feedback-sensitive="postal-code" data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44">
+                                                <input type="text" id="recipientSearchHouseNumber" class="form-control" placeholder="Huisnr.">
+                                            </div>
+                                            <div class="form-row subscription-person-name-row">
+                                                <input type="search" id="recipientSearchQuery" class="form-control" placeholder="Naam ontvanger" data-feedback-sensitive="name" data-i18n-placeholder="indexHtml.placeholder.zoek_ontvanger_op_naam_2046363e">
+                                                <button type="button" class="btn btn-secondary" id="recipientSearchButton" data-action="search-subscription-role-person" data-arg-role="recipient" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
+                                            </div>
+                                        </div>
+                                        <details class="subscription-person-search-more">
+                                            <summary>Meer zoekvelden</summary>
+                                            <div class="subscription-person-search-grid">
+                                                <input type="text" id="recipientSearchCustomerNumber" class="form-control" placeholder="Klantnummer" data-feedback-sensitive="id">
+                                                <input type="email" id="recipientSearchEmail" class="form-control" placeholder="E-mail" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
+                                                <input type="text" id="recipientSearchIban" class="form-control" placeholder="IBAN" data-feedback-sensitive="id">
+                                                <input type="date" id="recipientSearchBirthDate" class="form-control" data-feedback-sensitive="date">
+                                                <input type="text" id="recipientSearchPhone" class="form-control" placeholder="Telefoon" data-i18n-placeholder="indexHtml.placeholder.bijv_0612345678_e5ee02a0">
+                                            </div>
+                                        </details>
                                     </div>
                                     <div id="recipientSearchResults" class="party-search-results"></div>
                                     <div id="recipientSelectedPerson" class="party-selected-person empty" data-i18n="indexHtml.text.geen_ontvanger_geselecteerd_25f421dc">Geen ontvanger geselecteerd</div>
@@ -479,9 +530,27 @@
                                         <label><input type="radio" name="requesterMode" value="create" data-action="set-subscription-role-mode" data-action-event="change" data-arg-role="requester"> <span data-i18n="indexHtml.text.nieuwe_persoon_c574b0f2">Nieuwe persoon</span></label>
                                     </div>
                                     <div id="requesterExistingSection">
-                                        <div class="form-row">
-                                            <input type="search" id="requesterSearchQuery" class="form-control" placeholder="Zoek aanvrager/betaler op naam" data-feedback-sensitive="name" data-i18n-placeholder="indexHtml.placeholder.zoek_aanvrager_betaler_op_naam_9636a951">
-                                            <button type="button" class="btn btn-secondary" id="requesterSearchButton" data-action="search-subscription-role-person" data-arg-role="requester" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
+                                        <div class="subscription-person-search" data-action="search-subscription-role-person-keypress" data-action-event="keydown" data-arg-role="requester">
+                                            <div class="subscription-person-search-primary">
+                                                <div class="form-row subscription-person-address-row">
+                                                    <input type="text" id="requesterSearchPostalCode" class="form-control" placeholder="Postcode" data-feedback-sensitive="postal-code" data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44">
+                                                    <input type="text" id="requesterSearchHouseNumber" class="form-control" placeholder="Huisnr.">
+                                                </div>
+                                                <div class="form-row subscription-person-name-row">
+                                                    <input type="search" id="requesterSearchQuery" class="form-control" placeholder="Naam aanvrager/betaler" data-feedback-sensitive="name" data-i18n-placeholder="indexHtml.placeholder.zoek_aanvrager_betaler_op_naam_9636a951">
+                                                    <button type="button" class="btn btn-secondary" id="requesterSearchButton" data-action="search-subscription-role-person" data-arg-role="requester" data-i18n="indexHtml.text.zoeken_23d150c5">Zoeken</button>
+                                                </div>
+                                            </div>
+                                            <details class="subscription-person-search-more">
+                                                <summary>Meer zoekvelden</summary>
+                                                <div class="subscription-person-search-grid">
+                                                    <input type="text" id="requesterSearchCustomerNumber" class="form-control" placeholder="Klantnummer" data-feedback-sensitive="id">
+                                                    <input type="email" id="requesterSearchEmail" class="form-control" placeholder="E-mail" data-i18n-placeholder="indexHtml.placeholder.naam_email_nl_fec2671e">
+                                                    <input type="text" id="requesterSearchIban" class="form-control" placeholder="IBAN" data-feedback-sensitive="id">
+                                                    <input type="date" id="requesterSearchBirthDate" class="form-control" data-feedback-sensitive="date">
+                                                    <input type="text" id="requesterSearchPhone" class="form-control" placeholder="Telefoon" data-i18n-placeholder="indexHtml.placeholder.bijv_0612345678_e5ee02a0">
+                                                </div>
+                                            </details>
                                         </div>
                                         <div id="requesterSearchResults" class="party-search-results"></div>
                                         <div id="requesterSelectedPerson" class="party-selected-person empty" data-i18n="indexHtml.text.geen_aanvrager_betaler_geselecteerd_8415de35">Geen aanvrager/betaler geselecteerd</div>

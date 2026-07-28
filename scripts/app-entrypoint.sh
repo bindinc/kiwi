@@ -85,7 +85,7 @@ if [ -z "${OIDC_SCOPES:-}" ]; then
     export OIDC_SCOPES="${OIDC_FALLBACK_SCOPES:-openid email profile}"
   else
     if should_enable_presence_sync; then
-      export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read Presence.Read Presence.ReadWrite}"
+      export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read Presence.ReadWrite}"
     else
       export OIDC_SCOPES="${OIDC_EXTERNAL_SCOPES:-openid email profile User.Read}"
     fi

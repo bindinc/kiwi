@@ -524,7 +524,14 @@ function getSubscriptionRoleConfig(role) {
             createSectionId: 'recipientCreateSection',
             createFormContainerId: 'recipientCreateForm',
             duplicateCheckId: 'recipientDuplicateCheck',
+            searchPostalCodeId: 'recipientSearchPostalCode',
+            searchHouseNumberId: 'recipientSearchHouseNumber',
             searchQueryId: 'recipientSearchQuery',
+            searchCustomerNumberId: 'recipientSearchCustomerNumber',
+            searchEmailId: 'recipientSearchEmail',
+            searchIbanId: 'recipientSearchIban',
+            searchBirthDateId: 'recipientSearchBirthDate',
+            searchPhoneId: 'recipientSearchPhone',
             searchButtonId: 'recipientSearchButton',
             searchResultsId: 'recipientSearchResults',
             selectedPersonId: 'recipientSelectedPerson'
@@ -541,7 +548,14 @@ function getSubscriptionRoleConfig(role) {
             createSectionId: 'requesterCreateSection',
             createFormContainerId: 'requesterCreateForm',
             duplicateCheckId: 'requesterDuplicateCheck',
+            searchPostalCodeId: 'requesterSearchPostalCode',
+            searchHouseNumberId: 'requesterSearchHouseNumber',
             searchQueryId: 'requesterSearchQuery',
+            searchCustomerNumberId: 'requesterSearchCustomerNumber',
+            searchEmailId: 'requesterSearchEmail',
+            searchIbanId: 'requesterSearchIban',
+            searchBirthDateId: 'requesterSearchBirthDate',
+            searchPhoneId: 'requesterSearchPhone',
             searchButtonId: 'requesterSearchButton',
             searchResultsId: 'requesterSearchResults',
             selectedPersonId: 'requesterSelectedPerson'
@@ -1828,6 +1842,91 @@ function renderSubscriptionRoleSearchResults(role) {
     }).join('');
 }
 
+function readSubscriptionRoleSearchValue(elementId) {
+    return String(document.getElementById(elementId)?.value || '').trim();
+}
+
+function normalizeSubscriptionRolePostalCode(value) {
+    return String(value || '').replace(/\s+/g, '').toUpperCase();
+}
+
+function normalizeSubscriptionRoleIban(value) {
+    return String(value || '').replace(/\s+/g, '').toUpperCase();
+}
+
+function readSubscriptionRoleSearchFilters(cfg) {
+    return {
+        postalCode: normalizeSubscriptionRolePostalCode(readSubscriptionRoleSearchValue(cfg.searchPostalCodeId)),
+        houseNumber: readSubscriptionRoleSearchValue(cfg.searchHouseNumberId),
+        name: normalizeRoleSearchQuery(readSubscriptionRoleSearchValue(cfg.searchQueryId)),
+        customerNumber: readSubscriptionRoleSearchValue(cfg.searchCustomerNumberId),
+        email: readSubscriptionRoleSearchValue(cfg.searchEmailId).toLowerCase(),
+        iban: normalizeSubscriptionRoleIban(readSubscriptionRoleSearchValue(cfg.searchIbanId)),
+        birthDate: readSubscriptionRoleSearchValue(cfg.searchBirthDateId),
+        phone: normalizePhone(readSubscriptionRoleSearchValue(cfg.searchPhoneId))
+    };
+}
+
+function subscriptionRoleSearchHasFilters(filters) {
+    return Object.values(filters).some((value) => String(value || '').trim() !== '');
+}
+
+function appendSubscriptionRolePersonSearchFilters(params, filters) {
+    if (filters.postalCode) {
+        params.set('postalCode', filters.postalCode);
+    }
+    if (filters.houseNumber) {
+        params.set('houseNumber', filters.houseNumber);
+    }
+    if (filters.name) {
+        params.set('name', filters.name.toLowerCase());
+    }
+    if (filters.customerNumber) {
+        params.set('customerNumber', filters.customerNumber);
+    }
+    if (filters.email) {
+        params.set('email', filters.email);
+    }
+    if (filters.iban) {
+        params.set('iban', filters.iban);
+    }
+    if (filters.birthDate) {
+        params.set('birthDate', filters.birthDate);
+    }
+    if (filters.phone) {
+        params.set('phone', filters.phone);
+    }
+}
+
+function personMatchesSubscriptionRoleFilters(person, filters) {
+    const name = buildPersonDisplayName(person).toLowerCase();
+    const reference = resolvePersonReferenceValue(person).toLowerCase();
+    const postalCode = normalizeSubscriptionRolePostalCode(person.postalCode || '');
+    const houseNumber = String(person.houseNumber || '').trim();
+    const email = String(person.email || '').toLowerCase();
+    const iban = normalizeSubscriptionRoleIban(person.iban || '');
+    const birthDate = String(person.birthday || person.birthDate || '').trim();
+    const phone = normalizePhone(person.phone || '');
+
+    const matchesPostalCode = !filters.postalCode || postalCode === filters.postalCode;
+    const matchesHouseNumber = !filters.houseNumber || houseNumber === filters.houseNumber;
+    const matchesName = !filters.name || name.includes(filters.name);
+    const matchesCustomerNumber = !filters.customerNumber || reference.includes(filters.customerNumber.toLowerCase());
+    const matchesEmail = !filters.email || email.includes(filters.email);
+    const matchesIban = !filters.iban || iban.includes(filters.iban);
+    const matchesBirthDate = !filters.birthDate || birthDate === filters.birthDate;
+    const matchesPhone = !filters.phone || phone.includes(filters.phone);
+
+    return matchesPostalCode
+        && matchesHouseNumber
+        && matchesName
+        && matchesCustomerNumber
+        && matchesEmail
+        && matchesIban
+        && matchesBirthDate
+        && matchesPhone;
+}
+
 async function searchSubscriptionRolePerson(role) {
     const cfg = getSubscriptionRoleConfig(role);
     if (!cfg) return;
@@ -1846,8 +1945,8 @@ async function searchSubscriptionRolePerson(role) {
         return;
     }
 
-    const query = normalizeRoleSearchQuery(document.getElementById(cfg.searchQueryId)?.value);
-    if (!query) {
+    const filters = readSubscriptionRoleSearchFilters(cfg);
+    if (!subscriptionRoleSearchHasFilters(filters)) {
         showToast(translate('subscription.search.enterQuery', {}, 'Voer eerst een zoekterm in'), 'warning');
         return;
     }
@@ -1860,17 +1959,7 @@ async function searchSubscriptionRolePerson(role) {
             sortBy: 'name'
         });
 
-        if (query.includes('@')) {
-            params.set('email', query.toLowerCase());
-        } else {
-            const numericPhone = normalizePhone(query);
-            if (numericPhone.length >= 6) {
-                params.set('phone', numericPhone);
-            } else {
-                params.set('name', query.toLowerCase());
-            }
-        }
-
+        appendSubscriptionRolePersonSearchFilters(params, filters);
         appendSubscriptionRoleSearchScope(params, searchScope);
 
         try {
@@ -1881,7 +1970,9 @@ async function searchSubscriptionRolePerson(role) {
             return;
         }
     } else {
-        results = searchPersonsLocallyForRole(query);
+        results = readCustomersFromCache()
+            .filter((person) => personMatchesSubscriptionRoleFilters(person, filters))
+            .slice(0, 10);
     }
 
     subscriptionRoleState[role].searchResults = results;
@@ -2084,10 +2175,28 @@ function buildSubscriptionRolePayload(role, options = {}) {
 function initializeSubscriptionRolesForForm() {
     resetSubscriptionRoleState();
 
-    const recipientSearchQuery = document.getElementById('recipientSearchQuery');
-    if (recipientSearchQuery) recipientSearchQuery.value = '';
-    const requesterSearchQuery = document.getElementById('requesterSearchQuery');
-    if (requesterSearchQuery) requesterSearchQuery.value = '';
+    for (const role of ['recipient', 'requester']) {
+        const cfg = getSubscriptionRoleConfig(role);
+        if (!cfg) {
+            continue;
+        }
+
+        [
+            cfg.searchPostalCodeId,
+            cfg.searchHouseNumberId,
+            cfg.searchQueryId,
+            cfg.searchCustomerNumberId,
+            cfg.searchEmailId,
+            cfg.searchIbanId,
+            cfg.searchBirthDateId,
+            cfg.searchPhoneId
+        ].forEach((elementId) => {
+            const input = document.getElementById(elementId);
+            if (input) {
+                input.value = '';
+            }
+        });
+    }
 
     setSubscriptionRoleMode('recipient', 'existing');
     setSubscriptionRoleMode('requester', 'existing');

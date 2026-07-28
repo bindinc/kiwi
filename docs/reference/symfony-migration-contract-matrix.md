@@ -47,7 +47,7 @@ This matrix records the HTTP and runtime contract that the Symfony runtime must 
 | --- | --- |
 | Allowed roles | `bink8s.app.kiwi.admin`, `bink8s.app.kiwi.dev`, `bink8s.app.kiwi.supervisor`, `bink8s.app.kiwi.user`, `bink8s.app.kiwi.view` |
 | Access denied | Authenticated users without an allowed role get HTML `403` on `/` and JSON `403` on protected API routes |
-| External scopes | Default to `openid email profile User.Read Presence.Read Presence.ReadWrite` |
+| External scopes | Default to `openid email profile User.Read Presence.ReadWrite` |
 | Fallback scopes | Default to `openid email profile` |
 | Redirect URI contract | Exact callback URLs remain `/kiwi/auth/callback` and `/kiwi-preview/auth/callback` |
 
