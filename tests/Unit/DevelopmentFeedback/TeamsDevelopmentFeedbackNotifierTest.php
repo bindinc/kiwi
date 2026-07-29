@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\DevelopmentFeedback;
 
 use App\Entity\DevelopmentFeedbackReport;
+use App\Entity\DevelopmentFeedbackScreenshot;
 use App\Service\DevelopmentFeedback\DevelopmentFeedbackSettings;
 use App\Service\DevelopmentFeedback\TeamsDevelopmentFeedbackNotifier;
 use App\Service\DevelopmentFeedback\TeamsFeedbackCardFactory;
@@ -86,6 +87,62 @@ final class TeamsDevelopmentFeedbackNotifierTest extends TestCase
         $requestPayload = json_decode($requestBody, true, flags: \JSON_THROW_ON_ERROR);
         self::assertSame('New Kiwi contextual feedback with original data', $requestPayload['attachments'][0]['content']['body'][0]['text']);
         self::assertSame('https://example.org/original.png', $requestPayload['attachments'][0]['content']['body'][4]['url']);
+    }
+
+    public function testNotifierPostsOnlySelectedVariantWhenBothWebhooksAreConfigured(): void
+    {
+        putenv('CONTEXTUAL_FEEDBACK_WEBHOOK_URL=https://workflow.example/webhook');
+        putenv('CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL=https://workflow.example/original-data');
+        $requests = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests): MockResponse {
+            $requests[] = compact('method', 'url', 'options');
+
+            return new MockResponse('', ['http_code' => 202]);
+        });
+        $notifier = new TeamsDevelopmentFeedbackNotifier(
+            $client,
+            new DevelopmentFeedbackSettings(),
+            new TeamsFeedbackCardFactory(),
+            new NullLogger(),
+        );
+
+        $result = $notifier->notifyVariant(
+            $this->createReport(),
+            'https://example.org/pseudonymized.png',
+            DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED,
+        );
+
+        self::assertSame(['status' => 'sent', 'error' => null], $result);
+        self::assertCount(1, $requests);
+        self::assertSame('https://workflow.example/webhook', $requests[0]['url']);
+    }
+
+    public function testNotifierPostsOnlyOriginalVariantWhenItIsSelected(): void
+    {
+        putenv('CONTEXTUAL_FEEDBACK_WEBHOOK_URL=https://workflow.example/webhook');
+        putenv('CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL=https://workflow.example/original-data');
+        $requests = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests): MockResponse {
+            $requests[] = compact('method', 'url', 'options');
+
+            return new MockResponse('', ['http_code' => 202]);
+        });
+        $notifier = new TeamsDevelopmentFeedbackNotifier(
+            $client,
+            new DevelopmentFeedbackSettings(),
+            new TeamsFeedbackCardFactory(),
+            new NullLogger(),
+        );
+
+        $result = $notifier->notifyVariant(
+            $this->createReport(),
+            'https://example.org/original.png',
+            DevelopmentFeedbackScreenshot::VARIANT_ORIGINAL,
+        );
+
+        self::assertSame(['status' => 'sent', 'error' => null], $result);
+        self::assertCount(1, $requests);
+        self::assertSame('https://workflow.example/original-data', $requests[0]['url']);
     }
 
     public function testNotifierRecordsWebhookFailure(): void

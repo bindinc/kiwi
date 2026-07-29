@@ -136,6 +136,24 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(413);
     }
 
+    public function testSubmitRejectsUnsupportedTeamsScreenshotVariant(): void
+    {
+        $client = $this->createAuthenticatedClient(['bink8s.app.kiwi.dev']);
+        $payload = $this->validPayload();
+        $payload['teamsScreenshotVariant'] = 'both';
+
+        $client->request('POST', '/api/v1/development-feedback', [
+            'payload' => json_encode($payload, \JSON_THROW_ON_ERROR),
+        ], [
+            'screenshot' => $this->createUploadedFile($this->pngBytes(), 'image/png'),
+            'originalScreenshot' => $this->createUploadedFile($this->pngBytes(), 'image/png'),
+        ]);
+
+        self::assertResponseStatusCodeSame(400);
+        $responsePayload = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertSame('invalid_payload', $responsePayload['error']['code']);
+    }
+
     public function testSubmitStoresReportAndScreenshot(): void
     {
         $client = $this->createAuthenticatedClient(['bink8s.app.kiwi.dev']);
@@ -151,7 +169,8 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
         $responsePayload = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertSame('stored_with_warning', $responsePayload['status']);
         self::assertSame('not_configured', $responsePayload['teamsDeliveryStatus']);
-        self::assertSame('not_configured', $responsePayload['originalDataDeliveryStatus']);
+        self::assertSame('pseudonymized', $responsePayload['teamsScreenshotVariant']);
+        self::assertSame('skipped', $responsePayload['originalDataDeliveryStatus']);
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
@@ -243,6 +262,7 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
             'comment' => 'The start date picker overlaps the submit button.',
             'severity' => 'normal',
             'category' => 'bug',
+            'teamsScreenshotVariant' => 'pseudonymized',
             'pageUrl' => 'https://bdc.rtvmedia.org.local/kiwi/customer',
             'routePath' => '/kiwi/customer',
             'userAgent' => 'phpunit',

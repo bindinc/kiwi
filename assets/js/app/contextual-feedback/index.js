@@ -63,11 +63,12 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
                 onRetake() {
                     openPicker();
                 },
-                async onSubmit({ comment, severity, category, annotations, screenshots }) {
+                async onSubmit({ comment, severity, category, teamsScreenshotVariant, annotations, screenshots }) {
                     const payload = buildFeedbackPayload({
                         comment,
                         severity,
                         category,
+                        teamsScreenshotVariant,
                         selectedElement: screenshot.selectedElement,
                         selectedRect,
                         annotations,

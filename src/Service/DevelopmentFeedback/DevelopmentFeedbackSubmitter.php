@@ -90,8 +90,15 @@ final class DevelopmentFeedbackSubmitter
             $report->getPublicId(),
             $storedOriginalScreenshot['token'],
         );
-        $delivery = $this->notifier->notify($report, $screenshotUrl);
-        $originalDataDelivery = $this->notifier->notifyOriginalData($report, $originalScreenshotUrl);
+        $teamsScreenshotVariant = $payload['teamsScreenshotVariant'];
+        $sendOriginalData = DevelopmentFeedbackScreenshot::VARIANT_ORIGINAL === $teamsScreenshotVariant;
+        $selectedScreenshotUrl = $sendOriginalData
+            ? $originalScreenshotUrl
+            : $screenshotUrl;
+        $delivery = $this->notifier->notifyVariant($report, $selectedScreenshotUrl, $teamsScreenshotVariant);
+        $originalDataDelivery = $sendOriginalData
+            ? $delivery
+            : ['status' => 'skipped', 'error' => null];
         $report->markTeamsDelivery(
             $delivery['status'],
             $delivery['error'],
@@ -103,6 +110,7 @@ final class DevelopmentFeedbackSubmitter
             'id' => $report->getPublicId(),
             'status' => 'sent' === $delivery['status'] ? 'delivered' : 'stored_with_warning',
             'teamsDeliveryStatus' => $report->getTeamsDeliveryStatus(),
+            'teamsScreenshotVariant' => $teamsScreenshotVariant,
             'originalDataDeliveryStatus' => $originalDataDelivery['status'],
             'originalDataWarning' => $originalDataDelivery['error'],
             'warning' => $report->getTeamsDeliveryError(),
@@ -143,6 +151,7 @@ final class DevelopmentFeedbackSubmitter
      *   comment: string,
      *   severity: string,
      *   category: string,
+     *   teamsScreenshotVariant: string,
      *   pageUrl: string,
      *   routePath: string,
      *   userAgent: string,
@@ -163,6 +172,11 @@ final class DevelopmentFeedbackSubmitter
             'comment' => $comment,
             'severity' => $severity,
             'category' => $category,
+            'teamsScreenshotVariant' => $this->enumString(
+                $payload['teamsScreenshotVariant'] ?? DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED,
+                'teamsScreenshotVariant',
+                [DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED, DevelopmentFeedbackScreenshot::VARIANT_ORIGINAL],
+            ),
             'pageUrl' => $this->boundedString($payload['pageUrl'] ?? null, 'pageUrl', 2048),
             'routePath' => $this->boundedString($payload['routePath'] ?? null, 'routePath', 2048),
             'userAgent' => $this->boundedOptionalString($payload['userAgent'] ?? '', 1024),
