@@ -31,6 +31,7 @@ export async function openFeedbackDialog({
     const errorBox = modal.querySelector('[data-feedback-error]');
     const statusBox = modal.querySelector('[data-feedback-status]');
     const submitButton = modal.querySelector('[data-feedback-submit]');
+    const pseudonymizationCheckbox = modal.querySelector('[data-feedback-pseudonymized]');
     const pseudonymizedScreenshot = screenshots?.pseudonymized?.blob;
     const originalScreenshot = screenshots?.original?.blob;
     if (!pseudonymizedScreenshot || !originalScreenshot) {
@@ -57,15 +58,15 @@ export async function openFeedbackDialog({
 
     modal.querySelector('[data-feedback-undo]').addEventListener('click', () => annotationCanvas.undo());
     modal.querySelector('[data-feedback-clear]').addEventListener('click', () => annotationCanvas.clear());
-    modal.querySelector('[data-feedback-pseudonymized]').addEventListener('change', async (event) => {
+    pseudonymizationCheckbox.addEventListener('change', async (event) => {
         const usePseudonymizedScreenshot = event.target.checked;
         submitButton.disabled = true;
         statusBox.textContent = 'Switching screenshot...';
         try {
             await annotationCanvas.setScreenshotBlob(usePseudonymizedScreenshot ? pseudonymizedScreenshot : originalScreenshot);
             modal.querySelector('[data-feedback-visible-privacy]').textContent = usePseudonymizedScreenshot
-                ? 'Pseudo data visible'
-                : 'Original data visible';
+                ? 'Send pseudo-data screenshot to Teams'
+                : 'Send original-data screenshot to restricted Teams workflow';
         } finally {
             submitButton.disabled = false;
             statusBox.textContent = '';
@@ -97,6 +98,7 @@ export async function openFeedbackDialog({
                 comment,
                 severity: String(formData.get('severity') || 'normal'),
                 category: String(formData.get('category') || 'bug'),
+                teamsScreenshotVariant: pseudonymizationCheckbox.checked ? 'pseudonymized' : 'original',
                 annotations: annotationCanvas.getAnnotations(),
                 screenshots: {
                     pseudonymized: pseudonymizedBlob,
@@ -147,7 +149,7 @@ function dialogTemplate(selectedElement, privacySummary) {
                     <div class="contextual-feedback-privacy-status" aria-label="Screenshot privacy status">
                         <label class="contextual-feedback-screenshot-toggle">
                             <input type="checkbox" data-feedback-pseudonymized checked>
-                            <span data-feedback-visible-privacy>Pseudo data visible</span>
+                            <span data-feedback-visible-privacy>Send pseudo-data screenshot to Teams</span>
                         </label>
                         ${hiddenBadge}
                         <span>Manual redaction available</span>
@@ -180,7 +182,7 @@ function dialogTemplate(selectedElement, privacySummary) {
                         </select>
                     </label>
                 </div>
-                <p class="contextual-feedback-note">Kiwi stores both annotated screenshot variants. The regular Teams workflow receives the pseudo-data screenshot; the original-data workflow receives the screenshot with real visible data when that connector is configured.</p>
+                <p class="contextual-feedback-note">Kiwi stores both annotated screenshot variants. Only the selected screenshot is delivered: pseudo data goes to the regular Teams workflow and original data goes to the restricted original-data workflow.</p>
                 <div class="contextual-feedback-actions">
                     <div>
                         <button type="button" data-feedback-retake>Retake screenshot</button>

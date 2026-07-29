@@ -6,6 +6,7 @@ function testPayloadUsesRuntimeMetadata() {
         comment: 'Button overlaps.',
         severity: 'normal',
         category: 'bug',
+        teamsScreenshotVariant: 'original',
         selectedElement: {
             tag: 'button',
             label: 'Create subscription',
@@ -38,6 +39,7 @@ function testPayloadUsesRuntimeMetadata() {
         comment: 'Button overlaps.',
         severity: 'normal',
         category: 'bug',
+        teamsScreenshotVariant: 'original',
         pageUrl: 'https://bdc.rtvmedia.org.local/kiwi/customer?id=1',
         routePath: '/kiwi/customer?id=1',
         userAgent: 'node-test',

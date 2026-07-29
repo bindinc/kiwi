@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\DevelopmentFeedback;
 
 use App\Entity\DevelopmentFeedbackReport;
+use App\Entity\DevelopmentFeedbackScreenshot;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -17,6 +18,18 @@ final class TeamsDevelopmentFeedbackNotifier
         private readonly TeamsFeedbackCardFactory $cardFactory,
         private readonly LoggerInterface $logger,
     ) {
+    }
+
+    /**
+     * @return array{status: string, error: string|null}
+     */
+    public function notifyVariant(DevelopmentFeedbackReport $report, string $screenshotUrl, string $variant): array
+    {
+        return match ($variant) {
+            DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED => $this->notify($report, $screenshotUrl),
+            DevelopmentFeedbackScreenshot::VARIANT_ORIGINAL => $this->notifyOriginalData($report, $screenshotUrl),
+            default => throw new \InvalidArgumentException(sprintf('Unsupported Teams screenshot variant "%s".', $variant)),
+        };
     }
 
     /**

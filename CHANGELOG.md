@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+## [v1.0.18]
+
+### Fixed
+- Route each contextual feedback report only to the Teams workflow selected by the pseudonymization toggle, while continuing to retain both annotated screenshot variants.
+- Document that the Teams webhook workflow must post its Adaptive Card as the signed-in connector user when downstream channel-message automation must process it.
+
+## [v1.0.17]
+
 - Stop requesting the redundant Microsoft Graph `Presence.Read` OIDC scope because `Presence.ReadWrite` already provides the required presence access.
 - Add the KIWI customer search field order requested by KCC, including customer number, IBAN, birth date, phone, and a multi-select mandant filter, and reuse the same search field set for recipient/requester lookup in new subscription creation.
 - Add a contextual feedback screenshot pseudonymization toggle, store both pseudo-data and original-data annotated screenshots, and route original-data screenshots through a separate Teams workflow webhook.

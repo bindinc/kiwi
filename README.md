@@ -284,15 +284,18 @@ To create the Teams Workflows webhook:
 2. Go to the `KIWI` team and the `development feedback` channel.
 3. Open `Workflows`.
 4. Choose a channel incoming webhook template such as `Send webhook alerts to a channel`, or create a flow with the `When a Teams webhook request is received` trigger.
-5. Configure the message action to post the incoming Adaptive Card payload to the channel.
+5. Configure the `Post adaptive card in a chat or channel` action to post the incoming Adaptive Card payload to the channel.
+   Set `Post as` to `User` so the downstream channel-message workflow sees a regular user message. This is the Teams user signed in to the workflow connection, normally the workflow owner, not the individual Kiwi browser user.
 6. Save the workflow and copy the generated webhook URL.
 7. Store the regular webhook in the Kiwi runtime secret store as `CONTEXTUAL_FEEDBACK_WEBHOOK_URL`, or paste it into the admin/supervisor settings modal.
 8. Add at least one co-owner to the workflow so delivery does not depend on one owner account.
 
 Use a different Teams channel or workflow for original-data screenshots and
 store that webhook as `CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL`. Kiwi
-will send the pseudo-data screenshot to the regular webhook and the original
-visible-data screenshot only to the original-data webhook when it is configured.
+stores both annotated variants but invokes exactly one workflow per report. The
+checked pseudonymization toggle sends the pseudo-data screenshot to the regular
+workflow; clearing the toggle sends the original screenshot only to the
+restricted original-data workflow.
 
 For local testing, Teams cannot fetch images from
 `bdc.rtvmedia.org.local` unless a tunnel or reachable preview URL is used. Local
