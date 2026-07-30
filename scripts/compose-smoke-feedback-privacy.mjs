@@ -57,6 +57,7 @@ async function runSmokeScenario(page) {
     await loginIfNeeded(page);
     await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
     await enableFeedbackIfNeeded(page);
+    await assertFeedbackBadgeLayout(page);
     await searchAndSelectJansen(page);
 
     const targetBox = await page.locator('#customerName').boundingBox();
@@ -104,6 +105,84 @@ async function enableFeedbackIfNeeded(page) {
     await page.click('.contextual-feedback-settings-modal [data-feedback-settings-close]');
 }
 
+async function assertFeedbackBadgeLayout(page) {
+    const feedbackButton = page.locator('#contextualFeedbackButton');
+    await feedbackButton.waitFor({ state: 'visible', timeout: 10000 });
+    await feedbackButton.evaluate((element) => element.blur());
+    await page.mouse.move(10, 10);
+    await waitForFeedbackButtonWidth(page, 46);
+
+    const restingState = await readFeedbackButtonState(feedbackButton);
+    assertFeedbackButtonPosition(restingState, { width: 46, viewportWidth: 1693, viewportHeight: 1209 });
+    if (restingState.labelOpacity > 0.01) {
+        throw new Error(`Feedback label is visible while the capsule is resting: ${JSON.stringify(restingState)}`);
+    }
+
+    await feedbackButton.hover();
+    await waitForFeedbackButtonWidth(page, 124);
+    const hoverState = await readFeedbackButtonState(feedbackButton);
+    if (Math.abs(hoverState.width - 124) > 1 || hoverState.labelOpacity < 0.99) {
+        throw new Error(`Feedback capsule did not expand on hover: ${JSON.stringify(hoverState)}`);
+    }
+
+    await page.mouse.move(10, 10);
+    await waitForFeedbackButtonWidth(page, 46);
+    await page.keyboard.press('Tab');
+    await waitForFeedbackButtonWidth(page, 124);
+    const focusState = await readFeedbackButtonState(feedbackButton);
+    if (!focusState.focusVisible || focusState.labelOpacity < 0.99 || focusState.outlineWidth !== '3px') {
+        throw new Error(`Feedback capsule did not expose its keyboard focus state: ${JSON.stringify(focusState)}`);
+    }
+
+    await feedbackButton.evaluate((element) => element.blur());
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.mouse.move(10, 10);
+    await waitForFeedbackButtonWidth(page, 46);
+    const mobileState = await readFeedbackButtonState(feedbackButton);
+    assertFeedbackButtonPosition(mobileState, { width: 46, viewportWidth: 390, viewportHeight: 844 });
+
+    await page.setViewportSize({ width: 1693, height: 1209 });
+    await waitForFeedbackButtonWidth(page, 46);
+}
+
+async function readFeedbackButtonState(feedbackButton) {
+    return feedbackButton.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const styles = window.getComputedStyle(element);
+        const label = element.querySelector('.contextual-feedback-label');
+
+        return {
+            position: styles.position,
+            zIndex: styles.zIndex,
+            width: rect.width,
+            height: rect.height,
+            right: rect.right,
+            centerY: rect.top + rect.height / 2,
+            labelOpacity: Number(label ? window.getComputedStyle(label).opacity : 0),
+            focusVisible: element.matches(':focus-visible'),
+            outlineWidth: styles.outlineWidth
+        };
+    });
+}
+
+function assertFeedbackButtonPosition(state, { width, viewportWidth, viewportHeight }) {
+    const isExpectedSize = Math.abs(state.width - width) <= 1 && Math.abs(state.height - 46) <= 1;
+    const isAtRightEdge = Math.abs(state.right - viewportWidth) <= 1;
+    const isVerticallyCentered = Math.abs(state.centerY - viewportHeight / 2) <= 1;
+    const isAlwaysOnTop = state.position === 'fixed' && state.zIndex === '2147483647';
+
+    if (!isExpectedSize || !isAtRightEdge || !isVerticallyCentered || !isAlwaysOnTop) {
+        throw new Error(`Feedback capsule is not fixed at the viewport edge: ${JSON.stringify(state)}`);
+    }
+}
+
+async function waitForFeedbackButtonWidth(page, width) {
+    await page.waitForFunction((expectedWidth) => {
+        const button = document.querySelector('#contextualFeedbackButton');
+        return button && Math.abs(button.getBoundingClientRect().width - expectedWidth) <= 1;
+    }, width, { timeout: 10000 });
+}
+
 async function searchAndSelectJansen(page) {
     if (!await page.locator('#searchName').isVisible()) {
         await page.click('#additionalFiltersToggle');
@@ -111,7 +190,7 @@ async function searchAndSelectJansen(page) {
     }
 
     await page.fill('#searchName', 'Jansen');
-    await page.click('[data-action="search-customer"]');
+    await page.click('button[data-action="search-customer"]');
     await page.waitForSelector('#paginatedResults .result-row', { timeout: 30000 });
     await page.locator('#paginatedResults .result-row', { hasText: 'Jansen' }).first().click();
     await page.waitForFunction(() => document.querySelector('#customerName')?.textContent?.includes('Jansen'), null, { timeout: 10000 });
@@ -136,7 +215,9 @@ async function assertFeedbackReviewSurfaceIsPrivate(page) {
 
     const backgroundState = await page.evaluate(() => {
         const modal = document.querySelector('.contextual-feedback-modal');
-        const reviewedElement = Array.from(document.body.children).find((child) => child !== modal);
+        const reviewedElement = Array.from(document.body.children).find((child) => {
+            return child !== modal && !child.matches('[data-feedback-ignore]');
+        });
         const styles = reviewedElement ? window.getComputedStyle(reviewedElement) : null;
 
         return {
@@ -193,7 +274,9 @@ async function assertScreenshotPrivacyToggle(page) {
 
     const pseudoCanvas = await page.locator('.contextual-feedback-modal canvas').evaluate((canvas) => canvas.toDataURL('image/png'));
     await toggle.uncheck();
-    await page.waitForFunction(() => document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes('Original data visible'), null, { timeout: 10000 });
+    await page.waitForFunction(() => {
+        return document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes('Send original-data screenshot to restricted Teams workflow');
+    }, null, { timeout: 10000 });
     const originalCanvas = await page.locator('.contextual-feedback-modal canvas').evaluate((canvas) => canvas.toDataURL('image/png'));
     if (pseudoCanvas === originalCanvas) {
         await saveFailureEvidence(page, 'pseudonymization-toggle-no-change');
@@ -201,7 +284,9 @@ async function assertScreenshotPrivacyToggle(page) {
     }
 
     await toggle.check();
-    await page.waitForFunction(() => document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes('Pseudo data visible'), null, { timeout: 10000 });
+    await page.waitForFunction(() => {
+        return document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes('Send pseudo-data screenshot to Teams');
+    }, null, { timeout: 10000 });
 }
 
 async function saveFailureEvidence(page, name) {

@@ -180,4 +180,24 @@ final class HomeControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('id="contextualFeedbackSettingsButton"', (string) $supervisor->getResponse()->getContent());
     }
+
+    public function testFeedbackButtonRendersAtBodyLevelForAllowedRoles(): void
+    {
+        $developer = $this->createAuthenticatedClient(['bink8s.app.kiwi.dev']);
+        $crawler = $developer->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('body > #contextualFeedbackButton'));
+        self::assertCount(0, $crawler->filter('.header #contextualFeedbackButton'));
+        $feedbackButton = $crawler->filter('#contextualFeedbackButton')->getNode(0);
+        self::assertInstanceOf(\DOMElement::class, $feedbackButton);
+        self::assertTrue($feedbackButton->hasAttribute('hidden'));
+
+        self::ensureKernelShutdown();
+        $user = $this->createAuthenticatedClient(['bink8s.app.kiwi.user']);
+        $crawler = $user->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(0, $crawler->filter('#contextualFeedbackButton'));
+    }
 }

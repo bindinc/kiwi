@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>KIWI — feedbackbadge voorbeelden</title>
+    <link rel="icon" href="data:,">
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #111827;
+            --muted: #64748b;
+            --line: #dbe3ee;
+            --paper: #ffffff;
+            --canvas: #f3f6fa;
+            --kiwi-blue: #2563eb;
+            --kiwi-blue-dark: #1d4ed8;
+            --feedback-purple: #7c3aed;
+            --feedback-purple-dark: #6d28d9;
+            --feedback-pink: #db2777;
+            --feedback-layer: 2147483647;
+            --radius: 18px;
+            --shadow: 0 18px 44px rgba(15, 23, 42, 0.11);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-width: 320px;
+            background:
+                radial-gradient(circle at 12% 0%, rgba(37, 99, 235, 0.10), transparent 30rem),
+                var(--canvas);
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.5;
+        }
+
+        button {
+            font: inherit;
+        }
+
+        .page {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 56px 0 72px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 12px;
+            color: var(--kiwi-blue-dark);
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .eyebrow::before {
+            width: 26px;
+            height: 3px;
+            border-radius: 999px;
+            background: var(--kiwi-blue);
+            content: "";
+        }
+
+        h1 {
+            max-width: 780px;
+            margin: 0;
+            font-size: clamp(2rem, 5vw, 4rem);
+            line-height: 1.04;
+            letter-spacing: -0.045em;
+        }
+
+        .intro {
+            max-width: 760px;
+            margin: 18px 0 0;
+            color: #475569;
+            font-size: clamp(1rem, 2vw, 1.15rem);
+        }
+
+        .decision {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 14px;
+            max-width: 780px;
+            margin-top: 28px;
+            padding: 18px 20px;
+            border: 1px solid #c7d2fe;
+            border-radius: 14px;
+            background: rgba(238, 242, 255, 0.8);
+        }
+
+        .decision-icon {
+            display: grid;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #ffffff;
+            color: var(--feedback-purple);
+            font-size: 1.2rem;
+            font-weight: 900;
+            place-items: center;
+        }
+
+        .decision strong,
+        .decision span {
+            display: block;
+        }
+
+        .decision span {
+            margin-top: 2px;
+            color: #475569;
+            font-size: 0.92rem;
+        }
+
+        .examples {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 22px;
+            margin-top: 42px;
+        }
+
+        .example {
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--paper);
+            box-shadow: var(--shadow);
+        }
+
+        .example-header {
+            display: flex;
+            min-height: 102px;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 22px 22px 18px;
+        }
+
+        .example-number {
+            margin: 0 0 4px;
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            line-height: 1.2;
+        }
+
+        .example-copy {
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
+
+        .recommendation {
+            flex: 0 0 auto;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #ede9fe;
+            color: var(--feedback-purple-dark);
+            font-size: 0.68rem;
+            font-weight: 850;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .demo {
+            position: relative;
+            min-height: 310px;
+            overflow: hidden;
+            border-top: 1px solid var(--line);
+            background: #eef2f7;
+            isolation: isolate;
+        }
+
+        .kiwi-header {
+            display: flex;
+            height: 54px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: #050505;
+            color: #ffffff;
+        }
+
+        .kiwi-brand {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .kiwi-brand-mark {
+            display: grid;
+            width: 27px;
+            height: 27px;
+            border-radius: 7px;
+            background: linear-gradient(145deg, #f97316, #db2777 55%, #7c3aed);
+            font-size: 0.7rem;
+            place-items: center;
+        }
+
+        .kiwi-header-meta {
+            color: #a5b4c8;
+            font-size: 0.7rem;
+        }
+
+        .kiwi-content {
+            display: grid;
+            grid-template-columns: 116px 1fr;
+            min-height: 256px;
+        }
+
+        .kiwi-nav {
+            padding: 18px 12px;
+            border-right: 1px solid #dbe3ee;
+            background: #f8fafc;
+        }
+
+        .nav-line,
+        .field-line,
+        .text-line {
+            border-radius: 999px;
+            background: #dbe3ee;
+        }
+
+        .nav-line {
+            height: 8px;
+            margin-bottom: 14px;
+        }
+
+        .nav-line:nth-child(2) {
+            width: 74%;
+        }
+
+        .nav-line:nth-child(3) {
+            width: 88%;
+        }
+
+        .kiwi-main {
+            padding: 24px;
+            background: #ffffff;
+        }
+
+        .demo-title {
+            width: 44%;
+            height: 12px;
+            margin-bottom: 22px;
+            border-radius: 999px;
+            background: #64748b;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .field-line {
+            height: 34px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+        }
+
+        .text-line {
+            width: 90%;
+            height: 8px;
+            margin-top: 12px;
+        }
+
+        .text-line.short {
+            width: 60%;
+        }
+
+        .badge {
+            position: absolute;
+            top: 50%;
+            right: 0;
+            z-index: var(--feedback-layer);
+            border: 0;
+            color: #ffffff;
+            cursor: pointer;
+            transform: translateY(-50%);
+            box-shadow: 0 12px 28px rgba(30, 41, 59, 0.26);
+        }
+
+        .badge:focus-visible {
+            outline: 3px solid #fbbf24;
+            outline-offset: 3px;
+        }
+
+        .badge svg {
+            width: 19px;
+            height: 19px;
+            flex: 0 0 auto;
+            fill: none;
+            stroke: currentColor;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 2;
+        }
+
+        /* 1. Recommended: narrow, permanently labelled edge rail. */
+        .badge-rail {
+            display: inline-flex;
+            width: 42px;
+            height: 116px;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 13px 0 0 13px;
+            background: linear-gradient(180deg, var(--feedback-purple), var(--feedback-purple-dark));
+            writing-mode: vertical-rl;
+        }
+
+        .badge-rail span {
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.035em;
+            transform: rotate(180deg);
+        }
+
+        .badge-rail svg {
+            transform: rotate(90deg);
+        }
+
+        .badge-rail:hover {
+            background: linear-gradient(180deg, #8b5cf6, var(--feedback-purple));
+        }
+
+        /* 2. Small by default, grows toward the page on hover/focus. */
+        .badge-expand {
+            display: flex;
+            width: 46px;
+            height: 46px;
+            align-items: center;
+            gap: 9px;
+            overflow: hidden;
+            padding: 0 13px;
+            border-radius: 23px 0 0 23px;
+            background: var(--kiwi-blue);
+            white-space: nowrap;
+            transition: width 180ms ease, background-color 180ms ease;
+        }
+
+        .badge-expand span {
+            opacity: 0;
+            font-size: 0.78rem;
+            font-weight: 800;
+            transition: opacity 120ms ease 30ms;
+        }
+
+        .badge-expand:hover,
+        .badge-expand:focus-visible {
+            width: 124px;
+            background: var(--kiwi-blue-dark);
+        }
+
+        .badge-expand:hover span,
+        .badge-expand:focus-visible span {
+            opacity: 1;
+        }
+
+        /* 3. Minimal circular dock with a native-style tooltip. */
+        .badge-dot {
+            display: grid;
+            width: 48px;
+            height: 48px;
+            border-radius: 50% 0 0 50%;
+            background: #111827;
+            place-items: center;
+            transition: padding-right 150ms ease, background-color 150ms ease;
+        }
+
+        .badge-dot::before {
+            position: absolute;
+            right: 58px;
+            padding: 6px 9px;
+            border-radius: 7px;
+            background: #111827;
+            color: #ffffff;
+            content: "Feedback geven";
+            font-size: 0.7rem;
+            font-weight: 750;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(4px);
+            transition: opacity 140ms ease, transform 140ms ease;
+            white-space: nowrap;
+        }
+
+        .badge-dot:hover,
+        .badge-dot:focus-visible {
+            background: #253247;
+        }
+
+        .badge-dot:hover::before,
+        .badge-dot:focus-visible::before {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* 4. Translucent label: quieter, but wider than the other options. */
+        .badge-glass {
+            display: inline-flex;
+            height: 42px;
+            align-items: center;
+            gap: 8px;
+            padding: 0 14px 0 12px;
+            border: 1px solid rgba(255, 255, 255, 0.52);
+            border-right: 0;
+            border-radius: 12px 0 0 12px;
+            background: rgba(17, 24, 39, 0.86);
+            backdrop-filter: blur(10px);
+        }
+
+        .badge-glass::after {
+            position: absolute;
+            top: 7px;
+            left: 7px;
+            width: 6px;
+            height: 6px;
+            border: 2px solid #111827;
+            border-radius: 50%;
+            background: #22c55e;
+            content: "";
+        }
+
+        .badge-glass span {
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+
+        .badge-glass:hover {
+            background: rgba(17, 24, 39, 0.96);
+        }
+
+        .example-footer {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            border-top: 1px solid var(--line);
+            background: #fbfdff;
+        }
+
+        .metric {
+            padding: 13px 12px;
+            border-right: 1px solid var(--line);
+            text-align: center;
+        }
+
+        .metric:last-child {
+            border-right: 0;
+        }
+
+        .metric strong,
+        .metric span {
+            display: block;
+        }
+
+        .metric strong {
+            font-size: 0.82rem;
+        }
+
+        .metric span {
+            margin-top: 1px;
+            color: var(--muted);
+            font-size: 0.67rem;
+        }
+
+        .implementation {
+            margin-top: 38px;
+            padding: 28px;
+            border-radius: var(--radius);
+            background: #0f172a;
+            color: #e2e8f0;
+            box-shadow: var(--shadow);
+        }
+
+        .implementation h2 {
+            color: #ffffff;
+        }
+
+        .implementation p {
+            max-width: 760px;
+            margin: 9px 0 0;
+            color: #aebdd1;
+        }
+
+        pre {
+            overflow-x: auto;
+            margin: 20px 0 0;
+            padding: 18px;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            background: #020617;
+            color: #dbeafe;
+            font: 0.82rem/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .notes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .note {
+            padding: 14px;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            color: #cbd5e1;
+            font-size: 0.78rem;
+        }
+
+        .note strong {
+            display: block;
+            margin-bottom: 3px;
+            color: #ffffff;
+        }
+
+        @media (max-width: 800px) {
+            .page {
+                width: min(100% - 20px, 600px);
+                padding-top: 34px;
+            }
+
+            .examples {
+                grid-template-columns: 1fr;
+            }
+
+            .notes {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 460px) {
+            .decision {
+                grid-template-columns: 1fr;
+            }
+
+            .example-header {
+                min-height: 0;
+                flex-direction: column;
+            }
+
+            .kiwi-content {
+                grid-template-columns: 78px 1fr;
+            }
+
+            .kiwi-main {
+                padding: 20px 16px;
+            }
+
+            .kiwi-header-meta {
+                display: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <p class="eyebrow">KIWI UX-verkenning</p>
+        <h1>Vier always-on-top feedbackbadges</h1>
+        <p class="intro">
+            Alle varianten staan midden-rechts tegen de viewport en verlaten de normale header-flow.
+            Beweeg met de muis over de badges of gebruik Tab om de interactieve staten te bekijken.
+        </p>
+
+        <div class="decision">
+            <div class="decision-icon" aria-hidden="true">2</div>
+            <div>
+                <strong>Gekozen voor KIWI: de uitklappende capsule</strong>
+                <span>Compact in rust, direct aanklikbaar en volledig herkenbaar bij hover of toetsenbordfocus.</span>
+            </div>
+        </div>
+
+        <section class="examples" aria-label="Vier feedbackbadge voorbeelden">
+            <article class="example">
+                <header class="example-header">
+                    <div>
+                        <p class="example-number">Voorbeeld 01</p>
+                        <h2>Verticale randtab</h2>
+                        <p class="example-copy">Smalle permanente tekstbadge; maximaal vindbaar met minimale overlap.</p>
+                    </div>
+                </header>
+                <div class="demo">
+                    <div class="kiwi-header">
+                        <div class="kiwi-brand"><span class="kiwi-brand-mark">K</span> KIWI</div>
+                        <span class="kiwi-header-meta">donderdag 30 juli · 08:40</span>
+                    </div>
+                    <div class="kiwi-content" aria-hidden="true">
+                        <aside class="kiwi-nav">
+                            <div class="nav-line"></div><div class="nav-line"></div><div class="nav-line"></div>
+                        </aside>
+                        <div class="kiwi-main">
+                            <div class="demo-title"></div>
+                            <div class="form-row"><div class="field-line"></div><div class="field-line"></div></div>
+                            <div class="field-line"></div>
+                            <div class="text-line"></div><div class="text-line short"></div>
+                        </div>
+                    </div>
+                    <button class="badge badge-rail" type="button" aria-label="Contextuele feedback geven">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg>
+                        <span>Feedback</span>
+                    </button>
+                </div>
+                <footer class="example-footer">
+                    <div class="metric"><strong>42 px</strong><span>overlap</span></div>
+                    <div class="metric"><strong>Hoog</strong><span>vindbaarheid</span></div>
+                    <div class="metric"><strong>Rustig</strong><span>gedrag</span></div>
+                </footer>
+            </article>
+
+            <article class="example">
+                <header class="example-header">
+                    <div>
+                        <p class="example-number">Voorbeeld 02</p>
+                        <h2>Uitklappende capsule</h2>
+                        <p class="example-copy">Compact icoon in rust; toont het label bij hover of toetsenbordfocus.</p>
+                    </div>
+                    <span class="recommendation">Gekozen</span>
+                </header>
+                <div class="demo">
+                    <div class="kiwi-header">
+                        <div class="kiwi-brand"><span class="kiwi-brand-mark">K</span> KIWI</div>
+                        <span class="kiwi-header-meta">donderdag 30 juli · 08:40</span>
+                    </div>
+                    <div class="kiwi-content" aria-hidden="true">
+                        <aside class="kiwi-nav">
+                            <div class="nav-line"></div><div class="nav-line"></div><div class="nav-line"></div>
+                        </aside>
+                        <div class="kiwi-main">
+                            <div class="demo-title"></div>
+                            <div class="form-row"><div class="field-line"></div><div class="field-line"></div></div>
+                            <div class="field-line"></div>
+                            <div class="text-line"></div><div class="text-line short"></div>
+                        </div>
+                    </div>
+                    <button class="badge badge-expand" type="button" aria-label="Contextuele feedback geven">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg>
+                        <span>Feedback</span>
+                    </button>
+                </div>
+                <footer class="example-footer">
+                    <div class="metric"><strong>46 px</strong><span>overlap in rust</span></div>
+                    <div class="metric"><strong>Middel</strong><span>vindbaarheid</span></div>
+                    <div class="metric"><strong>Dynamisch</strong><span>gedrag</span></div>
+                </footer>
+            </article>
+
+            <article class="example">
+                <header class="example-header">
+                    <div>
+                        <p class="example-number">Voorbeeld 03</p>
+                        <h2>Minimalistische dock</h2>
+                        <p class="example-copy">Alleen het icoon blijft zichtbaar; tooltip verduidelijkt de actie.</p>
+                    </div>
+                </header>
+                <div class="demo">
+                    <div class="kiwi-header">
+                        <div class="kiwi-brand"><span class="kiwi-brand-mark">K</span> KIWI</div>
+                        <span class="kiwi-header-meta">donderdag 30 juli · 08:40</span>
+                    </div>
+                    <div class="kiwi-content" aria-hidden="true">
+                        <aside class="kiwi-nav">
+                            <div class="nav-line"></div><div class="nav-line"></div><div class="nav-line"></div>
+                        </aside>
+                        <div class="kiwi-main">
+                            <div class="demo-title"></div>
+                            <div class="form-row"><div class="field-line"></div><div class="field-line"></div></div>
+                            <div class="field-line"></div>
+                            <div class="text-line"></div><div class="text-line short"></div>
+                        </div>
+                    </div>
+                    <button class="badge badge-dot" type="button" aria-label="Contextuele feedback geven">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg>
+                    </button>
+                </div>
+                <footer class="example-footer">
+                    <div class="metric"><strong>48 px</strong><span>overlap</span></div>
+                    <div class="metric"><strong>Lager</strong><span>vindbaarheid</span></div>
+                    <div class="metric"><strong>Minimaal</strong><span>beeld</span></div>
+                </footer>
+            </article>
+
+            <article class="example">
+                <header class="example-header">
+                    <div>
+                        <p class="example-number">Voorbeeld 04</p>
+                        <h2>Glazen tekstbadge</h2>
+                        <p class="example-copy">Volledig label met een visueel zachtere, transparante behandeling.</p>
+                    </div>
+                </header>
+                <div class="demo">
+                    <div class="kiwi-header">
+                        <div class="kiwi-brand"><span class="kiwi-brand-mark">K</span> KIWI</div>
+                        <span class="kiwi-header-meta">donderdag 30 juli · 08:40</span>
+                    </div>
+                    <div class="kiwi-content" aria-hidden="true">
+                        <aside class="kiwi-nav">
+                            <div class="nav-line"></div><div class="nav-line"></div><div class="nav-line"></div>
+                        </aside>
+                        <div class="kiwi-main">
+                            <div class="demo-title"></div>
+                            <div class="form-row"><div class="field-line"></div><div class="field-line"></div></div>
+                            <div class="field-line"></div>
+                            <div class="text-line"></div><div class="text-line short"></div>
+                        </div>
+                    </div>
+                    <button class="badge badge-glass" type="button" aria-label="Contextuele feedback geven">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg>
+                        <span>Feedback</span>
+                    </button>
+                </div>
+                <footer class="example-footer">
+                    <div class="metric"><strong>112 px</strong><span>overlap</span></div>
+                    <div class="metric"><strong>Hoog</strong><span>vindbaarheid</span></div>
+                    <div class="metric"><strong>Zacht</strong><span>contrast</span></div>
+                </footer>
+            </article>
+        </section>
+
+        <section class="implementation">
+            <h2>Gedeeld implementatieprincipe</h2>
+            <p>
+                In KIWI wordt de gekozen badge buiten de header geplaatst. Deze basis houdt hem op elke pagina
+                midden-rechts en boven alle bestaande overlays.
+            </p>
+            <pre><code>.contextual-feedback-button {
+    position: fixed;
+    top: 50%;
+    right: env(safe-area-inset-right, 0);
+    z-index: 2147483647;
+    transform: translateY(-50%);
+}
+
+.contextual-feedback-button:focus-visible {
+    outline: 3px solid #fbbf24;
+    outline-offset: 3px;
+}</code></pre>
+            <div class="notes">
+                <div class="note"><strong>Always on top</strong>Een vaste viewportpositie en een eigen maximale z-laag voorkomen dat content of sticky headers de knop bedekken.</div>
+                <div class="note"><strong>Niet obstructief</strong>De aanbevolen tab neemt horizontaal 42 px in en blijft direct tegen de rechterrand staan.</div>
+                <div class="note"><strong>Toegankelijk</strong>Het blijft een echte button met een duidelijke naam, zichtbare focus en gereduceerde beweging waar ingesteld.</div>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
