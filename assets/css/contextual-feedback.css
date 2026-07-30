@@ -21,8 +21,6 @@
     display: none;
 }
 
-.contextual-feedback-button:hover,
-.contextual-feedback-button.is-active,
 .contextual-feedback-settings-button:hover,
 .contextual-feedback-settings-button.is-active {
     background: rgba(255, 255, 255, 0.16);
@@ -35,16 +33,83 @@
     outline-offset: 2px;
 }
 
-.contextual-feedback-header-label {
+.contextual-feedback-settings-button {
+    width: 36px;
+    padding: 0;
+}
+
+.contextual-feedback-button {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    right: env(safe-area-inset-right, 0);
+    z-index: 2147483647;
+    width: 46px;
+    height: 46px;
+    padding: 0 13px;
+    gap: 9px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 23px 0 0 23px;
+    background: var(--primary-color);
+    color: #ffffff;
+    box-shadow: 0 12px 28px rgba(30, 41, 59, 0.26);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    transition: width 0.18s ease, background-color 0.18s ease;
+}
+
+.contextual-feedback-button[hidden] {
+    display: none;
+}
+
+.contextual-feedback-button:hover,
+.contextual-feedback-button:focus-visible {
+    width: 124px;
+    background: var(--primary-hover);
+}
+
+.contextual-feedback-button.is-active {
+    width: 46px;
+    background: var(--primary-hover);
+    cursor: wait;
+}
+
+.contextual-feedback-button:focus-visible {
+    outline: 3px solid #fbbf24;
+    outline-offset: 3px;
+}
+
+.contextual-feedback-button svg {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.contextual-feedback-label {
+    opacity: 0;
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0;
     line-height: 1;
+    transition: opacity 0.12s ease 0.03s;
 }
 
-.contextual-feedback-settings-button {
-    width: 36px;
-    padding: 0;
+.contextual-feedback-button:hover .contextual-feedback-label,
+.contextual-feedback-button:focus-visible .contextual-feedback-label {
+    opacity: 1;
+}
+
+.contextual-feedback-button.is-active .contextual-feedback-label {
+    opacity: 0;
 }
 
 .contextual-feedback-picker-overlay {
@@ -454,5 +519,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 
     .contextual-feedback-form-row {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .contextual-feedback-button,
+    .contextual-feedback-label {
+        transition: none;
     }
 }

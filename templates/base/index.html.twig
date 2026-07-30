@@ -12,6 +12,23 @@
     <link rel="stylesheet" href="{{ asset('css/contextual-feedback.css') }}">
 </head>
 <body>
+    {% if contextual_feedback_available %}
+        <button
+            type="button"
+            id="contextualFeedbackButton"
+            class="contextual-feedback-button"
+            data-feedback-ignore
+            data-contextual-feedback-api-url="{{ path('api_development_feedback_submit') }}"
+            aria-label="Contextual feedback"
+            title="Contextual feedback"
+            {% if not contextual_feedback_enabled %}hidden{% endif %}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+                <path d="M8 9h8M8 13h5"></path>
+            </svg>
+            <span class="contextual-feedback-label">Feedback</span>
+        </button>
+    {% endif %}
     <div class="container">
         <!-- Header -->
         <header class="header">
@@ -108,21 +125,6 @@
                             <span id="subscriptionQueueToggleCount" class="workbox-toggle-count" style="display: none;">0</span>
                             <span class="sr-only">Aanvraagqueue</span>
                         </button>
-                        {% if contextual_feedback_available %}
-                            <button
-                                type="button"
-                                id="contextualFeedbackButton"
-                                class="contextual-feedback-header-button contextual-feedback-button"
-                                data-feedback-ignore
-                                data-contextual-feedback-api-url="{{ path('api_development_feedback_submit') }}"
-                                aria-label="Contextual feedback"
-                                title="Contextual feedback"
-                                {% if not contextual_feedback_enabled %}hidden{% endif %}>
-                                <span aria-hidden="true">💬</span>
-                                <span class="contextual-feedback-header-label">Feedback</span>
-                            </button>
-                        {% endif %}
-
                         <div class="user-info">
                             <span class="time" id="currentTime"></span>
                         </div>
