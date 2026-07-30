@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+## [v1.0.19]
+
 - Keep the contextual feedback action always available as a compact viewport-edge capsule that expands on hover and keyboard focus.
 
 ## [v1.0.18]
