@@ -133,13 +133,16 @@ function dialogTemplate(selectedElement, privacySummary) {
     const hiddenBadge = hiddenElements > 0
         ? `<span class="is-warning" title="${escapeHtml(hiddenTooltip)}">Some media hidden</span>`
         : '<span>No hidden regions</span>';
+    const selectionSummary = selectedElement.tag === 'area'
+        ? `${escapeHtml(selectedElement.label)} <span>${escapeHtml(selectedElement.dimensions)}</span>`
+        : `${escapeHtml(selectedElement.label)} <span>${escapeHtml(selectedElement.selector)}</span>`;
 
     return `
         <div class="contextual-feedback-panel" role="dialog" aria-modal="true" aria-labelledby="contextualFeedbackTitle">
             <header class="contextual-feedback-panel-header">
                 <div>
                     <h2 id="contextualFeedbackTitle">Contextual feedback</h2>
-                    <p>${escapeHtml(selectedElement.label)} <span>${escapeHtml(selectedElement.selector)}</span></p>
+                    <p>${selectionSummary}</p>
                 </div>
                 <button type="button" class="contextual-feedback-close" data-feedback-close aria-label="Close">x</button>
             </header>

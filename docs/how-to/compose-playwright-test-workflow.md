@@ -230,6 +230,20 @@ await page.waitForSelector('.contextual-feedback-picker-overlay');
 await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 ```
 
+To exercise custom area capture, hold the primary mouse button and drag at least
+10 pixels in both dimensions. The resulting canvas must match the selected
+rectangle rather than the underlying DOM element:
+
+```js
+await page.click('#contextualFeedbackButton');
+await page.waitForSelector('.contextual-feedback-picker-overlay');
+await page.mouse.move(100, 100);
+await page.mouse.down({ button: 'left' });
+await page.mouse.move(420, 280);
+await page.mouse.up({ button: 'left' });
+await page.waitForSelector('.contextual-feedback-modal canvas');
+```
+
 ## Save evidence output
 
 Write temporary evidence under `/tmp`, grouped by scenario:

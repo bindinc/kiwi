@@ -129,6 +129,15 @@
     border-radius: 4px;
 }
 
+.contextual-feedback-picker-outline.is-area {
+    border-style: dashed;
+    border-radius: 2px;
+}
+
+.contextual-feedback-picker-outline.is-invalid {
+    border-color: #dc2626;
+}
+
 .contextual-feedback-picker-label {
     position: fixed;
     z-index: 10002;

@@ -70,7 +70,14 @@ async function runSmokeScenario(page) {
     await page.mouse.click(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2);
     await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
 
-    await assertFeedbackReviewSurfaceIsPrivate(page);
+    await assertFeedbackReviewSurfaceIsPrivate(page, {
+        width: targetBox.width,
+        height: targetBox.height
+    });
+
+    await page.click('[data-feedback-close]');
+    await page.waitForSelector('.contextual-feedback-modal', { state: 'detached', timeout: 10000 });
+    await captureCustomArea(page, targetBox);
 }
 
 async function loginIfNeeded(page) {
@@ -203,7 +210,38 @@ async function searchAndSelectJansen(page) {
     }
 }
 
-async function assertFeedbackReviewSurfaceIsPrivate(page) {
+async function captureCustomArea(page, targetBox) {
+    const start = {
+        x: Math.max(20, targetBox.x - 30),
+        y: Math.max(20, targetBox.y - 30)
+    };
+    const end = {
+        x: Math.min(1673, start.x + 320),
+        y: Math.min(1189, start.y + 180)
+    };
+
+    await page.click('#contextualFeedbackButton');
+    await page.waitForSelector('.contextual-feedback-picker-overlay', { timeout: 10000 });
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down({ button: 'left' });
+    await page.mouse.move(end.x, end.y, { steps: 8 });
+    await page.mouse.up({ button: 'left' });
+    await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
+
+    const selectionSummary = await page.locator('.contextual-feedback-panel-header p').innerText();
+    const expectedSummary = `Custom screenshot area ${Math.round(end.x - start.x)} × ${Math.round(end.y - start.y)} px`;
+    if (!selectionSummary.includes(expectedSummary)) {
+        await saveFailureEvidence(page, 'custom-area-summary');
+        throw new Error(`Custom area summary is incorrect: ${selectionSummary}`);
+    }
+
+    await assertFeedbackReviewSurfaceIsPrivate(page, {
+        width: end.x - start.x,
+        height: end.y - start.y
+    });
+}
+
+async function assertFeedbackReviewSurfaceIsPrivate(page, expectedSize) {
     const modalText = await page.locator('.contextual-feedback-modal').innerText();
     const leakedModalValues = realSensitiveValues.filter((value) => modalText.includes(value));
     if (leakedModalValues.length > 0) {
@@ -250,17 +288,9 @@ async function assertFeedbackReviewSurfaceIsPrivate(page) {
         throw new Error(`Feedback canvas is blank or invalid: ${JSON.stringify(canvasState)}`);
     }
 
-    const targetRect = await page.locator('#customerName').evaluate((element) => {
-        const rect = element.getBoundingClientRect();
-        return {
-            width: Math.round(rect.width),
-            height: Math.round(rect.height)
-        };
-    });
-
-    if (Math.abs(canvasState.width - targetRect.width) > 4 || Math.abs(canvasState.height - targetRect.height) > 4) {
+    if (Math.abs(canvasState.width - expectedSize.width) > 4 || Math.abs(canvasState.height - expectedSize.height) > 4) {
         await saveFailureEvidence(page, 'canvas-not-cropped');
-        throw new Error(`Feedback canvas is not cropped to selected element: canvas=${JSON.stringify(canvasState)} target=${JSON.stringify(targetRect)}`);
+        throw new Error(`Feedback canvas is not cropped to the selection: canvas=${JSON.stringify(canvasState)} target=${JSON.stringify(expectedSize)}`);
     }
 }
 

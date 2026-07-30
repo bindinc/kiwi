@@ -1,7 +1,7 @@
 import { initFeedbackButton } from './button.js';
 import { startElementPicker } from './element-picker.js';
 import { describeElement } from './selector.js';
-import { captureElementScreenshot } from './screenshot.js';
+import { captureAreaScreenshot, captureElementScreenshot } from './screenshot.js';
 import { openFeedbackDialog } from './dialog.js';
 import { buildFeedbackPayload } from './payload.js';
 import { initContextualFeedbackSettings } from './settings-modal.js';
@@ -28,27 +28,37 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
 
         startElementPicker({
             documentRef,
+            windowRef,
             onCancel() {
                 resetButton(button);
             },
-            async onSelect(element) {
-                await captureSelection(element);
+            async onSelect(selection) {
+                await captureSelection(selection);
             }
         });
     }
 
-    async function captureSelection(element) {
-        const selectedRect = element.getBoundingClientRect();
-        const selectedElement = describeElement(element, documentRef);
+    async function captureSelection(selection) {
+        const selectedRect = selection.rect;
+        const selectedElement = selection.kind === 'area'
+            ? describeAreaSelection(selectedRect)
+            : describeElement(selection.element, documentRef);
         button.title = 'Capturing screenshot...';
 
         try {
-            const screenshot = await captureElementScreenshot({
-                element,
-                selectedElement,
-                documentRef,
-                windowRef
-            });
+            const screenshot = selection.kind === 'area'
+                ? await captureAreaScreenshot({
+                    rect: selectedRect,
+                    selectedElement,
+                    documentRef,
+                    windowRef
+                })
+                : await captureElementScreenshot({
+                    element: selection.element,
+                    selectedElement,
+                    documentRef,
+                    windowRef
+                });
             await openFeedbackDialog({
                 documentRef,
                 screenshots: {
@@ -90,6 +100,16 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
             windowRef.alert(error instanceof Error ? error.message : 'Could not capture feedback.');
         }
     }
+}
+
+function describeAreaSelection(rect) {
+    return {
+        tag: 'area',
+        label: 'Custom screenshot area',
+        selector: 'viewport-area',
+        textSample: null,
+        dimensions: `${Math.round(rect.width)} × ${Math.round(rect.height)} px`
+    };
 }
 
 async function submitFeedback({ apiUrl, payload, screenshots }) {
