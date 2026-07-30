@@ -21,32 +21,61 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
     button.disabled = true;
     button.classList.add('is-active');
 
-    openPicker();
+    await openFeedbackDialog({
+        documentRef,
+        onRequestScreenshot: captureScreenshot,
+        onCancel() {
+            resetButton(button);
+        },
+        async onSubmit({
+            comment,
+            severity,
+            category,
+            selectionKind,
+            teamsScreenshotVariant,
+            selectedElement,
+            selectedRect,
+            annotations,
+            screenshots
+        }) {
+            const payload = buildFeedbackPayload({
+                comment,
+                severity,
+                category,
+                selectionKind,
+                teamsScreenshotVariant,
+                selectedElement,
+                selectedRect,
+                annotations,
+                locationRef: windowRef.location,
+                windowRef,
+                navigatorRef: windowRef.navigator
+            });
 
-    function openPicker() {
+            await submitFeedback({
+                apiUrl: button.dataset.contextualFeedbackApiUrl || '/api/v1/development-feedback',
+                payload,
+                screenshots
+            });
+            resetButton(button);
+        }
+    });
+
+    async function captureScreenshot() {
         button.title = 'Select an element for feedback';
+        const selection = await selectScreenshotTarget({ documentRef, windowRef });
+        if (!selection) {
+            button.title = 'Contextual feedback';
+            return null;
+        }
 
-        startElementPicker({
-            documentRef,
-            windowRef,
-            onCancel() {
-                resetButton(button);
-            },
-            async onSelect(selection) {
-                await captureSelection(selection);
-            }
-        });
-    }
-
-    async function captureSelection(selection) {
         const selectedRect = selection.rect;
         const selectedElement = selection.kind === 'area'
             ? describeAreaSelection(selectedRect)
             : describeElement(selection.element, documentRef);
         button.title = 'Capturing screenshot...';
-
         try {
-            const screenshot = selection.kind === 'area'
+            const capturedScreenshot = selection.kind === 'area'
                 ? await captureAreaScreenshot({
                     rect: selectedRect,
                     selectedElement,
@@ -59,47 +88,36 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
                     documentRef,
                     windowRef
                 });
-            await openFeedbackDialog({
-                documentRef,
-                screenshots: {
-                    pseudonymized: screenshot.pseudonymized,
-                    original: screenshot.original
-                },
-                selectedElement: screenshot.selectedElement,
-                privacySummary: screenshot.privacySummary,
-                onCancel() {
-                    resetButton(button);
-                },
-                onRetake() {
-                    openPicker();
-                },
-                async onSubmit({ comment, severity, category, teamsScreenshotVariant, annotations, screenshots }) {
-                    const payload = buildFeedbackPayload({
-                        comment,
-                        severity,
-                        category,
-                        teamsScreenshotVariant,
-                        selectedElement: screenshot.selectedElement,
-                        selectedRect,
-                        annotations,
-                        locationRef: windowRef.location,
-                        windowRef,
-                        navigatorRef: windowRef.navigator
-                    });
 
-                    await submitFeedback({
-                        apiUrl: button.dataset.contextualFeedbackApiUrl || '/api/v1/development-feedback',
-                        payload,
-                        screenshots
-                    });
-                    resetButton(button);
+            return {
+                selectionKind: selection.kind,
+                selectedRect,
+                selectedElement: capturedScreenshot.selectedElement,
+                privacySummary: capturedScreenshot.privacySummary,
+                screenshots: {
+                    pseudonymized: capturedScreenshot.pseudonymized,
+                    original: capturedScreenshot.original
                 }
-            });
-        } catch (error) {
-            resetButton(button);
-            windowRef.alert(error instanceof Error ? error.message : 'Could not capture feedback.');
+            };
+        } finally {
+            button.title = 'Contextual feedback';
         }
     }
+}
+
+function selectScreenshotTarget({ documentRef, windowRef }) {
+    return new Promise((resolve) => {
+        startElementPicker({
+            documentRef,
+            windowRef,
+            onCancel() {
+                resolve(null);
+            },
+            onSelect(selection) {
+                resolve(selection);
+            }
+        });
+    });
 }
 
 function describeAreaSelection(rect) {
@@ -115,8 +133,10 @@ function describeAreaSelection(rect) {
 async function submitFeedback({ apiUrl, payload, screenshots }) {
     const formData = new FormData();
     formData.set('payload', JSON.stringify(payload));
-    formData.set('screenshot', screenshots.pseudonymized, 'kiwi-contextual-feedback-pseudonymized.png');
-    formData.set('originalScreenshot', screenshots.original, 'kiwi-contextual-feedback-original.png');
+    if (screenshots) {
+        formData.set('screenshot', screenshots.pseudonymized, 'kiwi-contextual-feedback-pseudonymized.png');
+        formData.set('originalScreenshot', screenshots.original, 'kiwi-contextual-feedback-original.png');
+    }
 
     const response = await fetch(apiUrl, {
         method: 'POST',

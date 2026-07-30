@@ -35,7 +35,7 @@ final class TeamsDevelopmentFeedbackNotifier
     /**
      * @return array{status: string, error: string|null}
      */
-    public function notify(DevelopmentFeedbackReport $report, string $screenshotUrl): array
+    public function notify(DevelopmentFeedbackReport $report, ?string $screenshotUrl): array
     {
         return $this->sendToWebhook(
             $report,
@@ -65,7 +65,7 @@ final class TeamsDevelopmentFeedbackNotifier
      */
     private function sendToWebhook(
         DevelopmentFeedbackReport $report,
-        string $screenshotUrl,
+        ?string $screenshotUrl,
         ?string $webhookUrl,
         bool $containsOriginalData,
         string $settingName,

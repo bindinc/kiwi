@@ -40,8 +40,24 @@ final class TeamsFeedbackCardFactoryTest extends TestCase
         self::assertSame('Attention', $content['body'][1]['color']);
     }
 
-    private function createReport(): DevelopmentFeedbackReport
+    public function testTextOnlyCardOmitsScreenshotDetailsAndAction(): void
     {
+        $report = $this->createReport(DevelopmentFeedbackReport::SELECTION_NONE);
+        $card = (new TeamsFeedbackCardFactory())->createCard($report, null);
+        $content = $card['attachments'][0]['content'];
+        $facts = $content['body'][3]['facts'];
+
+        self::assertSame('No screenshot attached.', $content['body'][1]['text']);
+        self::assertSame(['TextBlock', 'TextBlock', 'TextBlock', 'FactSet'], array_column($content['body'], 'type'));
+        self::assertSame(['Open Kiwi page'], array_column($content['actions'], 'title'));
+        self::assertNotContains('Element', array_column($facts, 'title'));
+        self::assertNotContains('Selector', array_column($facts, 'title'));
+    }
+
+    private function createReport(string $selectionKind = DevelopmentFeedbackReport::SELECTION_ELEMENT): DevelopmentFeedbackReport
+    {
+        $hasScreenshot = DevelopmentFeedbackReport::SELECTION_NONE !== $selectionKind;
+
         return new DevelopmentFeedbackReport(
             'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
             new \DateTimeImmutable('2026-06-16T12:00:00+00:00'),
@@ -56,12 +72,13 @@ final class TeamsFeedbackCardFactoryTest extends TestCase
             900,
             1.0,
             'phpunit',
-            'button',
-            'Create subscription',
-            '[data-feedback-id="create"]',
-            'Create',
-            ['x' => 10, 'y' => 20, 'width' => 100, 'height' => 40],
-            [['type' => 'rectangle']],
+            $selectionKind,
+            $hasScreenshot ? 'button' : null,
+            $hasScreenshot ? 'Create subscription' : null,
+            $hasScreenshot ? '[data-feedback-id="create"]' : null,
+            $hasScreenshot ? 'Create' : null,
+            $hasScreenshot ? ['x' => 10, 'y' => 20, 'width' => 100, 'height' => 40] : null,
+            $hasScreenshot ? [['type' => 'rectangle']] : [],
             'The button overlaps the date picker.',
             'normal',
             'bug',

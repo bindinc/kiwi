@@ -66,9 +66,19 @@ async function runSmokeScenario(page) {
     }
 
     await page.click('#contextualFeedbackButton');
+    await page.waitForSelector('.contextual-feedback-modal', { state: 'visible', timeout: 10000 });
+    await assertFormFirstState(page);
+    await page.fill('textarea[name="comment"]', 'This comment must survive screenshot capture.');
+    await page.click('[data-feedback-add-screenshot]');
     await page.waitForSelector('.contextual-feedback-picker-overlay', { timeout: 10000 });
+    await assertDialogIsSuspendedDuringCapture(page);
     await page.mouse.click(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2);
     await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
+
+    const retainedComment = await page.inputValue('textarea[name="comment"]');
+    if (retainedComment !== 'This comment must survive screenshot capture.') {
+        throw new Error(`Feedback comment was not retained after screenshot capture: ${retainedComment}`);
+    }
 
     await assertFeedbackReviewSurfaceIsPrivate(page, {
         width: targetBox.width,
@@ -78,6 +88,49 @@ async function runSmokeScenario(page) {
     await page.click('[data-feedback-close]');
     await page.waitForSelector('.contextual-feedback-modal', { state: 'detached', timeout: 10000 });
     await captureCustomArea(page, targetBox);
+}
+
+async function assertFormFirstState(page) {
+    const state = await page.evaluate(() => {
+        const modal = document.querySelector('.contextual-feedback-modal');
+        const workspace = document.querySelector('[data-feedback-workspace]');
+        const comment = document.querySelector('textarea[name="comment"]');
+
+        return {
+            modalVisible: Boolean(modal && window.getComputedStyle(modal).display !== 'none'),
+            workspaceHidden: Boolean(workspace?.hidden),
+            commentRequired: Boolean(comment?.required),
+            selectionSummary: document.querySelector('[data-feedback-selection-summary]')?.textContent?.trim(),
+            pickerCount: document.querySelectorAll('.contextual-feedback-picker-overlay').length
+        };
+    });
+
+    const isFormFirst = state.modalVisible
+        && state.workspaceHidden
+        && state.commentRequired
+        && state.selectionSummary === 'No screenshot attached'
+        && state.pickerCount === 0;
+    if (!isFormFirst) {
+        await saveFailureEvidence(page, 'form-first-state');
+        throw new Error(`Feedback did not open in form-first state: ${JSON.stringify(state)}`);
+    }
+}
+
+async function assertDialogIsSuspendedDuringCapture(page) {
+    const state = await page.evaluate(() => {
+        const modal = document.querySelector('.contextual-feedback-modal');
+
+        return {
+            modalHidden: Boolean(modal?.hidden),
+            modalDisplay: modal ? window.getComputedStyle(modal).display : '',
+            bodyHasReviewState: document.body.classList.contains('contextual-feedback-reviewing')
+        };
+    });
+
+    if (!state.modalHidden || state.modalDisplay !== 'none' || state.bodyHasReviewState) {
+        await saveFailureEvidence(page, 'dialog-visible-during-capture');
+        throw new Error(`Feedback dialog was not fully hidden during capture: ${JSON.stringify(state)}`);
+    }
 }
 
 async function loginIfNeeded(page) {
@@ -221,7 +274,10 @@ async function captureCustomArea(page, targetBox) {
     };
 
     await page.click('#contextualFeedbackButton');
+    await page.waitForSelector('.contextual-feedback-modal', { state: 'visible', timeout: 10000 });
+    await page.click('[data-feedback-add-screenshot]');
     await page.waitForSelector('.contextual-feedback-picker-overlay', { timeout: 10000 });
+    await assertDialogIsSuspendedDuringCapture(page);
     await page.mouse.move(start.x, start.y);
     await page.mouse.down({ button: 'left' });
     await page.mouse.move(end.x, end.y, { steps: 8 });

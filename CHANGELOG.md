@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
-- Add freeform 10 × 10 pixel minimum rectangle selection for contextual feedback screenshot crops, and document UX options for future feedback without screenshots.
+- Add form-first contextual feedback with optional screenshots, hide the feedback dialog during element or 10 × 10 pixel minimum area capture, and send text-only reports to Teams without screenshot details.
 
 ## [v1.0.19]
 

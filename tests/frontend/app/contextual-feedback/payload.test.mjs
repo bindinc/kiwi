@@ -6,6 +6,7 @@ function testPayloadUsesRuntimeMetadata() {
         comment: 'Button overlaps.',
         severity: 'normal',
         category: 'bug',
+        selectionKind: 'element',
         teamsScreenshotVariant: 'original',
         selectedElement: {
             tag: 'button',
@@ -39,6 +40,7 @@ function testPayloadUsesRuntimeMetadata() {
         comment: 'Button overlaps.',
         severity: 'normal',
         category: 'bug',
+        selectionKind: 'element',
         teamsScreenshotVariant: 'original',
         pageUrl: 'https://bdc.rtvmedia.org.local/kiwi/customer?id=1',
         routePath: '/kiwi/customer?id=1',
@@ -64,4 +66,42 @@ function testPayloadUsesRuntimeMetadata() {
     });
 }
 
+function testPayloadSupportsFeedbackWithoutScreenshot() {
+    const payload = buildFeedbackPayload({
+        comment: 'The labels are unclear.',
+        severity: 'low',
+        category: 'chore',
+        locationRef: {
+            href: 'https://bdc.rtvmedia.org.local/kiwi/customer',
+            pathname: '/kiwi/customer',
+            search: ''
+        },
+        windowRef: {
+            innerWidth: 1280,
+            innerHeight: 720,
+            devicePixelRatio: 2
+        },
+        navigatorRef: {
+            userAgent: 'node-test'
+        }
+    });
+
+    assert.deepEqual(payload, {
+        comment: 'The labels are unclear.',
+        severity: 'low',
+        category: 'chore',
+        selectionKind: 'none',
+        pageUrl: 'https://bdc.rtvmedia.org.local/kiwi/customer',
+        routePath: '/kiwi/customer',
+        userAgent: 'node-test',
+        viewport: {
+            width: 1280,
+            height: 720,
+            devicePixelRatio: 2
+        },
+        annotations: []
+    });
+}
+
 testPayloadUsesRuntimeMetadata();
+testPayloadSupportsFeedbackWithoutScreenshot();

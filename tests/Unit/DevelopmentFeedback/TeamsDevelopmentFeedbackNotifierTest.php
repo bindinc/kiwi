@@ -63,6 +63,34 @@ final class TeamsDevelopmentFeedbackNotifierTest extends TestCase
         self::assertSame('https://example.org/screenshot.png', $requestPayload['attachments'][0]['content']['body'][4]['url']);
     }
 
+    public function testNotifierPostsTextOnlyFeedbackToRegularWebhook(): void
+    {
+        putenv('CONTEXTUAL_FEEDBACK_WEBHOOK_URL=https://workflow.example/webhook');
+        $requests = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests): MockResponse {
+            $requests[] = compact('method', 'url', 'options');
+
+            return new MockResponse('', ['http_code' => 202]);
+        });
+
+        $result = (new TeamsDevelopmentFeedbackNotifier(
+            $client,
+            new DevelopmentFeedbackSettings(),
+            new TeamsFeedbackCardFactory(),
+            new NullLogger(),
+        ))->notify($this->createReport(DevelopmentFeedbackReport::SELECTION_NONE), null);
+
+        self::assertSame(['status' => 'sent', 'error' => null], $result);
+        self::assertCount(1, $requests);
+        self::assertSame('https://workflow.example/webhook', $requests[0]['url']);
+        $requestBody = $requests[0]['options']['body'] ?? '';
+        self::assertIsString($requestBody);
+        $requestPayload = json_decode($requestBody, true, flags: \JSON_THROW_ON_ERROR);
+        $content = $requestPayload['attachments'][0]['content'];
+        self::assertSame('No screenshot attached.', $content['body'][1]['text']);
+        self::assertSame(['Open Kiwi page'], array_column($content['actions'], 'title'));
+    }
+
     public function testNotifierPostsOriginalDataCardToSeparateWebhook(): void
     {
         putenv('CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL=https://workflow.example/original-data');
@@ -176,8 +204,10 @@ final class TeamsDevelopmentFeedbackNotifierTest extends TestCase
         self::assertSame('not_configured', $result['status']);
     }
 
-    private function createReport(): DevelopmentFeedbackReport
+    private function createReport(string $selectionKind = DevelopmentFeedbackReport::SELECTION_ELEMENT): DevelopmentFeedbackReport
     {
+        $hasScreenshot = DevelopmentFeedbackReport::SELECTION_NONE !== $selectionKind;
+
         return new DevelopmentFeedbackReport(
             'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
             new \DateTimeImmutable('2026-06-16T12:00:00+00:00'),
@@ -192,11 +222,12 @@ final class TeamsDevelopmentFeedbackNotifierTest extends TestCase
             900,
             1.0,
             'phpunit',
-            'button',
-            'Create subscription',
-            '[data-feedback-id="create"]',
-            'Create',
-            ['x' => 10, 'y' => 20, 'width' => 100, 'height' => 40],
+            $selectionKind,
+            $hasScreenshot ? 'button' : null,
+            $hasScreenshot ? 'Create subscription' : null,
+            $hasScreenshot ? '[data-feedback-id="create"]' : null,
+            $hasScreenshot ? 'Create' : null,
+            $hasScreenshot ? ['x' => 10, 'y' => 20, 'width' => 100, 'height' => 40] : null,
             [],
             'Feedback comment.',
             'normal',
