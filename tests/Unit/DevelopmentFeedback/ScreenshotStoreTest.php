@@ -72,6 +72,7 @@ final class ScreenshotStoreTest extends TestCase
             1,
             1.0,
             'phpunit',
+            DevelopmentFeedbackReport::SELECTION_ELEMENT,
             'button',
             'Button',
             'button',

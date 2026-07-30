@@ -244,10 +244,11 @@ Kiwi now stores server-side Symfony sessions in PostgreSQL.
 
 Kiwi includes a first-party contextual feedback flow for development feedback.
 When enabled, permitted users see a `Contextual feedback` button in the app
-header. The flow lets the user pick a real page element, captures the visible
-app state as a PNG, draws the selected-element marker and manual annotations on
-the image, stores the report and screenshot in PostgreSQL, and posts an Adaptive
-Card to Microsoft Teams through a Teams Workflows webhook.
+header. A single click captures a real page element, while holding the left
+mouse button and dragging captures a custom rectangle of at least 10 × 10
+pixels. Kiwi crops the PNG to that selection, lets the user add manual
+annotations, stores the report and screenshot in PostgreSQL, and posts an
+Adaptive Card to Microsoft Teams through a Teams Workflows webhook.
 
 Kiwi captures two annotated PNG variants for each report. The default visible
 variant uses coherent pseudo data for marked customer fields, while the

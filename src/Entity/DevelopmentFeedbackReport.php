@@ -15,6 +15,10 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_development_feedback_report_created_by', columns: ['created_by_user_id', 'created_at'])]
 final class DevelopmentFeedbackReport
 {
+    public const SELECTION_NONE = 'none';
+    public const SELECTION_ELEMENT = 'element';
+    public const SELECTION_AREA = 'area';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -59,23 +63,26 @@ final class DevelopmentFeedbackReport
     #[ORM\Column(name: 'user_agent', type: 'text')]
     private string $userAgent;
 
-    #[ORM\Column(name: 'selected_element_tag', length: 64)]
-    private string $selectedElementTag;
+    #[ORM\Column(name: 'selection_kind', length: 16, options: ['default' => self::SELECTION_ELEMENT])]
+    private string $selectionKind;
 
-    #[ORM\Column(name: 'selected_element_label', length: 255)]
-    private string $selectedElementLabel;
+    #[ORM\Column(name: 'selected_element_tag', length: 64, nullable: true)]
+    private ?string $selectedElementTag;
 
-    #[ORM\Column(name: 'selected_element_selector', type: 'text')]
-    private string $selectedElementSelector;
+    #[ORM\Column(name: 'selected_element_label', length: 255, nullable: true)]
+    private ?string $selectedElementLabel;
+
+    #[ORM\Column(name: 'selected_element_selector', type: 'text', nullable: true)]
+    private ?string $selectedElementSelector;
 
     #[ORM\Column(name: 'selected_element_text_sample', type: 'text', nullable: true)]
     private ?string $selectedElementTextSample;
 
     /**
-     * @var array<string, int|float>
+     * @var array<string, int|float>|null
      */
-    #[ORM\Column(name: 'selected_element_rect_json', type: 'json')]
-    private array $selectedElementRectJson;
+    #[ORM\Column(name: 'selected_element_rect_json', type: 'json', nullable: true)]
+    private ?array $selectedElementRectJson;
 
     /**
      * @var list<array<string, mixed>>
@@ -108,7 +115,7 @@ final class DevelopmentFeedbackReport
     private Collection $screenshots;
 
     /**
-     * @param array<string, int|float> $selectedElementRectJson
+     * @param array<string, int|float>|null $selectedElementRectJson
      * @param list<array<string, mixed>> $annotationJson
      */
     public function __construct(
@@ -125,16 +132,35 @@ final class DevelopmentFeedbackReport
         int $viewportHeight,
         float $devicePixelRatio,
         string $userAgent,
-        string $selectedElementTag,
-        string $selectedElementLabel,
-        string $selectedElementSelector,
+        string $selectionKind,
+        ?string $selectedElementTag,
+        ?string $selectedElementLabel,
+        ?string $selectedElementSelector,
         ?string $selectedElementTextSample,
-        array $selectedElementRectJson,
+        ?array $selectedElementRectJson,
         array $annotationJson,
         string $comment,
         string $severity,
         string $category,
     ) {
+        $allowedSelectionKinds = [self::SELECTION_NONE, self::SELECTION_ELEMENT, self::SELECTION_AREA];
+        if (!\in_array($selectionKind, $allowedSelectionKinds, true)) {
+            throw new \InvalidArgumentException(sprintf('Unsupported feedback selection kind "%s".', $selectionKind));
+        }
+
+        $hasSelection = self::SELECTION_NONE !== $selectionKind;
+        $hasCompleteSelection = null !== $selectedElementTag
+            && null !== $selectedElementLabel
+            && null !== $selectedElementSelector
+            && null !== $selectedElementRectJson;
+        if ($hasSelection !== $hasCompleteSelection) {
+            throw new \InvalidArgumentException('Feedback selection metadata must match the selection kind.');
+        }
+
+        if (!$hasSelection && [] !== $annotationJson) {
+            throw new \InvalidArgumentException('Feedback annotations require a screenshot selection.');
+        }
+
         $this->screenshots = new ArrayCollection();
         $this->publicId = $publicId;
         $this->createdAt = $createdAt;
@@ -149,6 +175,7 @@ final class DevelopmentFeedbackReport
         $this->viewportHeight = $viewportHeight;
         $this->devicePixelRatio = $devicePixelRatio;
         $this->userAgent = $userAgent;
+        $this->selectionKind = $selectionKind;
         $this->selectedElementTag = $selectedElementTag;
         $this->selectedElementLabel = $selectedElementLabel;
         $this->selectedElementSelector = $selectedElementSelector;
@@ -230,17 +257,22 @@ final class DevelopmentFeedbackReport
         return $this->userAgent;
     }
 
-    public function getSelectedElementTag(): string
+    public function getSelectionKind(): string
+    {
+        return $this->selectionKind;
+    }
+
+    public function getSelectedElementTag(): ?string
     {
         return $this->selectedElementTag;
     }
 
-    public function getSelectedElementLabel(): string
+    public function getSelectedElementLabel(): ?string
     {
         return $this->selectedElementLabel;
     }
 
-    public function getSelectedElementSelector(): string
+    public function getSelectedElementSelector(): ?string
     {
         return $this->selectedElementSelector;
     }
@@ -251,9 +283,9 @@ final class DevelopmentFeedbackReport
     }
 
     /**
-     * @return array<string, int|float>
+     * @return array<string, int|float>|null
      */
-    public function getSelectedElementRectJson(): array
+    public function getSelectedElementRectJson(): ?array
     {
         return $this->selectedElementRectJson;
     }

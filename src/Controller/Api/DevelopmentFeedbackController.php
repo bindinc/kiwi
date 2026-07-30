@@ -74,16 +74,15 @@ final class DevelopmentFeedbackController extends AbstractApiController
 
         $payload = $this->decodeMultipartPayload($request);
         $screenshot = $request->files->get('screenshot');
-        if (!$screenshot instanceof UploadedFile) {
-            throw new ApiProblemException(400, 'invalid_screenshot', 'screenshot is required');
-        }
-
         $originalScreenshot = $request->files->get('originalScreenshot');
-        if (!$originalScreenshot instanceof UploadedFile) {
-            throw new ApiProblemException(400, 'invalid_screenshot', 'originalScreenshot is required');
-        }
 
-        return $this->json($this->submitter->submit($request, $payload, $screenshot, $originalScreenshot, $currentUserContext), 201);
+        return $this->json($this->submitter->submit(
+            $request,
+            $payload,
+            $screenshot instanceof UploadedFile ? $screenshot : null,
+            $originalScreenshot instanceof UploadedFile ? $originalScreenshot : null,
+            $currentUserContext,
+        ), 201);
     }
 
     #[Route('/screenshots/{publicId}/{token}.png', name: 'api_development_feedback_screenshot', methods: ['GET'])]

@@ -1,3 +1,5 @@
+import { feedbackText } from './i18n.js';
+
 const TOOL_COLORS = {
     rectangle: '#ef4444',
     arrow: '#ef4444',
@@ -103,7 +105,7 @@ export class AnnotationCanvas {
                 if (blob) {
                     resolve(blob);
                 } else {
-                    reject(new Error('Could not render annotated screenshot.'));
+                    reject(new Error(feedbackText('annotation.renderFailed')));
                 }
             }, 'image/png');
         });
@@ -126,7 +128,7 @@ export class AnnotationCanvas {
                 if (blob) {
                     resolve(blob);
                 } else {
-                    reject(new Error('Could not render annotated screenshot.'));
+                    reject(new Error(feedbackText('annotation.renderFailed')));
                 }
             }, 'image/png');
         });
@@ -173,7 +175,7 @@ export class AnnotationCanvas {
                 return;
             }
 
-            const text = window.prompt('Label') || '';
+            const text = window.prompt(feedbackText('annotation.labelPrompt')) || '';
             if (text.trim()) {
                 const annotation = {
                     type: 'text',
@@ -335,7 +337,7 @@ export class AnnotationCanvas {
         this.textDrag = null;
 
         if (!textDrag.moved) {
-            const nextText = window.prompt('Label', textDrag.annotation.text) || '';
+            const nextText = window.prompt(feedbackText('annotation.labelPrompt'), textDrag.annotation.text) || '';
             if (nextText.trim()) {
                 textDrag.annotation.text = nextText.trim().slice(0, 80);
                 this.normalizeTextAnnotation(textDrag.annotation);
@@ -569,7 +571,7 @@ function loadImage(blob) {
         }, { once: true });
         image.addEventListener('error', () => {
             URL.revokeObjectURL(url);
-            reject(new Error('Could not load screenshot.'));
+            reject(new Error(feedbackText('annotation.loadFailed')));
         }, { once: true });
         image.src = url;
     });

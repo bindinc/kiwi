@@ -2,19 +2,20 @@ export function buildFeedbackPayload({
     comment,
     severity,
     category,
-    teamsScreenshotVariant = 'pseudonymized',
-    selectedElement,
-    selectedRect,
-    annotations,
+    selectionKind = 'none',
+    teamsScreenshotVariant = null,
+    selectedElement = null,
+    selectedRect = null,
+    annotations = [],
     locationRef = window.location,
     windowRef = window,
     navigatorRef = window.navigator
 }) {
-    return {
+    const payload = {
         comment,
         severity,
         category,
-        teamsScreenshotVariant,
+        selectionKind,
         pageUrl: locationRef.href,
         routePath: `${locationRef.pathname}${locationRef.search || ''}`,
         userAgent: navigatorRef.userAgent || '',
@@ -23,6 +24,16 @@ export function buildFeedbackPayload({
             height: Math.round(windowRef.innerHeight || 0),
             devicePixelRatio: Number(windowRef.devicePixelRatio || 1)
         },
+        annotations
+    };
+
+    if (selectionKind === 'none') {
+        return payload;
+    }
+
+    return {
+        ...payload,
+        teamsScreenshotVariant: teamsScreenshotVariant || 'pseudonymized',
         selectedElement: {
             tag: selectedElement.tag,
             label: selectedElement.label,
@@ -34,8 +45,7 @@ export function buildFeedbackPayload({
                 width: round(selectedRect.width),
                 height: round(selectedRect.height)
             }
-        },
-        annotations
+        }
     };
 }
 

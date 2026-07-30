@@ -59,6 +59,8 @@ async function runSmokeScenario(page) {
     await enableFeedbackIfNeeded(page);
     await assertFeedbackBadgeLayout(page);
     await searchAndSelectJansen(page);
+    await setKiwiLocale(page, 'nl', 'Contextuele feedback');
+    await assertFeedbackSettingsLocale(page);
 
     const targetBox = await page.locator('#customerName').boundingBox();
     if (!targetBox) {
@@ -66,11 +68,104 @@ async function runSmokeScenario(page) {
     }
 
     await page.click('#contextualFeedbackButton');
+    await page.waitForSelector('.contextual-feedback-modal', { state: 'visible', timeout: 10000 });
+    await assertFormFirstState(page, {
+        title: 'Feedback versturen',
+        noScreenshot: 'Geen screenshot toegevoegd',
+        commentLabel: 'Opmerking (verplicht)'
+    });
+    await page.fill('textarea[name="comment"]', 'Deze opmerking moet na de screenshot behouden blijven.');
+    await page.click('[data-feedback-add-screenshot]');
     await page.waitForSelector('.contextual-feedback-picker-overlay', { timeout: 10000 });
+    await assertDialogIsSuspendedDuringCapture(page);
     await page.mouse.click(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2);
     await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
 
-    await assertFeedbackReviewSurfaceIsPrivate(page);
+    const retainedComment = await page.inputValue('textarea[name="comment"]');
+    if (retainedComment !== 'Deze opmerking moet na de screenshot behouden blijven.') {
+        throw new Error(`Feedback comment was not retained after screenshot capture: ${retainedComment}`);
+    }
+
+    await assertFeedbackReviewSurfaceIsPrivate(page, {
+        width: targetBox.width,
+        height: targetBox.height
+    });
+
+    await page.click('[data-feedback-close]');
+    await page.waitForSelector('.contextual-feedback-modal', { state: 'detached', timeout: 10000 });
+    await setKiwiLocale(page, 'en', 'Contextual feedback');
+    await captureCustomArea(page, targetBox);
+}
+
+async function assertFormFirstState(page, expected) {
+    const state = await page.evaluate(() => {
+        const modal = document.querySelector('.contextual-feedback-modal');
+        const workspace = document.querySelector('[data-feedback-workspace]');
+        const comment = document.querySelector('textarea[name="comment"]');
+
+        return {
+            modalVisible: Boolean(modal && window.getComputedStyle(modal).display !== 'none'),
+            workspaceHidden: Boolean(workspace?.hidden),
+            commentRequired: Boolean(comment?.required),
+            title: document.querySelector('#contextualFeedbackTitle')?.textContent?.trim(),
+            commentLabel: comment?.closest('label')?.querySelector('span')?.textContent?.replace(/\s+/g, ' ').trim(),
+            selectionSummary: document.querySelector('[data-feedback-selection-summary]')?.textContent?.trim(),
+            pickerCount: document.querySelectorAll('.contextual-feedback-picker-overlay').length
+        };
+    });
+
+    const isFormFirst = state.modalVisible
+        && state.workspaceHidden
+        && state.commentRequired
+        && state.title === expected.title
+        && state.commentLabel === expected.commentLabel
+        && state.selectionSummary === expected.noScreenshot
+        && state.pickerCount === 0;
+    if (!isFormFirst) {
+        await saveFailureEvidence(page, 'form-first-state');
+        throw new Error(`Feedback did not open in form-first state: ${JSON.stringify(state)}`);
+    }
+}
+
+async function setKiwiLocale(page, locale, expectedFeedbackTitle) {
+    await page.click('#agentProfileTrigger');
+    await page.click(`[data-locale-option="${locale}"]`);
+    await page.waitForFunction((expectedLocale) => document.documentElement.lang === expectedLocale, locale, { timeout: 10000 });
+    await page.waitForFunction((expectedTitle) => {
+        return document.querySelector('#contextualFeedbackButton')?.getAttribute('title') === expectedTitle;
+    }, expectedFeedbackTitle, { timeout: 10000 });
+}
+
+async function assertFeedbackSettingsLocale(page) {
+    await page.click('#contextualFeedbackSettingsButton');
+    await page.waitForSelector('.contextual-feedback-settings-modal', { state: 'visible', timeout: 10000 });
+
+    const settingsText = await page.locator('.contextual-feedback-settings-modal').innerText();
+    for (const expectedText of ['Feedbackinstellingen', 'Feedbackknop', 'Microsoft Teams-koppeling', 'Opslaan']) {
+        if (!settingsText.includes(expectedText)) {
+            throw new Error(`Dutch feedback settings translation is missing: ${expectedText}`);
+        }
+    }
+
+    await page.locator('[data-feedback-settings-close]').first().click();
+    await page.waitForSelector('.contextual-feedback-settings-modal', { state: 'detached', timeout: 10000 });
+}
+
+async function assertDialogIsSuspendedDuringCapture(page) {
+    const state = await page.evaluate(() => {
+        const modal = document.querySelector('.contextual-feedback-modal');
+
+        return {
+            modalHidden: Boolean(modal?.hidden),
+            modalDisplay: modal ? window.getComputedStyle(modal).display : '',
+            bodyHasReviewState: document.body.classList.contains('contextual-feedback-reviewing')
+        };
+    });
+
+    if (!state.modalHidden || state.modalDisplay !== 'none' || state.bodyHasReviewState) {
+        await saveFailureEvidence(page, 'dialog-visible-during-capture');
+        throw new Error(`Feedback dialog was not fully hidden during capture: ${JSON.stringify(state)}`);
+    }
 }
 
 async function loginIfNeeded(page) {
@@ -203,7 +298,46 @@ async function searchAndSelectJansen(page) {
     }
 }
 
-async function assertFeedbackReviewSurfaceIsPrivate(page) {
+async function captureCustomArea(page, targetBox) {
+    const start = {
+        x: Math.max(20, targetBox.x - 30),
+        y: Math.max(20, targetBox.y - 30)
+    };
+    const end = {
+        x: Math.min(1673, start.x + 320),
+        y: Math.min(1189, start.y + 180)
+    };
+
+    await page.click('#contextualFeedbackButton');
+    await page.waitForSelector('.contextual-feedback-modal', { state: 'visible', timeout: 10000 });
+    await assertFormFirstState(page, {
+        title: 'Send feedback',
+        noScreenshot: 'No screenshot attached',
+        commentLabel: 'Comment (required)'
+    });
+    await page.click('[data-feedback-add-screenshot]');
+    await page.waitForSelector('.contextual-feedback-picker-overlay', { timeout: 10000 });
+    await assertDialogIsSuspendedDuringCapture(page);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down({ button: 'left' });
+    await page.mouse.move(end.x, end.y, { steps: 8 });
+    await page.mouse.up({ button: 'left' });
+    await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
+
+    const selectionSummary = await page.locator('.contextual-feedback-panel-header p').innerText();
+    const expectedSummary = `Custom screenshot area ${Math.round(end.x - start.x)} × ${Math.round(end.y - start.y)} px`;
+    if (!selectionSummary.includes(expectedSummary)) {
+        await saveFailureEvidence(page, 'custom-area-summary');
+        throw new Error(`Custom area summary is incorrect: ${selectionSummary}`);
+    }
+
+    await assertFeedbackReviewSurfaceIsPrivate(page, {
+        width: end.x - start.x,
+        height: end.y - start.y
+    });
+}
+
+async function assertFeedbackReviewSurfaceIsPrivate(page, expectedSize) {
     const modalText = await page.locator('.contextual-feedback-modal').innerText();
     const leakedModalValues = realSensitiveValues.filter((value) => modalText.includes(value));
     if (leakedModalValues.length > 0) {
@@ -250,17 +384,9 @@ async function assertFeedbackReviewSurfaceIsPrivate(page) {
         throw new Error(`Feedback canvas is blank or invalid: ${JSON.stringify(canvasState)}`);
     }
 
-    const targetRect = await page.locator('#customerName').evaluate((element) => {
-        const rect = element.getBoundingClientRect();
-        return {
-            width: Math.round(rect.width),
-            height: Math.round(rect.height)
-        };
-    });
-
-    if (Math.abs(canvasState.width - targetRect.width) > 4 || Math.abs(canvasState.height - targetRect.height) > 4) {
+    if (Math.abs(canvasState.width - expectedSize.width) > 4 || Math.abs(canvasState.height - expectedSize.height) > 4) {
         await saveFailureEvidence(page, 'canvas-not-cropped');
-        throw new Error(`Feedback canvas is not cropped to selected element: canvas=${JSON.stringify(canvasState)} target=${JSON.stringify(targetRect)}`);
+        throw new Error(`Feedback canvas is not cropped to the selection: canvas=${JSON.stringify(canvasState)} target=${JSON.stringify(expectedSize)}`);
     }
 }
 
@@ -272,11 +398,21 @@ async function assertScreenshotPrivacyToggle(page) {
         throw new Error('Pseudonymization toggle is not enabled by default.');
     }
 
+    const locale = await page.evaluate(() => document.documentElement.lang);
+    const expectedPrivacyText = locale === 'nl'
+        ? {
+            original: 'Screenshot met originele gegevens naar de afgeschermde Teams-workflow versturen',
+            pseudonymized: 'Screenshot met pseudogegevens naar Teams versturen'
+        }
+        : {
+            original: 'Send original-data screenshot to restricted Teams workflow',
+            pseudonymized: 'Send pseudo-data screenshot to Teams'
+        };
     const pseudoCanvas = await page.locator('.contextual-feedback-modal canvas').evaluate((canvas) => canvas.toDataURL('image/png'));
     await toggle.uncheck();
-    await page.waitForFunction(() => {
-        return document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes('Send original-data screenshot to restricted Teams workflow');
-    }, null, { timeout: 10000 });
+    await page.waitForFunction((expectedText) => {
+        return document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes(expectedText);
+    }, expectedPrivacyText.original, { timeout: 10000 });
     const originalCanvas = await page.locator('.contextual-feedback-modal canvas').evaluate((canvas) => canvas.toDataURL('image/png'));
     if (pseudoCanvas === originalCanvas) {
         await saveFailureEvidence(page, 'pseudonymization-toggle-no-change');
@@ -284,9 +420,9 @@ async function assertScreenshotPrivacyToggle(page) {
     }
 
     await toggle.check();
-    await page.waitForFunction(() => {
-        return document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes('Send pseudo-data screenshot to Teams');
-    }, null, { timeout: 10000 });
+    await page.waitForFunction((expectedText) => {
+        return document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes(expectedText);
+    }, expectedPrivacyText.pseudonymized, { timeout: 10000 });
 }
 
 async function saveFailureEvidence(page, name) {

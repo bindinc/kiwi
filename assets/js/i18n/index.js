@@ -15,7 +15,9 @@ function normalizeLocale(locale) {
 }
 
 let currentLocale = (() => {
-    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(LOCALE_STORAGE_KEY) : null;
+    const stored = typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function'
+        ? localStorage.getItem(LOCALE_STORAGE_KEY)
+        : null;
     const browser = typeof navigator !== 'undefined' ? navigator.language : null;
     const preferred = normalizeLocale(stored || browser);
     return locales[preferred] ? preferred : FALLBACK_LOCALE;
@@ -69,7 +71,7 @@ function setLocale(locale) {
 
     currentLocale = normalized;
 
-    if (typeof localStorage !== 'undefined') {
+    if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
         localStorage.setItem(LOCALE_STORAGE_KEY, normalized);
     }
 

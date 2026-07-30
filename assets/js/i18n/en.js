@@ -735,6 +735,134 @@ const en = {
         "dayNamesShort": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
         "monthNames": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     },
+    "contextualFeedback": {
+        "button": {
+            "title": "Contextual feedback",
+            "label": "Feedback",
+            "settingsTitle": "Feedback settings"
+        },
+        "picker": {
+            "selectTarget": "Select an element or drag a screenshot area",
+            "minimumArea": "Select an area of at least {size} × {size} px",
+            "customArea": "Custom screenshot area"
+        },
+        "tools": {
+            "hand": "Hand",
+            "rectangle": "Rectangle",
+            "arrow": "Arrow",
+            "pin": "Pin",
+            "text": "Text",
+            "blur": "Redact"
+        },
+        "dialog": {
+            "title": "Send feedback",
+            "close": "Close",
+            "noScreenshot": "No screenshot attached",
+            "screenshotPrivacyStatus": "Screenshot privacy status",
+            "sendPseudonymized": "Send pseudo-data screenshot to Teams",
+            "sendOriginal": "Send original-data screenshot to restricted Teams workflow",
+            "manualRedaction": "Manual redaction available",
+            "comment": "Comment",
+            "required": "required",
+            "commentPlaceholder": "What did you expect, and what happened?",
+            "severity": "Severity",
+            "severityNormal": "Normal",
+            "severityLow": "Low",
+            "severityHigh": "High",
+            "severityBlocking": "Blocking",
+            "category": "Category",
+            "categoryBug": "Bug",
+            "categoryChore": "Chore",
+            "categoryFeatureRequest": "Feature Request",
+            "categoryRegression": "Regression",
+            "addScreenshot": "Add screenshot",
+            "replaceScreenshot": "Replace screenshot",
+            "removeScreenshot": "Remove screenshot",
+            "undo": "Undo",
+            "clear": "Clear",
+            "send": "Send feedback",
+            "noteWithoutScreenshot": "A screenshot is optional. Text-only feedback is sent to the regular Teams workflow.",
+            "noteWithScreenshot": "Kiwi stores both annotated screenshot variants. Only the selected screenshot is delivered to Teams.",
+            "switchingScreenshot": "Switching screenshot...",
+            "uploading": "Uploading...",
+            "delivered": "Delivered.",
+            "commentRequired": "Comment is required.",
+            "submitFailed": "Could not submit feedback.",
+            "captureFailed": "Could not capture feedback."
+        },
+        "privacy": {
+            "noHiddenRegions": "No hidden regions",
+            "someMediaHidden": "Some media hidden",
+            "hiddenTooltip": "{count} hidden: {types}. These are hidden because they cannot be pseudonymized reliably.",
+            "unknownHiddenType": "media or marked private regions",
+            "hiddenTypes": {
+                "markedPrivateRegions": "marked private regions",
+                "images": "images",
+                "embeddedFrames": "embedded frames",
+                "videos": "videos",
+                "canvasContent": "canvas content",
+                "media": "media"
+            }
+        },
+        "annotation": {
+            "labelPrompt": "Label",
+            "renderFailed": "Could not render annotated screenshot.",
+            "loadFailed": "Could not load screenshot."
+        },
+        "capture": {
+            "noElement": "No element selected for screenshot capture.",
+            "noArea": "No area selected for screenshot capture.",
+            "noDocumentBody": "No document body available for screenshot capture.",
+            "noImage": "Screenshot capture returned no image.",
+            "cropFailed": "Could not crop selected screenshot area.",
+            "downscaleFailed": "Could not downscale screenshot.",
+            "readFailed": "Could not read captured screenshot.",
+            "capturing": "Capturing screenshot..."
+        },
+        "submission": {
+            "failed": "Could not submit feedback.",
+            "storedWithWarning": "Feedback was stored, but Teams delivery did not complete."
+        },
+        "settings": {
+            "title": "Feedback settings",
+            "subtitle": "Contextual feedback and Microsoft Teams connector",
+            "feedbackButton": "Feedback button",
+            "enabled": "Enabled for allowed Kiwi roles",
+            "allowedRoles": "Allowed roles: {roles}",
+            "teamsConnector": "Microsoft Teams connector",
+            "status": "Status",
+            "configured": "Configured",
+            "notConfigured": "Not configured",
+            "source": "Source",
+            "webhookUrl": "Webhook URL",
+            "keepWebhookPlaceholder": "Leave empty to keep existing webhook",
+            "webhookPlaceholder": "Paste Teams Workflows webhook URL",
+            "clearWebhook": "Clear stored webhook URL",
+            "originalWorkflow": "Original-data workflow",
+            "originalWebhookUrl": "Original-data webhook URL",
+            "keepOriginalWebhookPlaceholder": "Leave empty to keep existing original-data webhook",
+            "originalWebhookPlaceholder": "Paste Teams Workflows webhook URL for original data",
+            "clearOriginalWebhook": "Clear stored original-data webhook URL",
+            "publicBaseUrl": "Public base URL",
+            "imageTtlDays": "Image TTL days",
+            "maxImageBytes": "Max image bytes",
+            "cancel": "Cancel",
+            "save": "Save",
+            "saving": "Saving...",
+            "saved": "Saved.",
+            "loadFailed": "Could not load feedback settings.",
+            "saveFailed": "Could not save feedback settings."
+        },
+        "apiErrors": {
+            "invalid_payload": "The feedback data is invalid.",
+            "invalid_screenshot": "The screenshot is invalid.",
+            "screenshot_too_large": "The screenshot is too large.",
+            "feedback_rate_limited": "Feedback was submitted too often recently. Try again later.",
+            "feedback_store_unavailable": "Feedback storage is currently unavailable.",
+            "feedback_disabled": "Contextual feedback is disabled.",
+            "feedback_forbidden": "Contextual feedback is not available for this role."
+        }
+    },
     "articleSearch": {
         "noResults": "No articles found.",
         "browseAllCta": "Browse all articles →",

@@ -735,6 +735,134 @@ const nl = {
         "dayNamesShort": ["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"],
         "monthNames": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"]
     },
+    "contextualFeedback": {
+        "button": {
+            "title": "Contextuele feedback",
+            "label": "Feedback",
+            "settingsTitle": "Feedbackinstellingen"
+        },
+        "picker": {
+            "selectTarget": "Selecteer een element of sleep een screenshotgebied",
+            "minimumArea": "Selecteer een gebied van minimaal {size} × {size} px",
+            "customArea": "Aangepast screenshotgebied"
+        },
+        "tools": {
+            "hand": "Verplaatsen",
+            "rectangle": "Rechthoek",
+            "arrow": "Pijl",
+            "pin": "Pin",
+            "text": "Tekst",
+            "blur": "Onleesbaar maken"
+        },
+        "dialog": {
+            "title": "Feedback versturen",
+            "close": "Sluiten",
+            "noScreenshot": "Geen screenshot toegevoegd",
+            "screenshotPrivacyStatus": "Privacy-instellingen voor screenshot",
+            "sendPseudonymized": "Screenshot met pseudogegevens naar Teams versturen",
+            "sendOriginal": "Screenshot met originele gegevens naar de afgeschermde Teams-workflow versturen",
+            "manualRedaction": "Handmatig onleesbaar maken beschikbaar",
+            "comment": "Opmerking",
+            "required": "verplicht",
+            "commentPlaceholder": "Wat verwachtte je en wat gebeurde er?",
+            "severity": "Ernst",
+            "severityNormal": "Normaal",
+            "severityLow": "Laag",
+            "severityHigh": "Hoog",
+            "severityBlocking": "Blokkerend",
+            "category": "Categorie",
+            "categoryBug": "Bug",
+            "categoryChore": "Taak",
+            "categoryFeatureRequest": "Functieverzoek",
+            "categoryRegression": "Regressie",
+            "addScreenshot": "Screenshot toevoegen",
+            "replaceScreenshot": "Screenshot vervangen",
+            "removeScreenshot": "Screenshot verwijderen",
+            "undo": "Ongedaan maken",
+            "clear": "Wissen",
+            "send": "Feedback versturen",
+            "noteWithoutScreenshot": "Een screenshot is optioneel. Feedback zonder screenshot wordt naar de reguliere Teams-workflow verstuurd.",
+            "noteWithScreenshot": "Kiwi bewaart beide varianten van de gemarkeerde screenshot. Alleen de geselecteerde screenshot wordt naar Teams verstuurd.",
+            "switchingScreenshot": "Screenshot wisselen...",
+            "uploading": "Versturen...",
+            "delivered": "Verstuurd.",
+            "commentRequired": "Een opmerking is verplicht.",
+            "submitFailed": "Feedback kon niet worden verstuurd.",
+            "captureFailed": "Screenshot kon niet worden gemaakt."
+        },
+        "privacy": {
+            "noHiddenRegions": "Geen verborgen gebieden",
+            "someMediaHidden": "Sommige media verborgen",
+            "hiddenTooltip": "{count} verborgen: {types}. Deze zijn verborgen omdat ze niet betrouwbaar kunnen worden gepseudonimiseerd.",
+            "unknownHiddenType": "media of gemarkeerde privégebieden",
+            "hiddenTypes": {
+                "markedPrivateRegions": "gemarkeerde privégebieden",
+                "images": "afbeeldingen",
+                "embeddedFrames": "ingesloten frames",
+                "videos": "video's",
+                "canvasContent": "canvasinhoud",
+                "media": "media"
+            }
+        },
+        "annotation": {
+            "labelPrompt": "Label",
+            "renderFailed": "De gemarkeerde screenshot kon niet worden opgebouwd.",
+            "loadFailed": "De screenshot kon niet worden geladen."
+        },
+        "capture": {
+            "noElement": "Er is geen element geselecteerd voor de screenshot.",
+            "noArea": "Er is geen gebied geselecteerd voor de screenshot.",
+            "noDocumentBody": "De pagina kon niet worden voorbereid voor de screenshot.",
+            "noImage": "De screenshot bevatte geen afbeelding.",
+            "cropFailed": "Het geselecteerde screenshotgebied kon niet worden uitgesneden.",
+            "downscaleFailed": "De screenshot kon niet worden verkleind.",
+            "readFailed": "De gemaakte screenshot kon niet worden gelezen.",
+            "capturing": "Screenshot maken..."
+        },
+        "submission": {
+            "failed": "Feedback kon niet worden verstuurd.",
+            "storedWithWarning": "De feedback is opgeslagen, maar kon niet volledig naar Teams worden verstuurd."
+        },
+        "settings": {
+            "title": "Feedbackinstellingen",
+            "subtitle": "Contextuele feedback en Microsoft Teams-koppeling",
+            "feedbackButton": "Feedbackknop",
+            "enabled": "Ingeschakeld voor toegestane Kiwi-rollen",
+            "allowedRoles": "Toegestane rollen: {roles}",
+            "teamsConnector": "Microsoft Teams-koppeling",
+            "status": "Status",
+            "configured": "Ingesteld",
+            "notConfigured": "Niet ingesteld",
+            "source": "Bron",
+            "webhookUrl": "Webhook-URL",
+            "keepWebhookPlaceholder": "Laat leeg om de bestaande webhook te behouden",
+            "webhookPlaceholder": "Plak de Teams Workflows-webhook-URL",
+            "clearWebhook": "Opgeslagen webhook-URL verwijderen",
+            "originalWorkflow": "Workflow voor originele gegevens",
+            "originalWebhookUrl": "Webhook-URL voor originele gegevens",
+            "keepOriginalWebhookPlaceholder": "Laat leeg om de bestaande webhook voor originele gegevens te behouden",
+            "originalWebhookPlaceholder": "Plak de Teams Workflows-webhook-URL voor originele gegevens",
+            "clearOriginalWebhook": "Opgeslagen webhook-URL voor originele gegevens verwijderen",
+            "publicBaseUrl": "Publieke basis-URL",
+            "imageTtlDays": "Bewaartermijn afbeelding in dagen",
+            "maxImageBytes": "Maximale afbeeldingsgrootte in bytes",
+            "cancel": "Annuleren",
+            "save": "Opslaan",
+            "saving": "Opslaan...",
+            "saved": "Opgeslagen.",
+            "loadFailed": "De feedbackinstellingen konden niet worden geladen.",
+            "saveFailed": "De feedbackinstellingen konden niet worden opgeslagen."
+        },
+        "apiErrors": {
+            "invalid_payload": "De feedbackgegevens zijn ongeldig.",
+            "invalid_screenshot": "De screenshot is ongeldig.",
+            "screenshot_too_large": "De screenshot is te groot.",
+            "feedback_rate_limited": "Er is recent te vaak feedback verstuurd. Probeer het later opnieuw.",
+            "feedback_store_unavailable": "Feedbackopslag is momenteel niet beschikbaar.",
+            "feedback_disabled": "Contextuele feedback is uitgeschakeld.",
+            "feedback_forbidden": "Contextuele feedback is niet beschikbaar voor deze rol."
+        }
+    },
     "articleSearch": {
         "noResults": "Geen artikelen gevonden.",
         "browseAllCta": "Blader door alle artikelen →",
