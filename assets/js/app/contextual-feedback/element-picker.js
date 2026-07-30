@@ -1,4 +1,5 @@
 import { describeElement } from './selector.js';
+import { feedbackText } from './i18n.js';
 
 export const MINIMUM_AREA_SIZE = 10;
 
@@ -85,7 +86,7 @@ export function startElementPicker({
         outline.style.height = `${rect.height}px`;
         label.style.left = `${Math.max(8, rect.x)}px`;
         label.style.top = `${Math.max(8, rect.y - 30)}px`;
-        label.textContent = `Select an area of at least ${MINIMUM_AREA_SIZE} × ${MINIMUM_AREA_SIZE} px`;
+        label.textContent = feedbackText('picker.minimumArea', { size: MINIMUM_AREA_SIZE });
     }
 
     function preventAppEvent(event) {

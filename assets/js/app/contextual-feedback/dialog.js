@@ -1,13 +1,22 @@
 import { AnnotationCanvas } from './annotation-canvas.js';
+import { feedbackText } from './i18n.js';
 
 const TOOLS = [
-    ['hand', '✥', 'Hand'],
-    ['rectangle', '□', 'Rectangle'],
-    ['arrow', '↗', 'Arrow'],
-    ['pin', '!', 'Pin'],
-    ['text', 'T', 'Text'],
-    ['blur', '■', 'Redact']
+    ['hand', '✥'],
+    ['rectangle', '□'],
+    ['arrow', '↗'],
+    ['pin', '!'],
+    ['text', 'T'],
+    ['blur', '■']
 ];
+const HIDDEN_TYPE_TRANSLATION_KEYS = {
+    'marked private regions': 'markedPrivateRegions',
+    images: 'images',
+    'embedded frames': 'embeddedFrames',
+    videos: 'videos',
+    'canvas content': 'canvasContent',
+    media: 'media'
+};
 
 export async function openFeedbackDialog({
     documentRef = document,
@@ -18,7 +27,7 @@ export async function openFeedbackDialog({
     const modal = documentRef.createElement('div');
     modal.className = 'contextual-feedback-modal';
     modal.dataset.feedbackIgnore = 'true';
-    modal.innerHTML = dialogTemplate();
+    modal.innerHTML = buildFeedbackDialogHtml();
     documentRef.body.append(modal);
     documentRef.body.classList.add('contextual-feedback-reviewing');
 
@@ -68,15 +77,15 @@ export async function openFeedbackDialog({
 
         const usePseudonymizedScreenshot = event.target.checked;
         submitButton.disabled = true;
-        statusBox.textContent = 'Switching screenshot...';
+        statusBox.textContent = feedbackText('dialog.switchingScreenshot');
         try {
             const screenshotBlob = usePseudonymizedScreenshot
                 ? screenshot.screenshots.pseudonymized.blob
                 : screenshot.screenshots.original.blob;
             await annotationCanvas.setScreenshotBlob(screenshotBlob);
             modal.querySelector('[data-feedback-visible-privacy]').textContent = usePseudonymizedScreenshot
-                ? 'Send pseudo-data screenshot to Teams'
-                : 'Send original-data screenshot to restricted Teams workflow';
+                ? feedbackText('dialog.sendPseudonymized')
+                : feedbackText('dialog.sendOriginal');
         } finally {
             submitButton.disabled = false;
             statusBox.textContent = '';
@@ -95,12 +104,12 @@ export async function openFeedbackDialog({
         const comment = String(formData.get('comment') || '').trim();
 
         if (!comment) {
-            errorBox.textContent = 'Comment is required.';
+            errorBox.textContent = feedbackText('dialog.commentRequired');
             return;
         }
 
         submitButton.disabled = true;
-        statusBox.textContent = 'Uploading...';
+        statusBox.textContent = feedbackText('dialog.uploading');
 
         try {
             const submission = await buildSubmission({
@@ -114,12 +123,12 @@ export async function openFeedbackDialog({
                 category: String(formData.get('category') || 'bug'),
                 ...submission
             });
-            statusBox.textContent = 'Delivered.';
+            statusBox.textContent = feedbackText('dialog.delivered');
             cleanup();
         } catch (error) {
             submitButton.disabled = false;
             statusBox.textContent = '';
-            errorBox.textContent = error instanceof Error ? error.message : 'Could not submit feedback.';
+            errorBox.textContent = error instanceof Error ? error.message : feedbackText('dialog.submitFailed');
         }
     });
 
@@ -138,7 +147,7 @@ export async function openFeedbackDialog({
             }
         } catch (error) {
             resumeDialogAfterCapture();
-            errorBox.textContent = error instanceof Error ? error.message : 'Could not capture feedback.';
+            errorBox.textContent = error instanceof Error ? error.message : feedbackText('dialog.captureFailed');
         } finally {
             screenshotButton.disabled = false;
             screenshotButton.focus();
@@ -149,7 +158,7 @@ export async function openFeedbackDialog({
         annotationCanvas?.destroy();
         screenshot = nextScreenshot;
         pseudonymizationCheckbox.checked = true;
-        modal.querySelector('[data-feedback-visible-privacy]').textContent = 'Send pseudo-data screenshot to Teams';
+        modal.querySelector('[data-feedback-visible-privacy]').textContent = feedbackText('dialog.sendPseudonymized');
         annotationCanvas = new AnnotationCanvas({
             canvas,
             screenshotBlob: screenshot.screenshots.pseudonymized.blob,
@@ -175,16 +184,18 @@ export async function openFeedbackDialog({
         removeScreenshotButton.hidden = !hasScreenshot;
         undoButton.hidden = !hasScreenshot;
         clearButton.hidden = !hasScreenshot;
-        screenshotButton.textContent = hasScreenshot ? 'Replace screenshot' : 'Add screenshot';
+        screenshotButton.textContent = hasScreenshot
+            ? feedbackText('dialog.replaceScreenshot')
+            : feedbackText('dialog.addScreenshot');
         selectionSummary.innerHTML = hasScreenshot
             ? formatSelectionSummary(screenshot.selectedElement)
-            : 'No screenshot attached';
+            : feedbackText('dialog.noScreenshot');
         privacySummary.innerHTML = hasScreenshot
             ? formatPrivacySummary(screenshot.privacySummary)
             : '';
         feedbackNote.textContent = hasScreenshot
-            ? 'Kiwi stores both annotated screenshot variants. Only the selected screenshot is delivered to Teams.'
-            : 'A screenshot is optional. Text-only feedback is sent to the regular Teams workflow.';
+            ? feedbackText('dialog.noteWithScreenshot')
+            : feedbackText('dialog.noteWithoutScreenshot');
     }
 
     function suspendDialogForCapture() {
@@ -234,68 +245,72 @@ async function buildSubmission({ annotationCanvas, screenshot, pseudonymizationC
     };
 }
 
-function dialogTemplate() {
-    const toolButtons = TOOLS.map(([tool, label, title], index) => `
+export function buildFeedbackDialogHtml() {
+    const toolButtons = TOOLS.map(([tool, label], index) => {
+        const title = feedbackText(`tools.${tool}`);
+
+        return `
         <button type="button" class="contextual-feedback-tool${index === 0 ? ' is-active' : ''}" data-feedback-tool="${tool}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(label)}</button>
-    `).join('');
+    `;
+    }).join('');
 
     return `
         <div class="contextual-feedback-panel" role="dialog" aria-modal="true" aria-labelledby="contextualFeedbackTitle">
             <header class="contextual-feedback-panel-header">
                 <div>
-                    <h2 id="contextualFeedbackTitle">Send feedback</h2>
-                    <p data-feedback-selection-summary>No screenshot attached</p>
+                    <h2 id="contextualFeedbackTitle">${escapeHtml(feedbackText('dialog.title'))}</h2>
+                    <p data-feedback-selection-summary>${escapeHtml(feedbackText('dialog.noScreenshot'))}</p>
                 </div>
-                <button type="button" class="contextual-feedback-close" data-feedback-close aria-label="Close">x</button>
+                <button type="button" class="contextual-feedback-close" data-feedback-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">x</button>
             </header>
             <div class="contextual-feedback-workspace" data-feedback-workspace hidden>
                 <div class="contextual-feedback-toolbar">${toolButtons}</div>
                 <div class="contextual-feedback-canvas-wrap" data-feedback-canvas-wrap>
-                    <div class="contextual-feedback-privacy-status" aria-label="Screenshot privacy status">
+                    <div class="contextual-feedback-privacy-status" aria-label="${escapeHtml(feedbackText('dialog.screenshotPrivacyStatus'))}">
                         <label class="contextual-feedback-screenshot-toggle">
                             <input type="checkbox" data-feedback-pseudonymized checked>
-                            <span data-feedback-visible-privacy>Send pseudo-data screenshot to Teams</span>
+                            <span data-feedback-visible-privacy>${escapeHtml(feedbackText('dialog.sendPseudonymized'))}</span>
                         </label>
                         <span data-feedback-privacy-summary></span>
-                        <span>Manual redaction available</span>
+                        <span>${escapeHtml(feedbackText('dialog.manualRedaction'))}</span>
                     </div>
                     <canvas data-feedback-canvas></canvas>
                 </div>
             </div>
             <form class="contextual-feedback-form" data-feedback-form>
                 <label>
-                    <span>Comment <small>(required)</small></span>
-                    <textarea name="comment" maxlength="4000" required placeholder="What did you expect, and what happened?"></textarea>
+                    <span>${escapeHtml(feedbackText('dialog.comment'))} <small>(${escapeHtml(feedbackText('dialog.required'))})</small></span>
+                    <textarea name="comment" maxlength="4000" required placeholder="${escapeHtml(feedbackText('dialog.commentPlaceholder'))}"></textarea>
                 </label>
                 <div class="contextual-feedback-form-row">
                     <label>
-                        <span>Severity</span>
+                        <span>${escapeHtml(feedbackText('dialog.severity'))}</span>
                         <select name="severity">
-                            <option value="normal">Normal</option>
-                            <option value="low">Low</option>
-                            <option value="high">High</option>
-                            <option value="blocking">Blocking</option>
+                            <option value="normal">${escapeHtml(feedbackText('dialog.severityNormal'))}</option>
+                            <option value="low">${escapeHtml(feedbackText('dialog.severityLow'))}</option>
+                            <option value="high">${escapeHtml(feedbackText('dialog.severityHigh'))}</option>
+                            <option value="blocking">${escapeHtml(feedbackText('dialog.severityBlocking'))}</option>
                         </select>
                     </label>
                     <label>
-                        <span>Category</span>
+                        <span>${escapeHtml(feedbackText('dialog.category'))}</span>
                         <select name="category">
-                            <option value="bug">Bug</option>
-                            <option value="chore">Chore</option>
-                            <option value="feature_request">Feature Request</option>
-                            <option value="regression">Regression</option>
+                            <option value="bug">${escapeHtml(feedbackText('dialog.categoryBug'))}</option>
+                            <option value="chore">${escapeHtml(feedbackText('dialog.categoryChore'))}</option>
+                            <option value="feature_request">${escapeHtml(feedbackText('dialog.categoryFeatureRequest'))}</option>
+                            <option value="regression">${escapeHtml(feedbackText('dialog.categoryRegression'))}</option>
                         </select>
                     </label>
                 </div>
-                <p class="contextual-feedback-note" data-feedback-note>A screenshot is optional. Text-only feedback is sent to the regular Teams workflow.</p>
+                <p class="contextual-feedback-note" data-feedback-note>${escapeHtml(feedbackText('dialog.noteWithoutScreenshot'))}</p>
                 <div class="contextual-feedback-actions">
                     <div>
-                        <button type="button" data-feedback-add-screenshot>Add screenshot</button>
-                        <button type="button" data-feedback-remove-screenshot hidden>Remove screenshot</button>
-                        <button type="button" data-feedback-undo hidden>Undo</button>
-                        <button type="button" data-feedback-clear hidden>Clear</button>
+                        <button type="button" data-feedback-add-screenshot>${escapeHtml(feedbackText('dialog.addScreenshot'))}</button>
+                        <button type="button" data-feedback-remove-screenshot hidden>${escapeHtml(feedbackText('dialog.removeScreenshot'))}</button>
+                        <button type="button" data-feedback-undo hidden>${escapeHtml(feedbackText('dialog.undo'))}</button>
+                        <button type="button" data-feedback-clear hidden>${escapeHtml(feedbackText('dialog.clear'))}</button>
                     </div>
-                    <button type="submit" data-feedback-submit>Send feedback</button>
+                    <button type="submit" data-feedback-submit>${escapeHtml(feedbackText('dialog.send'))}</button>
                 </div>
                 <p class="contextual-feedback-status" data-feedback-status aria-live="polite"></p>
                 <p class="contextual-feedback-error" data-feedback-error role="alert"></p>
@@ -315,15 +330,27 @@ function formatSelectionSummary(selectedElement) {
 function formatPrivacySummary(privacySummary = {}) {
     const hiddenElements = Number(privacySummary.hiddenElements || 0);
     if (hiddenElements < 1) {
-        return 'No hidden regions';
+        return feedbackText('privacy.noHiddenRegions');
     }
 
-    const hiddenTypes = Array.isArray(privacySummary.hiddenElementTypes) && privacySummary.hiddenElementTypes.length > 0
-        ? privacySummary.hiddenElementTypes.join(', ')
-        : 'media or marked private regions';
-    const tooltip = `${hiddenElements} hidden: ${hiddenTypes}. These are hidden because they cannot be pseudonymized reliably.`;
+    const hiddenTypes = formatHiddenElementTypes(privacySummary.hiddenElementTypes);
+    const tooltip = feedbackText('privacy.hiddenTooltip', {
+        count: hiddenElements,
+        types: hiddenTypes
+    });
 
-    return `<span class="is-warning" title="${escapeHtml(tooltip)}">Some media hidden</span>`;
+    return `<span class="is-warning" title="${escapeHtml(tooltip)}">${escapeHtml(feedbackText('privacy.someMediaHidden'))}</span>`;
+}
+
+function formatHiddenElementTypes(hiddenElementTypes) {
+    if (!Array.isArray(hiddenElementTypes) || hiddenElementTypes.length === 0) {
+        return feedbackText('privacy.unknownHiddenType');
+    }
+
+    return hiddenElementTypes
+        .map((type) => HIDDEN_TYPE_TRANSLATION_KEYS[type] || 'media')
+        .map((key) => feedbackText(`privacy.hiddenTypes.${key}`))
+        .join(', ');
 }
 
 function escapeHtml(value) {

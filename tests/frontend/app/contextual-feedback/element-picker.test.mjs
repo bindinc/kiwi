@@ -5,6 +5,9 @@ import {
     normalizeAreaRect,
     startElementPicker
 } from '../../../../assets/js/app/contextual-feedback/element-picker.js';
+import { setLocale } from '../../../../assets/js/i18n/index.js';
+
+setLocale('en');
 
 function createElement(tagName, ignored = false) {
     return {

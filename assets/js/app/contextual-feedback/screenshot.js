@@ -1,6 +1,7 @@
 import { toBlob, toCanvas } from 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/+esm';
 import { createPseudonymContext, pseudonymizeSelectedElement, redactScreenshotDom } from './screenshot-redaction.js';
 import { calculateCanvasCrop } from './screenshot-crop.js';
+import { feedbackText } from './i18n.js';
 
 export async function captureElementScreenshot({
     element,
@@ -9,7 +10,7 @@ export async function captureElementScreenshot({
     maxDimension = 1600
 } = {}) {
     if (!element) {
-        throw new Error('No element selected for screenshot capture.');
+        throw new Error(feedbackText('capture.noElement'));
     }
 
     const rect = element.getBoundingClientRect();
@@ -53,12 +54,12 @@ export async function captureAreaScreenshot({
     maxDimension = 1600
 } = {}) {
     if (!rect || rect.width < 1 || rect.height < 1) {
-        throw new Error('No area selected for screenshot capture.');
+        throw new Error(feedbackText('capture.noArea'));
     }
 
     const captureRoot = documentRef.body;
     if (!captureRoot) {
-        throw new Error('No document body available for screenshot capture.');
+        throw new Error(feedbackText('capture.noDocumentBody'));
     }
 
     const documentSize = getDocumentSize(documentRef, windowRef);
@@ -130,7 +131,7 @@ async function captureScreenshotVariant({
         });
 
         if (!blob) {
-            throw new Error('Screenshot capture returned no image.');
+            throw new Error(feedbackText('capture.noImage'));
         }
 
         return downscalePngBlob(blob, maxDimension, documentRef);
@@ -224,7 +225,7 @@ export async function cropPageCanvas({
         canvas.height
     );
 
-    return canvasToPngBlob(canvas, 'Could not crop selected screenshot area.');
+    return canvasToPngBlob(canvas, feedbackText('capture.cropFailed'));
 }
 
 function serializePrivacySummary(privacySummary) {
@@ -251,7 +252,7 @@ async function downscalePngBlob(blob, maxDimension, documentRef = document) {
     const context = canvas.getContext('2d');
     context.drawImage(image, 0, 0, width, height);
 
-    const downscaledBlob = await canvasToPngBlob(canvas, 'Could not downscale screenshot.');
+    const downscaledBlob = await canvasToPngBlob(canvas, feedbackText('capture.downscaleFailed'));
 
     return { blob: downscaledBlob, width, height };
 }
@@ -306,7 +307,7 @@ function blobToImage(blob) {
         }, { once: true });
         image.addEventListener('error', () => {
             URL.revokeObjectURL(url);
-            reject(new Error('Could not read captured screenshot.'));
+            reject(new Error(feedbackText('capture.readFailed')));
         }, { once: true });
         image.src = url;
     });

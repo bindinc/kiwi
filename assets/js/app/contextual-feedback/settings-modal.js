@@ -1,3 +1,5 @@
+import { feedbackApiError, feedbackText } from './i18n.js';
+
 export function initContextualFeedbackSettings({ documentRef = document } = {}) {
     const button = documentRef.getElementById('contextualFeedbackSettingsButton');
     if (!button) {
@@ -35,7 +37,7 @@ async function openSettingsModal({ button, documentRef }) {
     } catch (error) {
         button.disabled = false;
         button.classList.remove('is-active');
-        window.alert(error instanceof Error ? error.message : 'Could not load feedback settings.');
+        window.alert(error instanceof Error ? error.message : feedbackText('settings.loadFailed'));
     }
 }
 
@@ -47,7 +49,7 @@ async function fetchSettings(settingsUrl) {
     const payload = await readJson(response);
 
     if (!response.ok) {
-        throw new Error(payload?.error?.message || 'Could not load feedback settings.');
+        throw new Error(feedbackApiError(payload, 'settings.loadFailed'));
     }
 
     return payload;
@@ -57,7 +59,7 @@ function renderSettingsModal(documentRef, settings) {
     const modal = documentRef.createElement('div');
     modal.className = 'contextual-feedback-settings-modal';
     modal.dataset.feedbackIgnore = 'true';
-    modal.innerHTML = settingsTemplate(settings);
+    modal.innerHTML = buildFeedbackSettingsHtml(settings);
     documentRef.body.append(modal);
 
     return modal;
@@ -76,23 +78,23 @@ function wireSettingsModal({ modal, settingsUrl, documentRef, onClose }) {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         errorBox.textContent = '';
-        statusBox.textContent = 'Saving...';
+        statusBox.textContent = feedbackText('settings.saving');
 
         try {
             const nextSettings = await saveSettings(settingsUrl, buildSettingsPayload(form));
-            statusBox.textContent = 'Saved.';
+            statusBox.textContent = feedbackText('settings.saved');
             form.querySelector('[name="webhookUrl"]').value = '';
             form.querySelector('[name="originalDataWebhookUrl"]').value = '';
-            form.querySelector('[data-webhook-configured]').textContent = nextSettings.teamsWebhookConfigured ? 'Configured' : 'Not configured';
+            form.querySelector('[data-webhook-configured]').textContent = configuredStatus(nextSettings.teamsWebhookConfigured);
             form.querySelector('[data-webhook-source]').textContent = nextSettings.teamsWebhookSource;
-            form.querySelector('[data-original-data-webhook-configured]').textContent = nextSettings.originalDataWebhookConfigured ? 'Configured' : 'Not configured';
+            form.querySelector('[data-original-data-webhook-configured]').textContent = configuredStatus(nextSettings.originalDataWebhookConfigured);
             form.querySelector('[data-original-data-webhook-source]').textContent = nextSettings.originalDataWebhookSource;
             if (feedbackButton) {
                 feedbackButton.hidden = !nextSettings.feedbackEnabled;
             }
         } catch (error) {
             statusBox.textContent = '';
-            errorBox.textContent = error instanceof Error ? error.message : 'Could not save feedback settings.';
+            errorBox.textContent = error instanceof Error ? error.message : feedbackText('settings.saveFailed');
         }
     });
 
@@ -114,7 +116,7 @@ async function saveSettings(settingsUrl, payload) {
     const responsePayload = await readJson(response);
 
     if (!response.ok) {
-        throw new Error(responsePayload?.error?.message || 'Could not save feedback settings.');
+        throw new Error(feedbackApiError(responsePayload, 'settings.saveFailed'));
     }
 
     return responsePayload;
@@ -144,84 +146,97 @@ function buildSettingsPayload(form) {
     return payload;
 }
 
-function settingsTemplate(settings) {
+export function buildFeedbackSettingsHtml(settings) {
+    const webhookPlaceholder = settings.teamsWebhookConfigured
+        ? feedbackText('settings.keepWebhookPlaceholder')
+        : feedbackText('settings.webhookPlaceholder');
+    const originalWebhookPlaceholder = settings.originalDataWebhookConfigured
+        ? feedbackText('settings.keepOriginalWebhookPlaceholder')
+        : feedbackText('settings.originalWebhookPlaceholder');
+
     return `
         <div class="contextual-feedback-settings-panel" role="dialog" aria-modal="true" aria-labelledby="contextualFeedbackSettingsTitle">
             <header class="contextual-feedback-panel-header">
                 <div>
-                    <h2 id="contextualFeedbackSettingsTitle">Settings</h2>
-                    <p>Contextual feedback and Microsoft Teams connector</p>
+                    <h2 id="contextualFeedbackSettingsTitle">${escapeHtml(feedbackText('settings.title'))}</h2>
+                    <p>${escapeHtml(feedbackText('settings.subtitle'))}</p>
                 </div>
-                <button type="button" class="contextual-feedback-close" data-feedback-settings-close aria-label="Close">x</button>
+                <button type="button" class="contextual-feedback-close" data-feedback-settings-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">x</button>
             </header>
             <form class="contextual-feedback-settings-form" data-feedback-settings-form>
                 <section>
-                    <h3>Feedback button</h3>
+                    <h3>${escapeHtml(feedbackText('settings.feedbackButton'))}</h3>
                     <label class="contextual-feedback-switch">
                         <input type="checkbox" name="feedbackEnabled"${settings.feedbackEnabled ? ' checked' : ''}>
-                        <span>Enabled for allowed Kiwi roles</span>
+                        <span>${escapeHtml(feedbackText('settings.enabled'))}</span>
                     </label>
-                    <p>Allowed roles: ${escapeHtml(settings.allowedRoles.join(', '))}</p>
+                    <p>${escapeHtml(feedbackText('settings.allowedRoles', { roles: settings.allowedRoles.join(', ') }))}</p>
                 </section>
                 <section>
-                    <h3>Microsoft Teams connector</h3>
+                    <h3>${escapeHtml(feedbackText('settings.teamsConnector'))}</h3>
                     <div class="contextual-feedback-settings-status-row">
-                        <span>Status</span>
-                        <strong data-webhook-configured>${settings.teamsWebhookConfigured ? 'Configured' : 'Not configured'}</strong>
+                        <span>${escapeHtml(feedbackText('settings.status'))}</span>
+                        <strong data-webhook-configured>${escapeHtml(configuredStatus(settings.teamsWebhookConfigured))}</strong>
                     </div>
                     <div class="contextual-feedback-settings-status-row">
-                        <span>Source</span>
+                        <span>${escapeHtml(feedbackText('settings.source'))}</span>
                         <strong data-webhook-source>${escapeHtml(settings.teamsWebhookSource)}</strong>
                     </div>
                     <label>
-                        <span>Webhook URL</span>
-                        <input type="password" name="webhookUrl" autocomplete="off" placeholder="${settings.teamsWebhookConfigured ? 'Leave empty to keep existing webhook' : 'Paste Teams Workflows webhook URL'}">
+                        <span>${escapeHtml(feedbackText('settings.webhookUrl'))}</span>
+                        <input type="password" name="webhookUrl" autocomplete="off" placeholder="${escapeHtml(webhookPlaceholder)}">
                     </label>
                     <label class="contextual-feedback-switch">
                         <input type="checkbox" name="clearWebhookUrl">
-                        <span>Clear stored webhook URL</span>
+                        <span>${escapeHtml(feedbackText('settings.clearWebhook'))}</span>
                     </label>
-                    <h3>Original-data workflow</h3>
+                    <h3>${escapeHtml(feedbackText('settings.originalWorkflow'))}</h3>
                     <div class="contextual-feedback-settings-status-row">
-                        <span>Status</span>
-                        <strong data-original-data-webhook-configured>${settings.originalDataWebhookConfigured ? 'Configured' : 'Not configured'}</strong>
+                        <span>${escapeHtml(feedbackText('settings.status'))}</span>
+                        <strong data-original-data-webhook-configured>${escapeHtml(configuredStatus(settings.originalDataWebhookConfigured))}</strong>
                     </div>
                     <div class="contextual-feedback-settings-status-row">
-                        <span>Source</span>
+                        <span>${escapeHtml(feedbackText('settings.source'))}</span>
                         <strong data-original-data-webhook-source>${escapeHtml(settings.originalDataWebhookSource)}</strong>
                     </div>
                     <label>
-                        <span>Original-data webhook URL</span>
-                        <input type="password" name="originalDataWebhookUrl" autocomplete="off" placeholder="${settings.originalDataWebhookConfigured ? 'Leave empty to keep existing original-data webhook' : 'Paste Teams Workflows webhook URL for original data'}">
+                        <span>${escapeHtml(feedbackText('settings.originalWebhookUrl'))}</span>
+                        <input type="password" name="originalDataWebhookUrl" autocomplete="off" placeholder="${escapeHtml(originalWebhookPlaceholder)}">
                     </label>
                     <label class="contextual-feedback-switch">
                         <input type="checkbox" name="clearOriginalDataWebhookUrl">
-                        <span>Clear stored original-data webhook URL</span>
+                        <span>${escapeHtml(feedbackText('settings.clearOriginalWebhook'))}</span>
                     </label>
                     <label>
-                        <span>Public base URL</span>
+                        <span>${escapeHtml(feedbackText('settings.publicBaseUrl'))}</span>
                         <input type="url" name="publicBaseUrl" value="${escapeHtml(settings.publicBaseUrl)}" required>
                     </label>
                     <div class="contextual-feedback-form-row">
                         <label>
-                            <span>Image TTL days</span>
+                            <span>${escapeHtml(feedbackText('settings.imageTtlDays'))}</span>
                             <input type="number" name="imageTtlDays" min="1" max="365" step="1" value="${Number(settings.imageTtlDays)}" required>
                         </label>
                         <label>
-                            <span>Max image bytes</span>
+                            <span>${escapeHtml(feedbackText('settings.maxImageBytes'))}</span>
                             <input type="number" name="maxImageBytes" min="1" max="10485760" step="1" value="${Number(settings.maxImageBytes)}" required>
                         </label>
                     </div>
                 </section>
                 <div class="contextual-feedback-actions">
-                    <button type="button" data-feedback-settings-close>Cancel</button>
-                    <button type="submit">Save</button>
+                    <button type="button" data-feedback-settings-close>${escapeHtml(feedbackText('settings.cancel'))}</button>
+                    <button type="submit">${escapeHtml(feedbackText('settings.save'))}</button>
                 </div>
                 <p class="contextual-feedback-status" data-feedback-settings-status></p>
                 <p class="contextual-feedback-error" data-feedback-settings-error></p>
             </form>
         </div>
     `;
+}
+
+function configuredStatus(isConfigured) {
+    return isConfigured
+        ? feedbackText('settings.configured')
+        : feedbackText('settings.notConfigured');
 }
 
 async function readJson(response) {

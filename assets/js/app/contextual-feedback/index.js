@@ -3,6 +3,7 @@ import { startElementPicker } from './element-picker.js';
 import { describeElement } from './selector.js';
 import { captureAreaScreenshot, captureElementScreenshot } from './screenshot.js';
 import { openFeedbackDialog } from './dialog.js';
+import { feedbackApiError, feedbackText } from './i18n.js';
 import { buildFeedbackPayload } from './payload.js';
 import { initContextualFeedbackSettings } from './settings-modal.js';
 
@@ -62,10 +63,10 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
     });
 
     async function captureScreenshot() {
-        button.title = 'Select an element for feedback';
+        button.title = feedbackText('picker.selectTarget');
         const selection = await selectScreenshotTarget({ documentRef, windowRef });
         if (!selection) {
-            button.title = 'Contextual feedback';
+            button.title = feedbackText('button.title');
             return null;
         }
 
@@ -73,7 +74,7 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
         const selectedElement = selection.kind === 'area'
             ? describeAreaSelection(selectedRect)
             : describeElement(selection.element, documentRef);
-        button.title = 'Capturing screenshot...';
+        button.title = feedbackText('capture.capturing');
         try {
             const capturedScreenshot = selection.kind === 'area'
                 ? await captureAreaScreenshot({
@@ -100,7 +101,7 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
                 }
             };
         } finally {
-            button.title = 'Contextual feedback';
+            button.title = feedbackText('button.title');
         }
     }
 }
@@ -123,7 +124,7 @@ function selectScreenshotTarget({ documentRef, windowRef }) {
 function describeAreaSelection(rect) {
     return {
         tag: 'area',
-        label: 'Custom screenshot area',
+        label: feedbackText('picker.customArea'),
         selector: 'viewport-area',
         textSample: null,
         dimensions: `${Math.round(rect.width)} × ${Math.round(rect.height)} px`
@@ -146,12 +147,11 @@ async function submitFeedback({ apiUrl, payload, screenshots }) {
 
     const responsePayload = await readJsonResponse(response);
     if (!response.ok) {
-        const message = responsePayload?.error?.message || 'Could not submit feedback.';
-        throw new Error(message);
+        throw new Error(feedbackApiError(responsePayload, 'submission.failed'));
     }
 
     if (responsePayload?.teamsDeliveryStatus && responsePayload.teamsDeliveryStatus !== 'sent') {
-        throw new Error(responsePayload.warning || 'Feedback was stored, but Teams delivery did not complete.');
+        throw new Error(feedbackText('submission.storedWithWarning'));
     }
 }
 
@@ -166,5 +166,5 @@ async function readJsonResponse(response) {
 function resetButton(button) {
     button.disabled = false;
     button.classList.remove('is-active');
-    button.title = 'Contextual feedback';
+    button.title = feedbackText('button.title');
 }
