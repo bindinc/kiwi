@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Add freeform 10 × 10 pixel minimum rectangle selection for contextual feedback screenshot crops, and document UX options for future feedback without screenshots.
+
 ## [v1.0.19]
 
 - Keep the contextual feedback action always available as a compact viewport-edge capsule that expands on hover and keyboard focus.
