@@ -75,6 +75,10 @@ function testFeedbackDialogAndSettingsRenderInBothLocales() {
         assert.match(dutchDialog, /Feedback versturen/);
         assert.match(dutchDialog, /Geen screenshot toegevoegd/);
         assert.match(dutchDialog, /Opmerking/);
+        assert.match(dutchDialog, /Pseudogegevens geselecteerd/);
+        assert.match(dutchDialog, /reguliere Teams-workflow/);
+        assert.match(dutchDialog, /Pseudogegevens gebruiken/);
+        assert.doesNotMatch(dutchDialog, /Handmatig onleesbaar maken beschikbaar/);
         assert.match(dutchSettings, /Feedbackinstellingen/);
         assert.match(dutchSettings, /Microsoft Teams-koppeling/);
 
@@ -84,6 +88,10 @@ function testFeedbackDialogAndSettingsRenderInBothLocales() {
         assert.match(englishDialog, /Send feedback/);
         assert.match(englishDialog, /No screenshot attached/);
         assert.match(englishDialog, /Comment/);
+        assert.match(englishDialog, /Pseudo data selected/);
+        assert.match(englishDialog, /standard Teams workflow/);
+        assert.match(englishDialog, /Use pseudo data/);
+        assert.doesNotMatch(englishDialog, /Manual redaction available/);
         assert.match(englishSettings, /Feedback settings/);
         assert.match(englishSettings, /Microsoft Teams connector/);
     } finally {
