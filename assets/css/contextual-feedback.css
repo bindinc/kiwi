@@ -368,6 +368,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     color: #9a3412;
 }
 
+.contextual-feedback-privacy-status span.is-critical {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
 .contextual-feedback-canvas-wrap canvas {
     max-width: 100%;
     height: auto;

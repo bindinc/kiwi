@@ -9,7 +9,7 @@ const TOOLS = [
     ['text', 'T'],
     ['blur', '■']
 ];
-const HIDDEN_TYPE_TRANSLATION_KEYS = {
+const MASKED_TYPE_TRANSLATION_KEYS = {
     'marked private regions': 'markedPrivateRegions',
     images: 'images',
     'embedded frames': 'embeddedFrames',
@@ -157,11 +157,17 @@ export async function openFeedbackDialog({
     async function installScreenshot(nextScreenshot) {
         annotationCanvas?.destroy();
         screenshot = nextScreenshot;
-        pseudonymizationCheckbox.checked = true;
-        modal.querySelector('[data-feedback-visible-privacy]').textContent = feedbackText('dialog.sendPseudonymized');
+        const pseudonymizedScreenshotIsSafe = screenshot.privacySummary?.verified === true;
+        pseudonymizationCheckbox.checked = pseudonymizedScreenshotIsSafe;
+        pseudonymizationCheckbox.disabled = !pseudonymizedScreenshotIsSafe;
+        modal.querySelector('[data-feedback-visible-privacy]').textContent = pseudonymizedScreenshotIsSafe
+            ? feedbackText('dialog.sendPseudonymized')
+            : feedbackText('dialog.sendOriginalRequired');
         annotationCanvas = new AnnotationCanvas({
             canvas,
-            screenshotBlob: screenshot.screenshots.pseudonymized.blob,
+            screenshotBlob: pseudonymizedScreenshotIsSafe
+                ? screenshot.screenshots.pseudonymized.blob
+                : screenshot.screenshots.original.blob,
             viewport: canvasViewport
         });
         updateScreenshotState();
@@ -173,6 +179,7 @@ export async function openFeedbackDialog({
         annotationCanvas = null;
         screenshot = null;
         pseudonymizationCheckbox.checked = true;
+        pseudonymizationCheckbox.disabled = false;
         updateScreenshotState();
         screenshotButton.focus();
     }
@@ -217,7 +224,7 @@ export async function openFeedbackDialog({
     }
 }
 
-async function buildSubmission({ annotationCanvas, screenshot, pseudonymizationCheckbox }) {
+export async function buildSubmission({ annotationCanvas, screenshot, pseudonymizationCheckbox }) {
     if (!annotationCanvas || !screenshot) {
         return {
             selectionKind: 'none',
@@ -231,10 +238,12 @@ async function buildSubmission({ annotationCanvas, screenshot, pseudonymizationC
 
     const pseudonymizedBlob = await annotationCanvas.exportFinalPngBlobFor(screenshot.screenshots.pseudonymized.blob);
     const originalBlob = await annotationCanvas.exportFinalPngBlobFor(screenshot.screenshots.original.blob);
+    const usePseudonymizedScreenshot = screenshot.privacySummary?.verified === true
+        && pseudonymizationCheckbox.checked;
 
     return {
         selectionKind: screenshot.selectionKind,
-        teamsScreenshotVariant: pseudonymizationCheckbox.checked ? 'pseudonymized' : 'original',
+        teamsScreenshotVariant: usePseudonymizedScreenshot ? 'pseudonymized' : 'original',
         selectedElement: screenshot.selectedElement,
         selectedRect: screenshot.selectedRect,
         annotations: annotationCanvas.getAnnotations(),
@@ -328,28 +337,39 @@ function formatSelectionSummary(selectedElement) {
 }
 
 function formatPrivacySummary(privacySummary = {}) {
-    const hiddenElements = Number(privacySummary.hiddenElements || 0);
-    if (hiddenElements < 1) {
-        return feedbackText('privacy.noHiddenRegions');
+    if (privacySummary.verified !== true) {
+        const unresolvedValues = Number(privacySummary.unresolvedValues || 0);
+        const details = feedbackText('privacy.verificationFailedDetails', { count: unresolvedValues });
+        return `<span class="is-critical" title="${escapeHtml(details)}">${escapeHtml(feedbackText('privacy.verificationFailed'))}</span>`;
     }
 
-    const hiddenTypes = formatHiddenElementTypes(privacySummary.hiddenElementTypes);
-    const tooltip = feedbackText('privacy.hiddenTooltip', {
-        count: hiddenElements,
-        types: hiddenTypes
-    });
+    const messages = [];
+    const maskedElements = Number(privacySummary.maskedElements || 0);
+    if (maskedElements > 0) {
+        const maskedTypes = formatMaskedElementTypes(privacySummary.maskedElementTypes);
+        const tooltip = feedbackText('privacy.maskedTooltip', {
+            count: maskedElements,
+            types: maskedTypes
+        });
+        messages.push(`<span class="is-warning" title="${escapeHtml(tooltip)}">${escapeHtml(feedbackText('privacy.someMediaMasked'))}</span>`);
+    }
 
-    return `<span class="is-warning" title="${escapeHtml(tooltip)}">${escapeHtml(feedbackText('privacy.someMediaHidden'))}</span>`;
+    const resourceFailures = Number(privacySummary.resourceFailures || 0);
+    if (resourceFailures > 0) {
+        messages.push(`<span class="is-warning">${escapeHtml(feedbackText('privacy.resourceFailures', { count: resourceFailures }))}</span>`);
+    }
+
+    return messages.join('') || feedbackText('privacy.verified');
 }
 
-function formatHiddenElementTypes(hiddenElementTypes) {
-    if (!Array.isArray(hiddenElementTypes) || hiddenElementTypes.length === 0) {
-        return feedbackText('privacy.unknownHiddenType');
+function formatMaskedElementTypes(maskedElementTypes) {
+    if (!Array.isArray(maskedElementTypes) || maskedElementTypes.length === 0) {
+        return feedbackText('privacy.unknownMaskedType');
     }
 
-    return hiddenElementTypes
-        .map((type) => HIDDEN_TYPE_TRANSLATION_KEYS[type] || 'media')
-        .map((key) => feedbackText(`privacy.hiddenTypes.${key}`))
+    return maskedElementTypes
+        .map((type) => MASKED_TYPE_TRANSLATION_KEYS[type] || 'media')
+        .map((key) => feedbackText(`privacy.maskedTypes.${key}`))
         .join(', ');
 }
 

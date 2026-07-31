@@ -1,16 +1,27 @@
+import { feedbackText } from './i18n.js';
+
 const VOLATILE_CLASS_PATTERN = /^(active|busy|checked|current|disabled|enabled|error|focus|focused|hidden|hover|invalid|loading|open|selected|show|success|valid)$/i;
 const GENERATED_VALUE_PATTERN = /(^\d+$|[a-f0-9]{8,}|^ember\d+|^react-|^vue-|generated|random|uuid)/i;
+const TYPED_SENSITIVITY_VALUES = new Set(['name', 'email', 'phone', 'address', 'postal-code', 'iban', 'id', 'date', 'free-text']);
 
 export function describeElement(element, documentRef = document) {
     const tag = element.tagName.toLowerCase();
-    const label = resolveElementLabel(element, documentRef) || tag;
-    const textSample = normalizeText(element.textContent || '').slice(0, 120) || null;
+    const sensitivityType = resolveExplicitSensitivityType(element);
+    const containsSensitiveContent = hasSensitiveContent(element);
+    const typedSensitiveLabel = sensitivityType
+        ? normalizeText(element.textContent || '').slice(0, 120)
+        : '';
+    const semanticLabel = resolveElementLabel(element, documentRef);
+    const label = containsSensitiveContent && !sensitivityType
+        ? feedbackText('picker.privateRegion')
+        : typedSensitiveLabel || semanticLabel || feedbackText('picker.selectedElement');
 
     return {
         tag,
         label,
         selector: generateStableSelector(element, documentRef),
-        textSample
+        textSample: null,
+        sensitivityType: sensitivityType || undefined
     };
 }
 
@@ -69,8 +80,7 @@ export function resolveElementLabel(element, documentRef = document) {
         return wrappedText.slice(0, 120);
     }
 
-    const text = normalizeText(element.textContent || '');
-    return text ? text.slice(0, 120) : '';
+    return '';
 }
 
 function selectorFromDataAttribute(element, documentRef) {
@@ -176,6 +186,20 @@ function isUniqueSelector(selector, documentRef) {
 
 function normalizeText(value) {
     return value.replace(/\s+/g, ' ').trim();
+}
+
+function resolveExplicitSensitivityType(element) {
+    const sensitiveElement = element.closest?.('[data-feedback-sensitive]');
+    const sensitivityType = normalizeText(sensitiveElement?.getAttribute('data-feedback-sensitive') || '').toLowerCase();
+
+    return TYPED_SENSITIVITY_VALUES.has(sensitivityType) ? sensitivityType : '';
+}
+
+function hasSensitiveContent(element) {
+    return Boolean(
+        element.closest?.('[data-feedback-sensitive], [data-feedback-mask]')
+        || element.querySelector?.('[data-feedback-sensitive], [data-feedback-mask]')
+    );
 }
 
 function cssEscape(value) {

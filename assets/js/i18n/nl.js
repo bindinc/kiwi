@@ -744,7 +744,9 @@ const nl = {
         "picker": {
             "selectTarget": "Selecteer een element of sleep een screenshotgebied",
             "minimumArea": "Selecteer een gebied van minimaal {size} × {size} px",
-            "customArea": "Aangepast screenshotgebied"
+            "customArea": "Aangepast screenshotgebied",
+            "privateRegion": "Geselecteerd privégebied",
+            "selectedElement": "Geselecteerd element"
         },
         "tools": {
             "hand": "Verplaatsen",
@@ -761,6 +763,7 @@ const nl = {
             "screenshotPrivacyStatus": "Privacy-instellingen voor screenshot",
             "sendPseudonymized": "Screenshot met pseudogegevens naar Teams versturen",
             "sendOriginal": "Screenshot met originele gegevens naar de afgeschermde Teams-workflow versturen",
+            "sendOriginalRequired": "Pseudonimisering vereist controle; verstuur origineel naar de afgeschermde Teams-workflow",
             "manualRedaction": "Handmatig onleesbaar maken beschikbaar",
             "comment": "Opmerking",
             "required": "verplicht",
@@ -791,11 +794,14 @@ const nl = {
             "captureFailed": "Screenshot kon niet worden gemaakt."
         },
         "privacy": {
-            "noHiddenRegions": "Geen verborgen gebieden",
-            "someMediaHidden": "Sommige media verborgen",
-            "hiddenTooltip": "{count} verborgen: {types}. Deze zijn verborgen omdat ze niet betrouwbaar kunnen worden gepseudonimiseerd.",
-            "unknownHiddenType": "media of gemarkeerde privégebieden",
-            "hiddenTypes": {
+            "verified": "Pseudonimisering gecontroleerd",
+            "verificationFailed": "Pseudonimisering kon niet worden gecontroleerd. Maak de screenshot opnieuw of gebruik de afgeschermde workflow met originele gegevens.",
+            "verificationFailedDetails": "{count} gevoelige bronwaarde(n) zijn niet opgelost.",
+            "someMediaMasked": "Gevoelige media gemaskeerd",
+            "maskedTooltip": "{count} gemaskeerd: {types}.",
+            "resourceFailures": "{count} bron(nen) konden niet betrouwbaar worden weergegeven",
+            "unknownMaskedType": "gemarkeerde privégebieden",
+            "maskedTypes": {
                 "markedPrivateRegions": "gemarkeerde privégebieden",
                 "images": "afbeeldingen",
                 "embeddedFrames": "ingesloten frames",
