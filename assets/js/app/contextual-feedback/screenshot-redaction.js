@@ -6,21 +6,19 @@ const REDACTED_ELEMENT_SELECTOR = '[data-feedback-mask]';
 const SENSITIVE_SELECTOR = '[data-feedback-sensitive]';
 const SENSITIVE_SCOPE_SELECTOR = '[data-feedback-sensitive-scope]';
 const PUBLIC_SELECTOR = '[data-feedback-public]';
-const MEDIA_TAGS = new Set(['CANVAS', 'EMBED', 'IFRAME', 'IMG', 'OBJECT', 'PICTURE', 'SVG', 'VIDEO']);
 const FORM_FIELD_TAGS = new Set(['INPUT', 'OPTION', 'SELECT', 'TEXTAREA']);
 const CHECKABLE_INPUT_TYPES = new Set(['checkbox', 'radio']);
 const NON_TEXT_INPUT_TYPES = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
 
 const REDACTION_STYLES = `
-    img,
-    picture,
-    video,
-    canvas,
-    svg,
-    iframe,
-    object,
-    embed,
     [data-feedback-mask] {
+        background: #d9dde3 !important;
+        color: transparent !important;
+        overflow: hidden !important;
+        text-shadow: none !important;
+    }
+
+    [data-feedback-mask] * {
         visibility: hidden !important;
     }
 `;
@@ -94,14 +92,12 @@ export function redactScreenshotDom(documentRef = document, {
             continue;
         }
 
-        removeBackgroundImage(element, restores);
-
         if (pseudonymizeText && isFormField(element)) {
             redactFormField(element, context, restores);
         }
 
-        if (isMediaElement(element) || isRedactedElement(element)) {
-            hideElement(element, restores, context);
+        if (pseudonymizeText && isRedactedElement(element)) {
+            maskElement(element, restores, context);
         }
     }
 
@@ -110,6 +106,27 @@ export function redactScreenshotDom(documentRef = document, {
     }
 
     return () => restoreAll(restores);
+}
+
+export function pseudonymizeScreenshotClone(clonedRoot, context = createPseudonymContext()) {
+    const documentRef = clonedRoot?.ownerDocument || globalThis.document;
+    redactScreenshotDom(documentRef, {
+        root: clonedRoot,
+        context,
+        pseudonymizeText: true
+    });
+    auditPseudonymizedClone(clonedRoot, context);
+
+    return context.privacySummary;
+}
+
+export function auditPseudonymizedClone(root, context) {
+    const unresolvedValues = context.unresolvedSourceValues.size;
+
+    context.privacySummary.unresolvedValues = unresolvedValues;
+    context.privacySummary.verified = unresolvedValues === 0;
+
+    return context.privacySummary;
 }
 
 export function createPseudonymContext() {
@@ -124,10 +141,14 @@ export function createPseudonymContext() {
         nextProfileIndex: 0,
         currentProfile: PSEUDO_PROFILES[0],
         nextIndexByType,
+        unresolvedSourceValues: new Set(),
         privacySummary: {
             pseudoValues: 0,
-            hiddenElements: 0,
-            hiddenElementTypes: new Set()
+            maskedElements: 0,
+            maskedElementTypes: new Set(),
+            resourceFailures: 0,
+            unresolvedValues: 0,
+            verified: true
         }
     };
 }
@@ -149,10 +170,11 @@ export function pseudonymizeSelectedElement(selectedElement, context = createPse
 
     return {
         ...selectedElement,
-        label: pseudonymizeFeedbackText(selectedElement.label || '', inferTypeFromName(selectedElement.selector || '') || 'free-text', context),
-        textSample: selectedElement.textSample
-            ? pseudonymizeFeedbackText(selectedElement.textSample, inferTypeFromName(selectedElement.selector || '') || 'free-text', context)
-            : selectedElement.textSample
+        label: selectedElement.sensitivityType
+            ? pseudonymizeFeedbackText(selectedElement.label || '', selectedElement.sensitivityType, context)
+            : selectedElement.label,
+        textSample: null,
+        sensitivityType: undefined
     };
 }
 
@@ -194,7 +216,9 @@ function redactTextNodes(root, context, restores) {
             continue;
         }
 
-        const nextValue = originalValue.replace(trimmedValue, pseudonymizeValue(trimmedValue, sensitivityType, context));
+        const replacement = pseudonymizeValue(trimmedValue, sensitivityType, context);
+        recordUnresolvedReplacement(trimmedValue, replacement, context);
+        const nextValue = originalValue.replace(trimmedValue, replacement);
         setNodeValue(textNode, nextValue, restores);
     }
 }
@@ -218,10 +242,6 @@ function collectTextNodesFrom(node, nodes) {
     for (const child of Array.from(node.childNodes || [])) {
         collectTextNodesFrom(child, nodes);
     }
-}
-
-function removeBackgroundImage(element, restores) {
-    setStyleProperty(element, 'backgroundImage', 'none', restores);
 }
 
 function redactFormField(element, context, restores) {
@@ -267,19 +287,25 @@ function redactTextControl(element, context, restores, fallbackType) {
     if (typeof element.value === 'string' && element.value.trim()) {
         const sensitivityType = getFieldSensitivityType(element, element.value) || fallbackType || inferSensitivityType(element.value);
         if (sensitivityType) {
-            setElementProperty(element, 'value', pseudonymizeValue(element.value, sensitivityType, context), restores);
+            const replacement = pseudonymizeValue(element.value, sensitivityType, context);
+            recordUnresolvedReplacement(element.value, replacement, context);
+            setElementProperty(element, 'value', replacement, restores);
         }
     }
 }
 
 function redactOption(element, context, restores) {
     const value = typeof element.textContent === 'string' ? element.textContent.trim() : '';
-    const sensitivityType = getElementSensitivityType(element) || inferSensitivityType(value);
+    const sensitivityType = getElementSensitivityType(element)
+        || inferTypeFromName(describeElement(element.parentElement))
+        || inferSensitivityType(value);
     if (!value || !sensitivityType) {
         return;
     }
 
-    setElementProperty(element, 'textContent', pseudonymizeValue(value, sensitivityType, context), restores);
+    const replacement = pseudonymizeValue(value, sensitivityType, context);
+    recordUnresolvedReplacement(value, replacement, context);
+    setElementProperty(element, 'textContent', replacement, restores);
 }
 
 function getTextSensitivityType(element, value) {
@@ -292,7 +318,7 @@ function getTextSensitivityType(element, value) {
         return inferSensitivityType(value) || 'free-text';
     }
 
-    return inferSensitivityType(value);
+    return inferTypeFromName(describeElement(element)) || inferSensitivityType(value);
 }
 
 function getFieldSensitivityType(element, value = '') {
@@ -377,39 +403,43 @@ function inferSensitivityType(value) {
 }
 
 function inferTypeFromName(value) {
-    const normalizedValue = String(value || '').toLowerCase();
+    const normalizedValue = String(value || '')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .toLowerCase()
+        .trim();
     if (!normalizedValue) {
         return '';
     }
 
-    if (/(mail|e-mail)/.test(normalizedValue)) {
+    if (/\b(email|mail)\b/.test(normalizedValue)) {
         return 'email';
     }
-    if (/(phone|telefoon|tel\b)/.test(normalizedValue)) {
+    if (/\b(phone|telephone|telefoon|telefoonnummer|tel)\b/.test(normalizedValue)) {
         return 'phone';
     }
-    if (/(iban|rekening)/.test(normalizedValue)) {
+    if (/\b(iban|rekening|rekeningnummer)\b/.test(normalizedValue)) {
         return 'iban';
     }
-    if (/(postcode|postal)/.test(normalizedValue)) {
+    if (/\b(postcode|postal)\b/.test(normalizedValue)) {
         return 'postal-code';
     }
-    if (/(address|adres|straat|city|plaats|huis)/.test(normalizedValue)) {
+    if (/\b(address|adres|straat|city|plaats|huis|huisnummer)\b/.test(normalizedValue)) {
         return 'address';
     }
-    if (/(birthday|birth|geboorte|datum|date)/.test(normalizedValue)) {
+    if (/\b(birthday|birth|geboorte|geboortedatum|datum|date)\b/.test(normalizedValue)) {
         return 'date';
     }
-    if (/(name|naam|initial|voorletter|tussenvoegsel|achternaam|voornaam)/.test(normalizedValue)) {
+    if (/\b(name|naam|initial|initials|voorletter|voorletters|tussenvoegsel|achternaam|voornaam)\b/.test(normalizedValue)) {
         return 'name';
     }
-    if (/(search|zoek)/.test(normalizedValue)) {
+    if (/\b(search|zoek|zoeken)\b/.test(normalizedValue)) {
         return 'name';
     }
-    if (/(customer|klant|person|persoon|subscriber|abon|id|nummer|nr)/.test(normalizedValue)) {
+    if (/\b(customer|klant|person|persoon|subscriber|abon|abonnement|id|nummer|nr)\b/.test(normalizedValue)) {
         return 'id';
     }
-    if (/(note|remark|description|opmerking|notitie|omschrijving)/.test(normalizedValue)) {
+    if (/\b(note|notes|remark|remarks|description|opmerking|opmerkingen|notitie|omschrijving)\b/.test(normalizedValue)) {
         return 'free-text';
     }
 
@@ -427,29 +457,42 @@ function normalizeSensitivityType(value) {
 
 function pseudonymizeValue(value, sensitivityType, context) {
     const originalValue = String(value || '');
+    const trimmedOriginalValue = originalValue.trim();
     const normalizedType = normalizeSensitivityType(sensitivityType) || 'free-text';
-    const key = `${normalizedType}:${originalValue.trim()}`;
+    const key = `${normalizedType}:${trimmedOriginalValue}`;
     const existingValue = context.replacements.get(key);
     if (existingValue) {
         return existingValue;
     }
 
     if (usesCustomerProfile(normalizedType)) {
-        const nextValue = pseudonymizeProfileValue(originalValue, normalizedType, context);
+        const nextValue = ensureReplacementDiffers(
+            originalValue,
+            pseudonymizeProfileValue(originalValue, normalizedType, context),
+            normalizedType
+        );
         context.replacements.set(key, nextValue);
         context.privacySummary.pseudoValues += 1;
         return nextValue;
     }
 
     if (normalizedType === 'free-text') {
-        const nextValue = pseudonymizeFreeText(originalValue, context);
+        const nextValue = ensureReplacementDiffers(
+            originalValue,
+            pseudonymizeFreeText(originalValue, context),
+            normalizedType
+        );
         context.replacements.set(key, nextValue);
         context.privacySummary.pseudoValues += 1;
         return nextValue;
     }
 
     const values = PSEUDO_VALUES[normalizedType] || PSEUDO_VALUES['free-text'];
-    const nextValue = values[context.nextIndexByType[normalizedType] % values.length];
+    const nextValue = ensureReplacementDiffers(
+        originalValue,
+        values[context.nextIndexByType[normalizedType] % values.length],
+        normalizedType
+    );
     context.nextIndexByType[normalizedType] += 1;
     context.replacements.set(key, nextValue);
     context.privacySummary.pseudoValues += 1;
@@ -458,6 +501,27 @@ function pseudonymizeValue(value, sensitivityType, context) {
 
 function usesCustomerProfile(sensitivityType) {
     return ['name', 'email', 'phone', 'address', 'postal-code', 'id', 'date'].includes(sensitivityType);
+}
+
+function ensureReplacementDiffers(originalValue, replacement, sensitivityType) {
+    if (String(originalValue).trim() !== String(replacement).trim()) {
+        return replacement;
+    }
+
+    const alternateProfile = PSEUDO_PROFILES[1];
+    const alternateValues = {
+        name: alternateProfile.name,
+        email: alternateProfile.email,
+        phone: alternateProfile.phone,
+        address: alternateProfile.address,
+        'postal-code': alternateProfile.postalCode,
+        id: alternateProfile.personReference,
+        date: alternateProfile.date,
+        iban: PSEUDO_VALUES.iban[1],
+        'free-text': PSEUDO_VALUES['free-text'][1]
+    };
+
+    return alternateValues[sensitivityType] || PSEUDO_VALUES['free-text'][1];
 }
 
 function pseudonymizeProfileValue(value, sensitivityType, context) {
@@ -597,6 +661,10 @@ function pseudonymizeFreeText(value, context) {
 }
 
 function describeElement(element) {
+    if (!element) {
+        return '';
+    }
+
     return [
         element.id,
         element.className,
@@ -606,20 +674,19 @@ function describeElement(element) {
     ].join(' ');
 }
 
-function hideElement(element, restores, context = null) {
+function maskElement(element, restores, context = null) {
     if (context?.privacySummary) {
-        context.privacySummary.hiddenElements += 1;
-        context.privacySummary.hiddenElementTypes.add(describeHiddenElementType(element));
+        context.privacySummary.maskedElements += 1;
+        context.privacySummary.maskedElementTypes.add(describeMaskedElementType(element));
     }
 
-    setStyleProperty(element, 'visibility', 'hidden', restores);
+    setStyleProperty(element, 'background', '#d9dde3', restores);
+    setStyleProperty(element, 'color', 'transparent', restores);
+    setStyleProperty(element, 'overflow', 'hidden', restores);
+    setStyleProperty(element, 'textShadow', 'none', restores);
 }
 
-function describeHiddenElementType(element) {
-    if (isRedactedElement(element)) {
-        return 'marked private regions';
-    }
-
+function describeMaskedElementType(element) {
     const tagName = normalizedTagName(element);
     if (tagName === 'IMG' || tagName === 'PICTURE' || tagName === 'SVG') {
         return 'images';
@@ -634,15 +701,11 @@ function describeHiddenElementType(element) {
         return 'canvas content';
     }
 
-    return 'media';
+    return 'marked private regions';
 }
 
 function isFormField(element) {
     return FORM_FIELD_TAGS.has(normalizedTagName(element));
-}
-
-function isMediaElement(element) {
-    return MEDIA_TAGS.has(normalizedTagName(element));
 }
 
 function isRedactedElement(element) {
@@ -718,5 +781,16 @@ function setStyleProperty(element, property, nextValue, restores) {
 function restoreAll(restores) {
     for (const restore of restores.reverse()) {
         restore();
+    }
+}
+
+function recordUnresolvedReplacement(originalValue, replacement, context) {
+    const normalizedOriginal = String(originalValue || '').trim();
+    const normalizedReplacement = String(replacement || '').trim();
+    const isMeaningfulSource = normalizedOriginal.length >= 3
+        && /[\p{L}\p{N}]/u.test(normalizedOriginal);
+
+    if (isMeaningfulSource && normalizedReplacement === normalizedOriginal) {
+        context.unresolvedSourceValues.add(normalizedOriginal);
     }
 }

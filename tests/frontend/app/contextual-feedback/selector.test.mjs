@@ -22,6 +22,18 @@ class FakeElement {
             return this.parentElement?.tagName === 'LABEL' ? this.parentElement : null;
         }
 
+        if (selector.includes('[data-feedback-sensitive]') && this.getAttribute('data-feedback-sensitive') !== null) {
+            return this;
+        }
+
+        if (selector.includes('[data-feedback-mask]') && this.getAttribute('data-feedback-mask') !== null) {
+            return this;
+        }
+
+        return null;
+    }
+
+    querySelector() {
         return null;
     }
 }
@@ -84,7 +96,7 @@ function testGeneratedIdIsIgnoredForSemanticSelector() {
     assert.equal(generateStableSelector(element, documentRef), 'input[name="postalCode"]');
 }
 
-function testLabelAndTextSampleAreBounded() {
+function testLabelIsBoundedAndRawTextIsNotCollected() {
     const label = new FakeElement('label', { for: 'city' }, { textContent: 'City name' });
     const element = new FakeElement('input', { id: 'city' }, { textContent: 'Hidden content' });
     const documentRef = createDocument([label, element]);
@@ -93,10 +105,38 @@ function testLabelAndTextSampleAreBounded() {
         tag: 'input',
         label: 'City name',
         selector: '#city',
-        textSample: 'Hidden content'
+        textSample: null,
+        sensitivityType: undefined
     });
+}
+
+function testExplicitlyTypedLabelIsMarkedWithoutCollectingRawText() {
+    const element = new FakeElement('h2', {
+        id: 'customerName',
+        'data-feedback-sensitive': 'name'
+    }, { textContent: 'Maria Jansen' });
+    const documentRef = createDocument([element]);
+
+    assert.deepEqual(describeElement(element, documentRef), {
+        tag: 'h2',
+        label: 'Maria Jansen',
+        selector: '#customerName',
+        textSample: null,
+        sensitivityType: 'name'
+    });
+}
+
+function testUnclassifiedElementUsesGenericLabel() {
+    const element = new FakeElement('div', { id: 'summaryPanel' }, { textContent: 'Unmarked customer details' });
+    const documentRef = createDocument([element]);
+    const description = describeElement(element, documentRef);
+
+    assert.notEqual(description.label, 'Unmarked customer details');
+    assert.equal(description.textSample, null);
 }
 
 testDataFeedbackIdWins();
 testGeneratedIdIsIgnoredForSemanticSelector();
-testLabelAndTextSampleAreBounded();
+testLabelIsBoundedAndRawTextIsNotCollected();
+testExplicitlyTypedLabelIsMarkedWithoutCollectingRawText();
+testUnclassifiedElementUsesGenericLabel();

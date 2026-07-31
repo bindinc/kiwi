@@ -10,19 +10,19 @@ const baseUrl = process.env.KIWI_SMOKE_BASE_URL || `https://bdc.rtvmedia.org.loc
 const evidenceDir = process.env.KIWI_FEEDBACK_EVIDENCE_DIR || '/tmp/kiwi-feedback-privacy-smoke';
 const playwrightModulePath = process.env.PLAYWRIGHT_MODULE_PATH || '/home/bartdeijkers/emailtemplates/node_modules/playwright';
 const chromeExecutablePath = process.env.CHROME_EXECUTABLE_PATH || '/usr/bin/google-chrome';
+const browserName = process.env.KIWI_SMOKE_BROWSER || 'chromium';
+const pixelChannelTolerance = 64;
 const realSensitiveValues = ['Jansen', 'maria.jansen@email.nl', 'Wijnhaven', '3011BD', '06-87654321'];
 
-const { chromium } = loadPlaywright();
+const playwright = loadPlaywright();
 await mkdir(evidenceDir, { recursive: true });
 
-const browser = await chromium.launch({
-    headless: true,
-    executablePath: chromeExecutablePath,
-    args: [
-        '--ignore-certificate-errors',
-        '--host-resolver-rules=MAP bdc.rtvmedia.org.local 127.0.0.1'
-    ]
-});
+const browserType = playwright[browserName];
+if (!['chromium', 'firefox'].includes(browserName) || !browserType) {
+    throw new Error(`KIWI_SMOKE_BROWSER must be firefox or chromium, received: ${browserName}`);
+}
+
+const browser = await browserType.launch(browserLaunchOptions());
 
 try {
     const page = await browser.newPage({
@@ -31,12 +31,27 @@ try {
     });
 
     await runSmokeScenario(page);
-    console.log('[compose-smoke-feedback-privacy] Contextual feedback privacy smoke checks passed.');
+    console.log(`[compose-smoke-feedback-privacy] Contextual feedback privacy smoke checks passed in ${browserName}.`);
 } catch (error) {
     console.log(`[compose-smoke-feedback-privacy] ${error instanceof Error ? error.message : String(error)}`);
     throw error;
 } finally {
     await browser.close();
+}
+
+function browserLaunchOptions() {
+    if (browserName === 'firefox') {
+        return { headless: true };
+    }
+
+    return {
+        headless: true,
+        executablePath: chromeExecutablePath,
+        args: [
+            '--ignore-certificate-errors',
+            '--host-resolver-rules=MAP bdc.rtvmedia.org.local 127.0.0.1'
+        ]
+    };
 }
 
 function loadPlaywright() {
@@ -62,10 +77,13 @@ async function runSmokeScenario(page) {
     await setKiwiLocale(page, 'nl', 'Contextuele feedback');
     await assertFeedbackSettingsLocale(page);
 
-    const targetBox = await page.locator('#customerName').boundingBox();
+    const target = page.locator('.customer-header');
+    const targetBox = await target.boundingBox();
     if (!targetBox) {
-        throw new Error('Could not locate #customerName for feedback capture.');
+        throw new Error('Could not locate the Jansen customer header for feedback capture.');
     }
+    const nativeElementScreenshot = bufferToDataUrl(await target.screenshot());
+    const liveDomBeforeCapture = await readLiveDomState(page);
 
     await page.click('#contextualFeedbackButton');
     await page.waitForSelector('.contextual-feedback-modal', { state: 'visible', timeout: 10000 });
@@ -78,7 +96,7 @@ async function runSmokeScenario(page) {
     await page.click('[data-feedback-add-screenshot]');
     await page.waitForSelector('.contextual-feedback-picker-overlay', { timeout: 10000 });
     await assertDialogIsSuspendedDuringCapture(page);
-    await page.mouse.click(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2);
+    await page.mouse.click(targetBox.x + 4, targetBox.y + targetBox.height - 4);
     await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
 
     const retainedComment = await page.inputValue('textarea[name="comment"]');
@@ -89,12 +107,19 @@ async function runSmokeScenario(page) {
     await assertFeedbackReviewSurfaceIsPrivate(page, {
         width: targetBox.width,
         height: targetBox.height
-    });
+    }, nativeElementScreenshot);
+    const liveDomAfterCapture = await readLiveDomState(page);
+    if (JSON.stringify(liveDomAfterCapture) !== JSON.stringify(liveDomBeforeCapture)) {
+        throw new Error(`Live Kiwi DOM changed during clone capture: before=${JSON.stringify(liveDomBeforeCapture)} after=${JSON.stringify(liveDomAfterCapture)}`);
+    }
 
     await page.click('[data-feedback-close]');
     await page.waitForSelector('.contextual-feedback-modal', { state: 'detached', timeout: 10000 });
     await setKiwiLocale(page, 'en', 'Contextual feedback');
     await captureCustomArea(page, targetBox);
+    await page.click('[data-feedback-close]');
+    await page.waitForSelector('.contextual-feedback-modal', { state: 'detached', timeout: 10000 });
+    await captureDeterministicFidelityFixture(page);
 }
 
 async function assertFormFirstState(page, expected) {
@@ -170,6 +195,9 @@ async function assertDialogIsSuspendedDuringCapture(page) {
 
 async function loginIfNeeded(page) {
     const usernameField = page.locator('input[name="username"]');
+    if (await usernameField.count() === 0 && page.url().includes('/login')) {
+        await usernameField.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+    }
     if (await usernameField.count() === 0) {
         return;
     }
@@ -188,7 +216,13 @@ async function enableFeedbackIfNeeded(page) {
         return;
     }
 
-    await page.click('#contextualFeedbackSettingsButton');
+    const settingsButton = page.locator('#contextualFeedbackSettingsButton');
+    if (await settingsButton.count() === 0) {
+        const bodyText = (await page.locator('body').innerText().catch(() => '')).slice(0, 500);
+        throw new Error(`Authenticated Kiwi page did not load: url=${page.url()} body=${JSON.stringify(bodyText)}`);
+    }
+
+    await settingsButton.click();
     const enabledCheckbox = page.locator('.contextual-feedback-settings-modal input[name="feedbackEnabled"]');
     await enabledCheckbox.waitFor({ timeout: 10000 });
     if (!await enabledCheckbox.isChecked()) {
@@ -307,6 +341,14 @@ async function captureCustomArea(page, targetBox) {
         x: Math.min(1673, start.x + 320),
         y: Math.min(1189, start.y + 180)
     };
+    const nativeAreaScreenshot = bufferToDataUrl(await page.screenshot({
+        clip: {
+            x: start.x,
+            y: start.y,
+            width: end.x - start.x,
+            height: end.y - start.y
+        }
+    }));
 
     await page.click('#contextualFeedbackButton');
     await page.waitForSelector('.contextual-feedback-modal', { state: 'visible', timeout: 10000 });
@@ -334,10 +376,90 @@ async function captureCustomArea(page, targetBox) {
     await assertFeedbackReviewSurfaceIsPrivate(page, {
         width: end.x - start.x,
         height: end.y - start.y
-    });
+    }, nativeAreaScreenshot);
 }
 
-async function assertFeedbackReviewSurfaceIsPrivate(page, expectedSize) {
+async function captureDeterministicFidelityFixture(page) {
+    await page.evaluate(() => {
+        const fixture = document.createElement('section');
+        fixture.id = 'feedbackFidelityFixture';
+        fixture.dataset.feedbackId = 'screenshot-fidelity-fixture';
+        fixture.style.cssText = [
+            'position:fixed',
+            'inset:70px auto auto 70px',
+            'z-index:9000',
+            'width:640px',
+            'height:360px',
+            'margin:17px',
+            'padding:12px',
+            'overflow:auto',
+            'box-sizing:border-box',
+            'background:#fff url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2720%27 height=%2720%27%3E%3Cpath d=%27M0 20L20 0%27 stroke=%27%23dbeafe%27/%3E%3C/svg%3E")',
+            'border:2px solid #1d4ed8',
+            'display:grid',
+            'grid-template-columns:1fr 1fr',
+            'gap:12px'
+        ].join(';');
+        fixture.innerHTML = `
+            <div style="display:flex;gap:10px;align-items:center">
+                <img data-feedback-public alt="Public product" width="64" height="48" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='48'%3E%3Crect width='64' height='48' fill='%2322c55e'/%3E%3Ccircle cx='32' cy='24' r='14' fill='%23fef08a'/%3E%3C/svg%3E">
+                <svg data-feedback-public width="64" height="48" viewBox="0 0 64 48"><rect width="64" height="48" fill="#f97316"/><path d="M8 38L32 8l24 30z" fill="#fff"/></svg>
+            </div>
+            <div data-feedback-sensitive="name" style="font:700 18px sans-serif">Alexandria Verylongcustomername-Sensitive</div>
+            <div data-feedback-mask style="width:96px;height:64px;border-radius:8px"><img alt="Sensitive avatar" width="96" height="64" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='64'%3E%3Crect width='96' height='64' fill='%23ef4444'/%3E%3C/svg%3E"></div>
+            <canvas id="feedbackFidelityCanvas" width="120" height="64"></canvas>
+            <div style="height:220px;grid-column:1/-1;background:linear-gradient(90deg,#e0f2fe,#fce7f3)">
+                <div style="position:sticky;top:0;background:#111827;color:#fff;padding:6px">Sticky landmark</div>
+                <img alt="Failed resource" width="24" height="24" src="/kiwi/feedback-fixture-does-not-exist.png">
+                <iframe title="Unsupported frame" style="width:80px;height:40px"></iframe>
+            </div>
+        `;
+        document.body.append(fixture);
+        const canvas = fixture.querySelector('#feedbackFidelityCanvas');
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#7c3aed';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = '#fff';
+        context.fillRect(18, 14, 84, 36);
+        fixture.scrollTop = 28;
+    });
+
+    const fixture = page.locator('#feedbackFidelityFixture');
+    const fixtureBox = await fixture.boundingBox();
+    if (!fixtureBox) {
+        throw new Error('Could not install deterministic screenshot fidelity fixture.');
+    }
+    const sensitiveRegions = await fixture.evaluate((root) => {
+        const rootRect = root.getBoundingClientRect();
+        return Array.from(root.querySelectorAll('[data-feedback-sensitive], [data-feedback-mask]')).map((element) => {
+            const rect = element.getBoundingClientRect();
+            return {
+                x: rect.x - rootRect.x,
+                y: rect.y - rootRect.y,
+                width: rect.width,
+                height: rect.height
+            };
+        });
+    });
+    const nativeScreenshot = bufferToDataUrl(await fixture.screenshot());
+    await page.click('#contextualFeedbackButton');
+    await page.waitForSelector('.contextual-feedback-modal', { state: 'visible', timeout: 10000 });
+    await page.click('[data-feedback-add-screenshot]');
+    await page.waitForSelector('.contextual-feedback-picker-overlay', { timeout: 10000 });
+    await page.mouse.click(fixtureBox.x + 4, fixtureBox.y + fixtureBox.height / 2);
+    await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
+    await assertFeedbackReviewSurfaceIsPrivate(page, fixtureBox, nativeScreenshot, sensitiveRegions);
+
+    const privacyText = await page.locator('[data-feedback-privacy-summary]').innerText();
+    if (!privacyText.includes('resource')) {
+        throw new Error(`Unsupported fixture resources did not produce a visible fidelity warning: ${privacyText}`);
+    }
+
+    await page.click('[data-feedback-close]');
+    await page.locator('#feedbackFidelityFixture').evaluate((element) => element.remove());
+}
+
+async function assertFeedbackReviewSurfaceIsPrivate(page, expectedSize, nativeScreenshot, sensitiveRegions = []) {
     const modalText = await page.locator('.contextual-feedback-modal').innerText();
     const leakedModalValues = realSensitiveValues.filter((value) => modalText.includes(value));
     if (leakedModalValues.length > 0) {
@@ -345,7 +467,7 @@ async function assertFeedbackReviewSurfaceIsPrivate(page, expectedSize) {
         throw new Error(`Feedback modal text leaks real values: ${leakedModalValues.join(', ')}`);
     }
 
-    await assertScreenshotPrivacyToggle(page);
+    await assertScreenshotPrivacyToggle(page, nativeScreenshot, sensitiveRegions);
 
     const backgroundState = await page.evaluate(() => {
         const modal = document.querySelector('.contextual-feedback-modal');
@@ -390,12 +512,14 @@ async function assertFeedbackReviewSurfaceIsPrivate(page, expectedSize) {
     }
 }
 
-async function assertScreenshotPrivacyToggle(page) {
+async function assertScreenshotPrivacyToggle(page, nativeScreenshot, sensitiveRegions = []) {
     const toggle = page.locator('[data-feedback-pseudonymized]');
     await toggle.waitFor({ timeout: 10000 });
     if (!await toggle.isChecked()) {
         await saveFailureEvidence(page, 'pseudonymization-toggle-off');
-        throw new Error('Pseudonymization toggle is not enabled by default.');
+        const privacySummary = await page.locator('[data-feedback-privacy-summary] [title]').getAttribute('title').catch(() => '');
+        const privacyText = await page.locator('[data-feedback-privacy-summary]').innerText().catch(() => '');
+        throw new Error(`Pseudonymization toggle is not enabled by default: ${privacyText} ${privacySummary}`);
     }
 
     const locale = await page.evaluate(() => document.documentElement.lang);
@@ -419,10 +543,107 @@ async function assertScreenshotPrivacyToggle(page) {
         throw new Error('Pseudonymization toggle did not switch the visible screenshot variant.');
     }
 
+    const fidelity = await compareScreenshots(page, nativeScreenshot, originalCanvas);
+    const dimensionsMatch = Math.abs(fidelity.nativeWidth - fidelity.actualWidth) <= 1
+        && Math.abs(fidelity.nativeHeight - fidelity.actualHeight) <= 1;
+    if (!dimensionsMatch || fidelity.changedPixelRatio > 0.02) {
+        await saveFailureEvidence(page, 'original-fidelity');
+        throw new Error(`Original screenshot differs from native capture: ${JSON.stringify(fidelity)}`);
+    }
+    console.log(`[compose-smoke-feedback-privacy] ${browserName} original/native changed pixels: ${(fidelity.changedPixelRatio * 100).toFixed(3)}%.`);
+
+    if (sensitiveRegions.length > 0) {
+        const outsideSensitiveRegions = await compareScreenshots(page, pseudoCanvas, originalCanvas, sensitiveRegions);
+        if (outsideSensitiveRegions.changedPixelRatio > 0.02) {
+            throw new Error(`Pseudonymization moved pixels outside measured sensitive regions: ${JSON.stringify(outsideSensitiveRegions)}`);
+        }
+        console.log(`[compose-smoke-feedback-privacy] ${browserName} pseudo/original changes outside sensitive regions: ${(outsideSensitiveRegions.changedPixelRatio * 100).toFixed(3)}%.`);
+    }
+
     await toggle.check();
     await page.waitForFunction((expectedText) => {
         return document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes(expectedText);
     }, expectedPrivacyText.pseudonymized, { timeout: 10000 });
+}
+
+async function compareScreenshots(page, expectedDataUrl, actualDataUrl, ignoredRegions = []) {
+    return page.evaluate(async ({ expectedDataUrl, actualDataUrl, ignoredRegions, pixelChannelTolerance }) => {
+        const loadImage = (src) => new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = src;
+        });
+        const [expected, actual] = await Promise.all([
+            loadImage(expectedDataUrl),
+            loadImage(actualDataUrl)
+        ]);
+        const width = Math.min(expected.width, actual.width);
+        const height = Math.min(expected.height, actual.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.drawImage(expected, 0, 0);
+        const expectedPixels = context.getImageData(0, 0, width, height).data;
+        context.clearRect(0, 0, width, height);
+        context.drawImage(actual, 0, 0);
+        const actualPixels = context.getImageData(0, 0, width, height).data;
+        let changedPixels = 0;
+        let comparedPixels = 0;
+
+        for (let index = 0; index < expectedPixels.length; index += 4) {
+            const pixelIndex = index / 4;
+            const x = pixelIndex % width;
+            const y = Math.floor(pixelIndex / width);
+            const isIgnored = ignoredRegions.some((region) => {
+                return x >= region.x - 2
+                    && x <= region.x + region.width + 2
+                    && y >= region.y - 2
+                    && y <= region.y + region.height + 2;
+            });
+            if (isIgnored) {
+                continue;
+            }
+            comparedPixels += 1;
+            const redDiff = Math.abs(expectedPixels[index] - actualPixels[index]);
+            const greenDiff = Math.abs(expectedPixels[index + 1] - actualPixels[index + 1]);
+            const blueDiff = Math.abs(expectedPixels[index + 2] - actualPixels[index + 2]);
+            const alphaDiff = Math.abs(expectedPixels[index + 3] - actualPixels[index + 3]);
+            if (Math.max(redDiff, greenDiff, blueDiff, alphaDiff) > pixelChannelTolerance) {
+                changedPixels += 1;
+            }
+        }
+
+        return {
+            nativeWidth: expected.width,
+            nativeHeight: expected.height,
+            actualWidth: actual.width,
+            actualHeight: actual.height,
+            changedPixelRatio: changedPixels / Math.max(1, comparedPixels)
+        };
+    }, { expectedDataUrl, actualDataUrl, ignoredRegions, pixelChannelTolerance });
+}
+
+async function readLiveDomState(page) {
+    return page.evaluate(() => {
+        const customerName = document.querySelector('#customerName');
+        const actions = document.querySelector('.customer-header-actions');
+        const customerRect = customerName?.getBoundingClientRect();
+        const actionsRect = actions?.getBoundingClientRect();
+
+        return {
+            customerName: customerName?.textContent,
+            customerHtml: customerName?.innerHTML,
+            customerRect: customerRect ? [customerRect.x, customerRect.y, customerRect.width, customerRect.height] : null,
+            actionsRect: actionsRect ? [actionsRect.x, actionsRect.y, actionsRect.width, actionsRect.height] : null,
+            searchName: document.querySelector('#searchName')?.value
+        };
+    });
+}
+
+function bufferToDataUrl(buffer) {
+    return `data:image/png;base64,${buffer.toString('base64')}`;
 }
 
 async function saveFailureEvidence(page, name) {

@@ -29,5 +29,21 @@ function testCropRoundsOutputDimensionsToCssPixels() {
     assert.equal(crop.targetHeight, 16);
 }
 
+function testCropIsClampedToMeasuredCanvas() {
+    assert.deepEqual(calculateCanvasCrop({
+        rect: { x: 80, y: 85, width: 40, height: 30 },
+        documentSize: { width: 100, height: 100 },
+        canvasSize: { width: 100, height: 100 }
+    }), {
+        sourceX: 80,
+        sourceY: 85,
+        sourceWidth: 20,
+        sourceHeight: 15,
+        targetWidth: 20,
+        targetHeight: 15
+    });
+}
+
 testCropUsesScrollOffsetAndCanvasScale();
 testCropRoundsOutputDimensionsToCssPixels();
+testCropIsClampedToMeasuredCanvas();

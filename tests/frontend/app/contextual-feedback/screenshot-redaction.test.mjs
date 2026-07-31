@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+    auditPseudonymizedClone,
     createPseudonymContext,
     pseudonymizeSelectedElement,
     redactScreenshotDom
@@ -306,12 +307,14 @@ function testSelectedElementDescriptionIsPseudonymized() {
         tag: 'h2',
         label: 'Mevr. M. Jansen',
         selector: '#customerName',
-        textSample: 'Mevr. M. Jansen'
+        textSample: null,
+        sensitivityType: 'name'
     }, context);
 
     assert.equal(safeElement.label, 'Sophie de Vries');
     assert.equal(safeElement.selector, '#customerName');
-    assert.equal(safeElement.textSample, 'Sophie de Vries');
+    assert.equal(safeElement.textSample, null);
+    assert.equal(safeElement.sensitivityType, undefined);
 }
 
 function testPatternFallbackCatchesUnmarkedSensitiveValues() {
@@ -369,7 +372,7 @@ function testRedactionSkipsFeedbackUi() {
     assert.equal(ignoredInput.value, 'feedback form value');
 }
 
-function testMediaMaskAndBackgroundsAreHiddenAndRestored() {
+function testPublicMediaAndBackgroundsArePreservedWhileExplicitMaskKeepsLayout() {
     const accountPanel = new FakeElement('section', { 'data-feedback-mask': '' });
     const profilePhoto = new FakeElement('img', {}, { style: { visibility: 'visible' } });
     const root = new FakeElement('main', {}, {
@@ -379,32 +382,33 @@ function testMediaMaskAndBackgroundsAreHiddenAndRestored() {
 
     const restore = redactScreenshotDom({ body: root });
 
-    assert.equal(root.style.backgroundImage, 'none');
-    assert.equal(accountPanel.style.visibility, 'hidden');
-    assert.equal(profilePhoto.style.visibility, 'hidden');
-    assert.equal(restore.privacySummary?.hiddenElements, undefined);
+    assert.equal(root.style.backgroundImage, 'url(customer-card.png)');
+    assert.equal(accountPanel.style.background, '#d9dde3');
+    assert.equal(accountPanel.style.color, 'transparent');
+    assert.equal(profilePhoto.style.visibility, 'visible');
 
     restore();
 
     assert.equal(root.style.backgroundImage, 'url(customer-card.png)');
-    assert.equal(accountPanel.style.visibility, '');
+    assert.equal(accountPanel.style.background, '');
+    assert.equal(accountPanel.style.color, '');
     assert.equal(profilePhoto.style.visibility, 'visible');
 }
 
-function testPrivacySummaryCountsPseudoValuesAndHiddenElements() {
+function testPrivacySummaryCountsPseudoValuesAndExplicitMasks() {
     const context = createPseudonymContext();
     const customerName = new FakeText('Jane Sensitive');
     const nameElement = new FakeElement('h2', { 'data-feedback-sensitive': 'name' }, {
         children: [customerName]
     });
-    const profilePhoto = new FakeElement('img');
+    const profilePhoto = new FakeElement('img', { 'data-feedback-mask': '' });
     const root = new FakeElement('main', {}, { children: [nameElement, profilePhoto] });
 
     const restore = redactScreenshotDom({ body: root }, { context });
 
     assert.equal(context.privacySummary.pseudoValues, 1);
-    assert.equal(context.privacySummary.hiddenElements, 1);
-    assert.deepEqual(Array.from(context.privacySummary.hiddenElementTypes), ['images']);
+    assert.equal(context.privacySummary.maskedElements, 1);
+    assert.deepEqual(Array.from(context.privacySummary.maskedElementTypes), ['images']);
 
     restore();
 }
@@ -461,7 +465,7 @@ function testRedactionInstallsAndRemovesTemporaryStylesheet() {
     assert.equal(stylesheets.length, 1);
     assert.equal(stylesheets[0].dataset.feedbackIgnore, 'true');
     assert.match(stylesheets[0].textContent, /visibility: hidden/);
-    assert.doesNotMatch(stylesheets[0].textContent, /color: transparent/);
+    assert.match(stylesheets[0].textContent, /color: transparent/);
 
     restore();
 
@@ -478,7 +482,41 @@ testEmptyFieldsStayEmptyAndAddressShapeIsPreserved();
 testSelectedElementDescriptionIsPseudonymized();
 testPatternFallbackCatchesUnmarkedSensitiveValues();
 testRedactionSkipsFeedbackUi();
-testMediaMaskAndBackgroundsAreHiddenAndRestored();
-testPrivacySummaryCountsPseudoValuesAndHiddenElements();
+function testIdentifierInferenceCoversCallerAndRemarksNames() {
+    const callerName = new FakeText('Maria Jansen');
+    const remarksName = new FakeText('Maria Jansen');
+    const root = new FakeElement('main', {}, {
+        children: [
+            new FakeElement('span', { id: 'queueNextCallerName' }, { children: [callerName] }),
+            new FakeElement('strong', { id: 'editRemarksCustomerName' }, { children: [remarksName] })
+        ]
+    });
+
+    const restore = redactScreenshotDom({ body: root });
+
+    assert.equal(callerName.nodeValue, 'Sophie de Vries');
+    assert.equal(remarksName.nodeValue, 'Sophie de Vries');
+
+    restore();
+}
+
+function testAuditFailsClosedWhenARecordedSourceValueRemains() {
+    const leakedValue = new FakeText('Maria Jansen');
+    const root = new FakeElement('main', {}, {
+        children: [new FakeElement('span', { 'data-feedback-sensitive': 'name' }, { children: [leakedValue] })]
+    });
+    const context = createPseudonymContext();
+    context.unresolvedSourceValues.add('Maria Jansen');
+
+    const summary = auditPseudonymizedClone(root, context);
+
+    assert.equal(summary.unresolvedValues, 1);
+    assert.equal(summary.verified, false);
+}
+
+testPublicMediaAndBackgroundsArePreservedWhileExplicitMaskKeepsLayout();
+testPrivacySummaryCountsPseudoValuesAndExplicitMasks();
 testFreeTextKeepsDomainContextAndReplacesPii();
 testRedactionInstallsAndRemovesTemporaryStylesheet();
+testIdentifierInferenceCoversCallerAndRemarksNames();
+testAuditFailsClosedWhenARecordedSourceValueRemains();
