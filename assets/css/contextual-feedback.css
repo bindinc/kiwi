@@ -398,6 +398,28 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     line-height: 1.3;
 }
 
+.contextual-feedback-privacy-copy .contextual-feedback-privacy-summary {
+    margin-top: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.contextual-feedback-privacy-summary > span {
+    width: fit-content;
+    padding: 2px 6px;
+    border: 1px solid #bbf7d0;
+    border-radius: 999px;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.contextual-feedback-privacy-summary > span.is-warning {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #9a3412;
+}
+
 .contextual-feedback-screenshot-toggle {
     position: relative;
     display: inline-flex;
@@ -458,6 +480,25 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-screenshot-toggle input:focus-visible + .contextual-feedback-switch-track {
     outline: 3px solid #fbbf24;
     outline-offset: 2px;
+}
+
+.contextual-feedback-screenshot-toggle:has(input:disabled) {
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.contextual-feedback-screenshot-toggle input:disabled {
+    cursor: not-allowed;
+}
+
+.contextual-feedback-screenshot-toggle input:disabled + .contextual-feedback-switch-track {
+    background: #cbd5e1;
+}
+
+.contextual-feedback-privacy-summary > span.is-critical {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
 }
 
 .contextual-feedback-canvas-wrap canvas {

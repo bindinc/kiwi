@@ -744,7 +744,9 @@ const en = {
         "picker": {
             "selectTarget": "Select an element or drag a screenshot area",
             "minimumArea": "Select an area of at least {size} × {size} px",
-            "customArea": "Custom screenshot area"
+            "customArea": "Custom screenshot area",
+            "privateRegion": "Selected private region",
+            "selectedElement": "Selected element"
         },
         "tools": {
             "hand": "Hand",
@@ -764,6 +766,10 @@ const en = {
             "standardTeamsDestination": "Sent to the standard Teams workflow",
             "restrictedTeamsDestination": "Sent to the restricted Teams workflow",
             "usePseudoData": "Use pseudo data",
+            "sendPseudonymized": "Send pseudo-data screenshot to Teams",
+            "sendOriginal": "Send original-data screenshot to restricted Teams workflow",
+            "sendOriginalRequired": "Pseudonymization requires review; send original to restricted Teams workflow",
+            "manualRedaction": "Manual redaction available",
             "comment": "Comment",
             "required": "required",
             "commentPlaceholder": "What did you expect, and what happened?",
@@ -793,11 +799,14 @@ const en = {
             "captureFailed": "Could not capture feedback."
         },
         "privacy": {
-            "noHiddenRegions": "No hidden regions",
-            "someMediaHidden": "Some media hidden",
-            "hiddenTooltip": "{count} hidden: {types}. These are hidden because they cannot be pseudonymized reliably.",
-            "unknownHiddenType": "media or marked private regions",
-            "hiddenTypes": {
+            "verified": "Pseudonymization verified",
+            "verificationFailed": "Pseudonymization could not be verified. Recapture or use the restricted original-data workflow.",
+            "verificationFailedDetails": "{count} sensitive source value(s) remain unresolved.",
+            "someMediaMasked": "Sensitive media masked",
+            "maskedTooltip": "{count} masked: {types}.",
+            "resourceFailures": "{count} resource(s) could not be rendered faithfully",
+            "unknownMaskedType": "marked private regions",
+            "maskedTypes": {
                 "markedPrivateRegions": "marked private regions",
                 "images": "images",
                 "embeddedFrames": "embedded frames",

@@ -50,7 +50,7 @@
                                 aria-haspopup="true"
                                 aria-controls="agentStatusMenu"
                                 title="Status: Beschikbaar" data-i18n-title="indexHtml.title.status_beschikbaar_7cd46110">
-                                <div class="agent-avatar">
+                                <div class="agent-avatar" data-feedback-mask>
                                     {% if user_profile_image %}
                                         <img src="{{ user_profile_image }}" alt="{{ user_full_name }}">
                                     {% else %}
@@ -142,7 +142,7 @@
                         <div class="queue-next-caller">
                             <span class="queue-icon">👤</span>
                             <span class="queue-label" data-i18n="indexHtml.text.volgende_beller_d50d542b">Volgende beller:</span>
-                            <span id="queueNextCallerName" class="queue-next-name" data-i18n="indexHtml.text.jan_jansen_b34aeb2f">Jan Jansen</span>
+                            <span id="queueNextCallerName" class="queue-next-name" data-feedback-sensitive="name" data-i18n="indexHtml.text.jan_jansen_b34aeb2f">Jan Jansen</span>
                         </div>
                         
                         <!-- Service nummer -->
@@ -192,7 +192,7 @@
                         </div>
                         <div class="session-caller">
                             <span data-i18n="indexHtml.text.gesprek_met_36e04f58">Gesprek met: </span>
-                            <span id="sessionCallerName" data-i18n="indexHtml.text.anonieme_beller_0c3daeaf">Anonieme Beller</span>
+                            <span id="sessionCallerName" data-feedback-sensitive="name" data-i18n="indexHtml.text.anonieme_beller_0c3daeaf">Anonieme Beller</span>
                         </div>
                         <div class="session-duration">
                             <span class="duration-icon">⏱️</span>
@@ -1410,7 +1410,7 @@
                 <button class="modal-close" type="button" data-action="close-edit-delivery-remarks-modal" data-i18n="indexHtml.text.times_87977e46">&times;</button>
             </div>
             <div class="modal-body">
-                <p>Klant: <strong id="editRemarksCustomerName"></strong></p>
+                <p>Klant: <strong id="editRemarksCustomerName" data-feedback-sensitive="name"></strong></p>
                 
                 <!-- Quick selection buttons -->
                 <div class="delivery-remarks-shortcuts">
@@ -1487,7 +1487,7 @@
                     </div>
                     <div class="info-row">
                         <span data-i18n="indexHtml.text.klant_347973e2">👤 Klant:</span>
-                        <span id="dispCustomerName">-</span>
+                        <span id="dispCustomerName" data-feedback-sensitive="name">-</span>
                     </div>
                 </div>
                 

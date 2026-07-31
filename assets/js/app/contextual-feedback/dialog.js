@@ -9,6 +9,14 @@ const TOOLS = [
     ['text', 'T'],
     ['blur', '■']
 ];
+const MASKED_TYPE_TRANSLATION_KEYS = {
+    'marked private regions': 'markedPrivateRegions',
+    images: 'images',
+    'embedded frames': 'embeddedFrames',
+    videos: 'videos',
+    'canvas content': 'canvasContent',
+    media: 'media'
+};
 
 export async function openFeedbackDialog({
     documentRef = document,
@@ -38,6 +46,7 @@ export async function openFeedbackDialog({
     const selectionSummary = modal.querySelector('[data-feedback-selection-summary]');
     const privacyStatus = modal.querySelector('[data-feedback-privacy-status]');
     const privacyDestination = modal.querySelector('[data-feedback-privacy-destination]');
+    const privacySummary = modal.querySelector('[data-feedback-privacy-summary]');
     const feedbackNote = modal.querySelector('[data-feedback-note]');
     let screenshot = null;
     let annotationCanvas = null;
@@ -68,7 +77,9 @@ export async function openFeedbackDialog({
             return;
         }
 
-        const usePseudonymizedScreenshot = event.target.checked;
+        const pseudonymizedScreenshotIsSafe = screenshot.privacySummary?.verified === true;
+        const usePseudonymizedScreenshot = event.target.checked && pseudonymizedScreenshotIsSafe;
+        event.target.checked = usePseudonymizedScreenshot;
         submitButton.disabled = true;
         statusBox.textContent = feedbackText('dialog.switchingScreenshot');
         try {
@@ -148,11 +159,15 @@ export async function openFeedbackDialog({
     async function installScreenshot(nextScreenshot) {
         annotationCanvas?.destroy();
         screenshot = nextScreenshot;
-        pseudonymizationCheckbox.checked = true;
-        updatePrivacyStatus(true);
+        const pseudonymizedScreenshotIsSafe = screenshot.privacySummary?.verified === true;
+        pseudonymizationCheckbox.checked = pseudonymizedScreenshotIsSafe;
+        pseudonymizationCheckbox.disabled = !pseudonymizedScreenshotIsSafe;
+        updatePrivacyStatus(pseudonymizedScreenshotIsSafe);
         annotationCanvas = new AnnotationCanvas({
             canvas,
-            screenshotBlob: screenshot.screenshots.pseudonymized.blob,
+            screenshotBlob: pseudonymizedScreenshotIsSafe
+                ? screenshot.screenshots.pseudonymized.blob
+                : screenshot.screenshots.original.blob,
             viewport: canvasViewport
         });
         updateScreenshotState();
@@ -164,6 +179,7 @@ export async function openFeedbackDialog({
         annotationCanvas = null;
         screenshot = null;
         pseudonymizationCheckbox.checked = true;
+        pseudonymizationCheckbox.disabled = false;
         updatePrivacyStatus(true);
         updateScreenshotState();
         screenshotButton.focus();
@@ -182,6 +198,9 @@ export async function openFeedbackDialog({
         selectionSummary.innerHTML = hasScreenshot
             ? formatSelectionSummary(screenshot.selectedElement)
             : feedbackText('dialog.noScreenshot');
+        privacySummary.innerHTML = hasScreenshot
+            ? formatPrivacySummary(screenshot.privacySummary)
+            : '';
         feedbackNote.textContent = hasScreenshot
             ? feedbackText('dialog.noteWithScreenshot')
             : feedbackText('dialog.noteWithoutScreenshot');
@@ -216,7 +235,7 @@ export async function openFeedbackDialog({
     }
 }
 
-async function buildSubmission({ annotationCanvas, screenshot, pseudonymizationCheckbox }) {
+export async function buildSubmission({ annotationCanvas, screenshot, pseudonymizationCheckbox }) {
     if (!annotationCanvas || !screenshot) {
         return {
             selectionKind: 'none',
@@ -230,10 +249,12 @@ async function buildSubmission({ annotationCanvas, screenshot, pseudonymizationC
 
     const pseudonymizedBlob = await annotationCanvas.exportFinalPngBlobFor(screenshot.screenshots.pseudonymized.blob);
     const originalBlob = await annotationCanvas.exportFinalPngBlobFor(screenshot.screenshots.original.blob);
+    const usePseudonymizedScreenshot = screenshot.privacySummary?.verified === true
+        && pseudonymizationCheckbox.checked;
 
     return {
         selectionKind: screenshot.selectionKind,
-        teamsScreenshotVariant: pseudonymizationCheckbox.checked ? 'pseudonymized' : 'original',
+        teamsScreenshotVariant: usePseudonymizedScreenshot ? 'pseudonymized' : 'original',
         selectedElement: screenshot.selectedElement,
         selectedRect: screenshot.selectedRect,
         annotations: annotationCanvas.getAnnotations(),
@@ -274,12 +295,13 @@ export function buildFeedbackDialogHtml() {
                                 </svg>
                             </span>
                             <span class="contextual-feedback-privacy-copy">
-                                <strong data-feedback-visible-privacy>${escapeHtml(feedbackText('dialog.pseudoDataSelected'))}</strong>
+                                <strong data-feedback-visible-privacy aria-live="polite">${escapeHtml(feedbackText('dialog.pseudoDataSelected'))}</strong>
                                 <span data-feedback-privacy-destination>${escapeHtml(feedbackText('dialog.standardTeamsDestination'))}</span>
+                                <span id="contextualFeedbackPrivacyDetails" class="contextual-feedback-privacy-summary" data-feedback-privacy-summary aria-live="polite"></span>
                             </span>
                         </div>
                         <label class="contextual-feedback-screenshot-toggle">
-                            <input type="checkbox" data-feedback-pseudonymized checked>
+                            <input type="checkbox" data-feedback-pseudonymized aria-describedby="contextualFeedbackPrivacyDetails" checked>
                             <span class="contextual-feedback-switch-track" aria-hidden="true"></span>
                             <span>${escapeHtml(feedbackText('dialog.usePseudoData'))}</span>
                         </label>
@@ -335,6 +357,43 @@ function formatSelectionSummary(selectedElement) {
     }
 
     return `${escapeHtml(selectedElement.label)} <span>${escapeHtml(selectedElement.selector)}</span>`;
+}
+
+function formatPrivacySummary(privacySummary = {}) {
+    if (privacySummary.verified !== true) {
+        const unresolvedValues = Number(privacySummary.unresolvedValues || 0);
+        const details = feedbackText('privacy.verificationFailedDetails', { count: unresolvedValues });
+        return `<span class="is-critical" title="${escapeHtml(details)}">${escapeHtml(feedbackText('privacy.verificationFailed'))}</span>`;
+    }
+
+    const messages = [];
+    const maskedElements = Number(privacySummary.maskedElements || 0);
+    if (maskedElements > 0) {
+        const maskedTypes = formatMaskedElementTypes(privacySummary.maskedElementTypes);
+        const tooltip = feedbackText('privacy.maskedTooltip', {
+            count: maskedElements,
+            types: maskedTypes
+        });
+        messages.push(`<span class="is-warning" title="${escapeHtml(tooltip)}">${escapeHtml(feedbackText('privacy.someMediaMasked'))}</span>`);
+    }
+
+    const resourceFailures = Number(privacySummary.resourceFailures || 0);
+    if (resourceFailures > 0) {
+        messages.push(`<span class="is-warning">${escapeHtml(feedbackText('privacy.resourceFailures', { count: resourceFailures }))}</span>`);
+    }
+
+    return messages.join('') || `<span class="is-verified">${escapeHtml(feedbackText('privacy.verified'))}</span>`;
+}
+
+function formatMaskedElementTypes(maskedElementTypes) {
+    if (!Array.isArray(maskedElementTypes) || maskedElementTypes.length === 0) {
+        return feedbackText('privacy.unknownMaskedType');
+    }
+
+    return maskedElementTypes
+        .map((type) => MASKED_TYPE_TRANSLATION_KEYS[type] || 'media')
+        .map((key) => feedbackText(`privacy.maskedTypes.${key}`))
+        .join(', ');
 }
 
 function escapeHtml(value) {
