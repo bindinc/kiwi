@@ -9,14 +9,6 @@ const TOOLS = [
     ['text', 'T'],
     ['blur', '■']
 ];
-const HIDDEN_TYPE_TRANSLATION_KEYS = {
-    'marked private regions': 'markedPrivateRegions',
-    images: 'images',
-    'embedded frames': 'embeddedFrames',
-    videos: 'videos',
-    'canvas content': 'canvasContent',
-    media: 'media'
-};
 
 export async function openFeedbackDialog({
     documentRef = document,
@@ -44,7 +36,8 @@ export async function openFeedbackDialog({
     const clearButton = modal.querySelector('[data-feedback-clear]');
     const pseudonymizationCheckbox = modal.querySelector('[data-feedback-pseudonymized]');
     const selectionSummary = modal.querySelector('[data-feedback-selection-summary]');
-    const privacySummary = modal.querySelector('[data-feedback-privacy-summary]');
+    const privacyStatus = modal.querySelector('[data-feedback-privacy-status]');
+    const privacyDestination = modal.querySelector('[data-feedback-privacy-destination]');
     const feedbackNote = modal.querySelector('[data-feedback-note]');
     let screenshot = null;
     let annotationCanvas = null;
@@ -83,9 +76,7 @@ export async function openFeedbackDialog({
                 ? screenshot.screenshots.pseudonymized.blob
                 : screenshot.screenshots.original.blob;
             await annotationCanvas.setScreenshotBlob(screenshotBlob);
-            modal.querySelector('[data-feedback-visible-privacy]').textContent = usePseudonymizedScreenshot
-                ? feedbackText('dialog.sendPseudonymized')
-                : feedbackText('dialog.sendOriginal');
+            updatePrivacyStatus(usePseudonymizedScreenshot);
         } finally {
             submitButton.disabled = false;
             statusBox.textContent = '';
@@ -158,7 +149,7 @@ export async function openFeedbackDialog({
         annotationCanvas?.destroy();
         screenshot = nextScreenshot;
         pseudonymizationCheckbox.checked = true;
-        modal.querySelector('[data-feedback-visible-privacy]').textContent = feedbackText('dialog.sendPseudonymized');
+        updatePrivacyStatus(true);
         annotationCanvas = new AnnotationCanvas({
             canvas,
             screenshotBlob: screenshot.screenshots.pseudonymized.blob,
@@ -173,6 +164,7 @@ export async function openFeedbackDialog({
         annotationCanvas = null;
         screenshot = null;
         pseudonymizationCheckbox.checked = true;
+        updatePrivacyStatus(true);
         updateScreenshotState();
         screenshotButton.focus();
     }
@@ -190,12 +182,19 @@ export async function openFeedbackDialog({
         selectionSummary.innerHTML = hasScreenshot
             ? formatSelectionSummary(screenshot.selectedElement)
             : feedbackText('dialog.noScreenshot');
-        privacySummary.innerHTML = hasScreenshot
-            ? formatPrivacySummary(screenshot.privacySummary)
-            : '';
         feedbackNote.textContent = hasScreenshot
             ? feedbackText('dialog.noteWithScreenshot')
             : feedbackText('dialog.noteWithoutScreenshot');
+    }
+
+    function updatePrivacyStatus(usePseudonymizedScreenshot) {
+        privacyStatus.classList.toggle('is-original', !usePseudonymizedScreenshot);
+        modal.querySelector('[data-feedback-visible-privacy]').textContent = usePseudonymizedScreenshot
+            ? feedbackText('dialog.pseudoDataSelected')
+            : feedbackText('dialog.originalDataSelected');
+        privacyDestination.textContent = usePseudonymizedScreenshot
+            ? feedbackText('dialog.standardTeamsDestination')
+            : feedbackText('dialog.restrictedTeamsDestination');
     }
 
     function suspendDialogForCapture() {
@@ -266,13 +265,24 @@ export function buildFeedbackDialogHtml() {
             <div class="contextual-feedback-workspace" data-feedback-workspace hidden>
                 <div class="contextual-feedback-toolbar">${toolButtons}</div>
                 <div class="contextual-feedback-canvas-wrap" data-feedback-canvas-wrap>
-                    <div class="contextual-feedback-privacy-status" aria-label="${escapeHtml(feedbackText('dialog.screenshotPrivacyStatus'))}">
+                    <div class="contextual-feedback-privacy-status" data-feedback-privacy-status aria-label="${escapeHtml(feedbackText('dialog.screenshotPrivacyStatus'))}">
+                        <div class="contextual-feedback-privacy-primary">
+                            <span class="contextual-feedback-privacy-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 3 5 6v5c0 4.5 2.7 7.7 7 10 4.3-2.3 7-5.5 7-10V6l-7-3Z"></path>
+                                    <path d="m9 12 2 2 4-4"></path>
+                                </svg>
+                            </span>
+                            <span class="contextual-feedback-privacy-copy">
+                                <strong data-feedback-visible-privacy>${escapeHtml(feedbackText('dialog.pseudoDataSelected'))}</strong>
+                                <span data-feedback-privacy-destination>${escapeHtml(feedbackText('dialog.standardTeamsDestination'))}</span>
+                            </span>
+                        </div>
                         <label class="contextual-feedback-screenshot-toggle">
                             <input type="checkbox" data-feedback-pseudonymized checked>
-                            <span data-feedback-visible-privacy>${escapeHtml(feedbackText('dialog.sendPseudonymized'))}</span>
+                            <span class="contextual-feedback-switch-track" aria-hidden="true"></span>
+                            <span>${escapeHtml(feedbackText('dialog.usePseudoData'))}</span>
                         </label>
-                        <span data-feedback-privacy-summary></span>
-                        <span>${escapeHtml(feedbackText('dialog.manualRedaction'))}</span>
                     </div>
                     <canvas data-feedback-canvas></canvas>
                 </div>
@@ -325,32 +335,6 @@ function formatSelectionSummary(selectedElement) {
     }
 
     return `${escapeHtml(selectedElement.label)} <span>${escapeHtml(selectedElement.selector)}</span>`;
-}
-
-function formatPrivacySummary(privacySummary = {}) {
-    const hiddenElements = Number(privacySummary.hiddenElements || 0);
-    if (hiddenElements < 1) {
-        return feedbackText('privacy.noHiddenRegions');
-    }
-
-    const hiddenTypes = formatHiddenElementTypes(privacySummary.hiddenElementTypes);
-    const tooltip = feedbackText('privacy.hiddenTooltip', {
-        count: hiddenElements,
-        types: hiddenTypes
-    });
-
-    return `<span class="is-warning" title="${escapeHtml(tooltip)}">${escapeHtml(feedbackText('privacy.someMediaHidden'))}</span>`;
-}
-
-function formatHiddenElementTypes(hiddenElementTypes) {
-    if (!Array.isArray(hiddenElementTypes) || hiddenElementTypes.length === 0) {
-        return feedbackText('privacy.unknownHiddenType');
-    }
-
-    return hiddenElementTypes
-        .map((type) => HIDDEN_TYPE_TRANSLATION_KEYS[type] || 'media')
-        .map((key) => feedbackText(`privacy.hiddenTypes.${key}`))
-        .join(', ');
 }
 
 function escapeHtml(value) {

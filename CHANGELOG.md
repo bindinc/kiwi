@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Replace the contextual feedback privacy bubbles with a clear control bar that separates the selected screenshot variant from its Teams destination.
+
 ## [v1.0.20]
 
 - Add Dutch and English form-first contextual feedback with optional screenshots, hide the feedback dialog during element or 10 × 10 pixel minimum area capture, and send text-only reports to Teams without screenshot details.

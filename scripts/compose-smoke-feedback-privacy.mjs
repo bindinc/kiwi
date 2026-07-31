@@ -401,17 +401,32 @@ async function assertScreenshotPrivacyToggle(page) {
     const locale = await page.evaluate(() => document.documentElement.lang);
     const expectedPrivacyText = locale === 'nl'
         ? {
-            original: 'Screenshot met originele gegevens naar de afgeschermde Teams-workflow versturen',
-            pseudonymized: 'Screenshot met pseudogegevens naar Teams versturen'
+            original: {
+                state: 'Originele gegevens geselecteerd',
+                destination: 'Wordt naar de afgeschermde Teams-workflow verstuurd'
+            },
+            pseudonymized: {
+                state: 'Pseudogegevens geselecteerd',
+                destination: 'Wordt naar de reguliere Teams-workflow verstuurd'
+            }
         }
         : {
-            original: 'Send original-data screenshot to restricted Teams workflow',
-            pseudonymized: 'Send pseudo-data screenshot to Teams'
+            original: {
+                state: 'Original data selected',
+                destination: 'Sent to the restricted Teams workflow'
+            },
+            pseudonymized: {
+                state: 'Pseudo data selected',
+                destination: 'Sent to the standard Teams workflow'
+            }
         };
     const pseudoCanvas = await page.locator('.contextual-feedback-modal canvas').evaluate((canvas) => canvas.toDataURL('image/png'));
     await toggle.uncheck();
     await page.waitForFunction((expectedText) => {
-        return document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes(expectedText);
+        const state = document.querySelector('[data-feedback-visible-privacy]')?.textContent;
+        const destination = document.querySelector('[data-feedback-privacy-destination]')?.textContent;
+
+        return state?.includes(expectedText.state) && destination?.includes(expectedText.destination);
     }, expectedPrivacyText.original, { timeout: 10000 });
     const originalCanvas = await page.locator('.contextual-feedback-modal canvas').evaluate((canvas) => canvas.toDataURL('image/png'));
     if (pseudoCanvas === originalCanvas) {
@@ -421,7 +436,10 @@ async function assertScreenshotPrivacyToggle(page) {
 
     await toggle.check();
     await page.waitForFunction((expectedText) => {
-        return document.querySelector('[data-feedback-visible-privacy]')?.textContent?.includes(expectedText);
+        const state = document.querySelector('[data-feedback-visible-privacy]')?.textContent;
+        const destination = document.querySelector('[data-feedback-privacy-destination]')?.textContent;
+
+        return state?.includes(expectedText.state) && destination?.includes(expectedText.destination);
     }, expectedPrivacyText.pseudonymized, { timeout: 10000 });
 }
 
