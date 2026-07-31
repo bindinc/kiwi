@@ -802,18 +802,7 @@ const nl = {
             "verified": "Pseudonimisering gecontroleerd",
             "verificationFailed": "Pseudonimisering kon niet worden gecontroleerd. Maak de screenshot opnieuw of gebruik de afgeschermde workflow met originele gegevens.",
             "verificationFailedDetails": "{count} gevoelige bronwaarde(n) zijn niet opgelost.",
-            "someMediaMasked": "Gevoelige media gemaskeerd",
-            "maskedTooltip": "{count} gemaskeerd: {types}.",
-            "resourceFailures": "{count} bron(nen) konden niet betrouwbaar worden weergegeven",
-            "unknownMaskedType": "gemarkeerde privégebieden",
-            "maskedTypes": {
-                "markedPrivateRegions": "gemarkeerde privégebieden",
-                "images": "afbeeldingen",
-                "embeddedFrames": "ingesloten frames",
-                "videos": "video's",
-                "canvasContent": "canvasinhoud",
-                "media": "media"
-            }
+            "resourceFailures": "{count} bron(nen) konden niet betrouwbaar worden weergegeven"
         },
         "annotation": {
             "labelPrompt": "Label",

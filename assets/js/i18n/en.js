@@ -802,18 +802,7 @@ const en = {
             "verified": "Pseudonymization verified",
             "verificationFailed": "Pseudonymization could not be verified. Recapture or use the restricted original-data workflow.",
             "verificationFailedDetails": "{count} sensitive source value(s) remain unresolved.",
-            "someMediaMasked": "Sensitive media masked",
-            "maskedTooltip": "{count} masked: {types}.",
-            "resourceFailures": "{count} resource(s) could not be rendered faithfully",
-            "unknownMaskedType": "marked private regions",
-            "maskedTypes": {
-                "markedPrivateRegions": "marked private regions",
-                "images": "images",
-                "embeddedFrames": "embedded frames",
-                "videos": "videos",
-                "canvasContent": "canvas content",
-                "media": "media"
-            }
+            "resourceFailures": "{count} resource(s) could not be rendered faithfully"
         },
         "annotation": {
             "labelPrompt": "Label",
