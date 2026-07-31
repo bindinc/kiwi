@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { buildSubmission } from '../../../../assets/js/app/contextual-feedback/dialog.js';
+import { buildSubmission, formatPrivacySummary } from '../../../../assets/js/app/contextual-feedback/dialog.js';
+import { getLocale, setLocale } from '../../../../assets/js/i18n/index.js';
 
 const annotationCanvas = {
     async exportFinalPngBlobFor(blob) {
@@ -32,6 +33,37 @@ async function testVerifiedPseudonymizationUsesRegularWorkflow() {
     assert.equal(submission.teamsScreenshotVariant, 'pseudonymized');
 }
 
+function testMaskedMediaDoesNotCreateVisibleNotice() {
+    const previousLocale = getLocale();
+
+    try {
+        setLocale('nl');
+        const summary = formatPrivacySummary({
+            verified: true,
+            maskedElements: 2,
+            maskedElementTypes: ['images']
+        });
+
+        assert.equal(summary, '<span class="is-verified">Pseudonimisering gecontroleerd</span>');
+        assert.doesNotMatch(summary, /Gevoelige media gemaskeerd/);
+    } finally {
+        setLocale(previousLocale);
+    }
+}
+
+function testResourceFailureWarningRemainsVisible() {
+    const previousLocale = getLocale();
+
+    try {
+        setLocale('en');
+        const summary = formatPrivacySummary({ verified: true, resourceFailures: 1 });
+
+        assert.match(summary, /1 resource\(s\) could not be rendered faithfully/);
+    } finally {
+        setLocale(previousLocale);
+    }
+}
+
 function createScreenshot(privacySummary) {
     return {
         selectionKind: 'element',
@@ -47,3 +79,5 @@ function createScreenshot(privacySummary) {
 
 await testUnverifiedPseudonymizationFailsClosedToOriginalWorkflow();
 await testVerifiedPseudonymizationUsesRegularWorkflow();
+testMaskedMediaDoesNotCreateVisibleNotice();
+testResourceFailureWarningRemainsVisible();

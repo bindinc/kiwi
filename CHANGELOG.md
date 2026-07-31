@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Stop showing the redundant sensitive-media-masked notice in the contextual feedback privacy control while retaining media masking.
 - Replace the contextual feedback privacy bubbles with a clear control bar that separates the selected screenshot variant from its Teams destination.
 
 ### Fixed

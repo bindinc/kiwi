@@ -9,14 +9,6 @@ const TOOLS = [
     ['text', 'T'],
     ['blur', '■']
 ];
-const MASKED_TYPE_TRANSLATION_KEYS = {
-    'marked private regions': 'markedPrivateRegions',
-    images: 'images',
-    'embedded frames': 'embeddedFrames',
-    videos: 'videos',
-    'canvas content': 'canvasContent',
-    media: 'media'
-};
 
 export async function openFeedbackDialog({
     documentRef = document,
@@ -359,41 +351,19 @@ function formatSelectionSummary(selectedElement) {
     return `${escapeHtml(selectedElement.label)} <span>${escapeHtml(selectedElement.selector)}</span>`;
 }
 
-function formatPrivacySummary(privacySummary = {}) {
+export function formatPrivacySummary(privacySummary = {}) {
     if (privacySummary.verified !== true) {
         const unresolvedValues = Number(privacySummary.unresolvedValues || 0);
         const details = feedbackText('privacy.verificationFailedDetails', { count: unresolvedValues });
         return `<span class="is-critical" title="${escapeHtml(details)}">${escapeHtml(feedbackText('privacy.verificationFailed'))}</span>`;
     }
 
-    const messages = [];
-    const maskedElements = Number(privacySummary.maskedElements || 0);
-    if (maskedElements > 0) {
-        const maskedTypes = formatMaskedElementTypes(privacySummary.maskedElementTypes);
-        const tooltip = feedbackText('privacy.maskedTooltip', {
-            count: maskedElements,
-            types: maskedTypes
-        });
-        messages.push(`<span class="is-warning" title="${escapeHtml(tooltip)}">${escapeHtml(feedbackText('privacy.someMediaMasked'))}</span>`);
-    }
-
     const resourceFailures = Number(privacySummary.resourceFailures || 0);
     if (resourceFailures > 0) {
-        messages.push(`<span class="is-warning">${escapeHtml(feedbackText('privacy.resourceFailures', { count: resourceFailures }))}</span>`);
+        return `<span class="is-warning">${escapeHtml(feedbackText('privacy.resourceFailures', { count: resourceFailures }))}</span>`;
     }
 
-    return messages.join('') || `<span class="is-verified">${escapeHtml(feedbackText('privacy.verified'))}</span>`;
-}
-
-function formatMaskedElementTypes(maskedElementTypes) {
-    if (!Array.isArray(maskedElementTypes) || maskedElementTypes.length === 0) {
-        return feedbackText('privacy.unknownMaskedType');
-    }
-
-    return maskedElementTypes
-        .map((type) => MASKED_TYPE_TRANSLATION_KEYS[type] || 'media')
-        .map((key) => feedbackText(`privacy.maskedTypes.${key}`))
-        .join(', ');
+    return `<span class="is-verified">${escapeHtml(feedbackText('privacy.verified'))}</span>`;
 }
 
 function escapeHtml(value) {
