@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+### Fixed
+- Preserve contextual-feedback screenshot geometry and public media by rendering original and pseudonymized variants from detached clones, while masking explicitly private media and failing closed when pseudonymization cannot be verified.
+
 ## [v1.0.20]
 
 - Add Dutch and English form-first contextual feedback with optional screenshots, hide the feedback dialog during element or 10 × 10 pixel minimum area capture, and send text-only reports to Teams without screenshot details.
