@@ -33,22 +33,14 @@ async function testVerifiedPseudonymizationUsesRegularWorkflow() {
     assert.equal(submission.teamsScreenshotVariant, 'pseudonymized');
 }
 
-function testMaskedMediaDoesNotCreateVisibleNotice() {
-    const previousLocale = getLocale();
+function testSuccessfulPrivacySummaryDoesNotCreateVisibleNotice() {
+    const summary = formatPrivacySummary({
+        verified: true,
+        maskedElements: 2,
+        maskedElementTypes: ['images']
+    });
 
-    try {
-        setLocale('nl');
-        const summary = formatPrivacySummary({
-            verified: true,
-            maskedElements: 2,
-            maskedElementTypes: ['images']
-        });
-
-        assert.equal(summary, '<span class="is-verified">Pseudonimisering gecontroleerd</span>');
-        assert.doesNotMatch(summary, /Gevoelige media gemaskeerd/);
-    } finally {
-        setLocale(previousLocale);
-    }
+    assert.equal(summary, '');
 }
 
 function testResourceFailureWarningRemainsVisible() {
@@ -79,5 +71,5 @@ function createScreenshot(privacySummary) {
 
 await testUnverifiedPseudonymizationFailsClosedToOriginalWorkflow();
 await testVerifiedPseudonymizationUsesRegularWorkflow();
-testMaskedMediaDoesNotCreateVisibleNotice();
+testSuccessfulPrivacySummaryDoesNotCreateVisibleNotice();
 testResourceFailureWarningRemainsVisible();

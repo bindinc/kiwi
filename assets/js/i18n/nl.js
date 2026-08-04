@@ -799,7 +799,6 @@ const nl = {
             "captureFailed": "Screenshot kon niet worden gemaakt."
         },
         "privacy": {
-            "verified": "Pseudonimisering gecontroleerd",
             "verificationFailed": "Pseudonimisering kon niet worden gecontroleerd. Maak de screenshot opnieuw of gebruik de afgeschermde workflow met originele gegevens.",
             "verificationFailedDetails": "{count} gevoelige bronwaarde(n) zijn niet opgelost.",
             "resourceFailures": "{count} bron(nen) konden niet betrouwbaar worden weergegeven"

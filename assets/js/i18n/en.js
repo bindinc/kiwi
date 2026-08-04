@@ -799,7 +799,6 @@ const en = {
             "captureFailed": "Could not capture feedback."
         },
         "privacy": {
-            "verified": "Pseudonymization verified",
             "verificationFailed": "Pseudonymization could not be verified. Recapture or use the restricted original-data workflow.",
             "verificationFailedDetails": "{count} sensitive source value(s) remain unresolved.",
             "resourceFailures": "{count} resource(s) could not be rendered faithfully"

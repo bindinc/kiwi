@@ -363,7 +363,7 @@ export function formatPrivacySummary(privacySummary = {}) {
         return `<span class="is-warning">${escapeHtml(feedbackText('privacy.resourceFailures', { count: resourceFailures }))}</span>`;
     }
 
-    return `<span class="is-verified">${escapeHtml(feedbackText('privacy.verified'))}</span>`;
+    return '';
 }
 
 function escapeHtml(value) {
