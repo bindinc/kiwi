@@ -282,7 +282,7 @@ const en = {
             "vooral_bekende_klanten_80_20_d72f4bfd": "Mainly famous customers (80/20)",
             "voornaam_575fbdf6": "First name *",
             "vul_het_nabewerkingsscherm_in_om_klaar_te_zijn_voor_het_volgende_gesprek_230eaff9": "Complete the post-processing screen to be ready for the next call",
-            "waar_klanten_zich_gehoord_voelen_3bc04244": "Where customers feel heard.",
+            "waar_klanten_zich_gehoord_voelen_3bc04244": "Klantenservice Interactive Web Interface",
             "waarom_wilt_u_het_abonnement_opzeggen_65e30783": "Why do you want to cancel the subscription?",
             "wacht_75f4e76c": "Guard:",
             "wachtrij_simulatie_227ad37c": "📋 Queue Simulation",
