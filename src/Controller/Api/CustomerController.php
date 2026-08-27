@@ -12,6 +12,7 @@ use App\Oidc\RequestOidcContext;
 use App\SubscriptionApi\AggregatedPersonSearchService;
 use App\SubscriptionApi\PersonDetailService;
 use App\SubscriptionApi\SubscriptionApiResponseException;
+use App\SubscriptionApi\SubscriptionSummaryService;
 use App\Service\PocStateService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -28,6 +29,7 @@ final class CustomerController extends AbstractApiController
         private readonly PocStateService $stateService,
         private readonly AggregatedPersonSearchService $aggregatedPersonSearchService,
         private readonly PersonDetailService $personDetailService,
+        private readonly SubscriptionSummaryService $subscriptionSummaryService,
     ) {
         parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
@@ -80,6 +82,18 @@ final class CustomerController extends AbstractApiController
             'mandants' => implode(',', $allowedMandants),
             'sortBy' => $sortBy,
         ], $page, $pageSize));
+    }
+
+    #[Route('/subscription-summaries', name: 'api_customer_subscription_summaries', methods: ['POST'], priority: 2)]
+    public function readSubscriptionSummaries(Request $request): JsonResponse
+    {
+        $this->requireApiAccess($request);
+        $payload = $this->parseJsonObject($request);
+        $persons = $this->parseSubscriptionSummaryPersons($payload['persons'] ?? null);
+
+        return $this->json([
+            'items' => $this->subscriptionSummaryService->summarize($persons),
+        ]);
     }
 
     #[Route('', name: 'api_customers_create', methods: ['POST'])]
@@ -212,6 +226,50 @@ final class CustomerController extends AbstractApiController
                 'Klantdetail via subscription API is tijdelijk niet beschikbaar.',
             );
         }
+    }
+
+    /**
+     * @return list<array{personId: string, credentialKey: string}>
+     */
+    private function parseSubscriptionSummaryPersons(mixed $rawPersons): array
+    {
+        if (!\is_array($rawPersons) || [] === $rawPersons) {
+            throw new ApiProblemException(400, 'invalid_payload', 'persons must be a non-empty array');
+        }
+
+        $personsByKey = [];
+        foreach ($rawPersons as $index => $rawPerson) {
+            if (!\is_array($rawPerson)) {
+                throw new ApiProblemException(400, 'invalid_payload', sprintf('persons[%d] must be an object', $index));
+            }
+
+            $personId = $this->normalizeSubscriptionSummaryIdentifier($rawPerson['personId'] ?? null);
+            $credentialKey = $this->normalizeSubscriptionSummaryIdentifier($rawPerson['credentialKey'] ?? null);
+            $personsByKey[sprintf('%s\0%s', $credentialKey, $personId)] = [
+                'personId' => $personId,
+                'credentialKey' => $credentialKey,
+            ];
+        }
+
+        if (count($personsByKey) > 20) {
+            throw new ApiProblemException(400, 'invalid_payload', 'persons must contain at most 20 unique entries');
+        }
+
+        return array_values($personsByKey);
+    }
+
+    private function normalizeSubscriptionSummaryIdentifier(mixed $rawValue): string
+    {
+        if (!\is_string($rawValue) && !\is_int($rawValue)) {
+            throw new ApiProblemException(400, 'invalid_payload', 'personId and credentialKey must be non-empty strings');
+        }
+
+        $value = trim((string) $rawValue);
+        if ('' === $value) {
+            throw new ApiProblemException(400, 'invalid_payload', 'personId and credentialKey must be non-empty strings');
+        }
+
+        return $value;
     }
 
     /**

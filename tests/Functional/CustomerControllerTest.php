@@ -11,6 +11,7 @@ use App\SubscriptionApi\PersonDetailService;
 use App\SubscriptionApi\PersonSearchClient;
 use App\SubscriptionApi\PersonSearchResultNormalizer;
 use App\SubscriptionApi\SubscriptionOrderNormalizer;
+use App\SubscriptionApi\SubscriptionSummaryService;
 use App\Webabo\HupApiConfigProvider;
 use App\Webabo\WebaboAccessTokenProvider;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -145,6 +146,80 @@ final class CustomerControllerTest extends WebTestCase
         $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertSame('customer_search_unavailable', $payload['error']['code']);
         self::assertCount(2, $requests);
+    }
+
+    public function testReadSubscriptionSummariesReturnsCurrentOrderStatus(): void
+    {
+        $this->useSubscriptionApiClientSecrets([
+            'tvk' => [
+                'title' => 'TV Krant',
+                'username' => 'tvk-user',
+                'password' => 'tvk-password',
+                'client_search' => 'yes',
+                'client' => 'HMC',
+                'divisionid' => '14',
+            ],
+        ]);
+
+        $requests = [];
+        $responses = [
+            $this->createTokenResponse('summary-token'),
+            new MockResponse((string) json_encode([
+                'content' => [
+                    [
+                        'rId' => '9001',
+                        'activeTo' => '2099-01-01',
+                        'orderItem' => ['product' => ['name' => 'Mikrogids']],
+                    ],
+                ],
+            ], \JSON_THROW_ON_ERROR), ['http_code' => 200]),
+        ];
+        $httpClient = $this->createMockHttpClient($requests, $responses);
+        $client = $this->createAuthenticatedClient();
+        static::getContainer()->set(
+            SubscriptionSummaryService::class,
+            $this->createSubscriptionSummaryService($httpClient),
+        );
+
+        $client->request(
+            'POST',
+            '/api/v1/persons/subscription-summaries',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: (string) json_encode([
+                'persons' => [
+                    ['personId' => '11860448', 'credentialKey' => 'tvk'],
+                    ['personId' => '11860448', 'credentialKey' => 'tvk'],
+                ],
+            ], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertCount(1, $payload['items']);
+        self::assertSame('loaded', $payload['items'][0]['state']);
+        self::assertSame(1, $payload['items'][0]['activeCount']);
+        self::assertSame([['magazine' => 'Mikrogids']], $payload['items'][0]['activeSubscriptions']);
+        self::assertCount(2, $requests);
+    }
+
+    public function testReadSubscriptionSummariesRejectsMoreThanTwentyUniquePersons(): void
+    {
+        $client = $this->createAuthenticatedClient();
+        $persons = [];
+        for ($personId = 1; $personId <= 21; ++$personId) {
+            $persons[] = ['personId' => (string) $personId, 'credentialKey' => 'tvk'];
+        }
+
+        $client->request(
+            'POST',
+            '/api/v1/persons/subscription-summaries',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: (string) json_encode(['persons' => $persons], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(400);
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertSame('invalid_payload', $payload['error']['code']);
     }
 
     public function testReadCustomerUsesSubscriptionApiDetailAdapterAndHydratesOrders(): void
@@ -402,6 +477,19 @@ final class CustomerControllerTest extends WebTestCase
             $configProvider,
             $personSearchClient,
             new PersonSearchResultNormalizer(),
+            new SubscriptionOrderNormalizer(),
+        );
+    }
+
+    private function createSubscriptionSummaryService(MockHttpClient $httpClient): SubscriptionSummaryService
+    {
+        $configProvider = new HupApiConfigProvider(new ClientSecretsLoader(dirname(__DIR__, 2)));
+        $tokenProvider = new WebaboAccessTokenProvider($configProvider, $httpClient);
+        $personSearchClient = new PersonSearchClient($configProvider, $tokenProvider, $httpClient);
+
+        return new SubscriptionSummaryService(
+            $configProvider,
+            $personSearchClient,
             new SubscriptionOrderNormalizer(),
         );
     }
