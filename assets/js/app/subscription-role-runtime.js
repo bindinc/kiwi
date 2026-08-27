@@ -344,7 +344,8 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         <div class="form-row">
             <input type="text" id="${prefix}PostalCode" placeholder="${translate('forms.postalCodePlaceholder', {}, 'Postcode*')}" data-feedback-sensitive="postal-code" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="${translate('forms.postalCodeTitle', {}, 'Voer een geldige postcode in (bijv. 1234AB)')}" required>
             <input type="text" id="${prefix}HouseNumber" placeholder="${translate('forms.houseNumberPlaceholder', {}, 'Huisnr. (en letter)*')}" data-feedback-sensitive="address" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="${translate('forms.houseNumberTitle', {}, 'Voer een geldig huisnummer in (bijv. 123 of 123A)')}" required>
-            <input type="text" id="${prefix}HouseExt" placeholder="${translate('forms.houseExtensionPlaceholder', {}, 'Toevoeging')}" data-feedback-sensitive="address" maxlength="10">
+            <input type="text" id="${prefix}HouseExt" placeholder="${translate('forms.houseExtensionPlaceholder', {}, 'Huisnummer toevoeging')}" data-feedback-sensitive="address" maxlength="10">
+            <input type="text" id="${prefix}AddressExtension" placeholder="${translate('forms.addressExtensionPlaceholder', {}, '(interne) Toevoeging 1')}" data-feedback-sensitive="address" maxlength="60">
         </div>
         
         <div class="form-row">
@@ -388,6 +389,7 @@ function getCustomerFormData(prefix) {
         postalCode: document.getElementById(`${prefix}PostalCode`)?.value || '',
         houseNumber: document.getElementById(`${prefix}HouseNumber`)?.value || '',
         houseExt: document.getElementById(`${prefix}HouseExt`)?.value || '',
+        addressExtension: document.getElementById(`${prefix}AddressExtension`)?.value || '',
         address: document.getElementById(`${prefix}Address`)?.value || '',
         city: document.getElementById(`${prefix}City`)?.value || '',
         phone: document.getElementById(`${prefix}Phone`)?.value || '',
@@ -414,6 +416,9 @@ function setCustomerFormData(prefix, data) {
     if (data.postalCode) document.getElementById(`${prefix}PostalCode`).value = data.postalCode;
     if (data.houseNumber) document.getElementById(`${prefix}HouseNumber`).value = data.houseNumber;
     if (data.houseExt) document.getElementById(`${prefix}HouseExt`).value = data.houseExt;
+    if (data.addressExtension && document.getElementById(`${prefix}AddressExtension`)) {
+        document.getElementById(`${prefix}AddressExtension`).value = data.addressExtension;
+    }
     if (data.address) document.getElementById(`${prefix}Address`).value = data.address;
     if (data.city) document.getElementById(`${prefix}City`).value = data.city;
     const phoneInput = document.getElementById(`${prefix}Phone`);
@@ -432,7 +437,7 @@ function setCustomerFormData(prefix, data) {
  */
 function toggleCustomerFormAddress(prefix) {
     const checkbox = document.getElementById(`${prefix}SameAddress`);
-    const addressFields = ['PostalCode', 'HouseNumber', 'HouseExt', 'Address', 'City'];
+    const addressFields = ['PostalCode', 'HouseNumber', 'HouseExt', 'AddressExtension', 'Address', 'City'];
     
     addressFields.forEach(field => {
         const element = document.getElementById(`${prefix}${field}`);
@@ -636,7 +641,7 @@ function buildExistingPersonSnapshot(selectedPerson) {
         return null;
     }
 
-    return {
+    const snapshot = {
         salutation: String(selectedPerson.salutation || '').trim(),
         firstName: String(selectedPerson.firstName || '').trim(),
         middleName: String(selectedPerson.middleName || '').trim(),
@@ -661,6 +666,15 @@ function buildExistingPersonSnapshot(selectedPerson) {
         sourceSystem: String(selectedPerson.sourceSystem || '').trim(),
         supportsPersonLookup: Boolean(selectedPerson.supportsPersonLookup)
     };
+
+    const addressExtension = String(selectedPerson.addressExtension || '').trim();
+    const street = String(selectedPerson.street || '').trim();
+    if (addressExtension && street) {
+        snapshot.addressExtension = addressExtension;
+        snapshot.street = street;
+    }
+
+    return snapshot;
 }
 
 function buildSubscriptionRolePersonDetailUrl(selectedPerson) {
@@ -2074,6 +2088,7 @@ function createPersonPayloadFromForm(prefix, optinData = null) {
     const street = data.address.trim();
     const houseNumber = data.houseNumber.trim();
     const houseExt = data.houseExt.trim();
+    const addressExtension = data.addressExtension.trim();
     const combinedHouseNumber = `${houseNumber}${houseExt}`.trim();
 
     if (!initials || !lastName || !street || !houseNumber || !data.postalCode.trim() || !data.city.trim() || !data.email.trim()) {
@@ -2096,6 +2111,11 @@ function createPersonPayloadFromForm(prefix, optinData = null) {
         landlinePhone: data.landlinePhone.trim(),
         mobilePhone: data.mobilePhone.trim()
     };
+
+    if (addressExtension) {
+        personPayload.street = street;
+        personPayload.addressExtension = addressExtension;
+    }
 
     if (optinData) {
         personPayload.optinEmail = optinData.optinEmail;

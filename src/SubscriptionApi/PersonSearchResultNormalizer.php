@@ -133,6 +133,8 @@ final class PersonSearchResultNormalizer
             'birthday' => $this->normalizeNullableString($rawPerson['birthDay'] ?? null) ?? '',
             'postalCode' => $primaryAddress['postalCode'] ?? '',
             'houseNumber' => $houseNumber ?? '',
+            'street' => $primaryAddress['street'] ?? '',
+            'addressExtension' => $primaryAddress['addressExtension'] ?? '',
             'address' => $this->buildAddress($primaryAddress['street'] ?? null, $houseNumber),
             'city' => $primaryAddress['city'] ?? '',
             'email' => $this->extractPrimaryContactValue($rawPerson['contacts'] ?? null, 'emails', 'emailAddress') ?? '',
@@ -199,7 +201,7 @@ final class PersonSearchResultNormalizer
 
     /**
      * @param mixed $contacts
-     * @return array{street:?string, postalCode:?string, houseNumber:?string, city:?string}
+     * @return array{street:?string, postalCode:?string, houseNumber:?string, addressExtension:?string, city:?string}
      */
     private function extractPrimaryAddress(mixed $contacts): array
     {
@@ -208,6 +210,7 @@ final class PersonSearchResultNormalizer
                 'street' => null,
                 'postalCode' => null,
                 'houseNumber' => null,
+                'addressExtension' => null,
                 'city' => null,
             ];
         }
@@ -223,6 +226,7 @@ final class PersonSearchResultNormalizer
                 'street' => $this->normalizeNullableString($address['street'] ?? null),
                 'postalCode' => $this->normalizeNullableString($address['postCode'] ?? null),
                 'houseNumber' => $this->normalizeNullableString($address['housenumber']['housenumber'] ?? null),
+                'addressExtension' => $this->normalizeNullableString($contactAddress['extension'] ?? null),
                 'city' => $this->normalizeNullableString($address['city'] ?? null),
             ];
         }
@@ -231,6 +235,7 @@ final class PersonSearchResultNormalizer
             'street' => null,
             'postalCode' => null,
             'houseNumber' => null,
+            'addressExtension' => null,
             'city' => null,
         ];
     }
