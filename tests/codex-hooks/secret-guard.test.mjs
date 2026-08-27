@@ -139,6 +139,40 @@ test("blocks an apply_patch call that adds a forbidden path", () => {
   assert.match(JSON.stringify(result), /SG008-sensitive-path/);
 });
 
+test("blocks moving a file to a forbidden path", () => {
+  const patch = [
+    "*** Begin Patch",
+    "*** Update File: config/example.json",
+    "*** Move to: client_secrets.json",
+    "@@",
+    " {}",
+    "*** End Patch",
+  ].join("\n");
+  const result = evaluateHook(preToolEvent(
+    repositoryRoot,
+    "apply_patch",
+    { command: patch },
+  ));
+
+  assert.equal(result.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(JSON.stringify(result), /SG008-sensitive-path/);
+});
+
+test("blocks a direct GitHub publication to a forbidden path", () => {
+  const result = evaluateHook(preToolEvent(
+    repositoryRoot,
+    "mcp__codex_apps__github_create_file",
+    {
+      path: "config/client_secrets.json",
+      content: "{}",
+      repository_full_name: "bindinc/kiwi",
+    },
+  ));
+
+  assert.equal(result.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(JSON.stringify(result), /SG008-sensitive-path/);
+});
+
 test("blocks webhook signatures without returning their value", () => {
   const candidate = [
     "https://hooks.example.invalid/callback?",

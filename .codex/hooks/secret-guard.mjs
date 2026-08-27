@@ -75,8 +75,15 @@ const GITHUB_PUBLICATION_TOOLS = new Set([
   "mcp__codex_apps__github_create_commit",
   "mcp__codex_apps__github_create_file",
   "mcp__codex_apps__github_create_pull_request",
+  "mcp__codex_apps__github_create_tree",
   "mcp__codex_apps__github_update_file",
   "mcp__codex_apps__github_update_ref",
+]);
+const PATH_FIELD_NAMES = new Set([
+  "file_name",
+  "file_path",
+  "filename",
+  "path",
 ]);
 
 function finding(ruleId, source) {
@@ -163,15 +170,23 @@ function scanPath(filePath) {
 }
 
 function pathFromPatchHeader(line) {
-  const match = line.match(/^\*\*\* (Add|Update) File:\s*(.+)$/);
+  const fileMatch = line.match(/^\*\*\* (Add|Update) File:\s*(.+)$/);
+  const moveMatch = line.match(/^\*\*\* Move to:\s*(.+)$/);
 
-  if (!match) {
+  if (moveMatch) {
+    return {
+      filePath: moveMatch[1].trim(),
+      isNew: true,
+    };
+  }
+
+  if (!fileMatch) {
     return null;
   }
 
   return {
-    filePath: match[2].trim(),
-    isNew: match[1] === "Add",
+    filePath: fileMatch[2].trim(),
+    isNew: fileMatch[1] === "Add",
   };
 }
 
@@ -211,6 +226,12 @@ function scanDiff(diff) {
 
     if (line.startsWith("new file mode ")) {
       isNewFile = true;
+      continue;
+    }
+
+    if (line.startsWith("rename to ")) {
+      currentPath = line.slice("rename to ".length).trim();
+      findings.push(...scanPath(currentPath));
       continue;
     }
 
@@ -317,6 +338,27 @@ function stringsFrom(value) {
   return [];
 }
 
+function pathsFromToolInput(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap(pathsFromToolInput);
+  }
+
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const paths = [];
+
+  for (const [key, nestedValue] of Object.entries(value)) {
+    if (PATH_FIELD_NAMES.has(key) && typeof nestedValue === "string") {
+      paths.push(nestedValue);
+    }
+    paths.push(...pathsFromToolInput(nestedValue));
+  }
+
+  return paths;
+}
+
 function scanToolInput(toolInput) {
   const findings = [];
 
@@ -368,6 +410,10 @@ function evaluateBeforeToolUse(event) {
   }
 
   const findings = scanToolInput(event.tool_input);
+  for (const filePath of pathsFromToolInput(event.tool_input)) {
+    findings.push(...scanPath(filePath));
+  }
+
   if (GITHUB_PUBLICATION_TOOLS.has(event.tool_name)) {
     findings.push(...scanRepository(event.cwd));
   }
