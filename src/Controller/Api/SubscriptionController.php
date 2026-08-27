@@ -12,7 +12,7 @@ use App\Oidc\RequestOidcContext;
 use App\Service\PocStateService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/v1/subscriptions')]
 final class SubscriptionController extends AbstractApiController

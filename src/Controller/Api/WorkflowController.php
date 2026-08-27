@@ -13,7 +13,7 @@ use App\Service\PocStateService;
 use App\Service\SubscriptionQueueService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/v1/workflows')]
 final class WorkflowController extends AbstractApiController

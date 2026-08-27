@@ -110,6 +110,8 @@ final class SubscriptionQueueServiceTest extends TestCase
                 'duration' => '1-jaar',
                 'durationLabel' => '1 jaar (52 nummers)',
                 'startDate' => '2026-01-10',
+                'paymentMethod' => 'b',
+                'iban' => 'NL80 INGB 0001 3401 87',
                 'status' => 'active',
             ],
             'offer' => [
@@ -150,6 +152,8 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertTrue($firstResponse['summary']['offer']['supportsPersonLookup']);
         self::assertSame('webabo-api', $firstResponse['summary']['offer']['sourceSystem']);
         self::assertTrue($firstResponse['summary']['requester']['sameAsRecipient']);
+        self::assertSame('B', $firstResponse['summary']['subscription']['paymentMethod']);
+        self::assertSame('NL80INGB0001340187', $firstResponse['summary']['subscription']['iban']);
         self::assertSame('B. Example', $firstResponse['summary']['agent']['shortName']);
         self::assertSame('Aanvraag', $firstResponse['summary']['typeLabel']);
         self::assertSame('Aanvraag', $firstResponse['display']['typeLabel']);
@@ -171,6 +175,31 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame($firstResponse['submissionId'], $statusResponse['submissionId']);
         self::assertSame('queued', $statusResponse['status']);
         self::assertSame('pending', $statusResponse['event']['status']);
+    }
+
+    public function testQueueSubscriptionStoresPaymentInstructionWithoutIban(): void
+    {
+        [$service, $entityManager] = $this->createQueueServiceWithDependencies();
+        $session = new Session(new MockArraySessionStorage());
+        $payload = $this->createPaymentPayload(
+            'unit-test-payment-instruction',
+            'AC',
+            'NL80INGB0001340187',
+        );
+
+        $response = $service->queueSubscription($session, $payload, [
+            'identity' => ['full_name' => 'Test User'],
+        ]);
+
+        self::assertSame('AC', $response['summary']['subscription']['paymentMethod']);
+        self::assertNull($response['summary']['subscription']['iban']);
+
+        $requestPayload = json_decode((string) $entityManager->getConnection()->fetchOne(
+            'SELECT request_payload FROM subscription_orders WHERE submission_id = ?',
+            ['unit-test-payment-instruction'],
+        ), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('AC', $requestPayload['subscription']['paymentMethod']);
+        self::assertNull($requestPayload['subscription']['iban']);
     }
 
     public function testQueueSubscriptionPreservesExistingPersonCredentialContext(): void
@@ -331,6 +360,41 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('41929371', $requestPayload['recipient']['person']['personNumber']);
         self::assertSame('NL80INGB0001340187', $requestPayload['recipient']['person']['iban']);
         self::assertSame('tvk', $requestPayload['requester']['person']['credentialKey']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createPaymentPayload(string $submissionId, string $paymentMethod, ?string $iban): array
+    {
+        return [
+            'submissionId' => $submissionId,
+            'recipient' => [
+                'person' => [
+                    'salutation' => 'Dhr.',
+                    'firstName' => 'Piet',
+                    'lastName' => 'Tester',
+                    'postalCode' => '1234AB',
+                    'houseNumber' => '10',
+                    'address' => 'Teststraat 10',
+                    'city' => 'Teststad',
+                    'email' => 'piet.tester@example.org',
+                ],
+            ],
+            'requester' => [
+                'sameAsRecipient' => true,
+            ],
+            'subscription' => [
+                'magazine' => 'Avrobode',
+                'startDate' => '2026-08-27',
+                'paymentMethod' => $paymentMethod,
+                'iban' => $iban,
+            ],
+            'offer' => [
+                'salesCode' => 'AVRV519',
+                'title' => '1 jaar Avrobode',
+            ],
+        ];
     }
 
     /**

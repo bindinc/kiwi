@@ -105,6 +105,7 @@ const nl = {
             "bestaande_persoon_4fee1022": "Bestaande persoon",
             "bestelling_overzicht_7d5a38f4": "📋 Bestelling Overzicht",
             "bestelling_plaatsen_07d072ea": "Bestelling Plaatsen",
+            "betaalinstructie_7fb08411": "Betaalinstructie",
             "betaalmethode_5e503508": "Betaalmethode *",
             "betaling_9887764f": "Betaling",
             "bevestiging_d6c110be": "Bevestiging",

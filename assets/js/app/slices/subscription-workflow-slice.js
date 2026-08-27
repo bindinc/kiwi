@@ -1,4 +1,9 @@
 import { getGlobalScope } from '../services.js';
+import {
+    buildSubscriptionPaymentDetails,
+    DIRECT_DEBIT_PAYMENT_METHOD,
+    syncSubscriptionIbanRequirement
+} from '../subscription-payment.js';
 
 const DEFAULT_API_ENDPOINTS = {
     personsApiUrl: '/api/v1/persons',
@@ -687,6 +692,7 @@ export function showNewSubscription() {
     const today = new Date().toISOString().split('T')[0];
     setInputValue('subStartDate', today);
     ensureSubscriptionSubmissionId(true);
+    syncSubscriptionIbanRequirement(getElementById('subIBAN'), DIRECT_DEBIT_PAYMENT_METHOD);
 
     resetWerfsleutelPickerState();
     refreshWerfsleutelCatalogIfStale();
@@ -715,10 +721,12 @@ export async function createSubscription(event) {
         return;
     }
     const submissionId = ensureSubscriptionSubmissionId();
+    const paymentDetails = buildSubscriptionPaymentDetails(
+        getCheckedValue('subPayment'),
+        getInputValue('subIBAN')
+    );
     const sharedFormData = {
         startDate: getInputValue('subStartDate'),
-        paymentMethod: getCheckedValue('subPayment'),
-        iban: getInputValue('subIBAN'),
         optinEmail: getCheckedValue('subOptinEmail'),
         optinPhone: getCheckedValue('subOptinPhone'),
         optinPost: getCheckedValue('subOptinPost')
@@ -820,6 +828,8 @@ export async function createSubscription(event) {
                 duration: formData.duration,
                 durationLabel: formData.durationLabel,
                 startDate: formData.startDate,
+                paymentMethod: paymentDetails.paymentMethod,
+                iban: paymentDetails.iban,
                 status: 'active',
                 lastEdition: new Date().toISOString().split('T')[0]
             },

@@ -120,6 +120,8 @@ final class ApiContractTest extends WebTestCase
                 'duration' => '1-jaar',
                 'durationLabel' => '1 jaar (52 nummers)',
                 'startDate' => '2026-01-10',
+                'paymentMethod' => 'B',
+                'iban' => 'NL80INGB0001340187',
                 'status' => 'active',
             ],
             'offer' => [
@@ -144,6 +146,8 @@ final class ApiContractTest extends WebTestCase
         self::assertSame($recipientId, $payload['summary']['recipient']['personId']);
         self::assertSame('AVRV519', $payload['summary']['offer']['salesCode']);
         self::assertSame('avrotros', $payload['summary']['offer']['credentialKey']);
+        self::assertSame('B', $payload['summary']['subscription']['paymentMethod']);
+        self::assertSame('NL80INGB0001340187', $payload['summary']['subscription']['iban']);
         self::assertSame('Aanvraag', $payload['summary']['typeLabel']);
         self::assertSame('pending', $payload['event']['status']);
         self::assertSame('Aanvraag', $payload['display']['typeLabel']);

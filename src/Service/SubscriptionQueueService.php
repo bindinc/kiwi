@@ -335,11 +335,15 @@ final class SubscriptionQueueService
             throw new ApiProblemException(400, 'invalid_payload', 'subscription.magazine and subscription.startDate are required');
         }
 
+        $paymentDetails = SubscriptionPaymentDetails::fromSubscriptionPayload($subscriptionPayload)->toArray();
+
         return [
             'magazine' => $magazine,
             'duration' => $this->normalizeNullableString($subscriptionPayload['duration'] ?? null),
             'durationLabel' => $this->normalizeNullableString($subscriptionPayload['durationLabel'] ?? null),
             'startDate' => $startDate,
+            'paymentMethod' => $paymentDetails['paymentMethod'],
+            'iban' => $paymentDetails['iban'],
             'requestedStatus' => $this->normalizeNullableString($subscriptionPayload['status'] ?? null) ?? 'active',
             'lastEdition' => $this->normalizeNullableString($subscriptionPayload['lastEdition'] ?? null),
         ];
