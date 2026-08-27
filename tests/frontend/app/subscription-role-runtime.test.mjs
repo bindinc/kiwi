@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import en from '../../../assets/js/i18n/en.js';
+import nl from '../../../assets/js/i18n/nl.js';
 
 function createDuplicateRoleState() {
     return {
@@ -29,6 +31,7 @@ function createElementStub() {
         checked: false,
         disabled: false,
         childElementCount: 0,
+        options: [],
         dataset: {},
         classList: {
             add() {},
@@ -37,7 +40,9 @@ function createElementStub() {
         },
         setAttribute() {},
         removeAttribute() {},
-        appendChild() {},
+        appendChild(child) {
+            this.options.push(child);
+        },
         addEventListener() {},
         querySelector() {
             return null;
@@ -106,11 +111,19 @@ function createRuntimeContext(options = {}) {
         recipientExistingSection: createElementStub(),
         recipientCreateSection: createElementStub(),
         subRecipientMiddleName: createElementStub(),
+        subRecipientInitials: createElementStub(),
         subRecipientLastName: createElementStub(),
+        subRecipientBirthdayDay: createElementStub(),
+        subRecipientBirthdayMonth: createElementStub(),
+        subRecipientBirthdayYear: createElementStub(),
         subRecipientPostalCode: createElementStub(),
         subRecipientHouseNumber: createElementStub(),
         subRecipientHouseExt: createElementStub(),
+        subRecipientAddress: createElementStub(),
+        subRecipientCity: createElementStub(),
         subRecipientPhone: createElementStub(),
+        subRecipientLandlinePhone: createElementStub(),
+        subRecipientMobilePhone: createElementStub(),
         subRecipientEmail: createElementStub()
     };
     const recipientSelectedPerson = options.recipientSelectedPerson || null;
@@ -124,6 +137,9 @@ function createRuntimeContext(options = {}) {
         __toasts: [],
         __upserts: [],
         document: {
+            createElement() {
+                return createElementStub();
+            },
             getElementById(id) {
                 return elementById[id] || null;
             },
@@ -139,6 +155,9 @@ function createRuntimeContext(options = {}) {
                 }
                 if (selector === 'input[name="recipientMode"][value="create"]') {
                     return modeRadios.recipientCreate;
+                }
+                if (selector === 'input[name="subRecipientSalutation"]:checked') {
+                    return { value: 'Dhr.' };
                 }
                 return null;
             }
@@ -346,6 +365,8 @@ function testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext() 
             city: 'Hilversum',
             email: 'demo@example.org',
             phone: '0612345678',
+            landlinePhone: '',
+            mobilePhone: '',
             optinEmail: '',
             optinPhone: '',
             optinPost: '',
@@ -357,6 +378,43 @@ function testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext() 
             supportsPersonLookup: true
         }
     });
+}
+
+function testNewSubscriptionPersonKeepsPpaPhoneTypesSeparate() {
+    const { context, elements, runtime } = createRuntimeContext();
+    context.subscriptionRoleState.recipient.mode = 'create';
+
+    runtime.ensureSubscriptionRoleCreateForm('recipient');
+
+    assert.match(elements.recipientCreateForm.innerHTML, /id="subRecipientLandlinePhone"/);
+    assert.match(elements.recipientCreateForm.innerHTML, /id="subRecipientMobilePhone"/);
+    assert.doesNotMatch(elements.recipientCreateForm.innerHTML, /id="subRecipientPhone"/);
+
+    elements.subRecipientInitials.value = 'P.';
+    elements.subRecipientLastName.value = 'Tester';
+    elements.subRecipientBirthdayDay.value = '02';
+    elements.subRecipientBirthdayMonth.value = '03';
+    elements.subRecipientBirthdayYear.value = '1980';
+    elements.subRecipientPostalCode.value = '1234 ab';
+    elements.subRecipientHouseNumber.value = '10';
+    elements.subRecipientAddress.value = 'Teststraat';
+    elements.subRecipientCity.value = 'Hilversum';
+    elements.subRecipientEmail.value = 'p.tester@example.org';
+    elements.subRecipientLandlinePhone.value = '035-1234567';
+    elements.subRecipientMobilePhone.value = '06-12345678';
+
+    const payload = JSON.parse(JSON.stringify(runtime.buildSubscriptionRolePayload('recipient')));
+
+    assert.equal(payload.person.landlinePhone, '035-1234567');
+    assert.equal(payload.person.mobilePhone, '06-12345678');
+    assert.equal(Object.hasOwn(payload.person, 'phone'), false);
+}
+
+function testPhoneTypeLabelsAreTranslated() {
+    assert.equal(nl.forms.landlinePhonePlaceholder, 'Vast telefoonnummer');
+    assert.equal(nl.forms.mobilePhonePlaceholder, 'Mobiel telefoonnummer');
+    assert.equal(en.forms.landlinePhonePlaceholder, 'Landline phone number');
+    assert.equal(en.forms.mobilePhonePlaceholder, 'Mobile phone number');
 }
 
 function testRefreshSubscriptionDuplicateMatchesIgnoresLocalCustomersWithoutBackendCache() {
@@ -844,6 +902,8 @@ async function run() {
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
     testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext();
+    testNewSubscriptionPersonKeepsPpaPhoneTypesSeparate();
+    testPhoneTypeLabelsAreTranslated();
     testRefreshSubscriptionDuplicateMatchesIgnoresLocalCustomersWithoutBackendCache();
     testRefreshSubscriptionDuplicateMatchesUsesBackendCachedMatchesOnly();
     await testSelectSubscriptionRolePersonHydratesDetailAndPrefillsIban();

@@ -137,6 +137,8 @@ final class PersonSearchResultNormalizer
             'city' => $primaryAddress['city'] ?? '',
             'email' => $this->extractPrimaryContactValue($rawPerson['contacts'] ?? null, 'emails', 'emailAddress') ?? '',
             'phone' => $this->extractPrimaryPhoneNumber($rawPerson['contacts'] ?? null) ?? '',
+            'landlinePhone' => $this->extractPrimaryContactValue($rawPerson['contacts'] ?? null, 'phones', 'number') ?? '',
+            'mobilePhone' => $this->extractPrimaryContactValue($rawPerson['contacts'] ?? null, 'mobiles', 'number') ?? '',
             'credentialKey' => $credential->name,
             'credentialTitle' => $credential->title ?? '',
             'mandant' => $mandant,

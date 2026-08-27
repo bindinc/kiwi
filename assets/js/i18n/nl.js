@@ -655,6 +655,8 @@ const nl = {
         "streetPlaceholder": "Straat*",
         "cityPlaceholder": "Plaats*",
         "phonePlaceholder": "Telefoonnummer",
+        "landlinePhonePlaceholder": "Vast telefoonnummer",
+        "mobilePhonePlaceholder": "Mobiel telefoonnummer",
         "emailPlaceholder": "E-mailadres",
         "sameAddressAsOriginalSubscriber": "Zelfde adres als originele abonnee"
     },

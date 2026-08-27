@@ -135,7 +135,8 @@ const DUPLICATE_CHECK_FETCH_LIMIT = 5;
 const DUPLICATE_CHECK_VISIBLE_LIMIT = 3;
 const SUBSCRIPTION_DUPLICATE_INPUT_FIELDS = [
     'Initials', 'MiddleName', 'LastName', 'PostalCode',
-    'HouseNumber', 'HouseExt', 'Address', 'City', 'Email', 'Phone'
+    'HouseNumber', 'HouseExt', 'Address', 'City', 'Email',
+    'LandlinePhone', 'MobilePhone', 'Phone'
 ];
 
 // ---------------------------------------------------------------------------

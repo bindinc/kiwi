@@ -11,6 +11,7 @@ use App\Http\ApiProblemException;
 use App\Outbox\SubscriptionQueueSchemaManager;
 use App\Repository\SubscriptionOrderRepository;
 use App\Repository\WebaboOfferRepository;
+use App\SubscriptionApi\PpaPhoneContactMapper;
 use App\Webabo\WebaboOfferCacheSchemaManager;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -26,6 +27,7 @@ final class SubscriptionQueueService
         private readonly Connection $connection,
         private readonly PocStateService $stateService,
         private readonly SubscriptionQueueDisplayFormatter $displayFormatter,
+        private readonly PpaPhoneContactMapper $ppaPhoneContactMapper,
         private readonly WebaboOfferCacheSchemaManager $webaboOfferCacheSchemaManager,
         private readonly WebaboOfferRepository $webaboOfferRepository,
     ) {
@@ -292,6 +294,10 @@ final class SubscriptionQueueService
             'email',
         ];
 
+        $landlinePhone = $this->normalizeNullableString($payload['landlinePhone'] ?? null);
+        $mobilePhone = $this->normalizeNullableString($payload['mobilePhone'] ?? null);
+        $legacyPhone = $this->normalizeNullableString($payload['phone'] ?? null);
+
         $normalized = [
             'salutation' => $this->normalizeNullableString($payload['salutation'] ?? null),
             'firstName' => $this->normalizeNullableString($payload['firstName'] ?? null),
@@ -303,7 +309,10 @@ final class SubscriptionQueueService
             'address' => $this->normalizeNullableString($payload['address'] ?? null),
             'city' => $this->normalizeNullableString($payload['city'] ?? null),
             'email' => $this->normalizeNullableString($payload['email'] ?? null),
-            'phone' => $this->normalizeNullableString($payload['phone'] ?? null) ?? '',
+            'phone' => $mobilePhone ?? $landlinePhone ?? $legacyPhone ?? '',
+            'landlinePhone' => $landlinePhone ?? '',
+            'mobilePhone' => $mobilePhone ?? '',
+            'contacts' => $this->ppaPhoneContactMapper->map($landlinePhone, $mobilePhone),
             'optinEmail' => $this->normalizeNullableString($payload['optinEmail'] ?? null),
             'optinPhone' => $this->normalizeNullableString($payload['optinPhone'] ?? null),
             'optinPost' => $this->normalizeNullableString($payload['optinPost'] ?? null),
@@ -523,6 +532,10 @@ final class SubscriptionQueueService
      */
     private function buildPersonSnapshot(array $person, array $context = []): array
     {
+        $landlinePhone = $this->normalizeNullableString($person['landlinePhone'] ?? null);
+        $mobilePhone = $this->normalizeNullableString($person['mobilePhone'] ?? null);
+        $legacyPhone = $this->normalizeNullableString($person['phone'] ?? null);
+
         $snapshot = [
             'salutation' => $this->normalizeNullableString($person['salutation'] ?? null),
             'firstName' => $this->normalizeNullableString($person['firstName'] ?? null),
@@ -535,7 +548,10 @@ final class SubscriptionQueueService
             'address' => $this->normalizeNullableString($person['address'] ?? null),
             'city' => $this->normalizeNullableString($person['city'] ?? null),
             'email' => $this->normalizeNullableString($person['email'] ?? null),
-            'phone' => $this->normalizeNullableString($person['phone'] ?? null),
+            'phone' => $mobilePhone ?? $landlinePhone ?? $legacyPhone,
+            'landlinePhone' => $landlinePhone,
+            'mobilePhone' => $mobilePhone,
+            'contacts' => $this->ppaPhoneContactMapper->map($landlinePhone, $mobilePhone),
             'iban' => $this->normalizeNullableString($person['iban'] ?? null),
             'optinEmail' => $this->normalizeNullableString($person['optinEmail'] ?? null),
             'optinPhone' => $this->normalizeNullableString($person['optinPhone'] ?? null),
