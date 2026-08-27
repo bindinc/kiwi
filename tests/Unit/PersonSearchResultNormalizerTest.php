@@ -153,6 +153,9 @@ final class PersonSearchResultNormalizerTest extends TestCase
                 'phones' => [
                     ['number' => '0591522006'],
                 ],
+                'mobiles' => [
+                    ['number' => '0612345678'],
+                ],
                 'addresses' => [
                     [
                         'address' => [
@@ -197,6 +200,8 @@ final class PersonSearchResultNormalizerTest extends TestCase
         self::assertSame('NIEUW-WEERDINGE', $normalized['city']);
         self::assertSame('wiesje_meeringa@hotmail.nl', $normalized['email']);
         self::assertSame('0591522006', $normalized['phone']);
+        self::assertSame('0591522006', $normalized['landlinePhone']);
+        self::assertSame('0612345678', $normalized['mobilePhone']);
         self::assertSame('HMC', $normalized['mandant']);
         self::assertSame('14', $normalized['divisionId']);
         self::assertSame('NL80INGB0001340187', $normalized['iban']);

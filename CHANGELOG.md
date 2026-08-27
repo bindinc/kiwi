@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Separate landline and mobile phone inputs for new subscription persons and preserve their PPA `contacts.phones` and `contacts.mobiles` mapping in the queued request contract.
 - Add project-local Codex lifecycle hooks that block sensitive prompts, risky secret-file operations, and repository publication when redacted secret scanning finds a problem, and run GitHub Actions jobs on GitHub-hosted Ubuntu runners.
 - Stop showing the redundant sensitive-media-masked notice in the contextual feedback privacy control while retaining media masking.
 - Replace the contextual feedback privacy bubbles with a clear control bar that separates the selected screenshot variant from its Teams destination.

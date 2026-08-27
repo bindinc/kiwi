@@ -277,6 +277,7 @@ function setBirthdayFields(prefix, birthday) {
  * @param {string} prefix - Prefix for all form field IDs (e.g., 'sub', 'article', 'transfer')
  * @param {object} config - Configuration options
  * @param {boolean} config.includePhone - Include phone field (default: true)
+ * @param {boolean} config.separatePhoneTypes - Render separate landline and mobile fields (default: false)
  * @param {boolean} config.includeEmail - Include email field (default: true)
  * @param {boolean} config.phoneRequired - Make phone required (default: false)
  * @param {boolean} config.emailRequired - Make email required (default: true)
@@ -285,6 +286,7 @@ function setBirthdayFields(prefix, birthday) {
 function renderCustomerForm(containerId, prefix, config = {}) {
     const defaults = {
         includePhone: true,
+        separatePhoneTypes: false,
         includeEmail: true,
         phoneRequired: false,
         emailRequired: true,
@@ -292,9 +294,23 @@ function renderCustomerForm(containerId, prefix, config = {}) {
     };
     const cfg = { ...defaults, ...config };
     const phonePlaceholderBase = translate('forms.phonePlaceholder', {}, 'Telefoonnummer');
+    const landlinePhonePlaceholderBase = translate('forms.landlinePhonePlaceholder', {}, 'Vast telefoonnummer');
+    const mobilePhonePlaceholderBase = translate('forms.mobilePhonePlaceholder', {}, 'Mobiel telefoonnummer');
     const emailPlaceholderBase = translate('forms.emailPlaceholder', {}, 'E-mailadres');
     const phonePlaceholder = `${phonePlaceholderBase}${cfg.phoneRequired ? '*' : ''}`;
+    const landlinePhonePlaceholder = `${landlinePhonePlaceholderBase}${cfg.phoneRequired ? '*' : ''}`;
+    const mobilePhonePlaceholder = `${mobilePhonePlaceholderBase}${cfg.phoneRequired ? '*' : ''}`;
     const emailPlaceholder = `${emailPlaceholderBase}${cfg.emailRequired ? '*' : ''}`;
+    let phoneFieldsMarkup = '';
+
+    if (cfg.includePhone && cfg.separatePhoneTypes) {
+        phoneFieldsMarkup = `
+            <input type="tel" id="${prefix}LandlinePhone" placeholder="${landlinePhonePlaceholder}" data-feedback-sensitive="phone">
+            <input type="tel" id="${prefix}MobilePhone" placeholder="${mobilePhonePlaceholder}" data-feedback-sensitive="phone">
+        `;
+    } else if (cfg.includePhone) {
+        phoneFieldsMarkup = `<input type="tel" id="${prefix}Phone" placeholder="${phonePlaceholder}" data-feedback-sensitive="phone" ${cfg.phoneRequired ? 'required' : ''}>`;
+    }
 
     const html = `
         <h3 class="form-subtitle">${translate('forms.salutationLabel', {}, 'Aanhef *')}</h3>
@@ -338,7 +354,7 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         
         ${cfg.includePhone || cfg.includeEmail ? `
         <div class="form-row">
-            ${cfg.includePhone ? `<input type="tel" id="${prefix}Phone" placeholder="${phonePlaceholder}" data-feedback-sensitive="phone" ${cfg.phoneRequired ? 'required' : ''}>` : ''}
+            ${phoneFieldsMarkup}
             ${cfg.includeEmail ? `<input type="email" id="${prefix}Email" placeholder="${emailPlaceholder}" data-feedback-sensitive="email" ${cfg.emailRequired ? 'required' : ''}>` : ''}
         </div>
         ` : ''}
@@ -375,6 +391,8 @@ function getCustomerFormData(prefix) {
         address: document.getElementById(`${prefix}Address`)?.value || '',
         city: document.getElementById(`${prefix}City`)?.value || '',
         phone: document.getElementById(`${prefix}Phone`)?.value || '',
+        landlinePhone: document.getElementById(`${prefix}LandlinePhone`)?.value || '',
+        mobilePhone: document.getElementById(`${prefix}MobilePhone`)?.value || '',
         email: document.getElementById(`${prefix}Email`)?.value || ''
     };
 }
@@ -398,7 +416,13 @@ function setCustomerFormData(prefix, data) {
     if (data.houseExt) document.getElementById(`${prefix}HouseExt`).value = data.houseExt;
     if (data.address) document.getElementById(`${prefix}Address`).value = data.address;
     if (data.city) document.getElementById(`${prefix}City`).value = data.city;
-    if (data.phone && document.getElementById(`${prefix}Phone`)) document.getElementById(`${prefix}Phone`).value = data.phone;
+    const phoneInput = document.getElementById(`${prefix}Phone`);
+    const landlinePhoneInput = document.getElementById(`${prefix}LandlinePhone`);
+    const mobilePhoneInput = document.getElementById(`${prefix}MobilePhone`);
+
+    if (data.phone && phoneInput) phoneInput.value = data.phone;
+    if (data.landlinePhone && landlinePhoneInput) landlinePhoneInput.value = data.landlinePhone;
+    if (data.mobilePhone && mobilePhoneInput) mobilePhoneInput.value = data.mobilePhone;
     if (data.email && document.getElementById(`${prefix}Email`)) document.getElementById(`${prefix}Email`).value = data.email;
 }
 
@@ -625,6 +649,8 @@ function buildExistingPersonSnapshot(selectedPerson) {
         city: String(selectedPerson.city || '').trim(),
         email: String(selectedPerson.email || '').trim(),
         phone: String(selectedPerson.phone || '').trim(),
+        landlinePhone: String(selectedPerson.landlinePhone || '').trim(),
+        mobilePhone: String(selectedPerson.mobilePhone || '').trim(),
         optinEmail: String(selectedPerson.optinEmail || '').trim(),
         optinPhone: String(selectedPerson.optinPhone || '').trim(),
         optinPost: String(selectedPerson.optinPost || '').trim(),
@@ -921,6 +947,7 @@ function ensureSubscriptionRoleCreateForm(role) {
     if (formContainer.childElementCount === 0) {
         renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
             includePhone: true,
+            separatePhoneTypes: true,
             includeEmail: true,
             phoneRequired: false,
             emailRequired: true
@@ -1144,7 +1171,8 @@ function normalizeSubscriptionDuplicateInput(data) {
     const postalCode = normalizeDuplicatePostalCode(data.postalCode);
     const houseToken = normalizeDuplicateHouseToken(data.houseNumber, data.houseExt);
     const email = normalizeDuplicateEmail(data.email);
-    const phoneDigits = normalizePhone(String(data.phone || ''));
+    const phone = data.mobilePhone || data.landlinePhone || data.phone;
+    const phoneDigits = normalizePhone(String(phone || ''));
     const lastNameNormalized = normalizeDuplicateLastName(lastNameRaw);
     const fullLastNameNormalized = normalizeDuplicateLastName(`${middleNameRaw} ${lastNameRaw}`.trim());
 
@@ -2065,7 +2093,8 @@ function createPersonPayloadFromForm(prefix, optinData = null) {
         address: `${street} ${combinedHouseNumber}`.trim(),
         city: data.city.trim(),
         email: data.email.trim(),
-        phone: data.phone.trim()
+        landlinePhone: data.landlinePhone.trim(),
+        mobilePhone: data.mobilePhone.trim()
     };
 
     if (optinData) {

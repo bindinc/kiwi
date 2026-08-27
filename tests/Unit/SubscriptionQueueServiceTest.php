@@ -13,6 +13,7 @@ use App\Service\PocCatalogService;
 use App\Service\PocStateService;
 use App\Service\SubscriptionQueueDisplayFormatter;
 use App\Service\SubscriptionQueueService;
+use App\SubscriptionApi\PpaPhoneContactMapper;
 use App\Webabo\WebaboOfferCacheSchemaManager;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
@@ -96,7 +97,8 @@ final class SubscriptionQueueServiceTest extends TestCase
                     'address' => 'Teststraat 10',
                     'city' => 'Teststad',
                     'email' => 'piet.tester@example.org',
-                    'phone' => '0612345678',
+                    'landlinePhone' => '0351234567',
+                    'mobilePhone' => '0612345678',
                     'optinEmail' => 'yes',
                     'optinPhone' => 'no',
                     'optinPost' => 'yes',
@@ -161,6 +163,17 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('in behandeling', $firstResponse['display']['statusLabel']);
         self::assertStringContainsString("Aanvraag '1 jaar Avrobode voor maar EUR52' (AVRV519) voor Dhr. Tester (nieuw)", $firstResponse['display']['line']);
         self::assertStringNotContainsString('B. Example', $firstResponse['display']['line']);
+
+        $requestPayload = json_decode((string) $entityManager->getConnection()->fetchOne(
+            'SELECT request_payload FROM subscription_orders WHERE submission_id = ?',
+            ['unit-test-submission-id'],
+        ), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('0351234567', $requestPayload['recipient']['person']['landlinePhone']);
+        self::assertSame('0612345678', $requestPayload['recipient']['person']['mobilePhone']);
+        self::assertSame([
+            'phones' => [['number' => '0351234567']],
+            'mobiles' => [['number' => '0612345678']],
+        ], $requestPayload['recipient']['person']['contacts']);
 
         $secondResponse = $service->queueSubscription($session, $payload, $currentUserContext);
         self::assertSame($firstResponse['orderId'], $secondResponse['orderId']);
@@ -316,6 +329,8 @@ final class SubscriptionQueueServiceTest extends TestCase
                     'city' => 'Hilversum',
                     'email' => 'wiesje@example.org',
                     'phone' => '0611122233',
+                    'landlinePhone' => '0351234567',
+                    'mobilePhone' => '0611122233',
                     'iban' => 'NL80INGB0001340187',
                     'credentialKey' => 'tvk',
                     'credentialTitle' => 'TV Krant',
@@ -359,6 +374,10 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('Mevr. Meeringa', $response['summary']['recipient']['displayName']);
         self::assertSame('41929371', $requestPayload['recipient']['person']['personNumber']);
         self::assertSame('NL80INGB0001340187', $requestPayload['recipient']['person']['iban']);
+        self::assertSame([
+            'phones' => [['number' => '0351234567']],
+            'mobiles' => [['number' => '0611122233']],
+        ], $requestPayload['recipient']['person']['contacts']);
         self::assertSame('tvk', $requestPayload['requester']['person']['credentialKey']);
     }
 
@@ -439,6 +458,7 @@ final class SubscriptionQueueServiceTest extends TestCase
                 $connection,
                 $stateService,
                 new SubscriptionQueueDisplayFormatter(),
+                new PpaPhoneContactMapper(),
                 $webaboOfferSchemaManager,
                 $webaboOfferRepository,
             ),

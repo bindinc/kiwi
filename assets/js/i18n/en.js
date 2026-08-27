@@ -655,6 +655,8 @@ const en = {
         "streetPlaceholder": "Street*",
         "cityPlaceholder": "City*",
         "phonePlaceholder": "Phone number",
+        "landlinePhonePlaceholder": "Landline phone number",
+        "mobilePhonePlaceholder": "Mobile phone number",
         "emailPlaceholder": "Email address",
         "sameAddressAsOriginalSubscriber": "Same address as original subscriber"
     },
