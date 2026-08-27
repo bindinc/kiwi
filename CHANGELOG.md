@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Replace the contextual feedback privacy bubbles with a clear control bar that separates the selected screenshot variant from its Teams destination.
 
 ### Fixed
+- Keep customer-search subscription statuses consistent with the customer detail overview by loading current Subscription API order summaries for visible results and never presenting unavailable data as no active subscription.
 - Preserve contextual-feedback screenshot geometry and public media by rendering original and pseudonymized variants from detached clones, while masking explicitly private media and failing closed when pseudonymization cannot be verified.
 
 ## [v1.0.20]

@@ -888,7 +888,11 @@ const nl = {
         "noneFoundTitle": "Geen klanten gevonden",
         "noneFoundDescription": "Pas je zoekcriteria aan en probeer opnieuw",
         "resultsTitle": '🔍 Zoekresultaten: "{query}"',
-        "resultsRange": "Toont {start}-{end} van {total}"
+        "resultsRange": "Toont {start}-{end} van {total}",
+        "subscriptionStatusLoading": "Abonnementstatus laden…",
+        "subscriptionStatusUnavailable": "Status niet beschikbaar",
+        "subscriptionNoneActive": "Geen actief",
+        "subscriptionEnded": "beëindigd"
     },
     "welcome": {
         "title": "Welkom bij Klantenservice",
