@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import en from '../../../../assets/js/i18n/en.js';
+import nl from '../../../../assets/js/i18n/nl.js';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
 import { registerCustomerSearchSlice, __customerSearchTestUtils } from '../../../../assets/js/app/slices/customer-search-slice.js';
 
@@ -167,6 +169,225 @@ function testRenderCustomerRowShowsMandantBadgeForRecognizedMandant() {
     }
 }
 
+function testSubscriptionApiBadgesDistinguishLoadingUnavailableAndLoadedStates() {
+    const loadingMarkup = __customerSearchTestUtils.buildSubscriptionBadges({
+        sourceSystem: 'subscription-api'
+    });
+    assert.equal(loadingMarkup.includes('Abonnementstatus laden'), true);
+    assert.equal(loadingMarkup.includes('Geen actief'), false);
+
+    const unavailableMarkup = __customerSearchTestUtils.buildSubscriptionBadges({
+        sourceSystem: 'subscription-api',
+        subscriptionSummary: { state: 'unavailable' }
+    });
+    assert.equal(unavailableMarkup.includes('Status niet beschikbaar'), true);
+    assert.equal(unavailableMarkup.includes('Geen actief'), false);
+
+    const loadedMarkup = __customerSearchTestUtils.buildSubscriptionBadges({
+        sourceSystem: 'subscription-api',
+        subscriptionSummary: {
+            state: 'loaded',
+            activeCount: 1,
+            activeSubscriptions: [{ magazine: 'Mikrogids' }],
+            inactiveSubscription: { magazine: 'NCRV-gids' }
+        }
+    });
+    assert.equal(loadedMarkup.includes('Mikrogids'), true);
+    assert.equal(loadedMarkup.includes('NCRV-gids'), false);
+
+    const confirmedEmptyMarkup = __customerSearchTestUtils.buildSubscriptionBadges({
+        sourceSystem: 'subscription-api',
+        subscriptionSummary: {
+            state: 'loaded',
+            activeCount: 0,
+            activeSubscriptions: [],
+            inactiveSubscription: null
+        }
+    });
+    assert.equal(confirmedEmptyMarkup.includes('Geen actief'), true);
+}
+
+function testSubscriptionStatusTranslationsStayAligned() {
+    const translationKeys = [
+        'subscriptionStatusLoading',
+        'subscriptionStatusUnavailable',
+        'subscriptionNoneActive',
+        'subscriptionEnded'
+    ];
+
+    for (const translationKey of translationKeys) {
+        assert.equal(typeof nl.search[translationKey], 'string');
+        assert.equal(typeof en.search[translationKey], 'string');
+    }
+
+    assert.equal(en.search.subscriptionStatusLoading, 'Loading subscription status…');
+    assert.equal(nl.search.subscriptionStatusLoading, 'Abonnementstatus laden…');
+}
+
+function testAppliesSummariesByPersonAndCredentialContext() {
+    const customers = [
+        { personId: '100', credentialKey: 'tvk', sourceSystem: 'subscription-api' },
+        { personId: '100', credentialKey: 'kroncrv', sourceSystem: 'subscription-api' }
+    ];
+
+    assert.equal(__customerSearchTestUtils.getCustomersMissingSubscriptionSummary(customers).length, 2);
+
+    __customerSearchTestUtils.applySubscriptionSummaries(customers, [{
+        personId: '100',
+        credentialKey: 'tvk',
+        state: 'loaded',
+        activeCount: 1,
+        activeSubscriptions: [{ magazine: 'Mikrogids' }],
+        inactiveSubscription: null
+    }]);
+
+    assert.equal(customers[0].subscriptionSummary.state, 'loaded');
+    assert.equal(customers[1].subscriptionSummary, undefined);
+    assert.equal(__customerSearchTestUtils.getCustomersMissingSubscriptionSummary(customers).length, 1);
+}
+
+function testSubscriptionSortUsesLoadedCountsAndPlacesUnavailableLast() {
+    const customers = [
+        {
+            firstName: 'Zoe',
+            lastName: 'Bakker',
+            personId: '1',
+            credentialKey: 'tvk',
+            sourceSystem: 'subscription-api',
+            subscriptionSummary: { state: 'loaded', activeCount: 1 }
+        },
+        {
+            firstName: 'Anna',
+            lastName: 'Albers',
+            personId: '2',
+            credentialKey: 'tvk',
+            sourceSystem: 'subscription-api',
+            subscriptionSummary: { state: 'unavailable', activeCount: null }
+        },
+        {
+            firstName: 'Ben',
+            lastName: 'Bakker',
+            personId: '3',
+            credentialKey: 'tvk',
+            sourceSystem: 'subscription-api',
+            subscriptionSummary: { state: 'loaded', activeCount: 2 }
+        }
+    ];
+
+    __customerSearchTestUtils.sortResultsList(customers, 'subscriptions');
+
+    assert.deepEqual(customers.map((customer) => customer.firstName), ['Ben', 'Zoe', 'Anna']);
+}
+
+async function testLoadsVisiblePageThenRemainingResultsForSubscriptionSort() {
+    const previousKiwiApi = globalThis.kiwiApi;
+    const requests = [];
+    const customers = Array.from({ length: 25 }, (_value, index) => ({
+        id: index + 1,
+        personId: String(index + 1),
+        credentialKey: 'tvk',
+        sourceSystem: 'subscription-api',
+        firstName: `Klant ${index + 1}`,
+        lastName: 'Test'
+    }));
+
+    globalThis.kiwiApi = {
+        async post(url, payload) {
+            requests.push({ url, payload });
+            return {
+                items: payload.persons.map((person) => ({
+                    ...person,
+                    state: 'loaded',
+                    activeCount: Number(person.personId) % 3,
+                    activeSubscriptions: [],
+                    inactiveSubscription: null
+                }))
+            };
+        }
+    };
+
+    try {
+        __customerSearchTestUtils.setSearchResultsForTests(customers);
+        const generation = __customerSearchTestUtils.getSearchStateSnapshot().generation;
+
+        await __customerSearchTestUtils.loadVisibleSubscriptionSummaries(generation);
+
+        assert.equal(requests.length, 1);
+        assert.equal(requests[0].url, '/api/v1/persons/subscription-summaries');
+        assert.equal(requests[0].payload.persons.length, 20);
+        assert.equal(customers.slice(0, 20).every((customer) => customer.subscriptionSummary?.state === 'loaded'), true);
+        assert.equal(customers.slice(20).every((customer) => customer.subscriptionSummary === undefined), true);
+
+        await __customerSearchTestUtils.loadAllSubscriptionSummaries(generation);
+
+        assert.equal(requests.length, 2);
+        assert.equal(requests[1].payload.persons.length, 5);
+        assert.equal(customers.every((customer) => customer.subscriptionSummary?.state === 'loaded'), true);
+    } finally {
+        __customerSearchTestUtils.resetSearchStateForTests();
+        if (previousKiwiApi === undefined) {
+            delete globalThis.kiwiApi;
+        } else {
+            globalThis.kiwiApi = previousKiwiApi;
+        }
+    }
+}
+
+async function testIgnoresSubscriptionSummariesFromAnOlderSearch() {
+    const previousKiwiApi = globalThis.kiwiApi;
+    let resolveRequest;
+    const oldCustomers = [{
+        id: 1,
+        personId: '1',
+        credentialKey: 'tvk',
+        sourceSystem: 'subscription-api'
+    }];
+    const newCustomers = [{
+        id: 2,
+        personId: '2',
+        credentialKey: 'tvk',
+        sourceSystem: 'subscription-api'
+    }];
+
+    globalThis.kiwiApi = {
+        post() {
+            return new Promise((resolve) => {
+                resolveRequest = resolve;
+            });
+        }
+    };
+
+    try {
+        __customerSearchTestUtils.setSearchResultsForTests(oldCustomers);
+        const oldGeneration = __customerSearchTestUtils.getSearchStateSnapshot().generation;
+        const pendingLoad = __customerSearchTestUtils.loadVisibleSubscriptionSummaries(oldGeneration);
+        await Promise.resolve();
+
+        __customerSearchTestUtils.setSearchResultsForTests(newCustomers);
+        resolveRequest({
+            items: [{
+                personId: '1',
+                credentialKey: 'tvk',
+                state: 'loaded',
+                activeCount: 1,
+                activeSubscriptions: [{ magazine: 'Mikrogids' }],
+                inactiveSubscription: null
+            }]
+        });
+        await pendingLoad;
+
+        assert.equal(oldCustomers[0].subscriptionSummary.state, 'loading');
+        assert.equal(newCustomers[0].subscriptionSummary, undefined);
+    } finally {
+        __customerSearchTestUtils.resetSearchStateForTests();
+        if (previousKiwiApi === undefined) {
+            delete globalThis.kiwiApi;
+        } else {
+            globalThis.kiwiApi = previousKiwiApi;
+        }
+    }
+}
+
 function testBuildSearchParamsIncludesEmailFilter() {
     const params = __customerSearchTestUtils.buildSearchParams({
         postalCode: '',
@@ -284,16 +505,22 @@ function testBuildSearchQueryLabelIncludesEmailAndPhone() {
     }
 }
 
-function run() {
+async function run() {
     testRegistersItemFiveActions();
     testInstallsLegacyCompatibilityExports();
     testPageNumbersAndNormalizationHelpers();
     testSortResultsList();
     testRenderCustomerRowShowsMandantBadgeForRecognizedMandant();
+    testSubscriptionApiBadgesDistinguishLoadingUnavailableAndLoadedStates();
+    testSubscriptionStatusTranslationsStayAligned();
+    testAppliesSummariesByPersonAndCredentialContext();
+    testSubscriptionSortUsesLoadedCountsAndPlacesUnavailableLast();
+    await testLoadsVisiblePageThenRemainingResultsForSubscriptionSort();
+    await testIgnoresSubscriptionSummariesFromAnOlderSearch();
     testBuildSearchParamsIncludesEmailFilter();
     testFilterCustomersLocallyUsesMandantAndAdditionalFields();
     testBuildSearchQueryLabelIncludesEmailAndPhone();
     console.log('customer search slice tests passed');
 }
 
-run();
+await run();

@@ -888,7 +888,11 @@ const en = {
         "noneFoundTitle": "No customers found",
         "noneFoundDescription": "Adjust your search criteria and try again",
         "resultsTitle": '🔍 Search results: "{query}"',
-        "resultsRange": "Showing {start}-{end} of {total}"
+        "resultsRange": "Showing {start}-{end} of {total}",
+        "subscriptionStatusLoading": "Loading subscription status…",
+        "subscriptionStatusUnavailable": "Status unavailable",
+        "subscriptionNoneActive": "None active",
+        "subscriptionEnded": "ended"
     },
     "welcome": {
         "title": "Welcome to Customer Service",

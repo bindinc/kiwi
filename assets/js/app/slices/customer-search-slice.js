@@ -5,8 +5,11 @@ const searchState = {
     results: [],
     currentPage: 1,
     itemsPerPage: 20,
-    sortBy: 'name'
+    sortBy: 'name',
+    generation: 0
 };
+
+const SUBSCRIPTION_SUMMARY_BATCH_SIZE = 20;
 
 const MANDANT_BADGE_CONFIG_BY_KEY = {
     AVROTROS: {
@@ -431,6 +434,7 @@ function setSearchResults(results) {
     searchState.results = Array.isArray(results) ? results : [];
     searchState.currentPage = 1;
     searchState.sortBy = 'name';
+    searchState.generation += 1;
 }
 
 function rememberCustomersInCache(customers) {
@@ -620,6 +624,11 @@ function getCustomerSubscriptions(customer) {
 }
 
 function buildSubscriptionBadges(customer) {
+    const usesSubscriptionApi = String(customer.sourceSystem || '').trim() === 'subscription-api';
+    if (usesSubscriptionApi) {
+        return buildSubscriptionApiBadges(customer.subscriptionSummary);
+    }
+
     const subscriptions = getCustomerSubscriptions(customer);
     const activeSubscriptions = subscriptions.filter((subscription) => subscription.status === 'active');
     const inactiveSubscriptions = subscriptions.filter((subscription) => subscription.status !== 'active');
@@ -634,7 +643,42 @@ function buildSubscriptionBadges(customer) {
         return `<span class="subscription-badge inactive">${inactiveSubscriptions[0].magazine} (beëindigd)</span>`;
     }
 
-    return '<span style="color: var(--text-secondary); font-size: 0.875rem;">Geen actief</span>';
+    return buildSubscriptionStatusText(translateKey('search.subscriptionNoneActive', {}, 'Geen actief'));
+}
+
+function buildSubscriptionApiBadges(summary) {
+    if (!summary || summary.state === 'loading') {
+        return buildSubscriptionStatusText(
+            translateKey('search.subscriptionStatusLoading', {}, 'Abonnementstatus laden…')
+        );
+    }
+
+    if (summary.state !== 'loaded') {
+        return buildSubscriptionStatusText(
+            translateKey('search.subscriptionStatusUnavailable', {}, 'Status niet beschikbaar')
+        );
+    }
+
+    const activeSubscriptions = Array.isArray(summary.activeSubscriptions)
+        ? summary.activeSubscriptions
+        : [];
+    if (activeSubscriptions.length > 0) {
+        return activeSubscriptions
+            .map((subscription) => `<span class="subscription-badge active">${subscription.magazine}</span>`)
+            .join('');
+    }
+
+    const inactiveMagazine = String(summary.inactiveSubscription?.magazine || '').trim();
+    if (inactiveMagazine) {
+        const endedLabel = translateKey('search.subscriptionEnded', {}, 'beëindigd');
+        return `<span class="subscription-badge inactive">${inactiveMagazine} (${endedLabel})</span>`;
+    }
+
+    return buildSubscriptionStatusText(translateKey('search.subscriptionNoneActive', {}, 'Geen actief'));
+}
+
+function buildSubscriptionStatusText(text) {
+    return `<span style="color: var(--text-secondary); font-size: 0.875rem;">${text}</span>`;
 }
 
 function buildCustomerSearchReference(customer) {
@@ -845,6 +889,7 @@ export function displayPaginatedResults() {
     setElementDisplay(searchResultsView, 'block');
 
     renderPagination();
+    void loadVisibleSubscriptionSummaries(searchState.generation);
 
     if (typeof searchResultsView.scrollIntoView === 'function') {
         searchResultsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -905,6 +950,7 @@ function resetSearchState() {
     searchState.results = [];
     searchState.currentPage = 1;
     searchState.sortBy = 'name';
+    searchState.generation += 1;
 }
 
 export function clearSearchResults() {
@@ -989,19 +1035,169 @@ export function closeCustomerDetail() {
     }
 }
 
+function getSubscriptionSummaryKey(personId, credentialKey) {
+    return `${String(credentialKey || '').trim()}\u0000${String(personId || '').trim()}`;
+}
+
+function getSubscriptionSummaryRequest(customer) {
+    const usesSubscriptionApi = String(customer?.sourceSystem || '').trim() === 'subscription-api';
+    const personId = String(customer?.personId || customer?.id || '').trim();
+    const credentialKey = String(customer?.credentialKey || '').trim();
+
+    if (!usesSubscriptionApi || !personId || !credentialKey) {
+        return null;
+    }
+
+    return { personId, credentialKey };
+}
+
+function getCustomersMissingSubscriptionSummary(customers) {
+    return customers.filter((customer) => {
+        const request = getSubscriptionSummaryRequest(customer);
+        if (!request) {
+            return false;
+        }
+
+        return !customer.subscriptionSummary;
+    });
+}
+
+function applySubscriptionSummaries(customers, summaries) {
+    const summariesByKey = new Map();
+    for (const summary of summaries) {
+        if (!summary || typeof summary !== 'object') {
+            continue;
+        }
+
+        const key = getSubscriptionSummaryKey(summary.personId, summary.credentialKey);
+        summariesByKey.set(key, summary);
+    }
+
+    for (const customer of customers) {
+        const request = getSubscriptionSummaryRequest(customer);
+        if (!request) {
+            continue;
+        }
+
+        const key = getSubscriptionSummaryKey(request.personId, request.credentialKey);
+        const summary = summariesByKey.get(key);
+        if (summary) {
+            customer.subscriptionSummary = summary;
+        }
+    }
+}
+
+function markSubscriptionSummaries(customers, state) {
+    for (const customer of customers) {
+        const request = getSubscriptionSummaryRequest(customer);
+        if (!request) {
+            continue;
+        }
+
+        customer.subscriptionSummary = {
+            ...request,
+            state,
+            activeCount: null,
+            activeSubscriptions: [],
+            inactiveSubscription: null
+        };
+    }
+}
+
+async function loadSubscriptionSummaryBatch(customers, generation, renderAfterLoad = true) {
+    const globalScope = getGlobalScope();
+    const apiClient = globalScope?.kiwiApi;
+    if (!apiClient || typeof apiClient.post !== 'function' || customers.length === 0) {
+        return;
+    }
+
+    const persons = customers
+        .map((customer) => getSubscriptionSummaryRequest(customer))
+        .filter(Boolean);
+    if (persons.length === 0) {
+        return;
+    }
+
+    markSubscriptionSummaries(customers, 'loading');
+
+    try {
+        const payload = await apiClient.post('/api/v1/persons/subscription-summaries', { persons });
+        if (generation !== searchState.generation) {
+            return;
+        }
+
+        const summaries = Array.isArray(payload?.items) ? payload.items : [];
+        applySubscriptionSummaries(customers, summaries);
+
+        const unresolvedCustomers = customers.filter((customer) => customer.subscriptionSummary?.state === 'loading');
+        markSubscriptionSummaries(unresolvedCustomers, 'unavailable');
+    } catch (error) {
+        if (generation !== searchState.generation) {
+            return;
+        }
+
+        markSubscriptionSummaries(customers, 'unavailable');
+        console.error('Kon abonnementstatussen niet laden via API', error);
+    }
+
+    if (renderAfterLoad && generation === searchState.generation) {
+        displayPaginatedResults();
+    }
+}
+
+async function loadVisibleSubscriptionSummaries(generation) {
+    const pageStartIndex = (searchState.currentPage - 1) * searchState.itemsPerPage;
+    const pageEndIndex = pageStartIndex + searchState.itemsPerPage;
+    const visibleCustomers = searchState.results.slice(pageStartIndex, pageEndIndex);
+    const missingCustomers = getCustomersMissingSubscriptionSummary(visibleCustomers);
+
+    await loadSubscriptionSummaryBatch(missingCustomers, generation);
+}
+
+async function loadAllSubscriptionSummaries(generation) {
+    const missingCustomers = searchState.results.filter((customer) => {
+        const request = getSubscriptionSummaryRequest(customer);
+        const state = customer.subscriptionSummary?.state;
+
+        return request && state !== 'loaded' && state !== 'unavailable';
+    });
+
+    for (let index = 0; index < missingCustomers.length; index += SUBSCRIPTION_SUMMARY_BATCH_SIZE) {
+        if (generation !== searchState.generation) {
+            return;
+        }
+
+        const batch = missingCustomers.slice(index, index + SUBSCRIPTION_SUMMARY_BATCH_SIZE);
+        await loadSubscriptionSummaryBatch(batch, generation, false);
+    }
+}
+
+function getActiveSubscriptionSortCount(customer) {
+    const request = getSubscriptionSummaryRequest(customer);
+    if (request) {
+        return customer.subscriptionSummary?.state === 'loaded'
+            ? Number(customer.subscriptionSummary.activeCount || 0)
+            : null;
+    }
+
+    return getCustomerSubscriptions(customer)
+        .filter((subscription) => subscription.status === 'active')
+        .length;
+}
+
+function compareCustomerNames(customerA, customerB) {
+    const lastNameComparison = String(customerA.lastName || '').localeCompare(String(customerB.lastName || ''));
+    if (lastNameComparison !== 0) {
+        return lastNameComparison;
+    }
+
+    return String(customerA.firstName || '').localeCompare(String(customerB.firstName || ''));
+}
+
 function sortResultsList(results, sortBy) {
     results.sort((customerA, customerB) => {
         if (sortBy === 'name') {
-            const customerALastName = String(customerA.lastName || '');
-            const customerBLastName = String(customerB.lastName || '');
-            const lastNameComparison = customerALastName.localeCompare(customerBLastName);
-            if (lastNameComparison !== 0) {
-                return lastNameComparison;
-            }
-
-            const customerAFirstName = String(customerA.firstName || '');
-            const customerBFirstName = String(customerB.firstName || '');
-            return customerAFirstName.localeCompare(customerBFirstName);
+            return compareCustomerNames(customerA, customerB);
         }
 
         if (sortBy === 'postal') {
@@ -1009,14 +1205,21 @@ function sortResultsList(results, sortBy) {
         }
 
         if (sortBy === 'subscriptions') {
-            const customerAActiveCount = getCustomerSubscriptions(customerA)
-                .filter((subscription) => subscription.status === 'active')
-                .length;
-            const customerBActiveCount = getCustomerSubscriptions(customerB)
-                .filter((subscription) => subscription.status === 'active')
-                .length;
+            const customerAActiveCount = getActiveSubscriptionSortCount(customerA);
+            const customerBActiveCount = getActiveSubscriptionSortCount(customerB);
 
-            return customerBActiveCount - customerAActiveCount;
+            if (customerAActiveCount === null && customerBActiveCount !== null) {
+                return 1;
+            }
+            if (customerAActiveCount !== null && customerBActiveCount === null) {
+                return -1;
+            }
+
+            if (customerAActiveCount !== customerBActiveCount) {
+                return customerBActiveCount - customerAActiveCount;
+            }
+
+            return compareCustomerNames(customerA, customerB);
         }
 
         return 0;
@@ -1027,13 +1230,22 @@ function sortResultsData() {
     sortResultsList(searchState.results, searchState.sortBy);
 }
 
-export function sortResults(sortBy) {
+export async function sortResults(sortBy) {
     if (!sortBy) {
         return;
     }
 
     searchState.sortBy = sortBy;
     searchState.currentPage = 1;
+    const generation = searchState.generation;
+
+    if (sortBy === 'subscriptions') {
+        await loadAllSubscriptionSummaries(generation);
+        if (generation !== searchState.generation) {
+            return;
+        }
+    }
+
     sortResultsData();
     displayPaginatedResults();
 }
@@ -1092,7 +1304,7 @@ export function registerCustomerSearchSlice(actionRouter) {
             if (!sortBy) {
                 return;
             }
-            sortResults(sortBy);
+            void sortResults(sortBy);
         },
         'go-to-page': (payload) => {
             goToPage(payload.page);
@@ -1116,6 +1328,14 @@ export const __customerSearchTestUtils = {
     buildSearchQueryLabel,
     filterCustomersLocally,
     renderCustomerRow,
+    buildSubscriptionBadges,
+    applySubscriptionSummaries,
+    getCustomersMissingSubscriptionSummary,
+    loadVisibleSubscriptionSummaries,
+    loadAllSubscriptionSummaries,
+    setSearchResultsForTests(results) {
+        setSearchResults(results);
+    },
     resetSearchStateForTests() {
         resetSearchState();
     },
