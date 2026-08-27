@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Add project-local Codex lifecycle hooks that block sensitive prompts, risky secret-file operations, and repository publication when redacted secret scanning finds a problem.
 - Stop showing the redundant sensitive-media-masked notice in the contextual feedback privacy control while retaining media masking.
 - Replace the contextual feedback privacy bubbles with a clear control bar that separates the selected screenshot variant from its Teams destination.
 
