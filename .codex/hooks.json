@@ -1,0 +1,55 @@
+{
+  "description": "Project-local guardrails that keep sensitive data out of Codex prompts and Kiwi repository changes.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/secret-guard.mjs\"",
+            "timeout": 10,
+            "statusMessage": "Checking prompt for sensitive data"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|apply_patch|mcp__codex_apps__github_.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/secret-guard.mjs\"",
+            "timeout": 15,
+            "statusMessage": "Checking tool input for sensitive data"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(Bash|apply_patch)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/secret-guard.mjs\"",
+            "timeout": 15,
+            "statusMessage": "Checking repository changes for sensitive data"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/secret-guard.mjs\"",
+            "timeout": 15,
+            "statusMessage": "Running final sensitive-data check"
+          }
+        ]
+      }
+    ]
+  }
+}
