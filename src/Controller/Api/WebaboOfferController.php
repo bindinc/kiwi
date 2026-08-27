@@ -13,7 +13,7 @@ use App\Service\WebaboOfferCatalogService;
 use App\Service\WebaboSalesCodeCombinationCatalogService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/v1/webabo')]
 final class WebaboOfferController extends AbstractApiController
