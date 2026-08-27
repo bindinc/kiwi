@@ -161,6 +161,18 @@ final class HomeControllerTest extends WebTestCase
         self::assertStringContainsString('Kiwi User', (string) $client->getResponse()->getContent());
     }
 
+    public function testNewSubscriptionOffersBothWebaboPaymentMethods(): void
+    {
+        $client = $this->createAuthenticatedClient(['bink8s.app.kiwi.user']);
+        $crawler = $client->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('input[name="subPayment"][value="B"][checked]'));
+        self::assertCount(1, $crawler->filter('input[name="subPayment"][value="AC"]'));
+        self::assertCount(1, $crawler->filter('#subIBAN[required]'));
+        self::assertStringContainsString('Betaalinstructie', (string) $client->getResponse()->getContent());
+    }
+
     public function testFeedbackSettingsCogOnlyRendersForAdministratorsAndSupervisors(): void
     {
         $developer = $this->createAuthenticatedClient(['bink8s.app.kiwi.dev']);

@@ -572,7 +572,7 @@
                             <div class="form-row">
                                 <div class="payment-methods">
                                     <div class="payment-option">
-                                        <input type="radio" id="subPaymentAuto" name="subPayment" value="automatisch" checked>
+                                        <input type="radio" id="subPaymentAuto" name="subPayment" value="B" checked>
                                         <label for="subPaymentAuto">
                                             <span class="payment-icon">
                                                 <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none">
@@ -585,9 +585,17 @@
                                         <div class="additional-input">
                                             <input type="text" id="subIBAN" placeholder="IBAN rekeningnummer" 
                                                 data-feedback-sensitive="iban"
+                                                required
                                                 pattern="^(NL[0-9]{2}[A-Z]{4}[0-9]{10}|BE[0-9]{2}[0-9]{12})$" 
                                                 title="Vul hier een geldig IBAN nummer in. Alleen Nederlandse (NL) en Belgische (BE) rekeningen worden ondersteund." data-i18n-placeholder="indexHtml.placeholder.iban_rekeningnummer_f6244ddc" data-i18n-title="indexHtml.title.vul_hier_een_geldig_iban_nummer_in_alleen_nederlandse_nl_en_belgische_be_5e253df9">
                                         </div>
+                                    </div>
+                                    <div class="payment-option">
+                                        <input type="radio" id="subPaymentInstruction" name="subPayment" value="AC">
+                                        <label for="subPaymentInstruction">
+                                            <span class="payment-icon" aria-hidden="true">🧾</span>
+                                            <span class="payment-text" data-i18n="indexHtml.text.betaalinstructie_7fb08411">Betaalinstructie</span>
+                                        </label>
                                     </div>
                                 </div>
                             </div>

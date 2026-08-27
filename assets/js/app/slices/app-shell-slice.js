@@ -1,4 +1,5 @@
 import { getGlobalScope } from '../services.js';
+import { DIRECT_DEBIT_PAYMENT_METHOD, syncSubscriptionIbanRequirement } from '../subscription-payment.js';
 
 const APP_SHELL_SLICE_NAMESPACE = 'kiwiAppShellSlice';
 let appShellDependenciesResolver = null;
@@ -342,8 +343,12 @@ function handleGlobalChange(event) {
         return;
     }
 
-    const isPaymentMethodField = target.name === 'subPayment' || target.name === 'editPayment';
-    if (!isPaymentMethodField || typeof target.closest !== 'function') {
+    if (target.name === 'subPayment') {
+        syncSubscriptionIbanRequirement(getElementById('subIBAN'), target.value);
+        return;
+    }
+
+    if (target.name !== 'editPayment' || typeof target.closest !== 'function') {
         return;
     }
 
@@ -358,17 +363,8 @@ function handleGlobalChange(event) {
     }
 
     const ibanInput = additionalInput.querySelector('input[type="text"]');
-    if (!ibanInput || typeof ibanInput.setAttribute !== 'function' || typeof ibanInput.removeAttribute !== 'function') {
-        return;
-    }
-
-    const shouldRequireIban = target.value === 'automatisch';
-    if (shouldRequireIban) {
-        ibanInput.setAttribute('required', 'required');
-        return;
-    }
-
-    ibanInput.removeAttribute('required');
+    const paymentMethod = target.value === 'automatisch' ? DIRECT_DEBIT_PAYMENT_METHOD : target.value;
+    syncSubscriptionIbanRequirement(ibanInput, paymentMethod);
 }
 
 export function installGlobalListeners() {

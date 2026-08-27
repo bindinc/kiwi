@@ -310,26 +310,12 @@ function testGlobalListenersHandleKeyboardClickAndChangeEvents() {
             }
         };
 
-        const paymentOption = {
-            querySelector(selector) {
-                if (selector !== '.additional-input') {
-                    return null;
-                }
-                return {
-                    querySelector(inputSelector) {
-                        return inputSelector === 'input[type="text"]' ? ibanInput : null;
-                    }
-                };
-            }
-        };
+        documentStub.getElementById = (elementId) => elementId === 'subIBAN' ? ibanInput : null;
 
         documentStub.listeners.change({
             target: {
                 name: 'subPayment',
-                value: 'automatisch',
-                closest(selector) {
-                    return selector === '.payment-option' ? paymentOption : null;
-                }
+                value: 'B'
             }
         });
         assert.equal(ibanInput.required, true);
@@ -337,10 +323,7 @@ function testGlobalListenersHandleKeyboardClickAndChangeEvents() {
         documentStub.listeners.change({
             target: {
                 name: 'subPayment',
-                value: 'acceptgiro',
-                closest(selector) {
-                    return selector === '.payment-option' ? paymentOption : null;
-                }
+                value: 'AC'
             }
         });
         assert.equal(ibanInput.required, false);

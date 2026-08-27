@@ -105,6 +105,7 @@ const en = {
             "bestaande_persoon_4fee1022": "Existing person",
             "bestelling_overzicht_7d5a38f4": "📋 Order Overview",
             "bestelling_plaatsen_07d072ea": "Place order",
+            "betaalinstructie_7fb08411": "Payment instruction",
             "betaalmethode_5e503508": "Payment method *",
             "betaling_9887764f": "Payment",
             "bevestiging_d6c110be": "Confirmation",
