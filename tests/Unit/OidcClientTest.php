@@ -318,7 +318,7 @@ final class OidcClientTest extends TestCase
             'aud' => 'kiwi-client',
             'nonce' => $nonce,
             'exp' => time() + 300,
-        ], 'shared-secret', 'HS256', 'alg-less-key');
+        ], 'oidc-algorithm-allowlist-test-key', 'HS256', 'alg-less-key');
 
         $this->expectException(\UnexpectedValueException::class);
         $this->expectExceptionMessage('Unsupported OIDC signing algorithm.');
