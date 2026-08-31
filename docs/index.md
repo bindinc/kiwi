@@ -28,6 +28,7 @@ Use `explanation/` for design background, tradeoffs, follow-up notes, and featur
 context that explain why Kiwi works the way it does.
 
 - [Cluster follow-up](explanation/cluster-follow-up.md)
+- [Customer work sessions](explanation/customer-work-sessions.md)
 - [Coupon code and discount improvements](explanation/coupon-code-feature.md)
 
 ## Tutorials

@@ -14,6 +14,7 @@ import { registerWinbackSlice } from './slices/winback-slice.js';
 import { registerLocalizationSlice, applyLocaleToUi, getDateLocaleForApp } from './slices/localization-slice.js';
 import { addContactMoment, configureContactHistorySliceDependencies, registerContactHistorySlice } from './slices/contact-history-slice.js';
 import { configureCustomerDetailSliceDependencies, registerCustomerDetailSlice, selectCustomer } from './slices/customer-detail-slice.js';
+import { configureCustomerWorkSessionSliceDependencies, registerCustomerWorkSessionSlice } from './slices/customer-work-session-slice.js';
 import { configureDeliveryRemarksSliceDependencies, registerDeliveryRemarksSlice } from './slices/delivery-remarks-slice.js';
 import { registerDeliveryDatePickerSlice, initDeliveryDatePicker } from './slices/delivery-date-picker-slice.js';
 import { registerWerfsleutelActions } from './slices/werfsleutel.js';
@@ -108,6 +109,7 @@ function createLegacySliceDependenciesResolver(providerKey) {
 }
 
 const resolveCustomerDetailSliceDependencies = createLegacySliceDependenciesResolver('getCustomerDetailSliceDependencies');
+configureCustomerWorkSessionSliceDependencies(createLegacySliceDependenciesResolver('getCustomerWorkSessionSliceDependencies'));
 configureContactHistorySliceDependencies(resolveCustomerDetailSliceDependencies);
 configureCustomerDetailSliceDependencies(resolveCustomerDetailSliceDependencies);
 configureOrderSliceDependencies(createLegacySliceDependenciesResolver('getOrderSliceDependencies'));
@@ -120,6 +122,7 @@ registerDeliveryRemarksSlice(actionRouter);
 registerAppShellSlice(actionRouter);
 registerDeliveryDatePickerSlice(actionRouter);
 registerLocalizationSlice(actionRouter);
+registerCustomerWorkSessionSlice(actionRouter);
 registerContactHistorySlice(actionRouter);
 registerCustomerDetailSlice(actionRouter);
 registerWerfsleutelActions(actionRouter);

@@ -61,22 +61,34 @@ final class HomeControllerTest extends WebTestCase
 
     public function testLogoutRedirectsToLoggedOutPageWithCsrfToken(): void
     {
-        $client = $this->createAuthenticatedClient(
-            ['bink8s.app.kiwi.user'],
-            ['name' => 'Kiwi User'],
-            ['id_token' => 'id-token-value'],
-        );
+        $previousClientSecretsPath = getenv('OIDC_CLIENT_SECRETS');
+        $missingClientSecretsPath = sys_get_temp_dir().'/kiwi-missing-oidc-'.uniqid('', true).'.json';
+        putenv('OIDC_CLIENT_SECRETS='.$missingClientSecretsPath);
 
-        $client->request('GET', '/');
-        $content = (string) $client->getResponse()->getContent();
-        self::assertSame(1, preg_match('/name="_csrf_token" value="([^"]+)"/', $content, $matches));
-        $csrfToken = $matches[1];
+        try {
+            $client = $this->createAuthenticatedClient(
+                ['bink8s.app.kiwi.user'],
+                ['name' => 'Kiwi User'],
+                ['id_token' => 'id-token-value'],
+            );
 
-        $client->request('POST', '/app-logout', [
-            '_csrf_token' => $csrfToken,
-        ]);
+            $client->request('GET', '/');
+            $content = (string) $client->getResponse()->getContent();
+            self::assertSame(1, preg_match('/name="_csrf_token" value="([^"]+)"/', $content, $matches));
+            $csrfToken = $matches[1];
 
-        self::assertResponseRedirects('/logged-out');
+            $client->request('POST', '/app-logout', [
+                '_csrf_token' => $csrfToken,
+            ]);
+
+            self::assertResponseRedirects('/logged-out');
+        } finally {
+            if (false === $previousClientSecretsPath) {
+                putenv('OIDC_CLIENT_SECRETS');
+            } else {
+                putenv('OIDC_CLIENT_SECRETS='.$previousClientSecretsPath);
+            }
+        }
     }
 
     public function testLogoutDoesNotAllowGetRequests(): void

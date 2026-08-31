@@ -883,6 +883,25 @@ const nl = {
         "resetConfirm": "⚠️ Dit zal alle sessiedata wissen en de pagina herladen. Weet je het zeker?",
         "resetFailed": "Reset via backend mislukt"
     },
+    "customerWorkSession": {
+        "activeCustomer": "Actieve klant",
+        "personNumber": "Persoonnr.",
+        "source": "Bron/mandant",
+        "endAction": "Nieuwe klant / klantwerksessie beëindigen",
+        "endCompactAction": "Nieuwe sessie",
+        "pendingMutation": "Aanvraagstatus wordt vastgesteld; wisselen is tijdelijk geblokkeerd.",
+        "queuedHeading": "Aanvraag in de wachtrij geplaatst",
+        "queuedOne": "1 aanvraag staat in de wachtrij.",
+        "queuedMany": "{count} aanvragen staan in de wachtrij.",
+        "recipient": "Ontvanger",
+        "requester": "Aanvrager/betaler",
+        "notFinal": "De aanvraag is door KIWI geaccepteerd, maar nog niet definitief verwerkt.",
+        "continueAction": "Verder werken met deze klant",
+        "activeCustomerBlocksSelection": "Beëindig eerst de huidige klantwerksessie voordat je een andere klant opent.",
+        "resetBlocked": "Wacht totdat de lopende aanvraag een duidelijke status heeft.",
+        "resetFailed": "De klantwerksessie kon niet veilig worden beëindigd.",
+        "resetComplete": "Klantwerksessie beëindigd. Klaar voor een nieuwe klant."
+    },
     "search": {
         "allCustomers": "alle klanten",
         "backendFailed": "Zoeken via backend mislukt",

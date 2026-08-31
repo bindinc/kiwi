@@ -254,6 +254,7 @@ const CONTACT_HISTORY_SLICE_NAMESPACE = 'kiwiContactHistorySlice';
 const ORDER_SLICE_NAMESPACE = 'kiwiOrderSlice';
 const DELIVERY_REMARKS_SLICE_NAMESPACE = 'kiwiDeliveryRemarksSlice';
 const APP_SHELL_SLICE_NAMESPACE = 'kiwiAppShellSlice';
+const CUSTOMER_WORK_SESSION_SLICE_NAMESPACE = 'kiwiCustomerWorkSession';
 
 function getSliceApi(namespace) {
     const globalScope = getGlobalScope();
@@ -448,6 +449,18 @@ function getCustomerDetailSliceDependencies() {
         upsertCustomerInCache,
         getCurrentCustomer: () => state.currentCustomer,
         setCurrentCustomer: (v) => { state.currentCustomer = v; },
+        startCustomerSelection(customer) {
+            return invokeSliceMethod(CUSTOMER_WORK_SESSION_SLICE_NAMESPACE, 'startCustomerSelection', [customer]);
+        },
+        confirmCustomerSelection(context, customer) {
+            return invokeSliceMethod(CUSTOMER_WORK_SESSION_SLICE_NAMESPACE, 'confirmCustomerSelection', [context, customer]);
+        },
+        abandonCustomerSelection(context) {
+            return invokeSliceMethod(CUSTOMER_WORK_SESSION_SLICE_NAMESPACE, 'abandonCustomerSelection', [context]);
+        },
+        isCustomerContextCurrent(context) {
+            return invokeSliceMethod(CUSTOMER_WORK_SESSION_SLICE_NAMESPACE, 'isCurrent', [context]) === true;
+        },
         getContactHistoryState: () => state.contactHistoryState,
         resetContactHistoryViewState() {
             invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'resetContactHistoryViewState');
@@ -462,6 +475,35 @@ function getCustomerDetailSliceDependencies() {
         getSubscriptionRequesterMetaLine: globalScope?.getSubscriptionRequesterMetaLine || (() => ''),
         getDateLocaleForApp: globalScope?.getDateLocaleForApp || (() => 'nl-NL'),
         personsApiUrl
+    };
+}
+
+function getCustomerWorkSessionSliceDependencies() {
+    const globalScope = getGlobalScope();
+
+    return {
+        getApiClient: () => (globalScope?.kiwiApi || null),
+        translate: globalScope?.translate || ((key, _params, fallback) => fallback || key),
+        showToast,
+        resetCustomerBoundState() {
+            state.customers = [];
+            state.currentCustomer = null;
+            state.selectedOffer = null;
+            state.contactHistoryState.currentPage = 1;
+            state.contactHistoryState.highlightId = null;
+            state.contactHistoryState.lastEntry = null;
+
+            if (globalScope && typeof globalScope.clearSearchResults === 'function') {
+                globalScope.clearSearchResults();
+            }
+            if (globalScope && typeof globalScope.resetSubscriptionRoleState === 'function') {
+                globalScope.resetSubscriptionRoleState();
+            }
+
+            resetWerfsleutelPicker();
+            invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'resetCustomerWorkspace');
+            updateCustomerActionButtons();
+        }
     };
 }
 
@@ -689,6 +731,7 @@ export function installLegacyAppState() {
         getCustomerDetailSliceDependencies,
         getOrderSliceDependencies,
         getDeliveryRemarksSliceDependencies,
+        getCustomerWorkSessionSliceDependencies,
         getAppShellSliceDependencies
     };
 

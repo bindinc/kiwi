@@ -110,10 +110,11 @@ final class WebaboOfferCatalogServiceTest extends TestCase
         $config = ORMSetup::createAttributeMetadataConfig([
             dirname(__DIR__, 2).'/src/Entity',
         ], true);
+        $config->enableNativeLazyObjects(true);
         $connection = DriverManager::getConnection($this->getConnectionParams(), $config);
 
         try {
-            $connection->connect();
+            $connection->executeQuery($connection->getDatabasePlatform()->getDummySelectSQL());
         } catch (\Throwable $exception) {
             self::markTestSkipped(sprintf('Test database is niet bereikbaar: %s', $exception->getMessage()));
         }
