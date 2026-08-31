@@ -12,6 +12,7 @@ complete a concrete workflow.
 - [Run the Docker Compose and Playwright test workflow](how-to/compose-playwright-test-workflow.md)
 - [Work with branches and collaboration rules](how-to/branching.md)
 - [Simulate Avaya calls](how-to/simulate-avaya-calls.md)
+- [Bestaande klanten zoeken en beheren](how-to/search-and-manage-existing-customers.md)
 
 ## Reference
 
