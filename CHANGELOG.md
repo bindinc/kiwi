@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Document how agents search for, select, view, and manage existing customers, including current Subscription API read-only and contact-history limitations.
 - Separate landline and mobile phone inputs for new subscription persons and preserve their PPA `contacts.phones` and `contacts.mobiles` mapping in the queued request contract.
 - Add project-local Codex lifecycle hooks that block sensitive prompts, risky secret-file operations, and repository publication when redacted secret scanning finds a problem, and run GitHub Actions jobs on GitHub-hosted Ubuntu runners.
 - Stop showing the redundant sensitive-media-masked notice in the contextual feedback privacy control while retaining media masking.
