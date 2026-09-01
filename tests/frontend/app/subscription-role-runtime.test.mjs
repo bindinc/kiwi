@@ -38,8 +38,12 @@ function createElementStub() {
             remove() {},
             toggle() {}
         },
-        setAttribute() {},
-        removeAttribute() {},
+        setAttribute(attribute) {
+            this[attribute] = true;
+        },
+        removeAttribute(attribute) {
+            this[attribute] = false;
+        },
         appendChild(child) {
             this.options.push(child);
         },
@@ -102,6 +106,7 @@ function createRuntimeContext(options = {}) {
         subRequesterPostalCode: createElementStub(),
         subRequesterHouseNumber: createElementStub(),
         subRequesterHouseExt: createElementStub(),
+        subRequesterAddressExtension: createElementStub(),
         subRequesterPhone: createElementStub(),
         subRequesterEmail: createElementStub(),
         recipientSelectedPerson: createElementStub(),
@@ -119,6 +124,7 @@ function createRuntimeContext(options = {}) {
         subRecipientPostalCode: createElementStub(),
         subRecipientHouseNumber: createElementStub(),
         subRecipientHouseExt: createElementStub(),
+        subRecipientAddressExtension: createElementStub(),
         subRecipientAddress: createElementStub(),
         subRecipientCity: createElementStub(),
         subRecipientPhone: createElementStub(),
@@ -410,11 +416,49 @@ function testNewSubscriptionPersonKeepsPpaPhoneTypesSeparate() {
     assert.equal(Object.hasOwn(payload.person, 'phone'), false);
 }
 
+function testNewSubscriptionPersonKeepsAddressExtensionsSeparate() {
+    const { context, elements, runtime } = createRuntimeContext();
+    context.subscriptionRoleState.recipient.mode = 'create';
+
+    runtime.ensureSubscriptionRoleCreateForm('recipient');
+
+    assert.match(elements.recipientCreateForm.innerHTML, /id="subRecipientHouseExt"/);
+    assert.match(elements.recipientCreateForm.innerHTML, /id="subRecipientAddressExtension"/);
+    assert.match(elements.recipientCreateForm.innerHTML, /\(interne\) Toevoeging 1/);
+
+    elements.subRecipientInitials.value = 'P.';
+    elements.subRecipientLastName.value = 'Tester';
+    elements.subRecipientBirthdayDay.value = '02';
+    elements.subRecipientBirthdayMonth.value = '03';
+    elements.subRecipientBirthdayYear.value = '1980';
+    elements.subRecipientPostalCode.value = '1234 ab';
+    elements.subRecipientHouseNumber.value = '10A';
+    elements.subRecipientHouseExt.value = '2';
+    elements.subRecipientAddressExtension.value = '310';
+    elements.subRecipientAddress.value = 'Teststraat';
+    elements.subRecipientCity.value = 'Hilversum';
+    elements.subRecipientEmail.value = 'p.tester@example.org';
+
+    const payload = JSON.parse(JSON.stringify(runtime.buildSubscriptionRolePayload('recipient')));
+
+    assert.equal(payload.person.houseNumber, '10A2');
+    assert.equal(payload.person.address, 'Teststraat 10A2');
+    assert.equal(payload.person.street, 'Teststraat');
+    assert.equal(payload.person.addressExtension, '310');
+}
+
 function testPhoneTypeLabelsAreTranslated() {
     assert.equal(nl.forms.landlinePhonePlaceholder, 'Vast telefoonnummer');
     assert.equal(nl.forms.mobilePhonePlaceholder, 'Mobiel telefoonnummer');
     assert.equal(en.forms.landlinePhonePlaceholder, 'Landline phone number');
     assert.equal(en.forms.mobilePhonePlaceholder, 'Mobile phone number');
+}
+
+function testAddressExtensionLabelsAreTranslated() {
+    assert.equal(nl.forms.houseExtensionPlaceholder, 'Huisnummer toevoeging');
+    assert.equal(nl.forms.addressExtensionPlaceholder, '(interne) Toevoeging 1');
+    assert.equal(en.forms.houseExtensionPlaceholder, 'House number addition');
+    assert.equal(en.forms.addressExtensionPlaceholder, '(internal) Addition 1');
 }
 
 function testRefreshSubscriptionDuplicateMatchesIgnoresLocalCustomersWithoutBackendCache() {
@@ -898,12 +942,42 @@ function testDuplicateApiIdentifiesStaleResponsesByRequestVersion() {
     );
 }
 
+function testToggleCustomerFormAddressKeepsAddressExtensionOptional() {
+    const { elements, runtime } = createRuntimeContext();
+    const addressFields = [
+        'PostalCode',
+        'HouseNumber',
+        'HouseExt',
+        'AddressExtension',
+        'Address',
+        'City'
+    ];
+
+    elements.subRequesterSameAddress = { checked: true };
+    addressFields.forEach((field) => {
+        elements[`subRequester${field}`] = createElementStub();
+    });
+
+    runtime.toggleCustomerFormAddress('subRequester');
+    elements.subRequesterSameAddress.checked = false;
+    runtime.toggleCustomerFormAddress('subRequester');
+
+    assert.equal(elements.subRequesterPostalCode.required, true);
+    assert.equal(elements.subRequesterHouseNumber.required, true);
+    assert.equal(elements.subRequesterAddress.required, true);
+    assert.equal(elements.subRequesterCity.required, true);
+    assert.equal(elements.subRequesterHouseExt.required, false);
+    assert.equal(elements.subRequesterAddressExtension.required, false);
+}
+
 async function run() {
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
     testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext();
     testNewSubscriptionPersonKeepsPpaPhoneTypesSeparate();
+    testNewSubscriptionPersonKeepsAddressExtensionsSeparate();
     testPhoneTypeLabelsAreTranslated();
+    testAddressExtensionLabelsAreTranslated();
     testRefreshSubscriptionDuplicateMatchesIgnoresLocalCustomersWithoutBackendCache();
     testRefreshSubscriptionDuplicateMatchesUsesBackendCachedMatchesOnly();
     await testSelectSubscriptionRolePersonHydratesDetailAndPrefillsIban();
@@ -920,6 +994,7 @@ async function run() {
     testFreshDuplicateCacheEntryExpiresWithControlledClock();
     testDuplicateApiScheduleUsesCooldownFromControlledClock();
     testDuplicateApiIdentifiesStaleResponsesByRequestVersion();
+    testToggleCustomerFormAddressKeepsAddressExtensionOptional();
     console.log('subscription role runtime tests passed');
 }
 

@@ -335,7 +335,7 @@ function buildExistingPersonSnapshot(person) {
         return null;
     }
 
-    return {
+    const snapshot = {
         salutation: String(person.salutation || '').trim(),
         firstName: String(person.firstName || '').trim(),
         middleName: String(person.middleName || '').trim(),
@@ -358,6 +358,15 @@ function buildExistingPersonSnapshot(person) {
         sourceSystem: String(person.sourceSystem || '').trim(),
         supportsPersonLookup: Boolean(person.supportsPersonLookup)
     };
+
+    const addressExtension = String(person.addressExtension || '').trim();
+    const street = String(person.street || '').trim();
+    if (addressExtension && street) {
+        snapshot.addressExtension = addressExtension;
+        snapshot.street = street;
+    }
+
+    return snapshot;
 }
 
 function generateSubmissionId() {

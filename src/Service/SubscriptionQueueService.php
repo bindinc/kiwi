@@ -12,6 +12,7 @@ use App\Http\ApiProblemException;
 use App\Outbox\SubscriptionQueueSchemaManager;
 use App\Repository\SubscriptionOrderRepository;
 use App\Repository\WebaboOfferRepository;
+use App\SubscriptionApi\PpaAddressContactMapper;
 use App\SubscriptionApi\PpaPhoneContactMapper;
 use App\Webabo\WebaboOfferCacheSchemaManager;
 use Doctrine\DBAL\Connection;
@@ -28,6 +29,7 @@ final class SubscriptionQueueService
         private readonly Connection $connection,
         private readonly PocStateService $stateService,
         private readonly SubscriptionQueueDisplayFormatter $displayFormatter,
+        private readonly PpaAddressContactMapper $ppaAddressContactMapper,
         private readonly PpaPhoneContactMapper $ppaPhoneContactMapper,
         private readonly WebaboOfferCacheSchemaManager $webaboOfferCacheSchemaManager,
         private readonly WebaboOfferRepository $webaboOfferRepository,
@@ -364,6 +366,23 @@ final class SubscriptionQueueService
         $landlinePhone = $this->normalizeNullableString($payload['landlinePhone'] ?? null);
         $mobilePhone = $this->normalizeNullableString($payload['mobilePhone'] ?? null);
         $legacyPhone = $this->normalizeNullableString($payload['phone'] ?? null);
+        $addressExtension = $this->normalizeNullableString($payload['addressExtension'] ?? null);
+        $street = $this->normalizeNullableString($payload['street'] ?? null);
+        $postalCode = strtoupper($this->normalizeNullableString($payload['postalCode'] ?? null) ?? '');
+        $houseNumber = $this->normalizeNullableString($payload['houseNumber'] ?? null);
+        $city = $this->normalizeNullableString($payload['city'] ?? null);
+        $contacts = $this->ppaPhoneContactMapper->map($landlinePhone, $mobilePhone);
+        $addressContacts = $this->ppaAddressContactMapper->map(
+            $addressExtension,
+            $street,
+            $postalCode,
+            $city,
+            $houseNumber,
+        );
+
+        if ([] !== $addressContacts) {
+            $contacts['addresses'] = $addressContacts;
+        }
 
         $normalized = [
             'salutation' => $this->normalizeNullableString($payload['salutation'] ?? null),
@@ -371,19 +390,24 @@ final class SubscriptionQueueService
             'middleName' => $this->normalizeNullableString($payload['middleName'] ?? null) ?? '',
             'lastName' => $this->normalizeNullableString($payload['lastName'] ?? null),
             'birthday' => $this->normalizeNullableString($payload['birthday'] ?? null),
-            'postalCode' => strtoupper($this->normalizeNullableString($payload['postalCode'] ?? null) ?? ''),
-            'houseNumber' => $this->normalizeNullableString($payload['houseNumber'] ?? null),
+            'postalCode' => $postalCode,
+            'houseNumber' => $houseNumber,
             'address' => $this->normalizeNullableString($payload['address'] ?? null),
-            'city' => $this->normalizeNullableString($payload['city'] ?? null),
+            'city' => $city,
             'email' => $this->normalizeNullableString($payload['email'] ?? null),
             'phone' => $mobilePhone ?? $landlinePhone ?? $legacyPhone ?? '',
             'landlinePhone' => $landlinePhone ?? '',
             'mobilePhone' => $mobilePhone ?? '',
-            'contacts' => $this->ppaPhoneContactMapper->map($landlinePhone, $mobilePhone),
+            'contacts' => $contacts,
             'optinEmail' => $this->normalizeNullableString($payload['optinEmail'] ?? null),
             'optinPhone' => $this->normalizeNullableString($payload['optinPhone'] ?? null),
             'optinPost' => $this->normalizeNullableString($payload['optinPost'] ?? null),
         ];
+
+        if (null !== $addressExtension && null !== $street) {
+            $normalized['addressExtension'] = $addressExtension;
+            $normalized['street'] = $street;
+        }
 
         foreach ($requiredFields as $requiredField) {
             if (!\is_string($normalized[$requiredField] ?? null) || '' === trim((string) $normalized[$requiredField])) {
@@ -602,6 +626,23 @@ final class SubscriptionQueueService
         $landlinePhone = $this->normalizeNullableString($person['landlinePhone'] ?? null);
         $mobilePhone = $this->normalizeNullableString($person['mobilePhone'] ?? null);
         $legacyPhone = $this->normalizeNullableString($person['phone'] ?? null);
+        $addressExtension = $this->normalizeNullableString($person['addressExtension'] ?? null);
+        $street = $this->normalizeNullableString($person['street'] ?? null);
+        $postalCode = $this->normalizeNullableString($person['postalCode'] ?? null);
+        $houseNumber = $this->normalizeNullableString($person['houseNumber'] ?? null);
+        $city = $this->normalizeNullableString($person['city'] ?? null);
+        $contacts = $this->ppaPhoneContactMapper->map($landlinePhone, $mobilePhone);
+        $addressContacts = $this->ppaAddressContactMapper->map(
+            $addressExtension,
+            $street,
+            $postalCode,
+            $city,
+            $houseNumber,
+        );
+
+        if ([] !== $addressContacts) {
+            $contacts['addresses'] = $addressContacts;
+        }
 
         $snapshot = [
             'salutation' => $this->normalizeNullableString($person['salutation'] ?? null),
@@ -610,20 +651,25 @@ final class SubscriptionQueueService
             'lastName' => $this->normalizeNullableString($person['lastName'] ?? null),
             'birthday' => $this->normalizeNullableString($person['birthday'] ?? null),
             'personNumber' => $this->normalizeNullableString($person['personNumber'] ?? null),
-            'postalCode' => $this->normalizeNullableString($person['postalCode'] ?? null),
-            'houseNumber' => $this->normalizeNullableString($person['houseNumber'] ?? null),
+            'postalCode' => $postalCode,
+            'houseNumber' => $houseNumber,
             'address' => $this->normalizeNullableString($person['address'] ?? null),
-            'city' => $this->normalizeNullableString($person['city'] ?? null),
+            'city' => $city,
             'email' => $this->normalizeNullableString($person['email'] ?? null),
             'phone' => $mobilePhone ?? $landlinePhone ?? $legacyPhone,
             'landlinePhone' => $landlinePhone,
             'mobilePhone' => $mobilePhone,
-            'contacts' => $this->ppaPhoneContactMapper->map($landlinePhone, $mobilePhone),
+            'contacts' => $contacts,
             'iban' => $this->normalizeNullableString($person['iban'] ?? null),
             'optinEmail' => $this->normalizeNullableString($person['optinEmail'] ?? null),
             'optinPhone' => $this->normalizeNullableString($person['optinPhone'] ?? null),
             'optinPost' => $this->normalizeNullableString($person['optinPost'] ?? null),
         ];
+
+        if (null !== $addressExtension && null !== $street) {
+            $snapshot['addressExtension'] = $addressExtension;
+            $snapshot['street'] = $street;
+        }
 
         foreach ($context as $key => $value) {
             $snapshot[$key] = $value;

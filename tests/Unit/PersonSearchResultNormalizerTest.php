@@ -158,6 +158,7 @@ final class PersonSearchResultNormalizerTest extends TestCase
                 ],
                 'addresses' => [
                     [
+                        'extension' => '310',
                         'address' => [
                             'street' => 'Ph. Lindemanstraat',
                             'postCode' => '7831CM',
@@ -197,6 +198,8 @@ final class PersonSearchResultNormalizerTest extends TestCase
         self::assertSame('Ph. Lindemanstraat 33', $normalized['address']);
         self::assertSame('7831CM', $normalized['postalCode']);
         self::assertSame('33', $normalized['houseNumber']);
+        self::assertSame('Ph. Lindemanstraat', $normalized['street']);
+        self::assertSame('310', $normalized['addressExtension']);
         self::assertSame('NIEUW-WEERDINGE', $normalized['city']);
         self::assertSame('wiesje_meeringa@hotmail.nl', $normalized['email']);
         self::assertSame('0591522006', $normalized['phone']);
