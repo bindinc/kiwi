@@ -37,6 +37,39 @@
             <div class="header-content">
                 <div class="header-top">
                     <h1>KIWI <i data-i18n="indexHtml.text.kiwiversion">v1</i></h1>
+                    <section id="customerWorkSessionBar" class="customer-work-session-bar" hidden aria-live="polite">
+                        <div class="customer-work-session-content">
+                            <div class="customer-work-session-identity">
+                                <span class="customer-work-session-label" data-i18n="customerWorkSession.activeCustomer">Actieve klant</span>
+                                <strong id="customerWorkSessionName" data-feedback-sensitive="name"></strong>
+                                <span class="customer-work-session-reference">
+                                    <span data-i18n="customerWorkSession.personNumber">Persoonnr.</span>
+                                    <span id="customerWorkSessionPersonId" data-feedback-sensitive="id"></span>
+                                </span>
+                                <span class="customer-work-session-source">
+                                    <span data-i18n="customerWorkSession.source">Bron/mandant</span>
+                                    <span id="customerWorkSessionSource"></span>
+                                </span>
+                            </div>
+                            <div class="customer-work-session-actions">
+                                <span id="customerWorkSessionPendingMutation" class="customer-work-session-warning" hidden data-i18n="customerWorkSession.pendingMutation">
+                                    Aanvraagstatus wordt vastgesteld; wisselen is tijdelijk geblokkeerd.
+                                </span>
+                                <button
+                                    id="endCustomerWorkSessionButton"
+                                    class="customer-work-session-end"
+                                    type="button"
+                                    data-action="customer-work-session.end"
+                                    data-i18n-aria-label="customerWorkSession.endAction"
+                                    data-i18n-title="customerWorkSession.endAction"
+                                    aria-label="Nieuwe klant / klantwerksessie beëindigen"
+                                    title="Nieuwe klant / klantwerksessie beëindigen">
+                                    <span class="customer-work-session-reset-icon" aria-hidden="true">↻</span>
+                                    <span class="customer-work-session-end-label" data-i18n="customerWorkSession.endCompactAction">Nieuwe sessie</span>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
                     <div class="header-right">
                         <!-- Agent Profile Widget with Status -->
                         <div class="agent-profile-widget">
@@ -238,6 +271,37 @@
                 </div>
             </div>
         </header>
+
+        <section id="queuedCustomerChoice" class="queued-customer-choice" hidden aria-live="assertive">
+            <div class="queued-customer-choice-copy">
+                <span class="queued-customer-choice-icon" aria-hidden="true">✓</span>
+                <div>
+                    <h2 data-i18n="customerWorkSession.queuedHeading">Aanvraag in de wachtrij geplaatst</h2>
+                    <p id="queuedCustomerChoiceStatus"></p>
+                    <dl class="queued-customer-choice-roles">
+                        <div>
+                            <dt data-i18n="customerWorkSession.recipient">Ontvanger</dt>
+                            <dd id="queuedCustomerChoiceRecipient" data-feedback-sensitive="name"></dd>
+                        </div>
+                        <div>
+                            <dt data-i18n="customerWorkSession.requester">Aanvrager/betaler</dt>
+                            <dd id="queuedCustomerChoiceRequester" data-feedback-sensitive="name"></dd>
+                        </div>
+                    </dl>
+                    <p class="queued-customer-choice-note" data-i18n="customerWorkSession.notFinal">
+                        De aanvraag is door KIWI geaccepteerd, maar nog niet definitief verwerkt.
+                    </p>
+                </div>
+            </div>
+            <div class="queued-customer-choice-actions">
+                <button class="btn btn-primary" type="button" data-action="customer-work-session.continue" data-i18n="customerWorkSession.continueAction">
+                    Verder werken met deze klant
+                </button>
+                <button class="btn btn-secondary" type="button" data-action="customer-work-session.end" data-i18n="customerWorkSession.endAction">
+                    Nieuwe klant / klantwerksessie beëindigen
+                </button>
+            </div>
+        </section>
 
         <!-- Main Content Area -->
         <div class="main-content">

@@ -5,6 +5,7 @@ import {
     closeForm,
     configureAppShellSliceDependencies,
     registerAppShellSlice,
+    resetCustomerWorkspace,
     showToast
 } from '../../../../assets/js/app/slices/app-shell-slice.js';
 
@@ -330,12 +331,78 @@ function testGlobalListenersHandleKeyboardClickAndChangeEvents() {
     });
 }
 
+function testCustomerWorkspaceResetDoesNotEndTheCallSession() {
+    withGlobalState(() => {
+        const visibleContainer = { style: { display: 'flex' } };
+        const form = {
+            resetCount: 0,
+            reset() {
+                this.resetCount += 1;
+            }
+        };
+        const standaloneInput = {
+            form: null,
+            tagName: 'INPUT',
+            type: 'text',
+            value: 'customer-bound value'
+        };
+        const checkedMandant = { checked: true };
+        const elementsById = {};
+        const documentStub = createDocumentStub({ elementsById });
+        documentStub.querySelectorAll = (selector) => {
+            if (selector === 'input[name="searchMandants"]:checked') {
+                return [checkedMandant];
+            }
+            if (selector === '.form-container') {
+                return [visibleContainer];
+            }
+            if (selector === '.form-container form') {
+                return [form];
+            }
+            if (selector === '.form-container input, .form-container select, .form-container textarea') {
+                return [standaloneInput];
+            }
+            return [];
+        };
+        globalThis.document = documentStub;
+
+        let endCallCount = 0;
+        let duplicateResetCount = 0;
+        const currentCustomers = [];
+        configureAppShellSliceDependencies(() => ({
+            endCallSession() {
+                endCallCount += 1;
+            },
+            isCallSessionActive() {
+                return true;
+            },
+            resetAllSubscriptionDuplicateStates() {
+                duplicateResetCount += 1;
+            },
+            setCurrentCustomer(customer) {
+                currentCustomers.push(customer);
+            }
+        }));
+
+        resetCustomerWorkspace();
+
+        assert.equal(endCallCount, 0);
+        assert.deepEqual(currentCustomers, [null]);
+        assert.equal(duplicateResetCount, 1);
+        assert.equal(visibleContainer.style.display, 'none');
+        assert.equal(form.resetCount, 1);
+        assert.equal(standaloneInput.value, '');
+        assert.equal(checkedMandant.checked, false);
+    });
+}
+
 function run() {
     testRegistersItemTwelveActionAndNamespace();
     testCloseFormResetsDuplicateStateForNewSubscriptionForm();
     testShowToastUsesContactHistoryAndDeduplicatesRecentSuccessToast();
     testShowToastFallsBackToVisualToastForSubscriptionApiCustomer();
     testGlobalListenersHandleKeyboardClickAndChangeEvents();
+    testCustomerWorkspaceResetDoesNotEndTheCallSession();
     console.log('app shell slice tests passed');
 }
 

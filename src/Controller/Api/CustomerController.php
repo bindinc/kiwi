@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\CustomerWorkSession\CustomerAuditService;
 use App\Http\ApiProblemException;
 use App\Http\JsonRequestDecoder;
 use App\Oidc\OidcConfiguration;
@@ -30,6 +31,7 @@ final class CustomerController extends AbstractApiController
         private readonly AggregatedPersonSearchService $aggregatedPersonSearchService,
         private readonly PersonDetailService $personDetailService,
         private readonly SubscriptionSummaryService $subscriptionSummaryService,
+        private readonly CustomerAuditService $customerAuditService,
     ) {
         parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
@@ -61,14 +63,14 @@ final class CustomerController extends AbstractApiController
 
         if ($this->aggregatedPersonSearchService->isAvailable()) {
             try {
-                return $this->json($this->aggregatedPersonSearchService->search(
+                $result = $this->aggregatedPersonSearchService->search(
                     $filters,
                     $page,
                     $pageSize,
                     $sortBy,
                     $allowedDivisionIds,
                     $allowedMandants,
-                ));
+                );
             } catch (\Throwable $exception) {
                 throw new ApiProblemException(
                     503,
@@ -76,12 +78,26 @@ final class CustomerController extends AbstractApiController
                     'Klant zoeken via subscription API is tijdelijk niet beschikbaar.',
                 );
             }
+        } else {
+            $result = $this->stateService->searchCustomers($request->getSession(), $filters + [
+                'mandants' => implode(',', $allowedMandants),
+                'sortBy' => $sortBy,
+            ], $page, $pageSize);
         }
 
-        return $this->json($this->stateService->searchCustomers($request->getSession(), $filters + [
-            'mandants' => implode(',', $allowedMandants),
-            'sortBy' => $sortBy,
-        ], $page, $pageSize));
+        $auditFilters = $filters + [
+            'divisionIds' => $allowedDivisionIds,
+            'mandants' => $allowedMandants,
+        ];
+        $resultCount = \is_array($result['items'] ?? null) ? count($result['items']) : 0;
+        $this->customerAuditService->recordSearchPerformed(
+            $request,
+            $this->getCurrentUserContext($request),
+            $auditFilters,
+            $resultCount,
+        );
+
+        return $this->json($result);
     }
 
     #[Route('/subscription-summaries', name: 'api_customer_subscription_summaries', methods: ['POST'], priority: 2)]
@@ -134,12 +150,20 @@ final class CustomerController extends AbstractApiController
 
         $credentialKey = trim((string) $request->query->get('credentialKey', ''));
         if ('' !== $credentialKey) {
-            return $this->readSubscriptionApiCustomer($customerId, $credentialKey);
+            $customer = $this->readSubscriptionApiCustomer($customerId, $credentialKey);
+        } else {
+            $numericCustomerId = $this->parseIntValue($customerId, 'customerId', required: true, errorCode: 'invalid_route_parameter');
+            $customer = $this->stateService->getCustomer($request->getSession(), $numericCustomerId);
         }
 
-        $numericCustomerId = $this->parseIntValue($customerId, 'customerId', required: true, errorCode: 'invalid_route_parameter');
+        $this->customerAuditService->recordProfileOpened(
+            $request,
+            $this->getCurrentUserContext($request),
+            $customer,
+            $customerId,
+        );
 
-        return $this->json($this->stateService->getCustomer($request->getSession(), $numericCustomerId));
+        return $this->json($customer);
     }
 
     #[Route('/{customerId}', name: 'api_customer_update', methods: ['PATCH'], requirements: ['customerId' => '\d+'])]
@@ -201,10 +225,13 @@ final class CustomerController extends AbstractApiController
         return $this->json($this->stateService->getArticleOrders($request->getSession(), $customerId));
     }
 
-    private function readSubscriptionApiCustomer(string $customerId, string $credentialKey): JsonResponse
+    /**
+     * @return array<string, mixed>
+     */
+    private function readSubscriptionApiCustomer(string $customerId, string $credentialKey): array
     {
         try {
-            return $this->json($this->personDetailService->getPerson($customerId, $credentialKey));
+            return $this->personDetailService->getPerson($customerId, $credentialKey);
         } catch (SubscriptionApiResponseException $exception) {
             if (404 === $exception->getStatusCode()) {
                 throw new ApiProblemException(404, 'customer_not_found', 'Customer not found');

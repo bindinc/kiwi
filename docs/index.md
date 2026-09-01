@@ -12,6 +12,7 @@ complete a concrete workflow.
 - [Run the Docker Compose and Playwright test workflow](how-to/compose-playwright-test-workflow.md)
 - [Work with branches and collaboration rules](how-to/branching.md)
 - [Simulate Avaya calls](how-to/simulate-avaya-calls.md)
+- [Bestaande klanten zoeken en beheren](how-to/search-and-manage-existing-customers.md)
 
 ## Reference
 
@@ -27,6 +28,7 @@ Use `explanation/` for design background, tradeoffs, follow-up notes, and featur
 context that explain why Kiwi works the way it does.
 
 - [Cluster follow-up](explanation/cluster-follow-up.md)
+- [Customer work sessions](explanation/customer-work-sessions.md)
 - [Coupon code and discount improvements](explanation/coupon-code-feature.md)
 
 ## Tutorials

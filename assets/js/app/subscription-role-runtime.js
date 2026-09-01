@@ -695,8 +695,40 @@ function buildSubscriptionRolePersonDetailUrl(selectedPerson) {
     if (sourceSystem) {
         params.set('sourceSystem', sourceSystem);
     }
+    const divisionId = String(selectedPerson.divisionId || '').trim();
+    if (divisionId) {
+        params.set('divisionId', divisionId);
+    }
+    const mandant = String(selectedPerson.mandant || '').trim();
+    if (mandant) {
+        params.set('mandant', mandant);
+    }
 
     return `${personsApiUrl}/${encodeURIComponent(String(selectedPerson.id))}?${params.toString()}`;
+}
+
+function buildSubscriptionRoleRequestHeaders(selectedPerson) {
+    return {
+        'X-Kiwi-Customer-Person-Id': String(selectedPerson.personId || selectedPerson.id || '').trim(),
+        'X-Kiwi-Customer-Credential-Key': String(selectedPerson.credentialKey || '').trim(),
+        'X-Kiwi-Customer-Source-System': String(selectedPerson.sourceSystem || 'kiwi').trim(),
+        'X-Kiwi-Customer-Division-Id': String(selectedPerson.divisionId || '').trim(),
+        'X-Kiwi-Customer-Mandant': String(selectedPerson.mandant || '').trim()
+    };
+}
+
+function subscriptionRoleSelectionIsCurrent(role, selectedPerson) {
+    const currentSelection = subscriptionRoleState[role]?.selectedPerson;
+    if (!currentSelection) {
+        return false;
+    }
+
+    const currentId = String(currentSelection.personId || currentSelection.id || '').trim();
+    const selectedId = String(selectedPerson.personId || selectedPerson.id || '').trim();
+    const currentCredential = String(currentSelection.credentialKey || '').trim();
+    const selectedCredential = String(selectedPerson.credentialKey || '').trim();
+
+    return currentId === selectedId && currentCredential === selectedCredential;
 }
 
 function mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload) {
@@ -723,7 +755,12 @@ async function hydrateSubscriptionRoleSelectedPerson(role) {
     }
 
     try {
-        const detailPayload = await window.kiwiApi.get(detailUrl);
+        const detailPayload = await window.kiwiApi.get(detailUrl, {
+            headers: buildSubscriptionRoleRequestHeaders(selectedPerson)
+        });
+        if (!subscriptionRoleSelectionIsCurrent(role, selectedPerson)) {
+            return;
+        }
         const hydratedPerson = mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload);
         subscriptionRoleState[role].selectedPerson = hydratedPerson;
         upsertCustomerInCache(hydratedPerson);

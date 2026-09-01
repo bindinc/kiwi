@@ -584,7 +584,7 @@ async function testSelectSubscriptionRolePersonHydratesDetailAndPrefillsIban() {
     runtime.selectSubscriptionRolePerson('recipient', 73);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    assert.equal(requestedUrl, '/api/v1/persons/73?credentialKey=tvk&sourceSystem=subscription-api');
+    assert.equal(requestedUrl, '/api/v1/persons/73?credentialKey=tvk&sourceSystem=subscription-api&mandant=HMC');
     assert.equal(context.subscriptionRoleState.recipient.selectedPerson.iban, 'NL80INGB0001340187');
     assert.equal(elements.subIBAN.value, 'NL80INGB0001340187');
     assert.equal(context.__upserts.length, 1);

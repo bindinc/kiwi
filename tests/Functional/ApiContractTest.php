@@ -113,6 +113,17 @@ final class ApiContractTest extends WebTestCase
         $submissionId = 'sc-187755-functional-submission';
         $requestPayload = [
             'submissionId' => $submissionId,
+            'customerContext' => [
+                'workflowSessionId' => 'workflow-sc-200164',
+                'contextGeneration' => 3,
+                'customerReference' => [
+                    'personId' => (string) $recipientId,
+                    'credentialKey' => '',
+                    'sourceSystem' => 'kiwi',
+                    'divisionId' => '',
+                    'mandant' => '',
+                ],
+            ],
             'recipient' => ['personId' => $recipientId],
             'requester' => ['personId' => $requesterId],
             'subscription' => [
@@ -164,6 +175,12 @@ final class ApiContractTest extends WebTestCase
         self::assertSame($submissionId, $duplicatePayload['submissionId']);
         self::assertSame($payload['display'], $duplicatePayload['display']);
 
+        $client->request('GET', '/api/v1/workflows/subscription/submission/'.rawurlencode($submissionId));
+        self::assertResponseIsSuccessful();
+        $submissionStatusPayload = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame($orderId, $submissionStatusPayload['orderId']);
+        self::assertSame($submissionId, $submissionStatusPayload['submissionId']);
+
         $client->request('GET', sprintf('/api/v1/workflows/subscription/%d', $orderId));
         self::assertResponseIsSuccessful();
         $statusPayload = json_decode($client->getResponse()->getContent(), true);
@@ -188,6 +205,11 @@ final class ApiContractTest extends WebTestCase
             'SELECT COUNT(*) FROM outbox_events WHERE order_id = ?',
             [$orderId],
         ));
+        $storedRequestPayload = json_decode((string) $connection->fetchOne(
+            'SELECT request_payload FROM subscription_orders WHERE submission_id = ?',
+            [$submissionId],
+        ), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertSame($requestPayload['customerContext'], $storedRequestPayload['customerContext']);
 
         $client->request('PATCH', sprintf('/api/v1/persons/%d', $recipientId), server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'city' => 'Zwolle',

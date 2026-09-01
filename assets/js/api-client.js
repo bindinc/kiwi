@@ -9,9 +9,26 @@
         ? configuredBasePath.replace(/\/+$/, '')
         : '';
 
-    function buildHeaders(extraHeaders) {
+    function getCustomerContextHeaders(options) {
+        if (options && options.skipCustomerContext === true) {
+            return {};
+        }
+
+        const customerWorkSession = typeof window !== 'undefined'
+            ? window.kiwiCustomerWorkSession
+            : null;
+        if (!customerWorkSession || typeof customerWorkSession.getRequestHeaders !== 'function') {
+            return {};
+        }
+
+        const headers = customerWorkSession.getRequestHeaders();
+        return headers && typeof headers === 'object' ? headers : {};
+    }
+
+    function buildHeaders(extraHeaders, options) {
         return {
             ...defaultHeaders,
+            ...getCustomerContextHeaders(options),
             ...(extraHeaders || {})
         };
     }
@@ -41,8 +58,12 @@
         const requestOptions = {
             method,
             credentials: 'same-origin',
-            headers: buildHeaders(options && options.headers)
+            headers: buildHeaders(options && options.headers, options)
         };
+
+        if (options && options.signal) {
+            requestOptions.signal = options.signal;
+        }
 
         if (payload !== undefined) {
             requestOptions.body = JSON.stringify(payload);

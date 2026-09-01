@@ -6,7 +6,9 @@ const searchState = {
     currentPage: 1,
     itemsPerPage: 20,
     sortBy: 'name',
-    generation: 0
+    generation: 0,
+    requestVersion: 0,
+    requestController: null
 };
 
 const SUBSCRIPTION_SUMMARY_BATCH_SIZE = 20;
@@ -517,16 +519,32 @@ function filterCustomersLocally(customers, filters) {
 export async function searchCustomer() {
     const filters = getSearchFilters();
     const globalScope = getGlobalScope();
+    searchState.requestVersion += 1;
+    const requestVersion = searchState.requestVersion;
+    if (searchState.requestController && typeof searchState.requestController.abort === 'function') {
+        searchState.requestController.abort();
+    }
+    searchState.requestController = typeof AbortController === 'function'
+        ? new AbortController()
+        : null;
     let results = [];
 
     if (globalScope && globalScope.kiwiApi && typeof globalScope.kiwiApi.get === 'function') {
         const query = buildSearchParams(filters);
 
         try {
-            const payload = await globalScope.kiwiApi.get(`/api/v1/persons?${query.toString()}`);
+            const payload = await globalScope.kiwiApi.get(`/api/v1/persons?${query.toString()}`, {
+                signal: searchState.requestController ? searchState.requestController.signal : undefined
+            });
+            if (requestVersion !== searchState.requestVersion) {
+                return;
+            }
             results = Array.isArray(payload && payload.items) ? payload.items : [];
             rememberCustomersInCache(results);
         } catch (error) {
+            if (error && error.name === 'AbortError') {
+                return;
+            }
             console.error('Kon klanten niet zoeken via API', error);
             showToast(translateKey('search.backendFailed', {}, 'Zoeken via backend mislukt'), 'error');
             return;
@@ -536,6 +554,10 @@ export async function searchCustomer() {
         results = filterCustomersLocally(customers, filters);
     }
 
+    if (requestVersion !== searchState.requestVersion) {
+        return;
+    }
+    searchState.requestController = null;
     setSearchResults(results);
     sortResultsData();
     displayPaginatedResults();
@@ -947,10 +969,20 @@ function clearSearchInputValue(inputId) {
 }
 
 function resetSearchState() {
+    if (searchState.requestController && typeof searchState.requestController.abort === 'function') {
+        searchState.requestController.abort();
+    }
     searchState.results = [];
     searchState.currentPage = 1;
     searchState.sortBy = 'name';
     searchState.generation += 1;
+    searchState.requestVersion += 1;
+    searchState.requestController = null;
+}
+
+export function clearPrimaryCustomerSearchFields() {
+    clearSearchInputValue('searchPostalCode');
+    clearSearchInputValue('searchHouseNumber');
 }
 
 export function clearSearchResults() {
@@ -1011,6 +1043,13 @@ export function closeCustomerDetail() {
         return;
     }
 
+    const globalScope = getGlobalScope();
+    const customerWorkSession = globalScope ? globalScope.kiwiCustomerWorkSession : null;
+    if (customerWorkSession && typeof customerWorkSession.endCustomerWorkSession === 'function') {
+        void customerWorkSession.endCustomerWorkSession();
+        return;
+    }
+
     writeLegacyCurrentCustomer(null);
 
     const customerDetail = document.getElementById('customerDetail');
@@ -1029,7 +1068,6 @@ export function closeCustomerDetail() {
     welcomeMessage.innerHTML = getWelcomeMessageMarkup();
     setElementDisplay(welcomeMessage, 'flex');
 
-    const globalScope = getGlobalScope();
     if (globalScope && typeof globalScope.scrollTo === 'function') {
         globalScope.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -1273,6 +1311,7 @@ function installLegacyCompatibilityExports() {
     globalScope.goToPage = goToPage;
     globalScope.scrollToResults = scrollToResults;
     globalScope.clearSearchResults = clearSearchResults;
+    globalScope.clearPrimaryCustomerSearchFields = clearPrimaryCustomerSearchFields;
     globalScope.closeCustomerDetail = closeCustomerDetail;
     globalScope.sortResults = sortResults;
     globalScope.displaySearchResults = displaySearchResults;

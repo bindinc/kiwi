@@ -118,6 +118,63 @@ function getApiClient() {
     return globalScope.kiwiApi;
 }
 
+function getCustomerWorkSessionApi() {
+    const globalScope = getGlobalScope();
+    const customerWorkSession = globalScope ? globalScope.kiwiCustomerWorkSession : null;
+    return customerWorkSession && typeof customerWorkSession === 'object'
+        ? customerWorkSession
+        : null;
+}
+
+function buildPersonRoleLabel(person, personId = '') {
+    const source = person && typeof person === 'object' ? person : {};
+    const name = [
+        source.salutation,
+        source.firstName || source.initials,
+        source.middleName,
+        source.lastName
+    ]
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+        .join(' ');
+    const reference = String(source.personId || source.personNumber || source.id || personId || '').trim();
+
+    if (name && reference) {
+        return `${name} (${reference})`;
+    }
+    return name || (reference ? `Klant ${reference}` : 'Onbekende persoon');
+}
+
+function buildSubscriptionRoleLabel(role, payload, recipientLabel = '') {
+    if (payload && payload.sameAsRecipient === true) {
+        return recipientLabel;
+    }
+
+    const globalScope = getGlobalScope();
+    const selectedPerson = globalScope?.subscriptionRoleState?.[role]?.selectedPerson || null;
+    const person = payload?.person || selectedPerson;
+    return buildPersonRoleLabel(person, payload?.personId);
+}
+
+function mutationOutcomeIsAmbiguous(error) {
+    const status = Number(error && error.status);
+    return !Number.isInteger(status) || status >= 500;
+}
+
+async function reconcileSubscriptionMutation(apiClient, workflowsApiUrl, submissionId) {
+    if (!apiClient || typeof apiClient.get !== 'function') {
+        return 'unknown';
+    }
+
+    const encodedSubmissionId = encodeURIComponent(submissionId);
+    try {
+        await apiClient.get(`${workflowsApiUrl}/subscription/submission/${encodedSubmissionId}`);
+        return 'queued';
+    } catch (error) {
+        return Number(error && error.status) === 404 ? 'not_found' : 'unknown';
+    }
+}
+
 function getApiEndpoints() {
     const globalScope = getGlobalScope();
     const bootstrapSlice = globalScope ? globalScope.kiwiBootstrapSlice : null;
@@ -776,6 +833,9 @@ export async function createSubscription(event) {
         toggleRequesterSameAsRecipient();
     }
 
+    const recipientLabel = buildSubscriptionRoleLabel('recipient', recipientPayload);
+    const requesterLabel = buildSubscriptionRoleLabel('requester', requesterPayload, recipientLabel);
+
     const duplicateGuardPassed = await validateDuplicateSubmitGuard();
     if (!duplicateGuardPassed) {
         return;
@@ -788,6 +848,10 @@ export async function createSubscription(event) {
     }
 
     const isExistingRecipient = recipientPayload.personId !== undefined && recipientPayload.personId !== null;
+    const customerWorkSession = getCustomerWorkSessionApi();
+    const customerContext = customerWorkSession && typeof customerWorkSession.getRequestContext === 'function'
+        ? customerWorkSession.getRequestContext()
+        : null;
     const { workflowsApiUrl } = getApiEndpoints();
     const queuedSalesCodes = [];
     const failedSelections = [];
@@ -830,6 +894,7 @@ export async function createSubscription(event) {
 
         const payload = {
             submissionId: itemSubmissionId,
+            customerContext,
             recipient: recipientPayload,
             requester: requesterPayload,
             subscription: {
@@ -866,13 +931,40 @@ export async function createSubscription(event) {
             }
         };
 
+        if (customerWorkSession && typeof customerWorkSession.beginMutation === 'function') {
+            customerWorkSession.beginMutation(itemSubmissionId);
+        }
+
         try {
             await apiClient.post(`${workflowsApiUrl}/subscription`, payload);
+            if (customerWorkSession && typeof customerWorkSession.finishMutation === 'function') {
+                customerWorkSession.finishMutation(itemSubmissionId);
+            }
             queuedSalesCodes.push(formData.werfsleutel);
         } catch (error) {
+            let ambiguous = mutationOutcomeIsAmbiguous(error);
+            if (ambiguous) {
+                const reconciledStatus = await reconcileSubscriptionMutation(
+                    apiClient,
+                    workflowsApiUrl,
+                    itemSubmissionId
+                );
+                if (reconciledStatus === 'queued') {
+                    if (customerWorkSession && typeof customerWorkSession.finishMutation === 'function') {
+                        customerWorkSession.finishMutation(itemSubmissionId);
+                    }
+                    queuedSalesCodes.push(formData.werfsleutel);
+                    continue;
+                }
+                ambiguous = reconciledStatus === 'unknown';
+            }
+            if (customerWorkSession && typeof customerWorkSession.finishMutation === 'function') {
+                customerWorkSession.finishMutation(itemSubmissionId, { ambiguous });
+            }
             failedSelections.push({
                 salesCode: formData.werfsleutel,
-                message: error.message || translateKey('subscription.createFailed', {}, 'Abonnement aanmaken via backend mislukt')
+                message: error.message || translateKey('subscription.createFailed', {}, 'Abonnement aanmaken via backend mislukt'),
+                ambiguous
             });
         }
     }
@@ -899,29 +991,32 @@ export async function createSubscription(event) {
             ),
             'warning'
         );
-        return;
+    } else {
+        closeForm('newSubscriptionForm');
+        showToast(
+            werfsleutelSelections.length > 1
+                ? translateKey(
+                    'subscription.multipleQueued',
+                    { count: werfsleutelSelections.length },
+                    `${werfsleutelSelections.length} aanvragen in wachtrij geplaatst!`
+                )
+                : translateKey('subscription.queued', {}, 'Aanvraag in wachtrij geplaatst!'),
+            'success'
+        );
     }
 
-    closeForm('newSubscriptionForm');
-    showToast(
-        werfsleutelSelections.length > 1
-            ? translateKey(
-                'subscription.multipleQueued',
-                { count: werfsleutelSelections.length },
-                `${werfsleutelSelections.length} aanvragen in wachtrij geplaatst!`
-            )
-            : translateKey('subscription.queued', {}, 'Aanvraag in wachtrij geplaatst!'),
-        'success'
-    );
-
-    const form = getElementById('subscriptionForm');
-    if (form && typeof form.reset === 'function') {
-        form.reset();
+    const globalScope = getGlobalScope();
+    if (globalScope && typeof globalScope.clearPrimaryCustomerSearchFields === 'function') {
+        globalScope.clearPrimaryCustomerSearchFields();
     }
 
-    resetWerfsleutelPickerState();
-    initializeSubscriptionRolesForForm();
-    ensureSubscriptionSubmissionId(true);
+    if (customerWorkSession && typeof customerWorkSession.showQueuedCustomerChoice === 'function') {
+        customerWorkSession.showQueuedCustomerChoice({
+            queuedCount: queuedSalesCodes.length,
+            recipientLabel,
+            requesterLabel
+        });
+    }
 }
 
 export function getSubscriptionRequesterMetaLine(subscription) {
@@ -1469,6 +1564,8 @@ export const __subscriptionWorkflowTestUtils = {
     getSelectedWerfsleutelSelections,
     getSubscriptionChanges,
     getSubscriptionDurationDescription,
+    mutationOutcomeIsAmbiguous,
+    reconcileSubscriptionMutation,
     setSubscriptionQueueExpanded,
     toggleSubscriptionQueueInfo,
     renderSubscriptionQueueItems

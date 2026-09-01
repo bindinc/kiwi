@@ -443,7 +443,7 @@ final class SubscriptionQueueServiceTest extends TestCase
         $connection = DriverManager::getConnection($this->getConnectionParams(), $config);
 
         try {
-            $connection->fetchOne('SELECT 1');
+            $connection->executeQuery($connection->getDatabasePlatform()->getDummySelectSQL());
         } catch (\Throwable $exception) {
             self::markTestSkipped(sprintf('Test database is niet bereikbaar: %s', $exception->getMessage()));
         }

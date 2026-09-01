@@ -884,6 +884,25 @@ const en = {
         "resetConfirm": "⚠️ This will clear all session data and reload the page. Are you sure?",
         "resetFailed": "Reset via backend failed"
     },
+    "customerWorkSession": {
+        "activeCustomer": "Active customer",
+        "personNumber": "Person no.",
+        "source": "Source/tenant",
+        "endAction": "New customer / end customer work session",
+        "endCompactAction": "New session",
+        "pendingMutation": "The request status is being established; switching is temporarily blocked.",
+        "queuedHeading": "Request placed in the queue",
+        "queuedOne": "1 request is in the queue.",
+        "queuedMany": "{count} requests are in the queue.",
+        "recipient": "Recipient",
+        "requester": "Requester/payer",
+        "notFinal": "KIWI accepted the request, but it has not been processed definitively yet.",
+        "continueAction": "Continue with this customer",
+        "activeCustomerBlocksSelection": "End the current customer work session before opening another customer.",
+        "resetBlocked": "Wait until the pending request has a clear status.",
+        "resetFailed": "The customer work session could not be ended safely.",
+        "resetComplete": "Customer work session ended. Ready for a new customer."
+    },
     "search": {
         "allCustomers": "all customers",
         "backendFailed": "Search via backend failed",
