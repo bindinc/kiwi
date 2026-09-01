@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+## [v1.0.21]
+
 - Add a separate `(interne) Toevoeging 1` field for new subscription persons and map it to the PPA address `extension` without changing the house number addition.
 - Add explicit client-owned customer work sessions with persistent customer identity, guarded async responses, deliberate post-queue continuation/reset choices, and durable backend audit records for customer searches, profile views, and session resets.
 - Document how agents search for, select, view, and manage existing customers, including current Subscription API read-only and contact-history limitations.
