@@ -175,6 +175,49 @@ function testSubscriptionHelperFunctions() {
         'Duur gewijzigd van 1 jaar - Jaarlijks betaald naar 2 jaar - Jaarlijks betaald (5% korting)',
         'Status gewijzigd van Actief naar Gepauzeerd'
     ]);
+
+    assert.equal(__subscriptionWorkflowTestUtils.mutationOutcomeIsAmbiguous(new Error('network')), true);
+    assert.equal(__subscriptionWorkflowTestUtils.mutationOutcomeIsAmbiguous({ status: 503 }), true);
+    assert.equal(__subscriptionWorkflowTestUtils.mutationOutcomeIsAmbiguous({ status: 400 }), false);
+}
+
+async function testReconcilesAmbiguousMutationBySubmissionId() {
+    const requestedUrls = [];
+    const apiClient = {
+        async get(url) {
+            requestedUrls.push(url);
+            return { status: 'queued' };
+        }
+    };
+
+    assert.equal(
+        await __subscriptionWorkflowTestUtils.reconcileSubscriptionMutation(
+            apiClient,
+            '/api/v1/workflows',
+            'request::AVR 123'
+        ),
+        'queued'
+    );
+    assert.equal(
+        requestedUrls[0],
+        '/api/v1/workflows/subscription/submission/request%3A%3AAVR%20123'
+    );
+
+    apiClient.get = async () => {
+        throw { status: 404 };
+    };
+    assert.equal(
+        await __subscriptionWorkflowTestUtils.reconcileSubscriptionMutation(apiClient, '/api/v1/workflows', 'missing'),
+        'not_found'
+    );
+
+    apiClient.get = async () => {
+        throw { status: 503 };
+    };
+    assert.equal(
+        await __subscriptionWorkflowTestUtils.reconcileSubscriptionMutation(apiClient, '/api/v1/workflows', 'unknown'),
+        'unknown'
+    );
 }
 
 function testWerfsleutelSelectionHelperPrefersMultiSelectionBridge() {
@@ -460,10 +503,11 @@ function testEditCustomerBlocksSubscriptionApiCustomers() {
     }
 }
 
-function run() {
+async function run() {
     testRegistersItemSevenActions();
     testInstallsLegacyCompatibilityExports();
     testSubscriptionHelperFunctions();
+    await testReconcilesAmbiguousMutationBySubmissionId();
     testWerfsleutelSelectionHelperPrefersMultiSelectionBridge();
     testQueueToggleUpdatesPanelVisibilityAndButtonState();
     testQueueRenderingUsesBackendDisplayFields();
@@ -472,4 +516,4 @@ function run() {
     console.log('subscription workflow slice tests passed');
 }
 
-run();
+await run();

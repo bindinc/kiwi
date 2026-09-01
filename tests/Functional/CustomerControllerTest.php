@@ -14,6 +14,7 @@ use App\SubscriptionApi\SubscriptionOrderNormalizer;
 use App\SubscriptionApi\SubscriptionSummaryService;
 use App\Webabo\HupApiConfigProvider;
 use App\Webabo\WebaboAccessTokenProvider;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -112,6 +113,15 @@ final class CustomerControllerTest extends WebTestCase
             'https://example.invalid/subscription/public/personsearch?page=0&pagesize=10&name=Jane+van+Dijk&email=jane%40example.org&divisionid=14',
             $requests[1]['url'],
         );
+
+        $auditEvent = $this->readAuditEventForResponse($client->getResponse()->headers->get('X-Kiwi-Request-Id'));
+        self::assertSame('CUSTOMER_SEARCH_PERFORMED', $auditEvent['action']);
+        self::assertSame('success', $auditEvent['result']);
+        self::assertSame('test@example.org', $auditEvent['actor_identifier']);
+        self::assertContains('name', $auditEvent['metadata']['filterFields']);
+        self::assertContains('email', $auditEvent['metadata']['filterFields']);
+        self::assertStringNotContainsString('Jane van Dijk', json_encode($auditEvent['metadata'], \JSON_THROW_ON_ERROR));
+        self::assertStringNotContainsString('jane@example.org', json_encode($auditEvent['metadata'], \JSON_THROW_ON_ERROR));
     }
 
     public function testReadCustomersReturnsServiceUnavailableWhenSubscriptionSearchFails(): void
@@ -312,7 +322,19 @@ final class CustomerControllerTest extends WebTestCase
             $this->createPersonDetailService($httpClient),
         );
 
-        $client->request('GET', '/api/v1/persons/11860448?credentialKey=tvk&sourceSystem=subscription-api');
+        $client->request(
+            'GET',
+            '/api/v1/persons/11860448?credentialKey=tvk&sourceSystem=subscription-api',
+            server: [
+                'HTTP_X_KIWI_WORKFLOW_SESSION_ID' => 'workflow-profile-audit',
+                'HTTP_X_KIWI_CONTEXT_GENERATION' => '7',
+                'HTTP_X_KIWI_CUSTOMER_PERSON_ID' => '11860448',
+                'HTTP_X_KIWI_CUSTOMER_CREDENTIAL_KEY' => 'tvk',
+                'HTTP_X_KIWI_CUSTOMER_SOURCE_SYSTEM' => 'subscription-api',
+                'HTTP_X_KIWI_CUSTOMER_DIVISION_ID' => '14',
+                'HTTP_X_KIWI_CUSTOMER_MANDANT' => 'HMC',
+            ],
+        );
 
         self::assertResponseIsSuccessful();
         $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
@@ -347,6 +369,21 @@ final class CustomerControllerTest extends WebTestCase
             'https://example.invalid/subscription/public/orders?page=0&pagesize=500&customerPersonId=11860448',
             $requests[2]['url'],
         );
+
+        $requestId = $client->getResponse()->headers->get('X-Kiwi-Request-Id');
+        $auditEvent = $this->readAuditEventForResponse($requestId);
+        self::assertSame('CUSTOMER_PROFILE_OPENED', $auditEvent['action']);
+        self::assertSame('success', $auditEvent['result']);
+        self::assertSame('workflow-profile-audit', $auditEvent['workflow_session_id']);
+        self::assertSame(7, (int) $auditEvent['context_generation']);
+        self::assertSame([
+            'personId' => '11860448',
+            'credentialKey' => 'tvk',
+            'sourceSystem' => 'subscription-api',
+            'divisionId' => '14',
+            'mandant' => 'HMC',
+        ], $auditEvent['customer_reference']);
+        self::assertSame(1, $this->countAuditEventsForRequest($requestId));
     }
 
     /**
@@ -410,6 +447,45 @@ final class CustomerControllerTest extends WebTestCase
             'expectedStatusCode' => 503,
             'expectedErrorCode' => 'customer_detail_unavailable',
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readAuditEventForResponse(?string $requestId): array
+    {
+        self::assertNotNull($requestId);
+
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $connection = $entityManager->getConnection();
+        $event = $connection->fetchAssociative(
+            'SELECT actor_identifier, action, result, workflow_session_id, context_generation, customer_reference, metadata FROM customer_audit_events WHERE request_id = ?',
+            [$requestId],
+        );
+        self::assertIsArray($event);
+
+        foreach (['customer_reference', 'metadata'] as $jsonField) {
+            if (\is_string($event[$jsonField])) {
+                $event[$jsonField] = json_decode($event[$jsonField], true, flags: \JSON_THROW_ON_ERROR);
+            }
+        }
+
+        return $event;
+    }
+
+    private function countAuditEventsForRequest(?string $requestId): int
+    {
+        self::assertNotNull($requestId);
+
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $connection = $entityManager->getConnection();
+
+        return (int) $connection->fetchOne(
+            'SELECT COUNT(*) FROM customer_audit_events WHERE request_id = ?',
+            [$requestId],
+        );
     }
 
     /**

@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Add explicit client-owned customer work sessions with persistent customer identity, guarded async responses, deliberate post-queue continuation/reset choices, and durable backend audit records for customer searches, profile views, and session resets.
 - Document how agents search for, select, view, and manage existing customers, including current Subscription API read-only and contact-history limitations.
 - Separate landline and mobile phone inputs for new subscription persons and preserve their PPA `contacts.phones` and `contacts.mobiles` mapping in the queued request contract.
 - Add project-local Codex lifecycle hooks that block sensitive prompts, risky secret-file operations, and repository publication when redacted secret scanning finds a problem, and run GitHub Actions jobs on GitHub-hosted Ubuntu runners.
@@ -12,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Replace the contextual feedback privacy bubbles with a clear control bar that separates the selected screenshot variant from its Teams destination.
 
 ### Fixed
+- Keep Doctrine-backed database unit tests executable on DBAL 4.4 by using a public connectivity query and PHP 8.4 native lazy objects instead of the now-protected `Connection::connect()` API.
 - Add payment instruction as a new-subscription payment method, preserve the selected Webabo payment code in the subscription queue, run CI and release builds on GitHub-hosted runners, and use Symfony 8-compatible routing configuration.
 - Keep customer-search subscription statuses consistent with the customer detail overview by loading current Subscription API order summaries for visible results and never presenting unavailable data as no active subscription.
 - Preserve contextual-feedback screenshot geometry and public media by rendering original and pseudonymized variants from detached clones, while masking explicitly private media and failing closed when pseudonymization cannot be verified.

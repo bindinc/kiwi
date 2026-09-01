@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
+use App\CustomerWorkSession\CustomerAuditSchemaManager;
 use App\Outbox\SubscriptionQueueSchemaManager;
 use App\Webabo\WebaboOfferCacheSchemaManager;
 use Doctrine\DBAL\DriverManager;
@@ -24,6 +25,7 @@ final class SchemaManagerCoexistenceTest extends TestCase
             try {
                 $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS outbox_events');
                 $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS subscription_orders');
+                $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS customer_audit_events');
                 $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS webabo_offers_cache');
                 $entityManager->getConnection()->executeStatement('DROP TABLE IF EXISTS werfsleutel_offer_cache');
             } catch (\Throwable) {
@@ -43,6 +45,7 @@ final class SchemaManagerCoexistenceTest extends TestCase
         $connection = $entityManager->getConnection();
         $webaboSchemaManager = new WebaboOfferCacheSchemaManager($connection, $entityManager);
         $queueSchemaManager = new SubscriptionQueueSchemaManager($connection, $entityManager);
+        $auditSchemaManager = new CustomerAuditSchemaManager($connection, $entityManager);
 
         $webaboSchemaManager->ensureSchema();
         self::assertTrue($webaboSchemaManager->hasCacheTable());
@@ -51,9 +54,15 @@ final class SchemaManagerCoexistenceTest extends TestCase
         self::assertTrue($webaboSchemaManager->hasCacheTable());
         self::assertTrue($queueSchemaManager->hasQueueTables());
 
+        $auditSchemaManager->ensureSchema();
+        self::assertTrue($webaboSchemaManager->hasCacheTable());
+        self::assertTrue($queueSchemaManager->hasQueueTables());
+        self::assertTrue($auditSchemaManager->hasAuditTable());
+
         $webaboSchemaManager->ensureSchema();
         self::assertTrue($webaboSchemaManager->hasCacheTable());
         self::assertTrue($queueSchemaManager->hasQueueTables());
+        self::assertTrue($auditSchemaManager->hasAuditTable());
     }
 
     private function createEntityManager(): EntityManager
@@ -61,10 +70,11 @@ final class SchemaManagerCoexistenceTest extends TestCase
         $config = ORMSetup::createAttributeMetadataConfig([
             dirname(__DIR__, 2).'/src/Entity',
         ], true);
+        $config->enableNativeLazyObjects(true);
         $connection = DriverManager::getConnection($this->getConnectionParams(), $config);
 
         try {
-            $connection->connect();
+            $connection->executeQuery($connection->getDatabasePlatform()->getDummySelectSQL());
         } catch (\Throwable $exception) {
             self::markTestSkipped(sprintf('Test database is niet bereikbaar: %s', $exception->getMessage()));
         }

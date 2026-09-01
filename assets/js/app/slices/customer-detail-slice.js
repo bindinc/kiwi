@@ -495,18 +495,41 @@ export async function selectCustomer(customerId) {
     const cachedCustomer = dependencies.findCustomerById
         ? dependencies.findCustomerById(normalizedCustomerId)
         : null;
+    const customerForSelection = cachedCustomer || {
+        id: normalizedCustomerId,
+        personId: normalizedCustomerId,
+        sourceSystem: 'kiwi'
+    };
+    const selectionContext = typeof dependencies.startCustomerSelection === 'function'
+        ? dependencies.startCustomerSelection(customerForSelection)
+        : null;
+    if (selectionContext && selectionContext.blocked) {
+        return;
+    }
     let customer = cachedCustomer;
     const apiClient = resolveApiClient();
 
     if (apiClient && dependencies.personsApiUrl) {
         try {
             const detailUrl = buildCustomerDetailUrl(dependencies.personsApiUrl, normalizedCustomerId, cachedCustomer);
-            customer = await apiClient.get(detailUrl);
+            customer = await apiClient.get(detailUrl, {
+                signal: selectionContext ? selectionContext.signal : undefined
+            });
+            const contextIsCurrent = !selectionContext
+                || typeof dependencies.isCustomerContextCurrent !== 'function'
+                || dependencies.isCustomerContextCurrent(selectionContext);
+            if (!contextIsCurrent) {
+                return;
+            }
             customer = mergeCustomerDetail(cachedCustomer, customer);
             if (typeof dependencies.upsertCustomerInCache === 'function') {
                 dependencies.upsertCustomerInCache(customer);
             }
         } catch (error) {
+            if (error && error.name === 'AbortError') {
+                return;
+            }
+
             const canUseCachedCustomer = cachedCustomer
                 && String(cachedCustomer.sourceSystem || '').trim() === 'subscription-api';
             if (canUseCachedCustomer) {
@@ -519,12 +542,28 @@ export async function selectCustomer(customerId) {
                     );
                 }
                 console.error('Kon klantdetail niet laden via API', error);
+                if (selectionContext && typeof dependencies.abandonCustomerSelection === 'function') {
+                    dependencies.abandonCustomerSelection(selectionContext);
+                }
                 return;
             }
         }
     }
 
+    if (selectionContext && typeof dependencies.confirmCustomerSelection === 'function') {
+        const confirmed = dependencies.confirmCustomerSelection(selectionContext, customer || null);
+        if (!confirmed) {
+            return;
+        }
+    }
+
     if (typeof dependencies.setCurrentCustomer === 'function') {
+        const contextIsCurrent = !selectionContext
+            || typeof dependencies.isCustomerContextCurrent !== 'function'
+            || dependencies.isCustomerContextCurrent(selectionContext);
+        if (!contextIsCurrent) {
+            return;
+        }
         dependencies.setCurrentCustomer(customer || null);
     }
 

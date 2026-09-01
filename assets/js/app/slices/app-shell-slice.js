@@ -98,6 +98,42 @@ function hideVisibleFormContainers(documentRef) {
     });
 }
 
+function resetCustomerForms(documentRef) {
+    if (!documentRef || typeof documentRef.querySelectorAll !== 'function') {
+        return;
+    }
+
+    documentRef.querySelectorAll('.form-container').forEach((container) => {
+        if (container && container.style) {
+            container.style.display = 'none';
+        }
+    });
+
+    documentRef.querySelectorAll('.form-container form').forEach((form) => {
+        if (form && typeof form.reset === 'function') {
+            form.reset();
+        }
+    });
+
+    documentRef.querySelectorAll('.form-container input, .form-container select, .form-container textarea')
+        .forEach((control) => {
+            if (!control || control.form) {
+                return;
+            }
+
+            const inputType = String(control.type || '').toLowerCase();
+            if (inputType === 'checkbox' || inputType === 'radio') {
+                control.checked = false;
+                return;
+            }
+            if (String(control.tagName || '').toLowerCase() === 'select') {
+                control.selectedIndex = 0;
+                return;
+            }
+            control.value = '';
+        });
+}
+
 function focusSearchInput() {
     const searchInput = getElementById('searchName');
     if (searchInput && typeof searchInput.focus === 'function') {
@@ -423,6 +459,50 @@ export function uninstallGlobalListeners() {
     listenersInstalled = false;
 }
 
+export function resetCustomerWorkspace() {
+    const dependencies = resolveDependencies();
+    callDependency(dependencies, 'setCurrentCustomer', [null]);
+    callDependency(dependencies, 'setSelectedOffer', [null]);
+
+    setElementDisplay('customerDetail', 'none');
+    setElementDisplay('welcomeMessage', 'block');
+
+    const searchFieldIds = [
+        'searchName',
+        'searchPostalCode',
+        'searchHouseNumber',
+        'searchCustomerNumber',
+        'searchPhone',
+        'searchEmail',
+        'searchIban',
+        'searchBirthDate'
+    ];
+    searchFieldIds.forEach(clearInputValue);
+    callDependency(dependencies, 'setAdditionalFiltersOpen', [false]);
+
+    const documentRef = getDocumentRef();
+    if (documentRef && typeof documentRef.querySelectorAll === 'function') {
+        documentRef.querySelectorAll('input[name="searchMandants"]:checked').forEach((input) => {
+            input.checked = false;
+        });
+    }
+
+    setElementDisplay('searchResultsView', 'none');
+    setElementDisplay('searchSummary', 'none');
+    clearElementContent('paginatedResults');
+    clearElementContent('pagination');
+
+    callDependency(dependencies, 'resetAllSubscriptionDuplicateStates');
+    resetCustomerForms(documentRef);
+
+    callDependency(dependencies, 'updateCustomerActionButtons');
+
+    const globalScope = getGlobalScope();
+    if (globalScope && typeof globalScope.scrollTo === 'function') {
+        globalScope.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
 export function endSession() {
     const dependencies = resolveDependencies();
     const isCallActive = dependencies
@@ -432,45 +512,8 @@ export function endSession() {
         dependencies.endCallSession();
     }
 
-    callDependency(dependencies, 'setCurrentCustomer', [null]);
-    callDependency(dependencies, 'setSelectedOffer', [null]);
-
-    setElementDisplay('customerDetail', 'none');
-    setElementDisplay('welcomeMessage', 'block');
+    resetCustomerWorkspace();
     setElementDisplay('endCallBtn', 'none');
-
-    clearInputValue('searchName');
-    clearInputValue('searchPostalCode');
-    clearInputValue('searchHouseNumber');
-    clearInputValue('searchPhone');
-    clearInputValue('searchEmail');
-    callDependency(dependencies, 'setAdditionalFiltersOpen', [false]);
-
-    setElementDisplay('searchResults', 'none');
-    clearElementContent('resultsContainer');
-
-    const formsToClose = [
-        'newSubscriptionForm',
-        'articleSaleForm',
-        'editCustomerForm',
-        'editSubscriptionForm',
-        'resendMagazineForm',
-        'winbackFlowForm'
-    ];
-    formsToClose.forEach((formId) => {
-        closeForm(formId);
-    });
-
-    callDependency(dependencies, 'updateCustomerActionButtons');
-
-    const globalScope = getGlobalScope();
-    if (globalScope && typeof globalScope.scrollTo === 'function') {
-        globalScope.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    if (typeof console !== 'undefined' && typeof console.log === 'function') {
-        console.log('Session ended - Ready for next customer');
-    }
 }
 
 function exposeAppShellSliceApi() {
@@ -486,6 +529,7 @@ function exposeAppShellSliceApi() {
         isDebugModalEnabled,
         installGlobalListeners,
         uninstallGlobalListeners,
+        resetCustomerWorkspace,
         endSession
     };
 }

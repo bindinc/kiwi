@@ -47,6 +47,14 @@ final class WorkflowController extends AbstractApiController
         return $this->json($this->subscriptionQueueService->getOrderStatus($orderId));
     }
 
+    #[Route('/subscription/submission/{submissionId}', name: 'api_workflow_subscription_status_by_submission', methods: ['GET'], priority: 2)]
+    public function subscriptionStatusBySubmission(Request $request, string $submissionId): JsonResponse
+    {
+        $this->requireApiAccess($request);
+
+        return $this->json($this->subscriptionQueueService->getOrderStatusBySubmissionId($submissionId));
+    }
+
     #[Route('/subscription', name: 'api_workflow_subscription_queue', methods: ['POST'])]
     #[Route('/subscription-signup', name: 'api_workflow_subscription_signup', methods: ['POST'])]
     public function queueSubscription(Request $request): JsonResponse

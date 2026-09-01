@@ -6,6 +6,7 @@
 parameters:
     app.session.table_name: 'kiwi_http_sessions'
     app.session.ttl_seconds: 43200
+    app.customer_audit.retention_days: 365
 
 services:
     # default configuration for services in *this* file
@@ -31,6 +32,10 @@ services:
     App\Command\CleanupSessionsCommand:
         arguments:
             $sessionTtlSeconds: '%app.session.ttl_seconds%'
+
+    App\Command\CleanupCustomerAuditCommand:
+        arguments:
+            $retentionDays: '%app.customer_audit.retention_days%'
 
     App\Webabo\WebaboSalesCodeCombinationProviderInterface: '@App\Webabo\WebaboSalesCodeCombinationClient'
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\CustomerWorkSession\CustomerReference;
 use App\Entity\OutboxEvent;
 use App\Entity\SubscriptionOrder;
 use App\Entity\WebaboOffer;
@@ -148,6 +149,29 @@ final class SubscriptionQueueService
         return $this->mapOrderToApiPayload($subscriptionOrder);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function getOrderStatusBySubmissionId(string $submissionId): array
+    {
+        if (!$this->schemaManager->hasQueueTables()) {
+            throw new ApiProblemException(404, 'subscription_order_not_found', 'Subscription order not found');
+        }
+
+        $normalizedSubmissionId = $this->normalizeSubmissionId($submissionId);
+        try {
+            $subscriptionOrder = $this->repository->findOneBySubmissionId($normalizedSubmissionId);
+        } catch (\Throwable $exception) {
+            throw $this->buildQueueUnavailableException($exception);
+        }
+
+        if (null === $subscriptionOrder) {
+            throw new ApiProblemException(404, 'subscription_order_not_found', 'Subscription order not found');
+        }
+
+        return $this->mapOrderToApiPayload($subscriptionOrder);
+    }
+
     private function ensureQueueSchema(): void
     {
         try {
@@ -192,12 +216,55 @@ final class SubscriptionQueueService
             ];
         }
 
-        return [
+        $normalizedPayload = [
             'recipient' => $recipient,
             'requester' => $requester,
             'subscription' => $this->normalizeSubscriptionPayload($payload['subscription'] ?? null),
             'offer' => $this->normalizeOfferPayload($payload['offer'] ?? null),
             'contactEntry' => $this->normalizeContactEntry($payload['contactEntry'] ?? null),
+        ];
+        $customerContext = $this->normalizeCustomerContext($payload['customerContext'] ?? null);
+        if (null !== $customerContext) {
+            $normalizedPayload['customerContext'] = $customerContext;
+        }
+
+        return $normalizedPayload;
+    }
+
+    /**
+     * @return array{workflowSessionId: string, contextGeneration: int, customerReference: array<string, string>|null}|null
+     */
+    private function normalizeCustomerContext(mixed $value): ?array
+    {
+        if (null === $value) {
+            return null;
+        }
+        if (!\is_array($value)) {
+            throw new ApiProblemException(400, 'invalid_payload', 'customerContext must be an object');
+        }
+
+        $workflowSessionId = \is_string($value['workflowSessionId'] ?? null)
+            ? trim($value['workflowSessionId'])
+            : '';
+        if ('' === $workflowSessionId || strlen($workflowSessionId) > 128) {
+            throw new ApiProblemException(400, 'invalid_payload', 'customerContext.workflowSessionId is invalid');
+        }
+
+        $contextGeneration = $value['contextGeneration'] ?? null;
+        if (!\is_int($contextGeneration) || $contextGeneration < 0) {
+            throw new ApiProblemException(400, 'invalid_payload', 'customerContext.contextGeneration is invalid');
+        }
+
+        $referencePayload = $value['customerReference'] ?? null;
+        if (null !== $referencePayload && !\is_array($referencePayload)) {
+            throw new ApiProblemException(400, 'invalid_payload', 'customerContext.customerReference must be an object');
+        }
+        $customerReference = CustomerReference::fromArray($referencePayload);
+
+        return [
+            'workflowSessionId' => $workflowSessionId,
+            'contextGeneration' => $contextGeneration,
+            'customerReference' => $customerReference?->toArray(),
         ];
     }
 
