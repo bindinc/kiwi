@@ -38,8 +38,12 @@ function createElementStub() {
             remove() {},
             toggle() {}
         },
-        setAttribute() {},
-        removeAttribute() {},
+        setAttribute(attribute) {
+            this[attribute] = true;
+        },
+        removeAttribute(attribute) {
+            this[attribute] = false;
+        },
         appendChild(child) {
             this.options.push(child);
         },
@@ -938,6 +942,34 @@ function testDuplicateApiIdentifiesStaleResponsesByRequestVersion() {
     );
 }
 
+function testToggleCustomerFormAddressKeepsAddressExtensionOptional() {
+    const { elements, runtime } = createRuntimeContext();
+    const addressFields = [
+        'PostalCode',
+        'HouseNumber',
+        'HouseExt',
+        'AddressExtension',
+        'Address',
+        'City'
+    ];
+
+    elements.subRequesterSameAddress = { checked: true };
+    addressFields.forEach((field) => {
+        elements[`subRequester${field}`] = createElementStub();
+    });
+
+    runtime.toggleCustomerFormAddress('subRequester');
+    elements.subRequesterSameAddress.checked = false;
+    runtime.toggleCustomerFormAddress('subRequester');
+
+    assert.equal(elements.subRequesterPostalCode.required, true);
+    assert.equal(elements.subRequesterHouseNumber.required, true);
+    assert.equal(elements.subRequesterAddress.required, true);
+    assert.equal(elements.subRequesterCity.required, true);
+    assert.equal(elements.subRequesterHouseExt.required, false);
+    assert.equal(elements.subRequesterAddressExtension.required, false);
+}
+
 async function run() {
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
@@ -962,6 +994,7 @@ async function run() {
     testFreshDuplicateCacheEntryExpiresWithControlledClock();
     testDuplicateApiScheduleUsesCooldownFromControlledClock();
     testDuplicateApiIdentifiesStaleResponsesByRequestVersion();
+    testToggleCustomerFormAddressKeepsAddressExtensionOptional();
     console.log('subscription role runtime tests passed');
 }
 

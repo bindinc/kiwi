@@ -438,6 +438,7 @@ function setCustomerFormData(prefix, data) {
 function toggleCustomerFormAddress(prefix) {
     const checkbox = document.getElementById(`${prefix}SameAddress`);
     const addressFields = ['PostalCode', 'HouseNumber', 'HouseExt', 'AddressExtension', 'Address', 'City'];
+    const optionalAddressFields = ['HouseExt', 'AddressExtension'];
     
     addressFields.forEach(field => {
         const element = document.getElementById(`${prefix}${field}`);
@@ -448,7 +449,7 @@ function toggleCustomerFormAddress(prefix) {
                 element.style.opacity = '0.5';
             } else {
                 element.disabled = false;
-                if (!field.includes('HouseExt') && !field.includes('MiddleName')) {
+                if (!optionalAddressFields.includes(field)) {
                     element.setAttribute('required', '');
                 }
                 element.style.opacity = '1';
