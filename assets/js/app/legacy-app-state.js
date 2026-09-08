@@ -357,6 +357,7 @@ function upsertCustomerInCache(customer) {
 }
 
 function saveCustomers() {
+    invokeSliceMethod(CUSTOMER_WORK_SESSION_SLICE_NAMESPACE, 'markChanged');
     const bs = resolveBootstrapSlice();
     if (!bs || typeof bs.saveCustomers !== 'function') return;
     const globalScope = getGlobalScope();
@@ -413,8 +414,8 @@ function mapToastTypeToContactType(toastType) {
     return typeof mapped === 'string' ? mapped : 'notification_success';
 }
 
-function showToast(message, type = 'success') {
-    invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'showToast', [message, type]);
+function showToast(message, type = 'success', options = {}) {
+    invokeSliceMethod(APP_SHELL_SLICE_NAMESPACE, 'showToast', [message, type, options]);
 }
 
 const isDebugModalEnabled = () => {

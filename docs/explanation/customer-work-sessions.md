@@ -38,10 +38,21 @@ session, generation, and full customer reference before it can update state.
 This check is the correctness boundary; request cancellation is only an
 optimization.
 
-Once confirmed, an active customer cannot be silently replaced. The agent must
-use **New customer / end customer work session** before opening a different
-primary customer. Recipient and requester/payer selections remain independent
-roles and never replace the active customer.
+After searching and viewing only, selecting another primary customer starts a
+new provisional work session automatically. The previous customer and its state
+remain intact until the new detail response and the reset audit both succeed.
+Only then are customer-bound state and the active session replaced. A failed or
+superseded selection cannot partially reset the workspace. Selecting the same
+full customer reference keeps the existing session ID.
+
+Customer form input, workflow choices, and attempted customer writes mark the
+session as changed. Hiding a form does not discard its retained draft. Once
+changed, the agent must use **New customer / end customer work session** before
+opening a different primary customer, even after a write succeeds. Pending or
+uncertain subscription submissions continue to block manual reset as well.
+Search fields, result pagination, and read-only subscription-summary requests do
+not mark the session as changed. Recipient and requester/payer selections remain
+independent roles and never replace the active customer.
 
 A customer reset clears customer details, caches, search filters and results,
 offers, recipient/requester selections, form drafts, queued-status UI, and
@@ -99,3 +110,15 @@ liveness probes determine which pods receive traffic, and topology constraints
 spread replicas over the available nodes. Temporary application or PostgreSQL
 failures may surface as retryable errors, but must never replace the active
 customer, apply a stale response, or generate a second mutation identity.
+
+## Local verification
+
+Run `make js-test` and `make guardrail` for the state machine, API write tracking,
+and detail/reset failure and race scenarios. With a fallback-OIDC Compose stack
+running from the same checkout, run `make compose-smoke-customer-sessions` for
+browser verification using the built-in Jansen and Bakker demo customers. It
+checks automatic switching, same-customer session retention, a retained edit
+draft, and explicit reset. Screenshots are written outside the repository under
+`/tmp/kiwi-customer-session-smoke`. The runner uses an existing Playwright
+installation; override `PLAYWRIGHT_MODULE_PATH` and `CHROME_EXECUTABLE_PATH` when
+needed. This smoke test does not prove three-replica or failover behavior.

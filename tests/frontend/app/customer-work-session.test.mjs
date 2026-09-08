@@ -70,13 +70,14 @@ function testLateCustomerResponseCannotBecomeCurrent() {
     assert.equal(session.getSnapshot().customerReference.personId, '2');
 }
 
-function testActiveCustomerCannotBeSilentlyReplaced() {
+function testChangedCustomerCannotBeSilentlyReplaced() {
     const { session } = createDeterministicSession();
     const customerA = { id: 1, sourceSystem: 'kiwi' };
     const contextA = session.startCustomerSelection(customerA);
 
     assert.equal(session.confirmCustomer(contextA, customerA), true);
 
+    session.markChanged();
     const blockedSelection = session.startCustomerSelection({ id: 2, sourceSystem: 'kiwi' });
     assert.deepEqual(blockedSelection, {
         blocked: true,
@@ -138,9 +139,57 @@ function testDisplaySummaryKeepsNameAndSourceDistinct() {
 
 testBuildsExplicitCustomerReference();
 testLateCustomerResponseCannotBecomeCurrent();
-testActiveCustomerCannotBeSilentlyReplaced();
+testChangedCustomerCannotBeSilentlyReplaced();
 testResetWaitsForKnownMutationOutcome();
 testRequestHeadersAddressTheCurrentCustomer();
 testDisplaySummaryKeepsNameAndSourceDistinct();
 
 console.log('customer work session tests passed');
+
+function testAutomaticSwitchAndRollback() {
+    const { session } = createDeterministicSession();
+    const a = { id: 1, credentialKey: 'one', sourceSystem: 'subscription-api' };
+    const b = { id: 2, credentialKey: 'two', sourceSystem: 'subscription-api' };
+    const aContext = session.startCustomerSelection(a);
+    session.confirmCustomer(aContext, a);
+    const same = session.startCustomerSelection(a);
+    assert.equal(same.workflowSessionId, aContext.workflowSessionId);
+    assert.equal(same.previousContext, null);
+    session.confirmCustomer(same, a);
+    const failed = session.startCustomerSelection(b);
+    assert.notEqual(failed.workflowSessionId, aContext.workflowSessionId);
+    assert.equal(session.getSnapshot().activeCustomer, a);
+    assert.equal(session.getSnapshot().workflowSessionId, aContext.workflowSessionId);
+    assert.equal(session.abandonCustomerSelection(failed), true);
+    assert.equal(session.getRequestContext().workflowSessionId, aContext.workflowSessionId);
+    assert.equal(session.isCurrent(failed), false);
+    const next = session.startCustomerSelection(b);
+    assert.equal(session.confirmCustomer(next, b), true);
+    assert.equal(session.getSnapshot().activeCustomer, b);
+    assert.equal(session.isCurrent(aContext), false);
+    const otherSource = session.startCustomerSelection({ ...b, credentialKey: 'other' });
+    assert.notEqual(otherSource.workflowSessionId, next.workflowSessionId);
+}
+
+function testMutationKeepsSessionChangedAfterCompletion() {
+    for (const outcome of ['pending', 'ambiguous', 'finished', 'resolved']) {
+        const { session } = createDeterministicSession();
+        const a = { id: 1 };
+        session.confirmCustomer(session.startCustomerSelection(a), a);
+        const pending = session.startCustomerSelection({ id: 2 });
+        const mutation = session.beginMutation('submission');
+        assert.equal(mutation.customerReference.personId, '1');
+        assert.equal(session.isCurrent(pending), false);
+        if (outcome !== 'pending') session.finishMutation('submission', { ambiguous: outcome === 'ambiguous' });
+        if (outcome === 'resolved') session.resolveMutation('submission');
+        assert.equal(session.startCustomerSelection({ id: 2 }).blocked, true, outcome);
+        if (outcome === 'finished' || outcome === 'resolved') {
+            assert.equal(session.reset(), true);
+            assert.equal(session.getSnapshot().changed, false);
+            assert.equal(session.startCustomerSelection({ id: 2 }).blocked, false);
+        }
+    }
+}
+
+testAutomaticSwitchAndRollback();
+testMutationKeepsSessionChangedAfterCompletion();
