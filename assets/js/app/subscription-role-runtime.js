@@ -341,11 +341,23 @@ function renderCustomerForm(containerId, prefix, config = {}) {
             </div>
         </div>
 
-        <div class="form-row">
-            <input type="text" id="${prefix}PostalCode" placeholder="${translate('forms.postalCodePlaceholder', {}, 'Postcode*')}" data-feedback-sensitive="postal-code" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="${translate('forms.postalCodeTitle', {}, 'Voer een geldige postcode in (bijv. 1234AB)')}" required>
-            <input type="text" id="${prefix}HouseNumber" placeholder="${translate('forms.houseNumberPlaceholder', {}, 'Huisnr. (en letter)*')}" data-feedback-sensitive="address" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="${translate('forms.houseNumberTitle', {}, 'Voer een geldig huisnummer in (bijv. 123 of 123A)')}" required>
-            <input type="text" id="${prefix}HouseExt" placeholder="${translate('forms.houseExtensionPlaceholder', {}, 'Huisnummer toevoeging')}" data-feedback-sensitive="address" maxlength="10">
-            <input type="text" id="${prefix}AddressExtension" placeholder="${translate('forms.addressExtensionPlaceholder', {}, '(interne) Toevoeging 1')}" data-feedback-sensitive="address" maxlength="60">
+        <div class="form-row customer-address-row">
+            <div class="customer-address-field">
+                <label for="${prefix}PostalCode">${translate('forms.postalCodePlaceholder', {}, 'Postcode*')}</label>
+                <input type="text" id="${prefix}PostalCode" data-feedback-sensitive="postal-code" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="${translate('forms.postalCodeTitle', {}, 'Voer een geldige postcode in (bijv. 1234AB)')}" required>
+            </div>
+            <div class="customer-address-field">
+                <label for="${prefix}HouseNumber">${translate('forms.houseNumberPlaceholder', {}, 'Huisnr. (en letter)*')}</label>
+                <input type="text" id="${prefix}HouseNumber" data-feedback-sensitive="address" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="${translate('forms.houseNumberTitle', {}, 'Voer een geldig huisnummer in (bijv. 123 of 123A)')}" required>
+            </div>
+            <div class="customer-address-field">
+                <label for="${prefix}HouseExt">${translate('forms.houseExtensionPlaceholder', {}, 'Huisnummer toevoeging')}</label>
+                <input type="text" id="${prefix}HouseExt" data-feedback-sensitive="address" maxlength="10">
+            </div>
+            <div class="customer-address-field">
+                <label for="${prefix}AddressExtension">${translate('forms.addressExtensionPlaceholder', {}, '(interne) Toevoeging 1')}</label>
+                <input type="text" id="${prefix}AddressExtension" data-feedback-sensitive="address" maxlength="60">
+            </div>
         </div>
         
         <div class="form-row">
@@ -370,7 +382,9 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         ` : ''}
     `;
 
-    document.getElementById(containerId).innerHTML = html;
+    const container = document.getElementById(containerId);
+    container.classList.add('customer-create-form');
+    container.innerHTML = html;
     populateBirthdayFields(prefix);
 }
 

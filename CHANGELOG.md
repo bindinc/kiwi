@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Keep new-customer address fields inside the subscription form with a responsive two-column layout and visible labels for the separate house number and internal additions.
+
 ## [v1.0.21]
 
 - Add a separate `(interne) Toevoeging 1` field for new subscription persons and map it to the PPA address `extension` without changing the house number addition.
