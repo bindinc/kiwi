@@ -39,6 +39,9 @@ COPY infra/docker/app/php.ini /usr/local/etc/php/conf.d/kiwi.ini
 
 EXPOSE 8000
 
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+
 FROM runtime-base AS dev
 
 ENV APP_ENV=dev \
