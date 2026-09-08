@@ -59,6 +59,28 @@ final class HomeControllerTest extends WebTestCase
         self::assertStringContainsString('static-page-i18n', $content);
     }
 
+    public function testRendersReleaseVersionWithoutTranslationBinding(): void
+    {
+        $previousVersion = $_SERVER['APP_VERSION'] ?? null;
+        $_SERVER['APP_VERSION'] = 'v9.8.7-rc.1';
+
+        try {
+            $client = $this->createAuthenticatedClient(['bink8s.app.kiwi.user']);
+            $crawler = $client->request('GET', '/');
+
+            self::assertResponseIsSuccessful();
+            self::assertSame('v9.8.7-rc.1', $crawler->filter('#kiwiVersion')->text());
+            self::assertNull($crawler->filter('#kiwiVersion')->attr('data-i18n'));
+        } finally {
+            self::ensureKernelShutdown();
+            if (null === $previousVersion) {
+                unset($_SERVER['APP_VERSION']);
+            } else {
+                $_SERVER['APP_VERSION'] = $previousVersion;
+            }
+        }
+    }
+
     public function testLogoutRedirectsToLoggedOutPageWithCsrfToken(): void
     {
         $previousClientSecretsPath = getenv('OIDC_CLIENT_SECRETS');

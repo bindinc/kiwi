@@ -50,4 +50,8 @@ jobs:
         run: node script/check
 
       - name: Build production image
-        run: docker build -f infra/docker/app/Dockerfile --target prod .
+        run: docker build -f infra/docker/app/Dockerfile --target prod --build-arg APP_VERSION=v0.0.0-ci -t kiwi:ci .
+
+      - name: Verify embedded release version
+        run: |
+          docker run --rm --entrypoint php kiwi:ci -r 'exit(getenv("APP_VERSION") === "v0.0.0-ci" ? 0 : 1);'

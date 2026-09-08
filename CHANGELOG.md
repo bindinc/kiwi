@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Display the release tag embedded in the deployed image instead of maintaining version numbers in translations; local builds show `dev`.
+
 - Automatically open a new customer work session when switching after read-only browsing, while preserving drafts and completed or uncertain customer actions and retaining the previous customer if loading or reset auditing fails.
 
 - Keep new-customer address fields inside the subscription form with a responsive two-column layout and visible labels for the separate house number and internal additions.
