@@ -77,7 +77,7 @@ async function testRendersAndResetsAnExplicitCustomerWorkSession() {
         const selectionContext = startCustomerSelection(customer);
         assert.equal(elements.customerWorkSessionBar.hidden, true);
 
-        assert.equal(confirmCustomerSelection(selectionContext, customer), true);
+        assert.equal(await confirmCustomerSelection(selectionContext, customer), true);
         assert.equal(elements.customerWorkSessionBar.hidden, false);
         assert.equal(elements.customerWorkSessionName.textContent, 'Jane van Dijk');
         assert.equal(elements.customerWorkSessionPersonId.textContent, '11860448');

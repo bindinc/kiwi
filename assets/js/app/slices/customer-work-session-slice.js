@@ -32,7 +32,7 @@ function translate(key, fallback, params = {}) {
 function showToast(message, type) {
     const dependencies = resolveDependencies();
     if (dependencies && typeof dependencies.showToast === 'function') {
-        dependencies.showToast(message, type);
+        dependencies.showToast(message, type, { recordContactHistory: false });
     }
 }
 
@@ -103,7 +103,40 @@ export function startCustomerSelection(customer) {
     return context;
 }
 
-export function confirmCustomerSelection(context, customer) {
+export async function confirmCustomerSelection(context, customer) {
+    if (!customerWorkSession.canConfirmCustomer(context, customer)) {
+        abandonCustomerSelection(context);
+        return false;
+    }
+
+    if (context.previousContext) {
+        const dependencies = resolveDependencies();
+        const apiClient = dependencies?.getApiClient?.();
+        try {
+            if (!apiClient || typeof apiClient.post !== 'function'
+                || typeof dependencies.resetCustomerBoundState !== 'function') {
+                throw new Error('Customer reset audit is unavailable.');
+            }
+            await apiClient.post('/api/v1/customer-work-sessions/reset', context.previousContext, {
+                skipCustomerContext: true
+            });
+        } catch (error) {
+            if (abandonCustomerSelection(context)) {
+                showToast(
+                    translate('customerWorkSession.resetFailed', 'De klantwerksessie kon niet veilig worden beëindigd.'),
+                    'error'
+                );
+            }
+            return false;
+        }
+
+        if (!customerWorkSession.isCurrent(context)) {
+            return false;
+        }
+        dependencies.resetCustomerBoundState();
+        setHidden('queuedCustomerChoice', true);
+    }
+
     const confirmed = customerWorkSession.confirmCustomer(context, customer);
     if (confirmed) {
         renderCustomerWorkSession();
@@ -121,6 +154,26 @@ export function abandonCustomerSelection(context) {
 
 export function isCustomerContextCurrent(context) {
     return customerWorkSession.isCurrent(context);
+}
+
+export function markCustomerWorkSessionChanged() {
+    customerWorkSession.markChanged();
+}
+
+function trackCustomerDraft(event) {
+    const target = event.target;
+    const editor = target?.closest?.('.form-container, #editDeliveryRemarksModal');
+    if (!editor) {
+        return;
+    }
+    if (event.type === 'click') {
+        const action = target.closest('[data-action]')?.dataset.action;
+        const isDismissal = action === 'close-form' || action === 'close-article-sale-form';
+        if (!action || isDismissal) {
+            return;
+        }
+    }
+    markCustomerWorkSessionChanged();
 }
 
 export function beginCustomerMutation(submissionId) {
@@ -180,6 +233,9 @@ export async function endCustomerWorkSession() {
         return false;
     }
 
+    if (customerWorkSession.getSnapshot().selectionPending) {
+        customerWorkSession.abandonCustomerSelection(customerWorkSession.getRequestContext());
+    }
     const context = customerWorkSession.getRequestContext();
     const dependencies = resolveDependencies();
     const apiClient = dependencies && typeof dependencies.getApiClient === 'function'
@@ -201,6 +257,9 @@ export async function endCustomerWorkSession() {
         }
     }
 
+    if (!customerWorkSession.isCurrent(context)) {
+        return false;
+    }
     const reset = customerWorkSession.reset();
     if (!reset) {
         return false;
@@ -235,6 +294,7 @@ function exposeCustomerWorkSessionApi() {
         getRequestContext: getCustomerRequestContext,
         getRequestHeaders: getCustomerRequestHeaders,
         isCurrent: isCustomerContextCurrent,
+        markChanged: markCustomerWorkSessionChanged,
         resolveMutation: resolveCustomerMutation,
         showQueuedCustomerChoice,
         startCustomerSelection
@@ -243,6 +303,11 @@ function exposeCustomerWorkSessionApi() {
 
 export function registerCustomerWorkSessionSlice(actionRouter) {
     exposeCustomerWorkSessionApi();
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+        for (const eventType of ['input', 'change', 'click']) {
+            document.addEventListener(eventType, trackCustomerDraft, true);
+        }
+    }
     renderCustomerWorkSession();
 
     if (!actionRouter || typeof actionRouter.registerMany !== 'function') {
@@ -261,5 +326,6 @@ export function registerCustomerWorkSessionSlice(actionRouter) {
 
 export const __customerWorkSessionTestUtils = {
     customerWorkSession,
-    renderCustomerWorkSession
+    renderCustomerWorkSession,
+    trackCustomerDraft
 };

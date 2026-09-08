@@ -2,7 +2,7 @@ SHELL := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev-certs compose-preflight compose-up compose-down compose-logs compose-build shell console composer phpunit js-test guardrail compose-smoke-oidc compose-smoke-feedback-privacy image-build
+.PHONY: help dev-certs compose-preflight compose-up compose-down compose-logs compose-build shell console composer phpunit js-test guardrail compose-smoke-oidc compose-smoke-feedback-privacy compose-smoke-customer-sessions image-build
 
 help:
 	@echo "Usage: make compose-up"
@@ -58,6 +58,9 @@ guardrail:
 
 compose-smoke-oidc:
 	scripts/compose-smoke-oidc.sh
+
+compose-smoke-customer-sessions:
+	node scripts/compose-smoke-customer-sessions.mjs
 
 compose-smoke-feedback-privacy:
 	node scripts/compose-smoke-feedback-privacy.mjs

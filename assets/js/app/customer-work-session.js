@@ -43,6 +43,14 @@ function referencesAreEqual(left, right) {
     return CUSTOMER_REFERENCE_FIELDS.every((fieldName) => left[fieldName] === right[fieldName]);
 }
 
+function referenceMatchesSelection(selection, reference) {
+    if (!selection || !reference) {
+        return selection === reference;
+    }
+    // Detail responses may enrich fields that were absent from the search result.
+    return CUSTOMER_REFERENCE_FIELDS.every((field) => !selection[field] || selection[field] === reference[field]);
+}
+
 export function createCustomerReference(customer) {
     if (!customer || typeof customer !== 'object') {
         return null;
@@ -103,6 +111,8 @@ export function createCustomerWorkSession(options = {}) {
     let customerReference = null;
     let activeCustomer = null;
     let pendingCustomerReference = null;
+    let pendingWorkflowSessionId = null;
+    let changed = false;
     let activeReadController = null;
     const activeMutationIds = new Set();
     const unresolvedMutationIds = new Set();
@@ -124,6 +134,7 @@ export function createCustomerWorkSession(options = {}) {
             contextGeneration,
             customerReference: cloneReference(customerReference),
             activeCustomer,
+            changed,
             pendingCustomerReference: cloneReference(pendingCustomerReference),
             selectionPending: Boolean(pendingCustomerReference),
             activeMutationIds: Array.from(activeMutationIds),
@@ -136,7 +147,7 @@ export function createCustomerWorkSession(options = {}) {
         const requestReference = pendingCustomerReference || customerReference;
 
         return {
-            workflowSessionId,
+            workflowSessionId: pendingWorkflowSessionId || workflowSessionId,
             contextGeneration,
             customerReference: cloneReference(requestReference)
         };
@@ -144,7 +155,7 @@ export function createCustomerWorkSession(options = {}) {
 
     function getRequestHeaders() {
         const headers = {
-            'X-Kiwi-Workflow-Session-Id': workflowSessionId,
+            'X-Kiwi-Workflow-Session-Id': pendingWorkflowSessionId || workflowSessionId,
             'X-Kiwi-Context-Generation': String(contextGeneration)
         };
 
@@ -173,21 +184,27 @@ export function createCustomerWorkSession(options = {}) {
         }
         const wouldReplaceActiveCustomer = customerReference
             && !referencesAreEqual(customerReference, nextReference);
-        if (wouldReplaceActiveCustomer) {
+        if (wouldReplaceActiveCustomer && changed) {
             return { blocked: true, reason: 'active_customer' };
         }
 
+        const previousContext = wouldReplaceActiveCustomer ? {
+            workflowSessionId,
+            contextGeneration,
+            customerReference: cloneReference(customerReference)
+        } : null;
         abortActiveRead();
-        if (!customerReference) {
-            workflowSessionId = createSessionId();
-        }
+        pendingWorkflowSessionId = !customerReference || wouldReplaceActiveCustomer
+            ? createSessionId()
+            : workflowSessionId;
         contextGeneration += 1;
         pendingCustomerReference = nextReference;
         activeReadController = createAbortController();
 
         return {
             blocked: false,
-            workflowSessionId,
+            previousContext,
+            workflowSessionId: pendingWorkflowSessionId,
             contextGeneration,
             customerReference: cloneReference(pendingCustomerReference),
             signal: activeReadController ? activeReadController.signal : undefined
@@ -201,21 +218,25 @@ export function createCustomerWorkSession(options = {}) {
 
         const currentReference = pendingCustomerReference || customerReference;
 
-        return context.workflowSessionId === workflowSessionId
+        return context.workflowSessionId === (pendingWorkflowSessionId || workflowSessionId)
             && context.contextGeneration === contextGeneration
-            && referencesAreEqual(context.customerReference, currentReference);
+            && referenceMatchesSelection(context.customerReference, currentReference);
+    }
+
+    function canConfirmCustomer(context, customer) {
+        const reference = createCustomerReference(customer);
+        return isCurrent(context) && Boolean(reference)
+            && referenceMatchesSelection(context.customerReference, reference);
     }
 
     function confirmCustomer(context, customer) {
-        if (!isCurrent(context)) {
+        if (!canConfirmCustomer(context, customer)) {
             return false;
         }
-
         const confirmedReference = createCustomerReference(customer);
-        if (!confirmedReference) {
-            return false;
-        }
 
+        workflowSessionId = pendingWorkflowSessionId || workflowSessionId;
+        pendingWorkflowSessionId = null;
         customerReference = confirmedReference;
         activeCustomer = customer;
         pendingCustomerReference = null;
@@ -231,10 +252,19 @@ export function createCustomerWorkSession(options = {}) {
         abortActiveRead();
         contextGeneration += 1;
         pendingCustomerReference = null;
+        pendingWorkflowSessionId = null;
         if (!customerReference) {
             workflowSessionId = createSessionId();
         }
         return true;
+    }
+
+    function markChanged() {
+        // Edits belong to the still-visible customer, never to a provisional selection.
+        if (customerReference && pendingCustomerReference) {
+            abandonCustomerSelection(getRequestContext());
+        }
+        changed = true;
     }
 
     function beginMutation(submissionId) {
@@ -243,6 +273,7 @@ export function createCustomerWorkSession(options = {}) {
             throw new TypeError('A mutation requires a submission id.');
         }
 
+        markChanged();
         activeMutationIds.add(normalizedSubmissionId);
         unresolvedMutationIds.delete(normalizedSubmissionId);
         return getRequestContext();
@@ -277,12 +308,15 @@ export function createCustomerWorkSession(options = {}) {
         customerReference = null;
         activeCustomer = null;
         pendingCustomerReference = null;
+        pendingWorkflowSessionId = null;
+        changed = false;
         return true;
     }
 
     return {
         abandonCustomerSelection,
         beginMutation,
+        canConfirmCustomer,
         confirmCustomer,
         finishMutation,
         getRequestContext,
@@ -290,6 +324,7 @@ export function createCustomerWorkSession(options = {}) {
         getSnapshot,
         hasBlockingMutation,
         isCurrent,
+        markChanged,
         reset,
         resolveMutation,
         startCustomerSelection

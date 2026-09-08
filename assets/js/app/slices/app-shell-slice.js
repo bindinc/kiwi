@@ -213,7 +213,7 @@ function shouldSkipContactHistoryToast(type, contactHistoryState) {
     return ageMs < TOAST_DEDUPLICATION_WINDOW_MS;
 }
 
-export function showToast(message, type = 'success') {
+export function showToast(message, type = 'success', options = {}) {
     const dependencies = resolveDependencies();
     const currentCustomer = dependencies && typeof dependencies.getCurrentCustomer === 'function'
         ? dependencies.getCurrentCustomer()
@@ -222,7 +222,8 @@ export function showToast(message, type = 'success') {
         ? dependencies.getContactHistoryState()
         : null;
     const canLogContactHistory = dependencies && typeof dependencies.pushContactHistory === 'function';
-    const canAppendContactHistoryToast = currentCustomer
+    const canAppendContactHistoryToast = options.recordContactHistory !== false
+        && currentCustomer
         && !isSubscriptionApiCustomer(currentCustomer)
         && canLogContactHistory;
 

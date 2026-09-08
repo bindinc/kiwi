@@ -55,6 +55,12 @@
 
     async function request(method, url, payload, options) {
         const requestUrl = buildRequestUrl(url);
+        const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+        const isCustomerEndpoint = /^\/api\/v1\/(persons|subscriptions|workflows)(\/|$)/.test(url);
+        const isReadOnlyPost = url === '/api/v1/persons/subscription-summaries';
+        if (isWrite && isCustomerEndpoint && !isReadOnlyPost) {
+            window.kiwiCustomerWorkSession?.markChanged?.();
+        }
         const requestOptions = {
             method,
             credentials: 'same-origin',

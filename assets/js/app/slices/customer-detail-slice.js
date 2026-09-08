@@ -522,15 +522,14 @@ export async function selectCustomer(customerId) {
                 return;
             }
             customer = mergeCustomerDetail(cachedCustomer, customer);
-            if (typeof dependencies.upsertCustomerInCache === 'function') {
-                dependencies.upsertCustomerInCache(customer);
-            }
         } catch (error) {
-            if (error && error.name === 'AbortError') {
+            const stale = selectionContext && typeof dependencies.isCustomerContextCurrent === 'function'
+                && !dependencies.isCustomerContextCurrent(selectionContext);
+            if (stale || (error && error.name === 'AbortError')) {
                 return;
             }
 
-            const canUseCachedCustomer = cachedCustomer
+            const canUseCachedCustomer = !selectionContext?.previousContext && cachedCustomer
                 && String(cachedCustomer.sourceSystem || '').trim() === 'subscription-api';
             if (canUseCachedCustomer) {
                 customer = cachedCustomer;
@@ -538,7 +537,8 @@ export async function selectCustomer(customerId) {
                 if (typeof dependencies.showToast === 'function') {
                     dependencies.showToast(
                         translateLabel(dependencies, 'customer.detailLoadFailed', 'Kon klantdetail niet laden'),
-                        'error'
+                        'error',
+                        { recordContactHistory: false }
                     );
                 }
                 console.error('Kon klantdetail niet laden via API', error);
@@ -551,7 +551,7 @@ export async function selectCustomer(customerId) {
     }
 
     if (selectionContext && typeof dependencies.confirmCustomerSelection === 'function') {
-        const confirmed = dependencies.confirmCustomerSelection(selectionContext, customer || null);
+        const confirmed = await dependencies.confirmCustomerSelection(selectionContext, customer || null);
         if (!confirmed) {
             return;
         }
@@ -565,6 +565,10 @@ export async function selectCustomer(customerId) {
             return;
         }
         dependencies.setCurrentCustomer(customer || null);
+    }
+
+    if (customer && typeof dependencies.upsertCustomerInCache === 'function') {
+        dependencies.upsertCustomerInCache(customer);
     }
 
     const selectedCustomer = getCurrentCustomer(dependencies);
