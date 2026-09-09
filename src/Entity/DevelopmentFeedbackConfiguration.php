@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Service\DevelopmentFeedback\DevelopmentFeedbackRetention;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
@@ -27,7 +28,7 @@ final class DevelopmentFeedbackConfiguration
     private ?string $publicBaseUrl = null;
 
     #[ORM\Column(name: 'image_ttl_days')]
-    private int $imageTtlDays = 30;
+    private int $imageTtlDays = DevelopmentFeedbackRetention::MAX_DAYS;
 
     #[ORM\Column(name: 'max_image_bytes')]
     private int $maxImageBytes = 3145728;

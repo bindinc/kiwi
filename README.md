@@ -268,7 +268,7 @@ CONTEXTUAL_FEEDBACK_ALLOWED_ROLES="admin,dev,supervisor"
 CONTEXTUAL_FEEDBACK_WEBHOOK_URL=
 CONTEXTUAL_FEEDBACK_ORIGINAL_DATA_WEBHOOK_URL=
 CONTEXTUAL_FEEDBACK_PUBLIC_BASE_URL="https://bdc.rtvmedia.org/kiwi"
-CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS=30
+CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS=14
 CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES=3145728
 ```
 
@@ -309,8 +309,28 @@ Expired screenshot links and old feedback rows can be cleaned with:
 make console ARGS='app:development-feedback:cleanup'
 ```
 
-Use `--report-retention-days=<days>` to override the default 180-day report
-retention.
+Feedback reports and both screenshot variants are retained for at most 14 days
+from creation, including existing reports. Screenshot links return 404 at the
+earlier of token expiry, screenshot age 14 days, or report age 14 days. Images
+are served with `Cache-Control: private, no-store`.
+
+The image retention setting accepts 1–14 days. Existing database and environment
+values above 14 are capped when read. Use `--report-retention-days=<days>` to
+shorten report retention (1–14 days; default 14). Cleanup deletes the entire
+report and its images when any screenshot expires or the report reaches its
+retention limit, including reports without screenshots.
+
+Docker Compose runs `feedback-cleanup` immediately after the app is healthy and
+then hourly. Kubernetes requires an hourly `kiwi-development-feedback-cleanup` CronJob in
+the cluster management repository. Under normal operation, expired reports are
+removed within one hour. Failed runs are logged and retried; monitor failed Jobs
+and cleanup service restarts. No image requests are needed to trigger cleanup.
+
+The Kubernetes CronJob is initially suspended. Deploy the updated Kiwi image to
+both tracks and enable the schedule through the cluster management repository
+only after validating that its `APP_IMAGE_BLUE` contains this change.
+The first run also removes existing expired reports. Copies in Teams, Shortcut,
+and backups are outside this retention policy.
 
 ## Cluster follow-up
 

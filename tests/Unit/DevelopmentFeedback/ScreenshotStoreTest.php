@@ -16,11 +16,14 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 final class ScreenshotStoreTest extends TestCase
 {
     private ?string $previousMaxBytes = null;
+    private ?string $previousTtlDays = null;
 
     protected function setUp(): void
     {
         $this->previousMaxBytes = getenv('CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES') ?: null;
+        $this->previousTtlDays = getenv('CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS') ?: null;
         putenv('CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES=3145728');
+        putenv('CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS=365');
     }
 
     protected function tearDown(): void
@@ -28,6 +31,9 @@ final class ScreenshotStoreTest extends TestCase
         null === $this->previousMaxBytes
             ? putenv('CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES')
             : putenv('CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES='.$this->previousMaxBytes);
+        null === $this->previousTtlDays
+            ? putenv('CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS')
+            : putenv('CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS='.$this->previousTtlDays);
     }
 
     public function testStorePngCreatesScreenshotMetadataAndToken(): void
@@ -38,6 +44,7 @@ final class ScreenshotStoreTest extends TestCase
 
         $result = $store->storePng($report, $file, new \DateTimeImmutable('2026-06-16T12:00:00+00:00'));
 
+        self::assertEquals(new \DateTimeImmutable('2026-06-30T12:00:00+00:00'), $result['screenshot']->getAccessTokenExpiresAt());
         self::assertSame($report->getScreenshot(), $result['screenshot']);
         self::assertSame(DevelopmentFeedbackScreenshot::VARIANT_PSEUDONYMIZED, $result['screenshot']->getVariant());
         self::assertSame('image/png', $result['screenshot']->getMimeType());

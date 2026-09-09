@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\DevelopmentFeedback\DevelopmentFeedbackCleanupService;
+use App\Service\DevelopmentFeedback\DevelopmentFeedbackRetention;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -27,8 +28,8 @@ final class CleanupDevelopmentFeedbackCommand extends Command
             'report-retention-days',
             null,
             InputOption::VALUE_REQUIRED,
-            'Delete feedback reports older than this many days.',
-            '180',
+            'Delete feedback reports at this age in days (1–14).',
+            (string) DevelopmentFeedbackRetention::MAX_DAYS,
         );
     }
 
@@ -58,13 +59,13 @@ final class CleanupDevelopmentFeedbackCommand extends Command
 
     private function normalizeRetentionDays(mixed $value): int
     {
-        if (!is_numeric($value)) {
-            throw new \InvalidArgumentException('report-retention-days must be numeric.');
+        if (!\is_string($value) || !ctype_digit($value)) {
+            throw new \InvalidArgumentException('report-retention-days must be an integer between 1 and 14.');
         }
 
         $retentionDays = (int) $value;
-        if ($retentionDays < 1 || $retentionDays > 3650) {
-            throw new \InvalidArgumentException('report-retention-days must be between 1 and 3650.');
+        if ($retentionDays < 1 || $retentionDays > DevelopmentFeedbackRetention::MAX_DAYS) {
+            throw new \InvalidArgumentException('report-retention-days must be between 1 and 14.');
         }
 
         return $retentionDays;

@@ -68,7 +68,7 @@ final class DevelopmentFeedbackConfigurationStore
         }
 
         if (\array_key_exists('imageTtlDays', $payload)) {
-            $configuration->setImageTtlDays($this->normalizeInt($payload['imageTtlDays'], 'imageTtlDays', 1, 365));
+            $configuration->setImageTtlDays($this->normalizeInt($payload['imageTtlDays'], 'imageTtlDays', 1, DevelopmentFeedbackRetention::MAX_DAYS));
         }
 
         if (\array_key_exists('maxImageBytes', $payload)) {
@@ -150,8 +150,8 @@ final class DevelopmentFeedbackConfigurationStore
             $configuration->setPublicBaseUrl($publicBaseUrl);
         }
 
-        $imageTtlDays = (int) (getenv('CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS') ?: 30);
-        $configuration->setImageTtlDays(max(1, min(365, $imageTtlDays)));
+        $imageTtlDays = (int) (getenv('CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS') ?: DevelopmentFeedbackRetention::MAX_DAYS);
+        $configuration->setImageTtlDays(max(1, min(DevelopmentFeedbackRetention::MAX_DAYS, $imageTtlDays)));
 
         $maxImageBytes = (int) (getenv('CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES') ?: 3145728);
         $configuration->setMaxImageBytes(max(1, min(10485760, $maxImageBytes)));

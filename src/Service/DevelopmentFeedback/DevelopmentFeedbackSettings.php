@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Request;
 final class DevelopmentFeedbackSettings
 {
     private const DEFAULT_ALLOWED_ROLES = ['admin', 'dev', 'supervisor'];
-    private const DEFAULT_IMAGE_TTL_DAYS = 30;
+    private const DEFAULT_IMAGE_TTL_DAYS = DevelopmentFeedbackRetention::MAX_DAYS;
     private const DEFAULT_MAX_IMAGE_BYTES = 3145728;
 
     public function __construct(
@@ -113,12 +113,12 @@ final class DevelopmentFeedbackSettings
     {
         $configuration = $this->readConfiguration();
         if (null !== $configuration) {
-            return max(1, min(365, $configuration->getImageTtlDays()));
+            return max(1, min(DevelopmentFeedbackRetention::MAX_DAYS, $configuration->getImageTtlDays()));
         }
 
         $value = (int) (getenv('CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS') ?: self::DEFAULT_IMAGE_TTL_DAYS);
 
-        return max(1, min(365, $value));
+        return max(1, min(DevelopmentFeedbackRetention::MAX_DAYS, $value));
     }
 
     public function getMaxImageBytes(): int

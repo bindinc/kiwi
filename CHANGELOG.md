@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Limit feedback reports and both screenshot variants to 14 days, enforce expiry for existing links without browser caching, and automatically delete expired reports hourly in Docker Compose.
+
 - Display the release tag embedded in the deployed image instead of maintaining version numbers in translations; local builds show `dev`.
 
 - Automatically open a new customer work session when switching after read-only browsing, while preserving drafts and completed or uncertain customer actions and retaining the previous customer if loading or reset auditing fails.

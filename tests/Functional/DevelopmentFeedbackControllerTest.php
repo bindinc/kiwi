@@ -260,6 +260,9 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSame('image/png', $client->getResponse()->headers->get('Content-Type'));
         self::assertSame($this->pngBytes(), $client->getResponse()->getContent());
+        self::assertTrue($client->getResponse()->headers->hasCacheControlDirective('no-store'));
+        self::assertTrue($client->getResponse()->headers->hasCacheControlDirective('private'));
+        self::assertFalse($client->getResponse()->headers->hasCacheControlDirective('max-age'));
 
         $client->request('GET', '/api/v1/development-feedback/screenshots/dddddddd-dddd-4ddd-8ddd-dddddddddddd/wrong.png');
         self::assertResponseStatusCodeSame(404);
@@ -269,8 +272,49 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
-    private function persistScreenshotReport(string $publicId, string $token, \DateTimeImmutable $expiresAt): void
+    public function testOldImagesAndReportsAreUnavailableEvenWithLongLivedTokens(): void
     {
+        $client = static::createClient();
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $expired = $now->modify('-14 days');
+        $future = $now->modify('+30 days');
+        $this->persistScreenshotReport('old-report', 'report-token', $future, $expired, $now);
+        $this->persistScreenshotReport('old-image', 'image-token', $future, $now, $expired);
+
+        foreach (['old-report/report-token', 'old-image/image-token'] as $path) {
+            $client->request('GET', '/api/v1/development-feedback/screenshots/'.$path.'.png');
+            self::assertResponseStatusCodeSame(404);
+        }
+    }
+
+    public function testSettingsCapLegacyDatabaseValuesAndAcceptOnlyOneToFourteenDays(): void
+    {
+        $client = $this->createAuthenticatedClient(['bink8s.app.kiwi.admin']);
+        $client->request('GET', '/api/v1/development-feedback/settings');
+        $connection = static::getContainer()->get(EntityManagerInterface::class)->getConnection();
+        $connection->executeStatement('UPDATE development_feedback_configuration SET image_ttl_days = 365');
+        static::getContainer()->get(EntityManagerInterface::class)->clear();
+        $client->request('GET', '/api/v1/development-feedback/settings');
+        self::assertSame(14, json_decode($client->getResponse()->getContent(), true)['imageTtlDays']);
+
+        foreach ([1, 14] as $days) {
+            $client->jsonRequest('PUT', '/api/v1/development-feedback/settings', ['imageTtlDays' => $days]);
+            self::assertResponseIsSuccessful();
+            self::assertSame($days, json_decode($client->getResponse()->getContent(), true)['imageTtlDays']);
+        }
+        foreach ([0, 15, 365, 1.5] as $days) {
+            $client->jsonRequest('PUT', '/api/v1/development-feedback/settings', ['imageTtlDays' => $days]);
+            self::assertResponseStatusCodeSame(400);
+        }
+    }
+
+    private function persistScreenshotReport(
+        string $publicId,
+        string $token,
+        \DateTimeImmutable $expiresAt,
+        ?\DateTimeImmutable $reportCreatedAt = null,
+        ?\DateTimeImmutable $screenshotCreatedAt = null,
+    ): void {
         /** @var DevelopmentFeedbackSchemaManager $schemaManager */
         $schemaManager = static::getContainer()->get(DevelopmentFeedbackSchemaManager::class);
         $schemaManager->ensureSchema();
@@ -282,7 +326,7 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
 
         $report = new DevelopmentFeedbackReport(
             $publicId,
-            new \DateTimeImmutable('2026-06-16T12:00:00+00:00'),
+            $reportCreatedAt ?? new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
             'test@example.org',
             'Test User',
             'test@example.org',
@@ -315,7 +359,7 @@ final class DevelopmentFeedbackControllerTest extends WebTestCase
             hash('sha256', $this->pngBytes()),
             $urlGenerator->hashToken($token),
             $expiresAt,
-            new \DateTimeImmutable('2026-06-16T12:00:00+00:00'),
+            $screenshotCreatedAt ?? new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
             $this->pngBytes(),
         );
         $report->setScreenshot($screenshot);
