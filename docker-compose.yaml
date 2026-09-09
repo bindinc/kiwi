@@ -122,6 +122,8 @@ services:
     image: kiwi-dev:local
     entrypoint: ["/bin/sh", "/app/scripts/feedback-cleanup-loop.sh"]
     restart: on-failure
+    healthcheck:
+      disable: true
     working_dir: /app
     environment: *app-environment
     volumes: *app-volumes
