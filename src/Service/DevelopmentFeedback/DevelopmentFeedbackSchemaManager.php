@@ -8,7 +8,6 @@ use App\Entity\DevelopmentFeedbackConfiguration;
 use App\Entity\DevelopmentFeedbackReport;
 use App\Entity\DevelopmentFeedbackScreenshot;
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Exception;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 
@@ -26,15 +25,12 @@ final class DevelopmentFeedbackSchemaManager
 
     public function hasFeedbackTables(): bool
     {
-        try {
-            return $this->connection->createSchemaManager()->tablesExist([
-                self::CONFIGURATION_TABLE,
-                self::REPORT_TABLE,
-                self::SCREENSHOT_TABLE,
-            ]);
-        } catch (Exception) {
-            return false;
-        }
+        // Connection failures must fail cleanup jobs, not look like an empty database.
+        return $this->connection->createSchemaManager()->tablesExist([
+            self::CONFIGURATION_TABLE,
+            self::REPORT_TABLE,
+            self::SCREENSHOT_TABLE,
+        ]);
     }
 
     /**

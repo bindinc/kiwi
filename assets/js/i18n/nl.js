@@ -846,7 +846,7 @@ const nl = {
             "originalWebhookPlaceholder": "Plak de Teams Workflows-webhook-URL voor originele gegevens",
             "clearOriginalWebhook": "Opgeslagen webhook-URL voor originele gegevens verwijderen",
             "publicBaseUrl": "Publieke basis-URL",
-            "imageTtlDays": "Bewaartermijn afbeelding in dagen",
+            "imageTtlDays": "Bewaartermijn afbeelding in dagen (maximaal 14)",
             "maxImageBytes": "Maximale afbeeldingsgrootte in bytes",
             "cancel": "Annuleren",
             "save": "Opslaan",

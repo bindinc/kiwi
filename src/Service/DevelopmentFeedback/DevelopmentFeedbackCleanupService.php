@@ -19,6 +19,10 @@ final class DevelopmentFeedbackCleanupService
      */
     public function cleanup(\DateTimeImmutable $now, int $reportRetentionDays): array
     {
+        if ($reportRetentionDays < 1 || $reportRetentionDays > DevelopmentFeedbackRetention::MAX_DAYS) {
+            throw new \InvalidArgumentException('report-retention-days must be between 1 and 14.');
+        }
+
         if (!$this->schemaManager->hasFeedbackTables()) {
             return [
                 'status' => 'skipped_missing',
@@ -33,15 +37,18 @@ DELETE FROM development_feedback_reports
 WHERE id IN (
     SELECT report_id
     FROM development_feedback_screenshots
-    WHERE access_token_expires_at < :now
+    WHERE access_token_expires_at <= :now OR created_at <= :oldestKeptScreenshotCreatedAt
 )
 SQL,
-            ['now' => $now],
-            ['now' => 'datetime_immutable'],
+            [
+                'now' => $now,
+                'oldestKeptScreenshotCreatedAt' => $now->modify(sprintf('-%d days', DevelopmentFeedbackRetention::MAX_DAYS)),
+            ],
+            ['now' => 'datetime_immutable', 'oldestKeptScreenshotCreatedAt' => 'datetime_immutable'],
         );
 
         $oldReportsDeleted = $this->connection->executeStatement(
-            'DELETE FROM development_feedback_reports WHERE created_at < :oldestKeptCreatedAt',
+            'DELETE FROM development_feedback_reports WHERE created_at <= :oldestKeptCreatedAt',
             ['oldestKeptCreatedAt' => $now->modify(sprintf('-%d days', $reportRetentionDays))],
             ['oldestKeptCreatedAt' => 'datetime_immutable'],
         );

@@ -12,6 +12,7 @@ use App\Oidc\RequestOidcContext;
 use App\Repository\DevelopmentFeedbackReportRepository;
 use App\Service\DevelopmentFeedback\DevelopmentFeedbackSchemaManager;
 use App\Service\DevelopmentFeedback\DevelopmentFeedbackConfigurationStore;
+use App\Service\DevelopmentFeedback\DevelopmentFeedbackRetention;
 use App\Service\DevelopmentFeedback\DevelopmentFeedbackSettings;
 use App\Service\DevelopmentFeedback\DevelopmentFeedbackSubmitter;
 use App\Service\DevelopmentFeedback\SignedScreenshotUrlGenerator;
@@ -30,6 +31,7 @@ final class DevelopmentFeedbackController extends AbstractApiController
         OidcConfiguration $oidcConfiguration,
         JsonRequestDecoder $jsonRequestDecoder,
         private readonly DevelopmentFeedbackSettings $settings,
+        private readonly DevelopmentFeedbackRetention $retention,
         private readonly DevelopmentFeedbackConfigurationStore $configurationStore,
         private readonly DevelopmentFeedbackSubmitter $submitter,
         private readonly DevelopmentFeedbackSchemaManager $schemaManager,
@@ -97,7 +99,7 @@ final class DevelopmentFeedbackController extends AbstractApiController
         $screenshot = $report?->findScreenshotByAccessTokenHash($tokenHash);
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
-        if (null === $screenshot || $screenshot->getAccessTokenExpiresAt() <= $now) {
+        if (null === $screenshot || $this->retention->isScreenshotExpired($screenshot, $now)) {
             throw new ApiProblemException(404, 'screenshot_not_found', 'Screenshot not found');
         }
 
@@ -107,7 +109,7 @@ final class DevelopmentFeedbackController extends AbstractApiController
 
         return new Response($screenshot->getImageData(), 200, [
             'Content-Type' => 'image/png',
-            'Cache-Control' => 'private, max-age=3600',
+            'Cache-Control' => 'private, no-store',
             'Content-Length' => (string) $screenshot->getByteSize(),
         ]);
     }

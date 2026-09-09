@@ -339,7 +339,7 @@ Rules:
 - Does not require browser session auth, because Teams must be able to fetch it.
 - Requires an unguessable token.
 - Stores only a token hash server-side.
-- Expires after a configured TTL, for example 30 days.
+- Expires after a configured TTL of 1–14 days, capped at 14 days from screenshot and report creation, including existing images.
 - Sends `Content-Type: image/png`.
 - Sends `Cache-Control: private, max-age=3600`.
 - Returns `404` for unknown, expired, or mismatched tokens.
@@ -355,7 +355,7 @@ CONTEXTUAL_FEEDBACK_ENABLED=0
 CONTEXTUAL_FEEDBACK_ALLOWED_ROLES="admin,dev,supervisor"
 CONTEXTUAL_FEEDBACK_WEBHOOK_URL=
 CONTEXTUAL_FEEDBACK_PUBLIC_BASE_URL="https://bdc.rtvmedia.org/kiwi"
-CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS=30
+CONTEXTUAL_FEEDBACK_IMAGE_TTL_DAYS=14
 CONTEXTUAL_FEEDBACK_MAX_IMAGE_BYTES=3145728
 ```
 

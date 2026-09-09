@@ -14,7 +14,7 @@ const SETTINGS = {
     originalDataWebhookConfigured: false,
     originalDataWebhookSource: 'environment',
     publicBaseUrl: 'https://example.org/kiwi',
-    imageTtlDays: 30,
+    imageTtlDays: 14,
     maxImageBytes: 3145728
 };
 

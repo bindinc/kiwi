@@ -846,7 +846,7 @@ const en = {
             "originalWebhookPlaceholder": "Paste Teams Workflows webhook URL for original data",
             "clearOriginalWebhook": "Clear stored original-data webhook URL",
             "publicBaseUrl": "Public base URL",
-            "imageTtlDays": "Image TTL days",
+            "imageTtlDays": "Image retention in days (maximum 14)",
             "maxImageBytes": "Max image bytes",
             "cancel": "Cancel",
             "save": "Save",

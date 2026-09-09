@@ -90,7 +90,7 @@ services:
         condition: service_healthy
       kiwi-postgres:
         condition: service_healthy
-    environment:
+    environment: &app-environment
       APP_ENV: dev
       APP_DEBUG: 1
       APP_SECRET: kiwi-local-compose-session-secret
@@ -111,12 +111,23 @@ services:
       timeout: 2s
       retries: 60
       start_period: 2s
-    volumes:
+    volumes: &app-volumes
       - ./:/app
       - kiwi_vendor:/app/vendor
       - kiwi_var:/app/var
     expose:
       - "8000"
+
+  feedback-cleanup:
+    image: kiwi-dev:local
+    entrypoint: ["/bin/sh", "/app/scripts/feedback-cleanup-loop.sh"]
+    restart: on-failure
+    working_dir: /app
+    environment: *app-environment
+    volumes: *app-volumes
+    depends_on:
+      app:
+        condition: service_healthy
 
   gateway:
     image: nginx:1.25-alpine

@@ -129,7 +129,7 @@ function buildSettingsPayload(form) {
     const payload = {
         feedbackEnabled: formData.get('feedbackEnabled') === 'on',
         publicBaseUrl: String(formData.get('publicBaseUrl') || '').trim(),
-        imageTtlDays: Number(formData.get('imageTtlDays') || 30),
+        imageTtlDays: Number(formData.get('imageTtlDays') || 14),
         maxImageBytes: Number(formData.get('maxImageBytes') || 3145728),
         clearWebhookUrl: formData.get('clearWebhookUrl') === 'on',
         clearOriginalDataWebhookUrl: formData.get('clearOriginalDataWebhookUrl') === 'on'
@@ -214,7 +214,7 @@ export function buildFeedbackSettingsHtml(settings) {
                     <div class="contextual-feedback-form-row">
                         <label>
                             <span>${escapeHtml(feedbackText('settings.imageTtlDays'))}</span>
-                            <input type="number" name="imageTtlDays" min="1" max="365" step="1" value="${Number(settings.imageTtlDays)}" required>
+                            <input type="number" name="imageTtlDays" min="1" max="14" step="1" value="${Number(settings.imageTtlDays)}" required>
                         </label>
                         <label>
                             <span>${escapeHtml(feedbackText('settings.maxImageBytes'))}</span>
