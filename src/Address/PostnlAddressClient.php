@@ -33,14 +33,18 @@ final class PostnlAddressClient
 
     public function search(AddressQuery $query, string $uuid, LookupBudget $budget): array
     {
-        $payload = $this->request('search', [
+        $parameters = [
             'uuid' => $uuid,
             'countryIso' => 'NL',
             'postalCode' => $query->postalCode,
             'houseNumber' => $query->houseNumber,
-            'houseNumberAddition' => $query->addition,
             'q' => '',
-        ], $budget);
+        ];
+        // PostNL treats an explicitly empty addition as a filter that yields no matches.
+        if ('' !== $query->addition) {
+            $parameters['houseNumberAddition'] = $query->addition;
+        }
+        $payload = $this->request('search', $parameters, $budget);
         if (!array_is_list($payload)) {
             throw new ProviderFailure('invalid_response');
         }

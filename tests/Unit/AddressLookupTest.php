@@ -116,6 +116,23 @@ final class AddressLookupTest extends TestCase
         self::assertSame(['provider', 'outcome', 'duration_ms'], array_keys($this->logs[0]));
     }
 
+    public function testPostnlOmitsEmptyAdditionAndPreservesSuppliedAdditions(): void
+    {
+        foreach (['', 'A 2', '0'] as $addition) {
+            $this->requests = [];
+            $service = $this->service([$this->response(['uuid' => self::UUID]), $this->response([])]);
+            $service->search($this->query('1', $addition), self::UUID, new Session(new MockArraySessionStorage()));
+            parse_str((string) parse_url($this->requests[1]['url'], PHP_URL_QUERY), $parameters);
+            self::assertSame('1231AA', $parameters['postalCode']);
+            self::assertSame('1', $parameters['houseNumber']);
+            if ('' === $addition) {
+                self::assertArrayNotHasKey('houseNumberAddition', $parameters);
+            } else {
+                self::assertSame($addition, $parameters['houseNumberAddition']);
+            }
+        }
+    }
+
     public function testFallbackRefreshesAndTriesAnyCredential(): void
     {
         $service = $this->service([

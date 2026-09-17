@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Omit empty house number additions from PostNL address searches so addresses without an addition can be completed. [sc-200162]
+
 - Accept Webabo street and city completion without an echoed house number, while rejecting mismatched postcodes and ambiguous results. [sc-200162]
 
 - Fix Dutch address completion across customer forms with PostNL, form-scoped UUID reuse and Webabo fallback; preserve manual entry during outages and provide safe interactive SOPS key entry. [sc-200162]
