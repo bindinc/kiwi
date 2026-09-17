@@ -22,7 +22,7 @@ final class WebaboAccessTokenProvider
     ) {
     }
 
-    public function getAccessToken(?string $credentialName = null): string
+    public function getAccessToken(?string $credentialName = null, ?float $deadline = null): string
     {
         $config = $this->configProvider->getConfig();
         $credential = $config->getCredential($credentialName);
@@ -40,7 +40,7 @@ final class WebaboAccessTokenProvider
                 'grant_type' => 'password',
                 'username' => $credential->username,
                 'password' => $credential->password,
-            ]));
+            ], $deadline));
         }
 
         $refreshToken = $tokenState['refreshToken'] ?? $credential->refreshToken;
@@ -49,7 +49,7 @@ final class WebaboAccessTokenProvider
             return $this->storeTokenData($credential->name, $this->requestToken($credential, [
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $refreshToken,
-            ]));
+            ], $deadline));
         }
 
         throw new \RuntimeException(sprintf(
@@ -71,7 +71,7 @@ final class WebaboAccessTokenProvider
      * @param array<string, string|null> $grantParameters
      * @return array<string, mixed>
      */
-    private function requestToken(HupApiCredential $credential, array $grantParameters): array
+    private function requestToken(HupApiCredential $credential, array $grantParameters, ?float $deadline = null): array
     {
         $config = $this->configProvider->getConfig();
         $headers = [
@@ -102,11 +102,18 @@ final class WebaboAccessTokenProvider
             static fn (mixed $value): bool => null !== $value && '' !== $value,
         );
 
+        $duration = null === $deadline ? 10.0 : min(3.0, $deadline - microtime(true));
+        if ($duration <= 0) {
+            throw new \RuntimeException('HUP token deadline exceeded.');
+        }
+
         try {
             $response = $this->httpClient->request('POST', $config->tokenUrl, [
                 'headers' => $headers,
                 'body' => $body,
-                'timeout' => 10.0,
+                'timeout' => $duration,
+                'max_duration' => null === $deadline ? 0 : $duration,
+                'max_redirects' => null === $deadline ? 20 : 0,
             ]);
         } catch (TransportExceptionInterface $exception) {
             throw new \RuntimeException(sprintf(

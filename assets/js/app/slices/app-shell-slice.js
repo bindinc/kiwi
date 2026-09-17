@@ -1,3 +1,4 @@
+import { endAddressSessions } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
 import { DIRECT_DEBIT_PAYMENT_METHOD, syncSubscriptionIbanRequirement } from '../subscription-payment.js';
 
@@ -173,6 +174,8 @@ export function closeForm(formId) {
         callDependency(dependencies, 'resetAllSubscriptionDuplicateStates');
     }
 
+    const addressForm = getElementById(formId);
+    if (addressForm) endAddressSessions(addressForm);
     setElementDisplay(formId, 'none');
 }
 

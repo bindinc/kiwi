@@ -141,6 +141,37 @@ HTML;
                     $operation['parameters'] = $pathParameters;
                 }
 
+                if ('api_address_search' === $name) {
+                    $operation['requestBody'] = [
+                        'required' => true,
+                        'content' => ['application/json' => ['schema' => [
+                            'type' => 'object',
+                            'required' => ['formSessionId', 'postalCode', 'houseNumber'],
+                            'properties' => [
+                                'formSessionId' => ['type' => 'string', 'format' => 'uuid'],
+                                'postalCode' => ['type' => 'string'],
+                                'houseNumber' => ['type' => 'string'],
+                                'houseNumberAddition' => ['type' => 'string'],
+                            ],
+                        ]]],
+                    ];
+                    $operation['responses']['200'] = [
+                        'description' => 'Lookup result; only matched results include an address',
+                        'content' => ['application/json' => ['schema' => [
+                            'type' => 'object', 'required' => ['status'],
+                            'properties' => [
+                                'status' => ['type' => 'string', 'enum' => ['matched', 'not_found', 'ambiguous', 'unavailable']],
+                                'address' => ['type' => 'object', 'required' => ['street', 'city'], 'properties' => [
+                                    'street' => ['type' => 'string'], 'city' => ['type' => 'string'],
+                                ]],
+                            ],
+                        ]]],
+                    ];
+                }
+                if ('api_address_session_close' === $name) {
+                    $operation['responses'] = ['204' => ['description' => 'Address form session closed']];
+                }
+
                 $paths[$openApiPath][strtolower($method)] = $operation;
             }
         }

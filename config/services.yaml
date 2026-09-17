@@ -51,3 +51,13 @@ services:
                 db_time_col: 'sess_time'
                 ttl: '%app.session.ttl_seconds%'
                 lock_mode: !php/const Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler::LOCK_ADVISORY
+
+    # Address URLs contain personal data; keep them out of HTTP debug/profiler logs.
+    address.http_client:
+        class: Symfony\Contracts\HttpClient\HttpClientInterface
+        factory: [Symfony\Component\HttpClient\HttpClient, create]
+
+    address.webabo_tokens:
+        class: App\Webabo\WebaboAccessTokenProvider
+        arguments:
+            $httpClient: '@address.http_client'

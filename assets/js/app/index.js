@@ -1,3 +1,4 @@
+import { initAddressCompletion } from './address-completion.js';
 import { createActionRouter } from './actions.js';
 import { getDispositionCategories } from './disposition-categories.js';
 import { installLegacyAppState, applyBootstrapData, legacyState } from './legacy-app-state.js';
@@ -222,6 +223,7 @@ async function bootstrapApplication() {
         wireCallAgentRuntimeDependencies();
         await runBootstrapInitialization();
         initContextualFeedbackFeature();
+        initAddressCompletion();
     } catch (error) {
         if (typeof console !== 'undefined' && typeof console.error === 'function') {
             console.error('Kon applicatie niet volledig initialiseren.', error);
