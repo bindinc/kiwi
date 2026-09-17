@@ -204,7 +204,7 @@ final class HomeControllerTest extends WebTestCase
         self::assertCount(1, $crawler->filter('input[name="subPayment"][value="B"][checked]'));
         self::assertCount(1, $crawler->filter('input[name="subPayment"][value="AC"]'));
         self::assertCount(1, $crawler->filter('#subIBAN[required]'));
-        self::assertStringContainsString('Betaalinstructie', (string) $client->getResponse()->getContent());
+        self::assertSelectorTextSame('label[for="subPaymentInstruction"] .payment-text', 'Factuur');
     }
 
     public function testFeedbackSettingsCogOnlyRendersForAdministratorsAndSupervisors(): void
