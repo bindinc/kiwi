@@ -31,6 +31,7 @@ async function fill(prefix, postcode, number = '1') {
     const choices = page.locator(`#${prefix}AddressChoices`);
     if (await choices.isVisible()) {
         await choices.selectOption('0');
+        assert.equal(await choices.isVisible(), false);
     }
 }
 
@@ -57,13 +58,16 @@ try {
     const first = requests.at(-1).formSessionId;
     assert.equal('houseNumberAddition' in requests.at(-1), false);
     const callsBeforeAddition = requests.length;
-    await page.selectOption('#editAddressChoices', '1');
-    assert.equal(await page.inputValue('#editHouseExt'), 'A');
+    assert.equal(await page.locator('#editAddressChoices').isVisible(), false);
     await page.fill('#editHouseExt', 'MANUAL');
     await page.waitForTimeout(450);
     assert.equal(requests.length, callsBeforeAddition);
+    assert.equal(await page.locator('#editAddressChoices').isVisible(), false);
+    await page.fill('#editHouseNumber', '3');
+    await page.waitForSelector('#editAddressChoices:not([hidden])');
     await page.locator('#editAddressChoices').focus();
-    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await page.locator('#editAddressChoices').isVisible(), false);
     assert.equal(await page.inputValue('#editHouseExt'), '');
     await page.locator('#editAddressStatus').screenshot({ path: `${evidence}/address-choices-desktop.png` });
     await page.setViewportSize({ width: 390, height: 844 });

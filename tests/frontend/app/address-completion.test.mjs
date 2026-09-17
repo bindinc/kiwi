@@ -140,7 +140,7 @@ test('waits for selection and never sends or filters on a manually edited additi
     f.fields.addition.value = 'B'; f.form.manualInput('addition'); f.flush();
     assert.equal(f.requests.length, 1);
     f.form.select(0);
-    assert.equal(f.fields.addition.value, '');
+    assert.equal(f.fields.addition.value, 'B');
 });
 
 test('unknown Webabo addition preserves manual input and old choices cannot be selected', async () => {
@@ -209,4 +209,21 @@ test('a copied address during debounce cancels the old scheduled lookup', () => 
     f.fields.street.value = 'Copied street'; f.fields.city.value = 'Copied city';
     f.flush();
     assert.equal(f.requests.length, 0);
+});
+
+test('selection closes the choices and only a new search can offer them again', async () => {
+    const states = [];
+    const f = fixture({ report: (status, choices = []) => states.push({ status, choices }) });
+    f.form.input(); f.flush();
+    f.pending[0].resolve(matched()); await tick();
+    assert.equal(states.at(-1).choices.length, 1);
+    f.form.select(0);
+    assert.deepEqual(states.at(-1), { status: 'matched', choices: [] });
+    f.fields.addition.value = 'Manual'; f.form.manualInput('addition');
+    f.form.select(0);
+    assert.equal(f.fields.addition.value, 'Manual');
+    f.fields.houseNumber.value = '2'; f.form.input(); f.flush();
+    f.pending[1].resolve(matched('Rembrandtlaan', '', '2')); await tick();
+    assert.equal(states.at(-1).status, 'results');
+    assert.equal(states.at(-1).choices.length, 1);
 });

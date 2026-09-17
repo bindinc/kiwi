@@ -145,7 +145,8 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
             fields.postalCode.value = choice.postalCode;
             choicesFingerprint = fingerprint();
             lastFingerprint = choicesFingerprint;
-            report('matched', choices);
+            choices = [];
+            report('matched');
         },
         manualInput(field) {
             if (automatic) delete automatic[field];
@@ -223,7 +224,6 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
                 label.textContent = text(value);
                 retry.hidden = value !== 'unavailable';
                 choicesSelect.hidden = choicesLabel.hidden = !candidates.length;
-                if (value === 'matched') return;
                 choicesSelect.replaceChildren();
                 if (!candidates.length) return;
                 const prompt = documentRef.createElement('option');
