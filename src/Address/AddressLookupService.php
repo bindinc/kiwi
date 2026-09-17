@@ -35,7 +35,7 @@ final class AddressLookupService
             }
         }
         try {
-            $result = self::match($query, $this->webabo->search($query, $budget));
+            $result = self::match($query, $this->webabo->search($query, $budget), allowStreetCompletion: true);
             $this->log('webabo', $result['status'], $started);
 
             return $result;
@@ -46,13 +46,14 @@ final class AddressLookupService
         }
     }
 
-    public static function match(AddressQuery $query, array $candidates): array
+    public static function match(AddressQuery $query, array $candidates, bool $allowStreetCompletion = false): array
     {
         $addresses = [];
         foreach ($candidates as $candidate) {
             $matchesPostalCode = AddressQuery::compact($candidate['postalCode']) === $query->postalCode;
-            $matchesNumber = $candidate['houseNumber'] === $query->houseNumber;
-            $matchesAddition = '' === $query->addition || AddressQuery::compact($candidate['addition']) === AddressQuery::compact($query->addition);
+            $streetOnly = $allowStreetCompletion && null === $candidate['houseNumber'];
+            $matchesNumber = $streetOnly || $candidate['houseNumber'] === $query->houseNumber;
+            $matchesAddition = $streetOnly || '' === $query->addition || AddressQuery::compact($candidate['addition']) === AddressQuery::compact($query->addition);
             if (!$matchesPostalCode || !$matchesNumber || !$matchesAddition) {
                 continue;
             }
