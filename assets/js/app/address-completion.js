@@ -199,8 +199,10 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
             status = documentRef.createElement('div');
             status.id = `${prefix}AddressStatus`;
             status.className = 'address-completion-status';
-            const addressRow = fields.houseNumber.closest('.form-row') || fields.houseNumber.parentElement;
-            addressRow.insertAdjacentElement('afterend', status);
+            status.hidden = true;
+            const addressRow = fields.city.closest('.form-row') || fields.city.parentElement;
+            addressRow.classList.add('address-completion-anchor');
+            addressRow.append(status);
         }
         status.replaceChildren();
         const label = documentRef.createElement('span');
@@ -222,6 +224,7 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
         const form = createAddressCompletion({ fields, request, uuid: () => windowRef.crypto.randomUUID(), includeNumber: prefix === 'restitutionTransfer', isActive: () => isVisible(fields.postalCode),
             report(value, candidates = []) {
                 label.textContent = text(value);
+                status.hidden = !value || value === 'matched';
                 retry.hidden = value !== 'unavailable';
                 choicesSelect.hidden = choicesLabel.hidden = !candidates.length;
                 choicesSelect.replaceChildren();
@@ -240,6 +243,13 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
                     choicesSelect.append(option);
                 });
                 choicesSelect.size = Math.min(5, candidates.length + 1);
+            }
+        });
+        status.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                status.hidden = true;
+                fields.city.focus();
+                event.preventDefault();
             }
         });
         choicesSelect.addEventListener('change', () => { if (choicesSelect.value !== '') form.select(Number(choicesSelect.value)); });

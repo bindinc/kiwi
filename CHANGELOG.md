@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
-- Close and clear address choices after selection; show new choices only after another lookup. [sc-200162]
+- Show address choices in a floating panel below street and city without shifting the form, and close and clear it after selection. [sc-200162]
 
 - Show selectable address results from any two postcode, house number, street or city fields, including alternatives for conflicting postcodes; fill additions only from selection, never use them as search filters. [sc-200162]
 
