@@ -108,6 +108,7 @@ final class ApiContractTest extends WebTestCase
         $client->request('GET', '/api/v1/persons');
         self::assertResponseIsSuccessful();
         $existingCustomers = json_decode($client->getResponse()->getContent(), true);
+        $this->rememberCustomerAddresses($client, array_slice($existingCustomers['items'], 0, 2));
         $recipientId = $existingCustomers['items'][0]['id'];
         $requesterId = $existingCustomers['items'][1]['id'];
         $submissionId = 'sc-187755-functional-submission';
@@ -223,6 +224,20 @@ final class ApiContractTest extends WebTestCase
         ], JSON_THROW_ON_ERROR));
         self::assertResponseIsSuccessful();
         self::assertSame('Test opmerking', json_decode($client->getResponse()->getContent(), true)['deliveryRemarks']['default']);
+    }
+
+    private function rememberCustomerAddresses(\Symfony\Bundle\FrameworkBundle\KernelBrowser $client, array $customers): void
+    {
+        $session = $this->newSession();
+        $session->setId($this->resolveClientSessionId($client));
+        $request = \Symfony\Component\HttpFoundation\Request::create('/');
+        $request->setSession($session);
+        $gate = static::getContainer()->get(\App\Address\CustomerAddressGate::class);
+        foreach ($customers as $customer) {
+            $customer['street'] = preg_replace('/ \d+.*$/', '', $customer['address']);
+            $gate->rememberCorrection($request, $customer);
+        }
+        $session->save();
     }
 
     private function rememberAddress(\Symfony\Bundle\FrameworkBundle\KernelBrowser $client, array $payload): string
@@ -346,6 +361,8 @@ final class ApiContractTest extends WebTestCase
         self::assertSame(2, $calendar['month']);
         self::assertArrayHasKey('recommendedDate', $calendar);
 
+        $client->request('GET', '/api/v1/persons');
+        $this->rememberCustomerAddresses($client, json_decode($client->getResponse()->getContent(), true)['items']);
         $client->request('PATCH', '/api/v1/subscriptions/1/1', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'status' => 'active',
             'duration' => '2-jaar',

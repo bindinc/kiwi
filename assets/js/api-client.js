@@ -59,8 +59,15 @@
         const isCustomerEndpoint = /^\/api\/v1\/(persons|subscriptions|workflows)(\/|$)/.test(url);
         const isReadOnlyPost = url === '/api/v1/persons/subscription-summaries';
         if (isWrite && isCustomerEndpoint && !isReadOnlyPost) {
+            const allowed = window.kiwiCustomerWorkSession?.addressAllowsMutation?.(method, url, payload);
+            if (allowed === false) {
+                const error = new Error('Controleer en corrigeer eerst het klantadres. Je invoer blijft behouden.');
+                error.status = 409;
+                throw error;
+            }
             window.kiwiCustomerWorkSession?.markChanged?.();
         }
+        const customerContext = window.kiwiCustomerWorkSession?.getRequestContext?.();
         const requestOptions = {
             method,
             credentials: 'same-origin',
@@ -88,6 +95,8 @@
         }
 
         if (!response.ok) {
+            const addressBlocked = ['customer_address_unconfirmed', 'address_correction_unconfirmed'].includes(body?.error?.code);
+            if (addressBlocked && customerContext) window.kiwiCustomerWorkSession?.rejectCustomerAddress?.(customerContext);
             const errorMessage = body && body.error && body.error.message
                 ? body.error.message
                 : `Request failed with status ${response.status}`;

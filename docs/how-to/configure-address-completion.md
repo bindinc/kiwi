@@ -144,6 +144,7 @@ To reproduce the isolated mock-provider browser checks from the PR worktree:
 python3 scripts/prepare-address-smoke.py
 GATEWAY_HTTPS_PORT=9443 docker compose -p sc200162 -f docker-compose.yaml -f /tmp/sc-200162-smoke/compose.yaml up -d gateway
 node scripts/compose-smoke-address-completion.mjs
+node scripts/compose-smoke-customer-address.mjs
 KIWI_SMOKE_BASE_URL=https://bdc.rtvmedia.org.local:9443/kiwi-preview/ node scripts/compose-smoke-address-completion.mjs
 ```
 
@@ -193,3 +194,44 @@ as its own field; this PR does not implement a new Paradise delivery worker.
 PostNL documentation bills unique UUID sessions rather than each search in the same
 session/day. The buffer reduces requests and latency; it does not necessarily reduce
 session credits beyond the existing UUID reuse.
+
+## Existing-person sessions
+
+Opening a person checks the authoritative address immediately. The profile remains
+readable and editable when confirmation fails. A persistent warning links to address
+correction; saving other changes is blocked until the address is confirmed. Local
+profile edits and an address correction can be saved together. Failed saves retain
+entered values. Changing postcode/number in a prefilled correction form discards the
+old street/city as search filters.
+
+Person detail responses include `addressValidation.status` (`confirmed` or `blocked`).
+This is a presentation hint, not an authorization token. Mutation endpoints recheck
+server-loaded person data, including subscription actions, existing-person subscription
+orders, article orders, contact history, complaints and bulk state writes. Existing
+person snapshots in queue requests are replaced by authoritative person data.
+
+The server derives an address-session identifier from workflow id, person id and
+credential key, scoped to the authenticated PostgreSQL session. Matching cached
+provider candidates avoid additional provider searches during the same customer
+session. Reset closes this address session. Normal twelve-hour/day expiry still
+applies, and changed addresses cannot inherit an earlier confirmation.
+
+For subscription-API persons, **Correct address** enables only the address fields.
+`PATCH /api/v1/persons/{personId}/address?credentialKey=...` first confirms the complete
+address and then updates the source's main address using
+`PATCH /public/persons/{personid}/contacts/addresses/0` with
+`Content-Type: application/merge-patch+json`. The PPA contract defines resource `0` as
+the primary address. The same resource is read when opening a profile, so another
+contact address cannot accidentally be validated or overwritten.
+
+Only street, postCode, city, isoCountryCode and housenumber are patched. Internal
+`extension`/`additionalExtension` and other profile data are preserved. PPA documents
+one house-number string including supplements; the adapter writes `123A 2`, while
+Kiwi retains `123A` and `2` separately. A readback must confirm persistence before
+success is reported. Transport failures are not retried automatically; only a 401
+permits one token refresh. No credentials are sent to the browser.
+
+Contract source: the PPA Subscription OpenAPI document available locally at
+`/home/bartdeijkers/security2026/Docs/Abel/API/PPA-Subscription/subscription-api-docs.json`.
+A real external-person write is not part of the local smoke test: browser responses
+are controlled, and the adapter/persistence contract is covered by functional tests.

@@ -6,6 +6,8 @@ namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
 use App\Http\JsonRequestDecoder;
+use App\Address\CustomerAddressGate;
+use App\Address\AddressValidationService;
 use App\Oidc\OidcConfiguration;
 use App\Oidc\OidcRoleAccess;
 use App\Oidc\RequestOidcContext;
@@ -22,6 +24,7 @@ final class SubscriptionController extends AbstractApiController
         OidcRoleAccess $oidcRoleAccess,
         OidcConfiguration $oidcConfiguration,
         JsonRequestDecoder $jsonRequestDecoder,
+        private readonly CustomerAddressGate $addressGate,
         private readonly PocStateService $stateService,
     ) {
         parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
@@ -31,6 +34,7 @@ final class SubscriptionController extends AbstractApiController
     public function updateSubscription(Request $request, int $customerId, int $subscriptionId): JsonResponse
     {
         $this->requireApiAccess($request);
+        $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->updateSubscription($request->getSession(), $customerId, $subscriptionId, $payload));
@@ -40,6 +44,7 @@ final class SubscriptionController extends AbstractApiController
     public function createComplaint(Request $request, int $customerId, int $subscriptionId): JsonResponse
     {
         $this->requireApiAccess($request);
+        $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->createSubscriptionComplaint(
@@ -54,6 +59,7 @@ final class SubscriptionController extends AbstractApiController
     public function completeWinback(Request $request, int $customerId, int $subscriptionId): JsonResponse
     {
         $this->requireApiAccess($request);
+        $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->completeWinback(
@@ -69,6 +75,7 @@ final class SubscriptionController extends AbstractApiController
     public function processDeceasedActions(Request $request, int $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
+        $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
         $actions = \is_array($payload['actions'] ?? null) ? $payload['actions'] : [];
@@ -77,9 +84,10 @@ final class SubscriptionController extends AbstractApiController
     }
 
     #[Route('/{customerId}/{subscriptionId}/restitution-transfer', name: 'api_subscription_restitution_transfer', methods: ['POST'], requirements: ['customerId' => '\d+', 'subscriptionId' => '\d+'])]
-    public function completeRestitutionTransfer(Request $request, int $customerId, int $subscriptionId, \App\Address\AddressValidationService $validator): JsonResponse
+    public function completeRestitutionTransfer(Request $request, int $customerId, int $subscriptionId, AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
+        $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
         $transferData = $validator->validatePerson($request->getSession(), \is_array($payload['transferData'] ?? null) ? $payload['transferData'] : []);

@@ -1044,10 +1044,14 @@ export function editCustomer() {
     if (!currentCustomer) {
         return;
     }
-    if (isSubscriptionApiCustomer(currentCustomer)) {
-        showReadonlySubscriptionApiToast('bewerkt');
-        return;
-    }
+    const addressOnly = isSubscriptionApiCustomer(currentCustomer);
+    const form = getElementById('customerEditForm');
+    const addressIds = ['editPostalCode', 'editHouseNumber', 'editHouseExt', 'editAddress', 'editCity'];
+    form?.querySelectorAll('input, select').forEach((field) => {
+        field.disabled = addressOnly && field.type !== 'hidden' && !addressIds.includes(field.id);
+    });
+    const note = getElementById('externalAddressCorrectionNote');
+    if (note) note.hidden = !addressOnly;
 
     setInputValue('editCustomerId', currentCustomer.id);
 
@@ -1095,12 +1099,9 @@ export async function saveCustomerEdit(event) {
     if (!customer) {
         return;
     }
-    if (isSubscriptionApiCustomer(customer)) {
-        showReadonlySubscriptionApiToast('bewerkt');
-        return;
-    }
+    const addressOnly = isSubscriptionApiCustomer(customer);
 
-    const birthday = callLegacyFunction('ensureBirthdayValue', 'edit', false);
+    const birthday = addressOnly ? '' : callLegacyFunction('ensureBirthdayValue', 'edit', false);
     if (birthday === null) {
         return;
     }
@@ -1127,8 +1128,15 @@ export async function saveCustomerEdit(event) {
     const apiClient = getApiClient();
     if (apiClient && typeof apiClient.patch === 'function' && typeof apiClient.post === 'function') {
         try {
-            await apiClient.patch(`${personsApiUrl}/${customerId}`, updates);
-            await apiClient.post(`${personsApiUrl}/${customerId}/contact-history`, {
+            const workSession = getCustomerWorkSessionApi();
+            const saveContext = workSession?.getRequestContext?.();
+            const url = addressOnly
+                ? `${personsApiUrl}/${customerId}/address?credentialKey=${encodeURIComponent(customer.credentialKey)}`
+                : `${personsApiUrl}/${customerId}`;
+            const saved = await apiClient.patch(url, addressOnly ? getAddressSubmission('edit') : updates);
+            if (saveContext && !workSession.isCurrent(saveContext)) return;
+            workSession?.acceptCorrectedCustomer?.(saved);
+            if (!addressOnly) await apiClient.post(`${personsApiUrl}/${customerId}/contact-history`, {
                 type: 'Gegevens gewijzigd',
                 description: 'Klantgegevens bijgewerkt.'
             });

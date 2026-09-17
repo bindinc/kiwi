@@ -44,13 +44,13 @@ export function endAddressSessions(root = null) {
     }
 }
 
-export function createAddressCompletion({ fields, request, report, uuid = () => crypto.randomUUID(), schedule = setTimeout, cancel = clearTimeout, now = Date.now, isActive = () => true, includeNumber = false, invalidMessage = messages.nl.invalid }) {
+export function createAddressCompletion({ fields, request, report, uuid = () => crypto.randomUUID(), schedule = setTimeout, cancel = clearTimeout, now = Date.now, isActive = () => true, includeNumber = false, prefilledAddress = false, invalidMessage = messages.nl.invalid }) {
     let sessionId = null;
     let startedAt = 0;
     let timer = null;
     let revision = 0;
     let lastFingerprint = '';
-    let automatic = null;
+    let automatic = prefilledAddress ? { street: fields.street.value, city: fields.city.value } : null;
     let destroyed = false;
     let validationBuffer = null;
     let choices = [];
@@ -303,7 +303,7 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
         choicesSelect.className = 'address-completion-choices';
         choicesSelect.hidden = choicesLabel.hidden = true;
         status.append(label, retry, choicesLabel, choicesSelect);
-        const form = createAddressCompletion({ fields, request, invalidMessage: text('invalid'), uuid: () => windowRef.crypto.randomUUID(), includeNumber: prefix === 'restitutionTransfer', isActive: () => isVisible(fields.postalCode),
+        const form = createAddressCompletion({ fields, request, prefilledAddress: prefix === 'edit', invalidMessage: text('invalid'), uuid: () => windowRef.crypto.randomUUID(), includeNumber: prefix === 'restitutionTransfer', isActive: () => isVisible(fields.postalCode),
             report(value, candidates = []) {
                 label.textContent = text(value);
                 status.hidden = !value || value === 'matched';

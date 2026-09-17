@@ -64,6 +64,25 @@ final class PersonSearchClient
         );
     }
 
+    public function getMainAddress(string $personId, string $credentialName): array
+    {
+        return $this->requestJson($credentialName, $this->buildPersonUrl($personId).'/contacts/addresses/0', 'main address', false);
+    }
+
+    public function updateMainAddress(string $personId, string $credentialName, array $address): void
+    {
+        $contact = ['address' => [
+            'street' => $address['street'],
+            'postCode' => $address['postalCode'],
+            'city' => $address['city'],
+            'isoCountryCode' => 'NL',
+            'housenumber' => ['housenumber' => trim($address['houseNumber'].' '.$address['houseNumberAddition'])],
+        ]];
+        // PPA documents rid=0 as the main address. Merge-patch preserves internal supplements.
+        $this->requestJson($credentialName, $this->buildPersonUrl($personId).'/contacts/addresses/0',
+            'address correction', false, 'PATCH', $contact);
+    }
+
     private function buildPersonUrl(string $personId): string
     {
         $normalizedPersonId = trim($personId);
@@ -96,17 +115,21 @@ final class PersonSearchClient
         );
     }
 
-    private function requestJson(string $credentialName, string $url, string $operationLabel, bool $isRetry): array
+    private function requestJson(string $credentialName, string $url, string $operationLabel, bool $isRetry, string $method = 'GET', ?array $body = null): array
     {
         $accessToken = $this->accessTokenProvider->getAccessToken($credentialName);
 
         try {
-            $response = $this->httpClient->request('GET', $url, [
+            $response = $this->httpClient->request($method, $url, [
                 'headers' => [
                     'Accept' => 'application/json',
+                    ...($body !== null ? ['Content-Type' => 'application/merge-patch+json'] : []),
                     'Authorization' => sprintf('Bearer %s', $accessToken),
                 ],
                 'timeout' => 15.0,
+                'max_duration' => 15.0,
+                'max_redirects' => 0,
+                ...($body !== null ? ['json' => $body] : []),
             ]);
         } catch (TransportExceptionInterface $exception) {
             throw new SubscriptionApiResponseException(sprintf(
@@ -120,7 +143,7 @@ final class PersonSearchClient
         if (401 === $statusCode && !$isRetry) {
             $this->accessTokenProvider->invalidateCachedToken($credentialName);
 
-            return $this->requestJson($credentialName, $url, $operationLabel, true);
+            return $this->requestJson($credentialName, $url, $operationLabel, true, $method, $body);
         }
 
         $payload = json_decode($response->getContent(false), true);

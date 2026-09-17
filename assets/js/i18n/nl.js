@@ -884,6 +884,13 @@ const nl = {
         "resetFailed": "Reset via backend mislukt"
     },
     "customerWorkSession": {
+        "addressChecking": "Adres wordt gecontroleerd. Je kunt gegevens aanpassen; opslaan kan na bevestiging.",
+        "addressBlocked": "Dit adres is nog niet bevestigd. Je kunt gegevens aanpassen. Corrigeer het adres voordat je wijzigingen opslaat.",
+        "addressSaveBlocked": "Opslaan kan pas nadat het klantadres is bevestigd. Gebruik Adres corrigeren; je invoer blijft behouden.",
+        "correctAddress": "Adres corrigeren",
+        "retryAddress": "Opnieuw controleren",
+        "externalAddressOnly": "Alleen het hoofdadres wordt gewijzigd. Andere gegevens blijven ongewijzigd.",
+
         "activeCustomer": "Actieve klant",
         "personNumber": "Persoonnr.",
         "source": "Bron/mandant",

@@ -461,6 +461,13 @@
                 </div>
 
                 <!-- Customer Detail View -->
+                <section id="customerAddressGate" class="customer-address-gate" hidden aria-live="polite">
+                    <p id="customerAddressGateMessage"></p>
+                    <div>
+                        <button type="button" class="btn btn-primary" data-action="customer-address.correct" data-i18n="customerWorkSession.correctAddress">Adres corrigeren</button>
+                        <button id="customerAddressRetry" type="button" class="btn btn-secondary" data-action="customer-address.retry" data-i18n="customerWorkSession.retryAddress">Opnieuw controleren</button>
+                    </div>
+                </section>
                 <div id="customerDetail" class="customer-detail" style="display: none;">
                     <div class="card">
                         <div class="customer-header">
@@ -942,6 +949,7 @@
                         </div>
                         <form id="customerEditForm" class="form-section" data-action="save-customer-edit" data-action-event="submit" data-action-prevent-default="true">
                             <input type="hidden" id="editCustomerId" data-feedback-sensitive="id">
+                            <p id="externalAddressCorrectionNote" hidden data-i18n="customerWorkSession.externalAddressOnly">Alleen het hoofdadres wordt gewijzigd. Andere gegevens blijven ongewijzigd.</p>
                             
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.aanhef_1833dec8">Aanhef *</h3>
                             <div class="aanhef-row">

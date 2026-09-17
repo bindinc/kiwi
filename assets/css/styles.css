@@ -4606,3 +4606,20 @@ select option {
 
 .address-completion-anchor { position: relative; }
 .address-completion-status[hidden] { display: none; }
+
+.customer-address-gate {
+    margin-block: 1rem;
+    padding: 1rem;
+    border-inline-start: 4px solid var(--warning-color);
+    background: var(--bg-secondary);
+}
+.customer-address-gate[hidden] { display: none; }
+.customer-address-gate p { margin: 0 0 .75rem; }
+.customer-address-gate > div { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+@media (max-width: 768px) {
+    .main-content { grid-template-columns: minmax(0, 1fr); }
+    .main-content > * { min-width: 0; }
+    .customer-header, .subscription-item, .subscription-actions { flex-wrap: wrap; }
+    .customer-info { min-width: 0; overflow-wrap: anywhere; }
+}

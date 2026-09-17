@@ -265,3 +265,14 @@ test('addition changed during server confirmation is never overwritten', async (
     assert.equal(await checking, false);
     assert.equal(f.fields.addition.value, 'B');
 });
+
+test('changing a prefilled profile postcode does not filter by its old street and city', () => {
+    const fields = Object.fromEntries(Object.entries({postalCode: '1231AA', houseNumber: '1', addition: '', street: 'Old street', city: 'Old city'}).map(([key, value]) => [key, {value}]));
+    const f = fixture({fields, prefilledAddress: true});
+    assert.equal(f.requests.length, 0);
+    f.form.input(); f.flush();
+    assert.equal(f.requests[0].payload.street, undefined);
+    assert.equal(f.requests[0].payload.city, undefined);
+    assert.equal(fields.street.value, '');
+    assert.equal(fields.city.value, '');
+});

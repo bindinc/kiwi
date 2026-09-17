@@ -460,7 +460,7 @@ function testShowNewSubscriptionPrefillsPrimaryIbanFromCurrentCustomer() {
     }
 }
 
-function testEditCustomerBlocksSubscriptionApiCustomers() {
+function testEditCustomerAllowsSubscriptionApiAddressCorrection() {
     const previousBridge = globalThis.kiwiLegacyCustomerSearchBridge;
     const previousShowToast = globalThis.showToast;
 
@@ -485,9 +485,7 @@ function testEditCustomerBlocksSubscriptionApiCustomers() {
         registerSubscriptionWorkflowSlice(createRouter());
         globalThis.editCustomer();
 
-        assert.equal(toasts.length, 1);
-        assert.equal(toasts[0].type, 'error');
-        assert.equal(toasts[0].message.includes('subscription-api detaildata'), true);
+        assert.equal(toasts.length, 0);
     } finally {
         if (previousBridge === undefined) {
             delete globalThis.kiwiLegacyCustomerSearchBridge;
@@ -512,7 +510,7 @@ async function run() {
     testQueueToggleUpdatesPanelVisibilityAndButtonState();
     testQueueRenderingUsesBackendDisplayFields();
     testShowNewSubscriptionPrefillsPrimaryIbanFromCurrentCustomer();
-    testEditCustomerBlocksSubscriptionApiCustomers();
+    testEditCustomerAllowsSubscriptionApiAddressCorrection();
     console.log('subscription workflow slice tests passed');
 }
 

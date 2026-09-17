@@ -34,6 +34,38 @@ final class PersonSearchClientTest extends TestCase
         parent::tearDown();
     }
 
+    public function testAddressCorrectionUsesMergePatchAndRefreshesOnlyAfterUnauthorized(): void
+    {
+        $this->writeClientSecretsFile(['username' => 'demo-user', 'password' => '<password>',
+            'ppa_base_url' => 'https://example.invalid/subscription']);
+        $requests = [];
+        $responses = [
+            new MockResponse('{"access_token":"<token>","expires_in":300}'),
+            new MockResponse('{}', ['http_code' => 401]),
+            new MockResponse('{"access_token":"<new-token>","expires_in":300}'),
+            new MockResponse('{"address":{}}'),
+        ];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$requests, &$responses) {
+            $requests[] = compact('method', 'url', 'options');
+            return array_shift($responses);
+        });
+        $config = new HupApiConfigProvider(new ClientSecretsLoader($this->tempDir));
+        $client = new PersonSearchClient($config, new WebaboAccessTokenProvider($config, $http), $http);
+        $client->updateMainAddress('123', $config->getConfig()->getCredential()->name, [
+            'postalCode' => '1231AA', 'houseNumber' => '1A', 'houseNumberAddition' => '2',
+            'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT',
+        ]);
+        self::assertCount(4, $requests);
+        self::assertSame('PATCH', $requests[1]['method']);
+        self::assertSame('https://example.invalid/subscription/public/persons/123/contacts/addresses/0', $requests[1]['url']);
+        self::assertContains('Content-Type: application/merge-patch+json', $requests[1]['options']['headers']);
+        self::assertSame($requests[1]['options']['body'], $requests[3]['options']['body']);
+        $body = json_decode($requests[1]['options']['body'], true);
+        self::assertSame(['address'], array_keys($body));
+        self::assertSame('1A 2', $body['address']['housenumber']['housenumber']);
+        self::assertSame('NL', $body['address']['isoCountryCode']);
+    }
+
     public function testSearchUsesPpaBaseUrlAndBearerToken(): void
     {
         $clientSecretsPath = $this->writeClientSecretsFile([
