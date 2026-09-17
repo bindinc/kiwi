@@ -1,7 +1,9 @@
 # Configure address completion
 
-Kiwi searches Dutch addresses by postcode and house number and shows a result list.
-Selecting a result completes street, city and the house number addition. The addition
+Kiwi searches Dutch addresses using any two or more of postcode, house number, street
+and city, and shows a result list. An invalid postcode is ignored when two other
+fields are usable. House numbers must be valid; street and city support prefixes.
+Selecting a result completes postcode, house number, street, city and the addition. The addition
 input never filters searches, including a letter typed in the number field. This applies to recipient/requester creation, article orders,
 customer edits and restitution transfers. Screenshot selection is outside sc-200162.
 
@@ -63,7 +65,7 @@ from the local Flux/kind acceptance environment. Both Kiwi deployments mount
 ## API and behaviour
 
 - `POST /api/v1/addresses/search`: JSON strings `formSessionId` (UUID), `postalCode`,
-  `houseNumber`. Any supplied `houseNumberAddition` is ignored. Authentication and a Kiwi role are required.
+  `houseNumber`, `street`, `city` (at least two usable fields). Any supplied `houseNumberAddition` is ignored. Authentication and a Kiwi role are required.
 - Responses contain `status` and, for successful lookups, `candidates`: objects with
   `postalCode`, `houseNumber`, `houseNumberAddition`, `street` and `city`.
   A single candidate has status `matched`; multiple candidates have `ambiguous`.
@@ -80,11 +82,15 @@ malformed responses permit Webabo fallback. Empty or ambiguous valid results do 
 PostNL 400 is an integration error. Each external call, including HUP authentication,
 is capped at three seconds within a ten-second total lookup budget.
 
-Candidates must match postcode and house number. Distinct additions remain separate
-choices even when street and city agree. Webabo may omit `houseNo`; street-level
-results are then selectable for the matching postcode, without validating the user's
-number or addition. A full Webabo page (20 rows) remains unavailable to avoid presenting
-an incomplete candidate set. The internal address extension is never sent to providers.
+Candidates match every supplied field: postcode/number exactly and street/city by
+case-insensitive prefix. If none match and at least two other fields exist, one
+additional search omits the postcode, sharing the UUID and remaining time budget.
+The UI labels these alternatives and changes the postcode only on selection.
+There are no transport retries for PostNL. Distinct additions remain separate choices.
+Webabo may omit `houseNo`; these results cannot validate the number/addition. A missing
+number remains empty unless the user supplied one. A null addition preserves manual
+input. Full pages (50 PostNL / 20 Webabo) display a refinement hint rather than claiming
+completeness. The internal address extension is never sent to providers.
 
 Each form/tab gets its own local form identifier. The PostNL UUID is requested lazily
 and stored in the existing PostgreSQL-backed authenticated session under its advisory

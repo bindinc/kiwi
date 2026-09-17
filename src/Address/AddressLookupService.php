@@ -20,7 +20,7 @@ final class AddressLookupService
     public function search(AddressQuery $query, string $formId, SessionInterface $session, bool $includeCandidates = false): array
     {
         if ($includeCandidates) {
-            $query = new AddressQuery($query->postalCode, $query->houseNumber, '');
+            $query = new AddressQuery($query->postalCode, $query->houseNumber, '', $query->street, $query->city);
         }
         $started = microtime(true);
         $budget = new LookupBudget();
@@ -29,6 +29,12 @@ final class AddressLookupService
             $uuid = $this->sessions->uuid($session, $formId, fn (): string => $this->postnl->token($budget));
             $candidates = $this->postnl->search($query, $uuid, $budget);
             $result = $includeCandidates ? self::choices($query, $candidates) : self::match($query, $candidates);
+            $alternative = $query->withoutPostcode();
+            if ($includeCandidates && 'not_found' === $result['status'] && null !== $alternative) {
+                $candidates = $this->postnl->search($alternative, $uuid, $budget);
+                $result = self::choices($alternative, $candidates);
+                $result['postcodeRelaxed'] = true;
+            }
             $this->log('postnl', $result['status'], $started);
 
             return $result;
@@ -39,8 +45,14 @@ final class AddressLookupService
             }
         }
         try {
-            $candidates = $this->webabo->search($query, $budget);
+            $candidates = $this->webabo->search($query, $budget, $includeCandidates);
             $result = $includeCandidates ? self::choices($query, $candidates, true) : self::match($query, $candidates, allowStreetCompletion: true);
+            $alternative = $query->withoutPostcode();
+            if ($includeCandidates && 'not_found' === $result['status'] && null !== $alternative) {
+                $candidates = $this->webabo->search($alternative, $budget, true);
+                $result = self::choices($alternative, $candidates, true);
+                $result['postcodeRelaxed'] = true;
+            }
             $this->log('webabo', $result['status'], $started);
 
             return $result;
@@ -55,15 +67,17 @@ final class AddressLookupService
     {
         $choices = [];
         foreach ($candidates as $candidate) {
-            $samePostcode = AddressQuery::compact($candidate['postalCode']) === $query->postalCode;
+            $samePostcode = '' === $query->postalCode || AddressQuery::compact($candidate['postalCode']) === $query->postalCode;
             $streetOnly = $allowStreetCompletion && null === $candidate['houseNumber'];
-            $sameNumber = $streetOnly || $candidate['houseNumber'] === $query->houseNumber;
-            if (!$samePostcode || !$sameNumber) {
+            $sameNumber = '' === $query->houseNumber || $streetOnly || $candidate['houseNumber'] === $query->houseNumber;
+            $sameStreet = '' === $query->street || str_starts_with(mb_strtolower($candidate['street']), mb_strtolower($query->street));
+            $sameCity = '' === $query->city || str_starts_with(mb_strtolower($candidate['city']), mb_strtolower($query->city));
+            if (!$samePostcode || !$sameNumber || !$sameStreet || !$sameCity) {
                 continue;
             }
             $choice = [
-                'postalCode' => $query->postalCode,
-                'houseNumber' => $query->houseNumber,
+                'postalCode' => AddressQuery::compact($candidate['postalCode']),
+                'houseNumber' => $candidate['houseNumber'] ?? $query->houseNumber,
                 // Null means Webabo did not supply a number/addition; preserve manual input.
                 'houseNumberAddition' => $streetOnly ? null : $candidate['addition'],
                 'street' => $candidate['street'],
@@ -75,7 +89,7 @@ final class AddressLookupService
         $choices = array_values($choices);
         $status = [] === $choices ? 'not_found' : (count($choices) === 1 ? 'matched' : 'ambiguous');
 
-        return ['status' => $status, 'candidates' => $choices];
+        return ['status' => $status, 'candidates' => $choices, 'limited' => count($candidates) >= ($allowStreetCompletion ? 20 : 50)];
     }
 
     public static function match(AddressQuery $query, array $candidates, bool $allowStreetCompletion = false): array

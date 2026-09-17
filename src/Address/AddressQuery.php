@@ -12,6 +12,8 @@ final readonly class AddressQuery
         public string $postalCode,
         public string $houseNumber,
         public string $addition,
+        public string $street = '',
+        public string $city = '',
     ) {
     }
 
@@ -37,6 +39,44 @@ final readonly class AddressQuery
         }
 
         return new self($postalCode, $parts[1], $addition);
+    }
+
+    public static function fromSearchPayload(array $payload): self
+    {
+        $values = [];
+        foreach (['postalCode', 'houseNumber', 'street', 'city'] as $key) {
+            $value = $payload[$key] ?? '';
+            if (!is_string($value) || strlen($value) > 200) {
+                throw new ApiProblemException(400, 'invalid_payload', 'Invalid address search field');
+            }
+            $values[$key] = trim($value);
+        }
+        $values['postalCode'] = self::compact($values['postalCode']);
+        if ('' !== $values['postalCode'] && !preg_match('/^[1-9][0-9]{3}[A-Z]{2}$/D', $values['postalCode'])) {
+            // An illegible postcode must not prevent searching the other coupon fields.
+            $values['postalCode'] = '';
+        }
+        if ('' !== $values['houseNumber']) {
+            if (!preg_match('/^([1-9][0-9]{0,5})[A-Z]?$/iD', $values['houseNumber'], $parts)) {
+                throw new ApiProblemException(400, 'invalid_address', 'Invalid house number');
+            }
+            $values['houseNumber'] = $parts[1];
+        }
+        if (count(array_filter($values, static fn (string $value): bool => '' !== $value)) < 2) {
+            throw new ApiProblemException(400, 'invalid_address', 'At least two address fields are required');
+        }
+
+        return new self($values['postalCode'], $values['houseNumber'], '', $values['street'], $values['city']);
+    }
+
+    public function withoutPostcode(): ?self
+    {
+        $otherFields = array_filter([$this->houseNumber, $this->street, $this->city], static fn (string $value): bool => '' !== $value);
+        if ('' === $this->postalCode || count($otherFields) < 2) {
+            return null;
+        }
+
+        return new self('', $this->houseNumber, '', $this->street, $this->city);
     }
 
     public static function compact(string $value): string

@@ -88,6 +88,104 @@ final class AddressLookupTest extends TestCase
         return new AddressLookupService(new PostnlAddressClient($loader, $http), new WebaboAddressClient($config, new WebaboAccessTokenProvider($config, $http), $http), new AddressSessionStore(), $logger);
     }
 
+    public function testAllSixSearchPairsUseStructuredProviderFields(): void
+    {
+        $values = ['postalCode' => '1231AA', 'houseNumber' => '1', 'street' => 'Rembrandtlaan', 'city' => 'Loosdrecht'];
+        $keys = array_keys($values);
+        for ($first = 0; $first < 4; ++$first) {
+            for ($second = $first + 1; $second < 4; ++$second) {
+                $this->requests = [];
+                $payload = array_intersect_key($values, array_flip([$keys[$first], $keys[$second]]));
+                $query = AddressQuery::fromSearchPayload($payload + ['houseNumberAddition' => 'IGNORED']);
+                $service = $this->service([$this->response(['uuid' => self::UUID]), $this->response([$this->postnlAddress()])]);
+                $result = $service->search($query, self::UUID, new Session(new MockArraySessionStorage()), true);
+                self::assertSame('matched', $result['status']);
+                self::assertSame('1231AA', $result['candidates'][0]['postalCode']);
+                self::assertSame('1', $result['candidates'][0]['houseNumber']);
+                parse_str((string) parse_url($this->requests[1]['url'], PHP_URL_QUERY), $parameters);
+                self::assertSame('', $parameters['q']);
+                foreach (['postalCode' => 'postalCode', 'houseNumber' => 'houseNumber', 'street' => 'streetName', 'city' => 'cityName'] as $input => $parameter) {
+                    if (isset($payload[$input])) self::assertSame($payload[$input], $parameters[$parameter]);
+                    else self::assertArrayNotHasKey($parameter, $parameters);
+                }
+                self::assertArrayNotHasKey('houseNumberAddition', $parameters);
+            }
+        }
+    }
+
+    public function testConflictingPostcodeIsRelaxedOnceUsingTheSameUuid(): void
+    {
+        $query = AddressQuery::fromSearchPayload(['postalCode' => '9999AA', 'houseNumber' => '1', 'street' => 'Rembrandt', 'city' => 'Loosdrecht']);
+        $service = $this->service([$this->response(['uuid' => self::UUID]), $this->response([]), $this->response([$this->postnlAddress()])]);
+        $result = $service->search($query, self::UUID, new Session(new MockArraySessionStorage()), true);
+        self::assertTrue($result['postcodeRelaxed']);
+        self::assertSame('1231AA', $result['candidates'][0]['postalCode']);
+        self::assertCount(3, $this->requests);
+        parse_str((string) parse_url($this->requests[2]['url'], PHP_URL_QUERY), $parameters);
+        self::assertArrayNotHasKey('postalCode', $parameters);
+        self::assertSame(self::UUID, $parameters['uuid']);
+        self::assertSame('Rembrandt', $parameters['streetName']);
+    }
+
+    public function testBroadFallbackUsesStreetAndCityWithoutInventingNumber(): void
+    {
+        $query = AddressQuery::fromSearchPayload(['street' => 'Rembrandt', 'city' => 'Loosdrecht']);
+        $service = $this->service([$this->response([], 503), $this->response(['access_token' => '<token>']),
+            $this->response([['zipcode' => '1231AA', 'streetName' => 'Rembrandtlaan', 'city' => 'Loosdrecht']])]);
+        $result = $service->search($query, self::UUID, new Session(new MockArraySessionStorage()), true);
+        self::assertSame('matched', $result['status']);
+        self::assertSame('', $result['candidates'][0]['houseNumber']);
+        self::assertNull($result['candidates'][0]['houseNumberAddition']);
+        self::assertSame(['streetName' => 'Rembrandt', 'city' => 'Loosdrecht'], json_decode($this->requests[2]['options']['body'], true));
+    }
+
+    public function testFallbackCanRelaxPostcodeWithOneExtraSearch(): void
+    {
+        $query = AddressQuery::fromSearchPayload(['postalCode' => '9999AA', 'street' => 'Rembrandt', 'city' => 'Loosdrecht']);
+        $service = $this->service([$this->response([], 503), $this->response(['access_token' => '<token>']),
+            $this->response([]), $this->response([['zipcode' => '1231AA', 'streetName' => 'Rembrandtlaan', 'city' => 'Loosdrecht']])]);
+        $result = $service->search($query, self::UUID, new Session(new MockArraySessionStorage()), true);
+        self::assertTrue($result['postcodeRelaxed']);
+        self::assertSame('matched', $result['status']);
+        self::assertCount(4, $this->requests);
+        self::assertSame(['streetName' => 'Rembrandt', 'city' => 'Loosdrecht'], json_decode($this->requests[3]['options']['body'], true));
+    }
+
+    public function testTwoFieldsCannotRelaxToOneAndFullPageIsLabelled(): void
+    {
+        $query = AddressQuery::fromSearchPayload(['postalCode' => '9999AA', 'city' => 'Loosdrecht']);
+        $service = $this->service([$this->response(['uuid' => self::UUID]), $this->response([])]);
+        $result = $service->search($query, self::UUID, new Session(new MockArraySessionStorage()), true);
+        self::assertSame('not_found', $result['status']);
+        self::assertCount(2, $this->requests);
+        $this->requests = [];
+        $query = AddressQuery::fromSearchPayload(['street' => 'Rembrandt', 'city' => 'Loosdrecht']);
+        $service = $this->service([$this->response([], 503), $this->response(['access_token' => '<token>']),
+            $this->response(array_fill(0, 20, ['zipcode' => '1231AA', 'streetName' => 'Rembrandtlaan', 'city' => 'Loosdrecht']))]);
+        $result = $service->search($query, self::UUID, new Session(new MockArraySessionStorage()), true);
+        self::assertTrue($result['limited']);
+        self::assertCount(1, $result['candidates']);
+    }
+
+    public function testChoicesFilterStreetAndCityAndMarkLimitedResults(): void
+    {
+        $query = AddressQuery::fromSearchPayload(['street' => 'rembrandt', 'city' => 'loos']);
+        self::assertSame([], AddressLookupService::choices($query, [$this->address('Other')])['candidates']);
+        $wrongCity = array_replace($this->address(), ['city' => 'Amsterdam']);
+        self::assertSame([], AddressLookupService::choices($query, [$wrongCity])['candidates']);
+        self::assertTrue(AddressLookupService::choices($query, array_fill(0, 50, $this->address()))['limited']);
+    }
+
+    public function testInvalidPostcodeDoesNotBlockTwoOtherFields(): void
+    {
+        $query = AddressQuery::fromSearchPayload(['postalCode' => 'unreadable', 'houseNumber' => '1A', 'street' => 'Museumstraat']);
+        self::assertSame('', $query->postalCode);
+        self::assertSame('1', $query->houseNumber);
+        self::assertSame('', $query->addition);
+        $this->expectException(ApiProblemException::class);
+        AddressQuery::fromSearchPayload(['postalCode' => 'unreadable', 'houseNumber' => '1']);
+    }
+
     public function testChoiceLookupIgnoresAdditionAndReturnsEveryVariant(): void
     {
         $first = $this->postnlAddress();

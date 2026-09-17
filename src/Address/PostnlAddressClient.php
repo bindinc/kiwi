@@ -36,10 +36,14 @@ final class PostnlAddressClient
         $parameters = [
             'uuid' => $uuid,
             'countryIso' => 'NL',
-            'postalCode' => $query->postalCode,
-            'houseNumber' => $query->houseNumber,
-            'q' => '',
+                        'q' => '',
         ];
+        foreach (['postalCode' => $query->postalCode, 'houseNumber' => $query->houseNumber,
+            'streetName' => $query->street, 'cityName' => $query->city] as $field => $value) {
+            if ('' !== $value) {
+                $parameters[$field] = $value;
+            }
+        }
         // PostNL treats an explicitly empty addition as a filter that yields no matches.
         if ('' !== $query->addition) {
             $parameters['houseNumberAddition'] = $query->addition;

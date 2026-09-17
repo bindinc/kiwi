@@ -26,7 +26,7 @@ function fixture(options = {}) {
 const matched = (street = 'Rembrandtlaan', addition = '', number = '1') => ({ status: 'matched', candidates: [{ street, city: 'Loosdrecht', postalCode: '1231AA', houseNumber: number, houseNumberAddition: addition }] });
 
 test('normalizes Dutch input without looking up incomplete values', () => {
-    assert.deepEqual(normalizeAddressInput('1231 aa', '1a', '2'), { postalCode: '1231AA', houseNumber: '1' });
+    assert.deepEqual(normalizeAddressInput('1231 aa', '1a'), { postalCode: '1231AA', houseNumber: '1' });
     assert.equal(normalizeAddressInput('123', '1'), null);
     const f = fixture();
     assert.equal(f.requests.length, 0);
@@ -152,4 +152,61 @@ test('unknown Webabo addition preserves manual input and old choices cannot be s
     f.fields.houseNumber.value = '2'; f.form.input(); f.form.select(0);
     assert.equal(f.fields.street.value, '');
     assert.equal(f.fields.addition.value, 'A');
+});
+
+for (const pair of [['postalCode', 'houseNumber'], ['postalCode', 'street'], ['postalCode', 'city'], ['houseNumber', 'street'], ['houseNumber', 'city'], ['street', 'city']]) {
+    test(`searches the pair ${pair.join(' + ')} and fills all fields only after selection`, async () => {
+        const f = fixture();
+        const values = { postalCode: '1231AA', houseNumber: '1', street: 'Rembrandt', city: 'Loosdrecht' };
+        for (const key of Object.keys(values)) f.fields[key].value = pair.includes(key) ? values[key] : '';
+        f.form.input(); f.flush();
+        assert.deepEqual(Object.keys(f.requests[0].payload).sort(), ['formSessionId', ...pair].sort());
+        f.pending[0].resolve(matched()); await tick();
+        assert.equal(f.reports.at(-1), 'results');
+        f.form.select(0);
+        assert.equal(f.fields.postalCode.value, '1231AA');
+        assert.equal(f.fields.houseNumber.value, '1');
+        assert.equal(f.fields.street.value, 'Rembrandtlaan');
+        f.form.input(); f.flush();
+        assert.equal(f.requests.length, 1);
+    });
+}
+
+test('offers a corrected postcode without changing input until selection', async () => {
+    const f = fixture();
+    f.fields.postalCode.value = '9999AA';
+    f.fields.street.value = 'Rembrandtlaan';
+    f.fields.city.value = 'Loosdrecht';
+    f.form.input(); f.flush();
+    f.pending[0].resolve({ ...matched(), postcodeRelaxed: true }); await tick();
+    assert.equal(f.reports.at(-1), 'alternatives');
+    assert.equal(f.fields.postalCode.value, '9999AA');
+    f.form.select(0);
+    assert.equal(f.fields.postalCode.value, '1231AA');
+});
+
+test('street and city edits debounce and reject stale suggestions', async () => {
+    const f = fixture();
+    f.fields.postalCode.value = ''; f.fields.houseNumber.value = '';
+    f.fields.street.value = 'Rem'; f.form.manualInput('street');
+    f.flush(); assert.equal(f.requests.length, 0);
+    f.fields.city.value = 'Loosdrecht'; f.form.manualInput('city'); f.flush();
+    f.fields.street.value = 'Other'; f.form.manualInput('street'); f.flush();
+    f.pending[0].resolve(matched()); await tick(); f.form.select(0);
+    assert.equal(f.fields.street.value, 'Other');
+    f.pending[1].resolve({ status: 'not_found' }); await tick();
+    assert.equal(f.reports.at(-1), 'not_found');
+});
+
+test('invalid postcode can be ignored when two other fields are present', () => {
+    assert.deepEqual(normalizeAddressInput('illegible', '1', 'Museumstraat'), { houseNumber: '1', street: 'Museumstraat' });
+    assert.equal(normalizeAddressInput('illegible', '1'), null);
+});
+
+test('a copied address during debounce cancels the old scheduled lookup', () => {
+    const f = fixture();
+    f.form.input();
+    f.fields.street.value = 'Copied street'; f.fields.city.value = 'Copied city';
+    f.flush();
+    assert.equal(f.requests.length, 0);
 });
