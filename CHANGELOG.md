@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Rename the new-subscription payment option to Factuur in Dutch and Invoice in English, preserving payment code AC and existing IBAN behavior.
+
 - Limit feedback reports and both screenshot variants to 14 days, enforce expiry for existing links without browser caching, and automatically delete expired reports hourly in Docker Compose.
 
 - Display the release tag embedded in the deployed image instead of maintaining version numbers in translations; local builds show `dev`.

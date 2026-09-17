@@ -51,8 +51,8 @@ function testSynchronizesIbanRequirement() {
 }
 
 function testPaymentInstructionIsTranslated() {
-    assert.equal(nl.indexHtml.text.betaalinstructie_7fb08411, 'Betaalinstructie');
-    assert.equal(en.indexHtml.text.betaalinstructie_7fb08411, 'Payment instruction');
+    assert.equal(nl.indexHtml.text.betaalinstructie_7fb08411, 'Factuur');
+    assert.equal(en.indexHtml.text.betaalinstructie_7fb08411, 'Invoice');
 }
 
 testBuildsDirectDebitDetailsWithIban();
