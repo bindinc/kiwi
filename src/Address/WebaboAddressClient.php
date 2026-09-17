@@ -21,7 +21,7 @@ final class WebaboAddressClient
     ) {
     }
 
-    public function search(AddressQuery $query, LookupBudget $budget): array
+    public function search(AddressQuery $query, LookupBudget $budget, bool $allowTruncated = false): array
     {
         try {
             $config = $this->config->getConfig();
@@ -41,7 +41,8 @@ final class WebaboAddressClient
                     $response = $this->httpClient->request('POST', rtrim($config->webaboBaseUrl, '/').'/addresses/search', $budget->options() + [
                         'headers' => ['Authorization' => 'Bearer '.$token, 'Accept' => 'application/json'],
                         'query' => ['limit' => 20],
-                        'json' => ['zipcode' => $query->postalCode, 'houseNo' => trim($query->houseNumber.' '.$query->addition)],
+                        'json' => array_filter(['zipcode' => $query->postalCode, 'houseNo' => trim($query->houseNumber.' '.$query->addition),
+                            'streetName' => $query->street, 'city' => $query->city], static fn (string $value): bool => '' !== $value),
                     ]);
                     $status = $response->getStatusCode();
                     $content = $response->getContent(false);
@@ -63,19 +64,19 @@ final class WebaboAddressClient
                     throw new ProviderFailure('invalid_response');
                 }
 
-                return $this->normalize(json_decode($content, true));
+                return $this->normalize(json_decode($content, true), $allowTruncated);
             }
         }
         throw new ProviderFailure('authentication');
     }
 
-    private function normalize(mixed $payload): array
+    private function normalize(mixed $payload, bool $allowTruncated): array
     {
         if (!is_array($payload) || !array_is_list($payload)) {
             throw new ProviderFailure('invalid_response');
         }
         // A full page may hide conflicting candidates. Never infer uniqueness from truncation.
-        if (count($payload) >= 20) {
+        if (!$allowTruncated && count($payload) >= 20) {
             throw new ProviderFailure('truncated_response');
         }
 

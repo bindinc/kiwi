@@ -28,6 +28,10 @@ async function fill(prefix, postcode, number = '1') {
         const text = document.getElementById(id)?.textContent || '';
         return text && !text.includes('opzoeken…') && !text.includes('Looking up');
     }, `${prefix}AddressStatus`);
+    const choices = page.locator(`#${prefix}AddressChoices`);
+    if (await choices.isVisible()) {
+        await choices.selectOption('0');
+    }
 }
 
 try {
@@ -51,6 +55,21 @@ try {
     await page.waitForFunction(() => document.getElementById('editAddress').value === 'Rembrandtlaan');
     assert.equal(await page.inputValue('#editCity'), 'Loosdrecht');
     const first = requests.at(-1).formSessionId;
+    assert.equal('houseNumberAddition' in requests.at(-1), false);
+    const callsBeforeAddition = requests.length;
+    await page.selectOption('#editAddressChoices', '1');
+    assert.equal(await page.inputValue('#editHouseExt'), 'A');
+    await page.fill('#editHouseExt', 'MANUAL');
+    await page.waitForTimeout(450);
+    assert.equal(requests.length, callsBeforeAddition);
+    await page.locator('#editAddressChoices').focus();
+    await page.keyboard.press('ArrowUp');
+    assert.equal(await page.inputValue('#editHouseExt'), '');
+    await page.locator('#editAddressStatus').screenshot({ path: `${evidence}/address-choices-desktop.png` });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('#editAddressStatus').screenshot({ path: `${evidence}/address-choices-narrow.png` });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
+    await page.setViewportSize({ width: 1440, height: 1100 });
     await fill('edit', '1231AA', '2');
     assert.equal(requests.at(-1).formSessionId, first);
     const box = await page.locator('#editPostalCode').boundingBox();
@@ -68,6 +87,35 @@ try {
     await fill('edit', '1231AA');
     await page.waitForFunction(() => document.getElementById('editAddress').value === 'Rembrandtlaan');
     assert.notEqual(requests.at(-1).formSessionId, first);
+    // Every pair must trigger lookup; preserve contradictory coupon data until selection.
+    for (const pair of [['PostalCode', 'HouseNumber'], ['PostalCode', 'Address'], ['PostalCode', 'City'], ['HouseNumber', 'Address'], ['HouseNumber', 'City'], ['Address', 'City']]) {
+        await page.click('#editCustomerForm [data-action="close-form"]');
+        await page.evaluate(() => window.editCustomer());
+        const values = { PostalCode: '1231AA', HouseNumber: '1', Address: 'Rembrandt', City: 'Loosdrecht' };
+        for (const field of pair) await page.fill(`#edit${field}`, values[field]);
+        await page.waitForSelector('#editAddressChoices:not([hidden])');
+        await page.selectOption('#editAddressChoices', '0');
+        assert.equal(await page.inputValue('#editPostalCode'), '1231AA');
+        assert.equal(await page.inputValue('#editHouseNumber'), '1');
+        assert.equal(await page.inputValue('#editAddress'), 'Rembrandtlaan');
+    }
+    await page.click('#editCustomerForm [data-action="close-form"]');
+    await page.evaluate(() => window.editCustomer());
+    await page.fill('#editPostalCode', '9999ZZ');
+    await page.fill('#editHouseNumber', '1');
+    await page.fill('#editAddress', 'Rembrandtlaan');
+    await page.fill('#editCity', 'Loosdrecht');
+    await page.waitForSelector('#editAddressChoices:not([hidden])');
+    assert.equal(await page.inputValue('#editPostalCode'), '9999ZZ');
+    assert.match(await page.locator('#editAddressStatus').innerText(), /alternatieven/);
+    await page.locator('#editAddressStatus').screenshot({ path: `${evidence}/address-alternatives-desktop.png` });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('#editAddressStatus').screenshot({ path: `${evidence}/address-alternatives-narrow.png` });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    await page.selectOption('#editAddressChoices', '0');
+    assert.equal(await page.inputValue('#editPostalCode'), '1231AA');
+    console.log('PASS: all six input pairs and explicit postcode correction');
     console.log('PASS: PostNL, Webabo fallback, total failure, manual input, UUID reuse and form reopening');
     await page.click('#editCustomerForm [data-action="close-form"]');
     // Exercise the actual existing form renderers, including dynamic role fields.

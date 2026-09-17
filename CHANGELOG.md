@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Show selectable address results from any two postcode, house number, street or city fields, including alternatives for conflicting postcodes; fill additions only from selection, never use them as search filters. [sc-200162]
+
 - Omit empty house number additions from PostNL address searches so addresses without an addition can be completed. [sc-200162]
 
 - Accept Webabo street and city completion without an echoed house number, while rejecting mismatched postcodes and ambiguous results. [sc-200162]

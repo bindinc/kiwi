@@ -4575,3 +4575,23 @@ select option {
 .address-completion-status button {
     margin-left: 8px;
 }
+
+.address-completion-status:has(.address-completion-choices:not([hidden])) {
+    display: grid;
+    gap: .35rem;
+    width: 100%;
+    min-width: 0;
+}
+.address-completion-choices {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    font: inherit;
+}
+.address-completion-choices option {
+    padding: .45rem .6rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.address-completion-status select[hidden],
+.address-completion-status label[hidden] { display: none; }

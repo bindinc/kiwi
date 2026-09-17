@@ -1,17 +1,18 @@
 const activeForms = new Set();
 const prefixes = ['subRecipient', 'subRequester', 'article', 'edit', 'restitutionTransfer'];
 const messages = {
-    nl: { loading: 'Adres opzoeken…', matched: 'Straat en plaats zijn aangevuld.', not_found: 'Geen adres gevonden. Vul straat en plaats zelf in.', ambiguous: 'Meerdere adressen gevonden. Vul straat en plaats zelf in.', unavailable: 'Adres opzoeken is tijdelijk niet beschikbaar. Vul straat en plaats zelf in.', retry: 'Opnieuw proberen' },
-    en: { loading: 'Looking up address…', matched: 'Street and city completed.', not_found: 'No address found. Enter street and city manually.', ambiguous: 'Multiple addresses found. Enter street and city manually.', unavailable: 'Address lookup is temporarily unavailable. Enter street and city manually.', retry: 'Try again' }
+    nl: { loading: 'Adres opzoeken…', matched: 'Adres aangevuld vanuit je keuze.', results: 'Kies het juiste adres.', alternatives: 'Geen match met deze postcode. Controleer de alternatieven; kiezen vervangt de postcode.', limited: 'Er zijn veel resultaten. Vul een extra adresveld in om gerichter te zoeken.', choose: 'Kies een adres', unknownAddition: 'toevoeging niet beschikbaar', not_found: 'Geen adres gevonden. Vul straat en plaats zelf in.', ambiguous: 'Meerdere adressen gevonden. Vul straat en plaats zelf in.', unavailable: 'Adres opzoeken is tijdelijk niet beschikbaar. Vul straat en plaats zelf in.', retry: 'Opnieuw proberen' },
+    en: { loading: 'Looking up address…', matched: 'Address completed from your selection.', results: 'Choose the correct address.', alternatives: 'No match for this postcode. Check the alternatives; selecting one replaces the postcode.', limited: 'Many results found. Enter another address field to narrow the search.', choose: 'Choose an address', unknownAddition: 'addition unavailable', not_found: 'No address found. Enter street and city manually.', ambiguous: 'Multiple addresses found. Enter street and city manually.', unavailable: 'Address lookup is temporarily unavailable. Enter street and city manually.', retry: 'Try again' }
 };
 
-export function normalizeAddressInput(postalCode, houseNumber, addition = '') {
+export function normalizeAddressInput(postalCode, houseNumber, street = '', city = '') {
     const postal = postalCode.replace(/\s+/g, '').toUpperCase();
     const number = houseNumber.trim().toUpperCase();
-    const suffix = addition.trim().toUpperCase();
-    if (!/^[1-9][0-9]{3}[A-Z]{2}$/.test(postal) || !/^[1-9][0-9]{0,5}[A-Z]?$/.test(number)
-        || suffix.length > 10 || !/^[A-Z0-9\s/-]*$/.test(suffix)) return null;
-    return { postalCode: postal, houseNumber: number, houseNumberAddition: suffix };
+    if (number && !/^[1-9][0-9]{0,5}[A-Z]?$/.test(number)) return null;
+    const values = { postalCode: /^[1-9][0-9]{3}[A-Z]{2}$/.test(postal) ? postal : '',
+        houseNumber: number.replace(/[A-Z]$/, ''), street: street.trim(), city: city.trim() };
+    const query = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ''));
+    return Object.keys(query).length >= 2 ? query : null;
 }
 
 export function endAddressSessions(root = null) {
@@ -28,8 +29,19 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
     let lastFingerprint = '';
     let automatic = null;
     let destroyed = false;
-    const read = () => normalizeAddressInput(fields.postalCode.value, fields.houseNumber.value, fields.addition?.value || '');
-    const fingerprint = () => JSON.stringify(read());
+    let choices = [];
+    let selected = null;
+    let choicesFingerprint = '';
+    const read = () => {
+        let street = fields.street.value === automatic?.street ? '' : fields.street.value;
+        if (includeNumber) {
+            // Restitution stores a combined street/number field; search only its street part.
+            street = street.replace(/\s+\d+[A-Za-z]?(?:\s+.*)?$/, '');
+        }
+        const city = fields.city.value === automatic?.city ? '' : fields.city.value;
+        return normalizeAddressInput(fields.postalCode.value, fields.houseNumber.value, street, city);
+    };
+    const fingerprint = () => JSON.stringify([read(), fields.postalCode.value, fields.houseNumber.value, fields.street.value, fields.city.value]);
 
     function closeSession() {
         if (sessionId) void request(`/sessions/${sessionId}`, { method: 'DELETE', keepalive: true }).catch(() => {});
@@ -42,34 +54,40 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
         closeSession();
         lastFingerprint = '';
         automatic = null;
+        choices = [];
+        selected = null;
         report('');
     }
 
     function input() {
         if (destroyed) return;
-        const query = read();
         const changed = fingerprint() !== lastFingerprint;
         if (!changed) return;
         ++revision;
         cancel(timer);
-        if (changed && automatic) {
-            for (const key of ['street', 'city']) {
-                if (fields[key].value === automatic[key]) fields[key].value = '';
+        choices = [];
+        selected = null;
+        report('');
+        if (automatic) {
+            for (const key of ['street', 'city', 'addition']) {
+                if (fields[key] && fields[key].value === automatic[key]) fields[key].value = '';
             }
             automatic = null;
         }
+        const query = read();
         if (!query) {
             lastFingerprint = '';
             report('');
             return;
         }
-        fields.postalCode.value = query.postalCode;
-        if (!changed) return;
-        timer = schedule(() => void search(query, revision), 350);
+        if (query.postalCode) fields.postalCode.value = query.postalCode;
+        const expectedFingerprint = fingerprint();
+        const version = revision;
+        timer = schedule(() => void search(query, version, expectedFingerprint), 350);
     }
 
-    async function search(query, version) {
-        if (destroyed || !isActive()) return;
+    async function search(query, version, expectedFingerprint) {
+        if (destroyed || version !== revision || fingerprint() !== expectedFingerprint || !isActive()) return;
         const time = now();
         const expired = time - startedAt >= 43200000 || new Date(time).toISOString().slice(0, 10) !== new Date(startedAt).toISOString().slice(0, 10);
         if (sessionId && expired) closeSession();
@@ -77,7 +95,6 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
             sessionId = uuid();
             startedAt = time;
         }
-        const expectedFingerprint = JSON.stringify(query);
         lastFingerprint = expectedFingerprint;
         const before = { street: fields.street.value, city: fields.city.value };
         report('loading');
@@ -88,13 +105,15 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
                 report('');
                 return;
             }
-            if (response.status === 'matched' && typeof response.address?.street === 'string' && typeof response.address?.city === 'string') {
-                const street = includeNumber ? `${response.address.street} ${query.houseNumber}${query.houseNumberAddition ? ` ${query.houseNumberAddition}` : ''}` : response.address.street;
-                automatic = { street, city: response.address.city };
-                fields.street.value = automatic.street;
-                fields.city.value = automatic.city;
-                report('matched');
-                return;
+            if (Array.isArray(response.candidates) && response.candidates.length) {
+                choices = response.candidates.filter((candidate) => typeof candidate.postalCode === 'string'
+                    && typeof candidate.houseNumber === 'string' && typeof candidate.street === 'string'
+                    && typeof candidate.city === 'string' && (candidate.houseNumberAddition === null || typeof candidate.houseNumberAddition === 'string'));
+                if (choices.length) {
+                    choicesFingerprint = expectedFingerprint;
+                    report(response.postcodeRelaxed ? 'alternatives' : response.limited ? 'limited' : 'results', choices);
+                    return;
+                }
             }
             const status = ['not_found', 'ambiguous', 'unavailable'].includes(response.status) ? response.status : 'unavailable';
             if (status === 'unavailable') lastFingerprint = '';
@@ -108,11 +127,44 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
 
     const form = {
         fields, input, reset,
+        select(index) {
+            const choice = choices[index];
+            if (!choice || destroyed || !isActive() || fingerprint() !== choicesFingerprint) return;
+            selected = choice;
+            const addition = choice.houseNumberAddition;
+            const effectiveAddition = addition === null ? fields.addition?.value || '' : addition;
+            const street = includeNumber ? `${choice.street} ${choice.houseNumber}${effectiveAddition ? ` ${effectiveAddition}` : ''}` : choice.street;
+            automatic = { street, city: choice.city };
+            fields.street.value = street;
+            fields.city.value = choice.city;
+            if (addition !== null && fields.addition) {
+                fields.addition.value = addition;
+                automatic.addition = addition;
+            }
+            fields.houseNumber.value = choice.houseNumber;
+            fields.postalCode.value = choice.postalCode;
+            choicesFingerprint = fingerprint();
+            lastFingerprint = choicesFingerprint;
+            report('matched', choices);
+        },
         manualInput(field) {
+            if (automatic) delete automatic[field];
+            if (field === 'addition') {
+                if (includeNumber && selected && fields.street.value === automatic?.street) {
+                    const suffix = fields.addition?.value.trim() || '';
+                    automatic.street = `${selected.street} ${selected.houseNumber}${suffix ? ` ${suffix}` : ''}`;
+                    fields.street.value = automatic.street;
+                    choicesFingerprint = fingerprint();
+                    lastFingerprint = choicesFingerprint;
+                }
+                return;
+            }
+            choices = [];
             ++revision;
             cancel(timer);
             if (automatic) delete automatic[field];
-            report('');
+            lastFingerprint = '';
+            input();
         },
         retry() { lastFingerprint = ''; input(); },
         destroy() { if (destroyed) return; reset(); destroyed = true; activeForms.delete(form); }
@@ -146,7 +198,7 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
             status = documentRef.createElement('div');
             status.id = `${prefix}AddressStatus`;
             status.className = 'address-completion-status';
-            const addressRow = fields.city.closest('.form-row') || fields.city.parentElement;
+            const addressRow = fields.houseNumber.closest('.form-row') || fields.houseNumber.parentElement;
             addressRow.insertAdjacentElement('afterend', status);
         }
         status.replaceChildren();
@@ -158,10 +210,39 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
         retry.className = 'btn btn-secondary btn-sm';
         retry.textContent = text('retry');
         retry.hidden = true;
-        status.append(label, retry);
+        const choicesLabel = documentRef.createElement('label');
+        choicesLabel.htmlFor = `${prefix}AddressChoices`;
+        choicesLabel.textContent = text('choose');
+        const choicesSelect = documentRef.createElement('select');
+        choicesSelect.id = `${prefix}AddressChoices`;
+        choicesSelect.className = 'address-completion-choices';
+        choicesSelect.hidden = choicesLabel.hidden = true;
+        status.append(label, retry, choicesLabel, choicesSelect);
         const form = createAddressCompletion({ fields, request, uuid: () => windowRef.crypto.randomUUID(), includeNumber: prefix === 'restitutionTransfer', isActive: () => isVisible(fields.postalCode),
-            report(value) { label.textContent = text(value); retry.hidden = value !== 'unavailable'; }
+            report(value, candidates = []) {
+                label.textContent = text(value);
+                retry.hidden = value !== 'unavailable';
+                choicesSelect.hidden = choicesLabel.hidden = !candidates.length;
+                if (value === 'matched') return;
+                choicesSelect.replaceChildren();
+                if (!candidates.length) return;
+                const prompt = documentRef.createElement('option');
+                prompt.textContent = text('choose');
+                prompt.value = '';
+                prompt.disabled = true;
+                prompt.selected = true;
+                choicesSelect.append(prompt);
+                candidates.forEach((candidate, index) => {
+                    const option = documentRef.createElement('option');
+                    option.value = String(index);
+                    const suffix = candidate.houseNumberAddition === null ? ` (${text('unknownAddition')})` : candidate.houseNumberAddition ? ` ${candidate.houseNumberAddition}` : '';
+                    option.textContent = `${candidate.street} ${candidate.houseNumber}${suffix} — ${candidate.postalCode} ${candidate.city}`;
+                    choicesSelect.append(option);
+                });
+                choicesSelect.size = Math.min(5, candidates.length + 1);
+            }
         });
+        choicesSelect.addEventListener('change', () => { if (choicesSelect.value !== '') form.select(Number(choicesSelect.value)); });
         retry.addEventListener('click', () => form.retry());
         forms.set(prefix, form);
         return form;
@@ -173,8 +254,8 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
         let form = forms.get(prefix);
         if (!form || !activeForms.has(form)) form = attach(prefix);
         if (!form) return;
-        const manual = event.target === form.fields.street || event.target === form.fields.city;
-        if (manual) form.manualInput(event.target === form.fields.street ? 'street' : 'city');
+        const manual = event.target === form.fields.street || event.target === form.fields.city || event.target === form.fields.addition;
+        if (manual) form.manualInput(event.target === form.fields.street ? 'street' : event.target === form.fields.city ? 'city' : 'addition');
         else form.input();
     });
     documentRef.addEventListener('reset', (event) => endAddressSessions(event.target));
