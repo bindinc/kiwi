@@ -91,6 +91,8 @@ services:
       kiwi-postgres:
         condition: service_healthy
     environment: &app-environment
+      KIWI_LOCAL_OIDC: "1"
+      TRUSTED_PROXIES: "127.0.0.1,172.16.0.0/12"
       APP_ENV: dev
       APP_DEBUG: 1
       APP_SECRET: kiwi-local-compose-session-secret

@@ -56,7 +56,10 @@ final class SystemController extends AbstractApiController
     {
         $this->requireApiAccess($request);
 
-        return $this->json($this->getCurrentUserContext($request));
+        $context = \App\Security\AuthorizationContext::fromSessionData($request->getSession()->all());
+        return $this->json($this->getCurrentUserContext($request) + [
+            'capabilities' => ['businessRead' => $context?->canRead() ?? false, 'businessWrite' => $context?->canWrite() ?? false],
+        ]);
     }
 
     #[Route('/bootstrap', name: 'api_bootstrap', methods: ['GET'])]

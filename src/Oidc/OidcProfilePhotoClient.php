@@ -41,20 +41,20 @@ final class OidcProfilePhotoClient
                 ],
                 'timeout' => 5,
             ]);
+
+            if (200 !== $response->getStatusCode()) {
+                return null;
+            }
+
+            $headers = $response->getHeaders(false);
+            $contentType = $headers['content-type'][0] ?? 'image/jpeg';
+            $content = $response->getContent(false);
+            $dataUrl = 'data:'.$contentType.';base64,'.base64_encode($content);
+            $sessionData['oidc_profile_photo'] = $dataUrl;
+
+            return $dataUrl;
         } catch (TransportExceptionInterface) {
             return null;
         }
-
-        if (200 !== $response->getStatusCode()) {
-            return null;
-        }
-
-        $headers = $response->getHeaders(false);
-        $contentType = $headers['content-type'][0] ?? 'image/jpeg';
-        $content = $response->getContent(false);
-        $dataUrl = 'data:'.$contentType.';base64,'.base64_encode($content);
-        $sessionData['oidc_profile_photo'] = $dataUrl;
-
-        return $dataUrl;
     }
 }

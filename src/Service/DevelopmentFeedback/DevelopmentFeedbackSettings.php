@@ -207,9 +207,8 @@ final class DevelopmentFeedbackSettings
     private function normalizeRoleAlias(string $role): string
     {
         $role = strtolower(trim($role));
-        $parts = explode('.', $role);
-
-        return (string) end($parts);
+        $prefix = 'bink8s.app.kiwi.';
+        return str_starts_with($role, $prefix) ? substr($role, strlen($prefix)) : '';
     }
 
     private function readConfiguration(): ?\App\Entity\DevelopmentFeedbackConfiguration

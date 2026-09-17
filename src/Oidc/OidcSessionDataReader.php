@@ -33,7 +33,7 @@ final class OidcSessionDataReader
     {
         $sessionData = [];
 
-        foreach (['oidc_auth_profile', 'oidc_auth_token', 'oidc_profile_photo'] as $key) {
+        foreach (['oidc_auth_profile', 'oidc_auth_token', 'oidc_profile_photo', \App\Security\AuthorizationContext::SESSION_KEY] as $key) {
             $value = $session->get($key);
             if (\is_array($value) || (\is_string($value) && '' !== $value)) {
                 $sessionData[$key] = $value;

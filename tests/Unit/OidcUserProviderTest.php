@@ -97,6 +97,13 @@ final class OidcUserProviderTest extends TestCase
 
     private function createProvider(array $sessionValues = []): OidcUserProvider
     {
+        if (isset($sessionValues['oidc_auth_token'])) {
+            $sessionValues[\App\Security\AuthorizationContext::SESSION_KEY] = [
+                'actor' => 'test-user', 'tenant' => 'test-tenant',
+                'roles' => $sessionValues['oidc_auth_token']['roles'] ?? [],
+                'expiresAt' => $sessionValues['oidc_auth_token']['expires'],
+            ];
+        }
         $session = new Session(new MockArraySessionStorage());
         foreach ($sessionValues as $key => $value) {
             $session->set($key, $value);

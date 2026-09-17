@@ -26,14 +26,25 @@ trait AuthenticatedClientTrait
             'expires' => time() + 3600,
         ];
 
-        return $this->createClientWithSession(array_filter([
+        $client = $this->createClientWithSession(array_filter([
+            'oidc_profile_photo' => 'data:image/png;base64,',
             'oidc_auth_profile' => array_merge([
                 'name' => 'Test User',
                 'email' => 'test@example.org',
                 'roles' => $roles,
             ], $profile),
+            '_csrf/kiwi_api' => 'test-api-csrf',
             'oidc_auth_token' => array_merge($defaultToken, $token),
+            \App\Security\AuthorizationContext::SESSION_KEY => [
+                'actor' => 'test-user', 'tenant' => 'test-tenant',
+                'roles' => $roles, 'expiresAt' => $token['expires'] ?? time() + 3600,
+            ],
+            '_security_main' => serialize(new \Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken(
+                \App\Security\OidcUser::fromProfile(array_merge(['email' => 'test@example.org'], $profile), $roles), 'main', $roles,
+            )),
         ], static fn (mixed $value): bool => null !== $value));
+        $client->setServerParameter('HTTP_X_CSRF_TOKEN', 'test-api-csrf');
+        return $client;
     }
 
     /**

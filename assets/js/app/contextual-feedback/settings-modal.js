@@ -109,7 +109,8 @@ async function saveSettings(settingsUrl, payload) {
         method: 'PUT',
         credentials: 'same-origin',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="kiwi-csrf-token"]')?.content || ''
         },
         body: JSON.stringify(payload)
     });

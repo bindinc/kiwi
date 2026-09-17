@@ -23,6 +23,11 @@ final class PersistOidcSessionDataSubscriber implements EventSubscriberInterface
         }
 
         $session = $request->getSession();
+        $authorization = $request->attributes->get(\App\Security\AuthorizationContext::SESSION_KEY);
+        if (!is_array($authorization)) {
+            throw new \LogicException('Login requires a verified authorization context');
+        }
+        $session->set(\App\Security\AuthorizationContext::SESSION_KEY, $authorization);
 
         // Persist OIDC data after Symfony migrates the session ID on login.
         if (\is_array($profile)) {

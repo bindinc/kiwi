@@ -72,7 +72,7 @@ final class OidcUserProvider implements UserProviderInterface
             return $roles;
         }
 
-        return null !== $fallbackUser ? $fallbackUser->getRoles() : [];
+        return [];
     }
 
     /**

@@ -63,7 +63,9 @@ final class OidcAuthenticator extends AbstractAuthenticator implements Authentic
                 'oidc_auth_token' => \is_array($token) ? $token : [],
             ];
             $expectedNonce = (string) $session->get(self::AUTH_NONCE_KEY, '');
-            $this->oidcClient->validateIdToken($sessionData, $expectedNonce);
+            $authorization = $this->oidcClient->validateIdToken($sessionData, $expectedNonce);
+            $sessionData[AuthorizationContext::SESSION_KEY] = $authorization;
+            $request->attributes->set(AuthorizationContext::SESSION_KEY, $authorization);
 
             $roles = $this->oidcClient->getUserRoles($sessionData);
             $user = OidcUser::fromProfile($sessionData['oidc_auth_profile'], $roles);

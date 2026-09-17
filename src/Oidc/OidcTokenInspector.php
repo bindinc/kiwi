@@ -69,51 +69,7 @@ final class OidcTokenInspector
      */
     public function getUserRoles(array $sessionData): array
     {
-        if (!$this->hasFreshSessionToken($sessionData)) {
-            return [];
-        }
-
-        $roles = [];
-
-        $tokenData = $sessionData['oidc_auth_token'] ?? null;
-        if (\is_array($tokenData)) {
-            $idToken = $tokenData['id_token'] ?? null;
-            if (\is_string($idToken) && '' !== $idToken) {
-                $claims = $this->decodeJwtPayload($idToken);
-                if (\is_array($claims) && \is_array($claims['roles'] ?? null)) {
-                    $roles = $claims['roles'];
-                }
-            }
-
-            if ([] === $roles) {
-                $rawRoles = $tokenData['roles'] ?? [];
-                if (\is_string($rawRoles)) {
-                    $roles = [$rawRoles];
-                } elseif (\is_array($rawRoles)) {
-                    $roles = $rawRoles;
-                }
-            }
-        }
-
-        if ([] === $roles) {
-            $profile = $sessionData['oidc_auth_profile'] ?? null;
-            if (\is_array($profile)) {
-                $rawRoles = $profile['roles'] ?? [];
-                if (\is_string($rawRoles)) {
-                    $roles = [$rawRoles];
-                } elseif (\is_array($rawRoles)) {
-                    $roles = $rawRoles;
-                }
-            }
-        }
-
-        return array_values(array_filter(
-            array_map(
-                static fn (mixed $value): string => \is_string($value) ? trim($value) : '',
-                $roles,
-            ),
-            static fn (string $value): bool => '' !== $value,
-        ));
+        return \App\Security\AuthorizationContext::fromSessionData($sessionData)?->roles ?? [];
     }
 
     /**
@@ -196,7 +152,7 @@ final class OidcTokenInspector
      *
      * @throws \UnexpectedValueException
      */
-    public function validateIdToken(array $sessionData, string $expectedNonce): void
+    public function validateIdToken(array $sessionData, string $expectedNonce): array
     {
         $tokenData = $sessionData['oidc_auth_token'] ?? null;
         $idToken = \is_array($tokenData) ? ($tokenData['id_token'] ?? null) : null;
@@ -231,6 +187,35 @@ final class OidcTokenInspector
         if ('' === $normalizedExpectedNonce || '' === $receivedNonce || !hash_equals($normalizedExpectedNonce, $receivedNonce)) {
             throw new \UnexpectedValueException('Invalid OIDC nonce.');
         }
+
+        $expires = $claims['exp'] ?? null;
+        $subject = $claims['oid'] ?? $claims['sub'] ?? null;
+        $tenant = $claims['tid'] ?? $tokenIssuer;
+        if (!is_int($expires) || $expires <= time() || !is_string($subject) || '' === $subject
+            || !is_string($tenant) || '' === $tenant) {
+            throw new \UnexpectedValueException('Missing identity or token expiration.');
+        }
+        $roles = $claims['roles'] ?? [];
+        if (!is_array($roles) || array_filter($roles, static fn ($role) => !is_string($role))) {
+            throw new \UnexpectedValueException('Invalid role claim.');
+        }
+        $configuredIssuer = rtrim(trim((string) ($this->configuration->getConfig()['issuer'] ?? '')), '/');
+        $microsoftIssuer = $this->isMicrosoftIssuer($tokenIssuer);
+        $localFallback = '1' === (string) getenv('KIWI_LOCAL_OIDC');
+        $localConfiguredIssuer = 'http://fallback-oidc:8080/kiwi-oidc/realms/kiwi-local' === $configuredIssuer;
+        // Local Keycloak advertises the browser-facing issuer through its internal discovery URL.
+        $localAliasAllowed = !$microsoftIssuer && $localFallback && $localConfiguredIssuer;
+        $exactIssuer = '' !== $configuredIssuer && hash_equals($configuredIssuer, rtrim($tokenIssuer, '/'));
+        if (!$exactIssuer && !$localAliasAllowed) {
+            throw new \UnexpectedValueException('An explicit tenant issuer is required.');
+        }
+        if (!$microsoftIssuer && !$localFallback) {
+            throw new \UnexpectedValueException('Only the configured Entra issuer is allowed');
+        }
+        if ($this->isMicrosoftIssuer($tokenIssuer) && !str_contains($tokenIssuer, '/'.$tenant.'/')) {
+            throw new \UnexpectedValueException('Tenant claim does not match issuer.');
+        }
+        return (new \App\Security\AuthorizationContext($subject, $tenant, array_values(array_unique($roles)), $expires))->toArray();
     }
 
     /**

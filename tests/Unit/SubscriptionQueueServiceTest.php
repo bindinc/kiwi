@@ -84,6 +84,9 @@ final class SubscriptionQueueServiceTest extends TestCase
         $entityManager->clear();
 
         $session = new Session(new MockArraySessionStorage());
+        $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
+            'actor' => 'test-user', 'tenant' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.user'], 'expiresAt' => time() + 3600,
+        ]);
         $payload = [
             'submissionId' => 'unit-test-submission-id',
             'recipient' => [
@@ -208,6 +211,9 @@ final class SubscriptionQueueServiceTest extends TestCase
     {
         [$service, $entityManager] = $this->createQueueServiceWithDependencies();
         $session = new Session(new MockArraySessionStorage());
+        $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
+            'actor' => 'test-user', 'tenant' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.user'], 'expiresAt' => time() + 3600,
+        ]);
         $payload = $this->createPaymentPayload(
             'unit-test-payment-instruction',
             'AC',
@@ -250,6 +256,9 @@ final class SubscriptionQueueServiceTest extends TestCase
         $entityManager->clear();
 
         $session = new Session(new MockArraySessionStorage());
+        $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
+            'actor' => 'test-user', 'tenant' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.user'], 'expiresAt' => time() + 3600,
+        ]);
         $session->set('kiwi_poc_state', [
             'customers' => [
                 [
@@ -322,6 +331,9 @@ final class SubscriptionQueueServiceTest extends TestCase
         [$service, $entityManager] = $this->createQueueServiceWithDependencies();
 
         $session = new Session(new MockArraySessionStorage());
+        $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
+            'actor' => 'test-user', 'tenant' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.user'], 'expiresAt' => time() + 3600,
+        ]);
         $payload = [
             'submissionId' => 'unit-test-existing-person-snapshot',
             'recipient' => [

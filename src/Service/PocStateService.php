@@ -59,6 +59,7 @@ final class PocStateService
      */
     public function createCustomer(SessionInterface $session, array $payload): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $customer = $payload;
         $customer['id'] = $this->nextCounter($state, 'customer_id');
@@ -89,6 +90,7 @@ final class PocStateService
      */
     public function replaceCustomers(SessionInterface $session, array $customers): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $state['customers'] = $customers;
         $this->saveState($session, $state);
@@ -119,12 +121,21 @@ final class PocStateService
      */
     public function updateCustomer(SessionInterface $session, int $customerId, array $payload): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $index = $this->findCustomerIndex($state, $customerId);
         if (null === $index) {
             throw new ApiProblemException(404, 'customer_not_found', 'Customer not found');
         }
 
+        if ('subscription-api' === ($state['customers'][$index]['sourceSystem'] ?? null)) {
+            throw new ApiProblemException(409, 'upstream_edit_required', 'Use the protected upstream editing endpoints');
+        }
+        $allowedFields = ['salutation', 'firstName', 'middleName', 'lastName', 'birthday', 'postalCode',
+            'city', 'email', 'phone', 'optinEmail', 'optinPhone', 'optinPost', 'houseNumber', 'address'];
+        if ([] !== array_diff(array_keys($payload), $allowedFields)) {
+            throw new ApiProblemException(400, 'invalid_fields', 'Unknown or protected customer fields');
+        }
         foreach ($payload as $key => $value) {
             $state['customers'][$index][$key] = $value;
         }
@@ -160,6 +171,7 @@ final class PocStateService
      */
     public function createContactHistoryEntry(SessionInterface $session, int $customerId, array $payload): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $entry = $this->appendContactHistory($state, $customerId, $payload);
         if (null === $entry) {
@@ -176,6 +188,7 @@ final class PocStateService
      */
     public function updateDeliveryRemarks(SessionInterface $session, int $customerId, string $defaultRemark, string $updatedBy): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $index = $this->findCustomerIndex($state, $customerId);
         if (null === $index) {
@@ -234,6 +247,7 @@ final class PocStateService
      */
     public function createEditorialComplaint(SessionInterface $session, int $customerId, array $payload): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $magazine = trim((string) ($payload['magazine'] ?? ''));
         $complaintType = strtolower(trim((string) ($payload['type'] ?? 'klacht')));
         $category = strtolower(trim((string) ($payload['category'] ?? 'overig')));
@@ -331,6 +345,7 @@ final class PocStateService
      */
     public function writeCallQueue(SessionInterface $session, array $payload): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $queue = $this->getCallQueueFromState($state);
         foreach ($payload as $key => $value) {
@@ -347,6 +362,7 @@ final class PocStateService
      */
     public function clearCallQueue(SessionInterface $session): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $state['call_queue'] = $this->defaultCallQueue();
         $this->saveState($session, $state);
@@ -359,6 +375,7 @@ final class PocStateService
      */
     public function generateDebugQueue(SessionInterface $session, int $queueSize, string $queueMix): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $queueSize = max(0, min($queueSize, 100));
         $mix = strtolower(trim($queueMix));
@@ -406,6 +423,7 @@ final class PocStateService
      */
     public function acceptNextCall(SessionInterface $session): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $queue = $this->getCallQueueFromState($state);
         $items = $queue['queue'] ?? [];
@@ -464,6 +482,7 @@ final class PocStateService
      */
     public function writeCallSession(SessionInterface $session, array $payload): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $callSession = $this->getCallSessionFromState($state);
         foreach ($payload as $key => $value) {
@@ -481,6 +500,7 @@ final class PocStateService
      */
     public function startDebugCall(SessionInterface $session, array $payload): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $callSession = $this->getCallSessionFromState($state);
         $customerId = $payload['customerId'] ?? null;
@@ -513,6 +533,7 @@ final class PocStateService
      */
     public function identifyCaller(SessionInterface $session, int $customerId): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $customerIndex = $this->findCustomerIndex($state, $customerId);
         if (null === $customerIndex) {
@@ -555,6 +576,7 @@ final class PocStateService
      */
     public function holdCall(SessionInterface $session): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $callSession = $this->getCallSessionFromState($state);
         if (true !== ($callSession['active'] ?? false)) {
@@ -574,6 +596,7 @@ final class PocStateService
      */
     public function resumeCall(SessionInterface $session): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $callSession = $this->getCallSessionFromState($state);
         if (true !== ($callSession['active'] ?? false)) {
@@ -599,6 +622,7 @@ final class PocStateService
      */
     public function endCall(SessionInterface $session, bool $forcedByCustomer): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $callSessionBefore = $this->getCallSessionFromState($state);
         if (true !== ($callSessionBefore['active'] ?? false)) {
@@ -654,6 +678,7 @@ final class PocStateService
         ?string $followUpDate,
         string $followUpNotes,
     ): array {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $lastCall = $state['last_call_session'] ?? null;
         if (!\is_array($lastCall)) {
@@ -700,6 +725,7 @@ final class PocStateService
      */
     public function updateSubscription(SessionInterface $session, int $customerId, int $subscriptionId, array $payload): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         [$customerIndex, $subscriptionIndex] = $this->findSubscriptionLocation($state, $customerId, $subscriptionId);
 
@@ -718,6 +744,7 @@ final class PocStateService
      */
     public function createSubscriptionComplaint(SessionInterface $session, int $customerId, int $subscriptionId, string $reason): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         [$customerIndex, $subscriptionIndex] = $this->findSubscriptionLocation($state, $customerId, $subscriptionId);
         $subscription = $state['customers'][$customerIndex]['subscriptions'][$subscriptionIndex];
@@ -752,6 +779,7 @@ final class PocStateService
      */
     public function completeWinback(SessionInterface $session, int $customerId, int $subscriptionId, ?string $result, array $offer): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         [$customerIndex, $subscriptionIndex] = $this->findSubscriptionLocation($state, $customerId, $subscriptionId);
         $subscription = $state['customers'][$customerIndex]['subscriptions'][$subscriptionIndex];
@@ -797,6 +825,7 @@ final class PocStateService
      */
     public function processDeceasedActions(SessionInterface $session, int $customerId, array $actions): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         $customerIndex = $this->findCustomerIndex($state, $customerId);
         if (null === $customerIndex) {
@@ -859,6 +888,7 @@ final class PocStateService
      */
     public function completeRestitutionTransfer(SessionInterface $session, int $customerId, int $subscriptionId, array $transferData): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->getState($session);
         [$customerIndex, $subscriptionIndex] = $this->findSubscriptionLocation($state, $customerId, $subscriptionId);
 
@@ -888,6 +918,7 @@ final class PocStateService
      */
     public function createSubscriptionSignup(SessionInterface $session, array $payload): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         if (isset($payload['customerId']) || isset($payload['customer'])) {
             throw new ApiProblemException(
                 400,
@@ -982,6 +1013,7 @@ final class PocStateService
         array $orderPayload,
         ?array $contactEntry,
     ): array {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         if ([] === $orderPayload) {
             throw new ApiProblemException(400, 'invalid_payload', 'order payload is required');
         }
@@ -1047,6 +1079,7 @@ final class PocStateService
      */
     public function resetState(SessionInterface $session): array
     {
+        \App\Security\BusinessAccess::requireSessionWrite($session);
         $state = $this->deepCopyDefaultState();
         $this->saveState($session, $state);
 

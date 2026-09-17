@@ -140,12 +140,12 @@ final class OidcClientTest extends TestCase
         self::assertSame('jan@example.org', $identity['email']);
     }
 
-    public function testGetUserRolesPrefersIdTokenClaims(): void
+    public function testUnverifiedIdTokenCannotGrantRoles(): void
     {
         $client = $this->createClient();
         $token = $this->makeJwt(['roles' => ['bink8s.app.kiwi.user']]);
 
-        self::assertSame(['bink8s.app.kiwi.user'], $client->getUserRoles([
+        self::assertSame([], $client->getUserRoles([
             'oidc_auth_token' => [
                 'id_token' => $token,
                 'expires' => time() + 60,
@@ -187,7 +187,7 @@ final class OidcClientTest extends TestCase
     public function testValidateIdTokenAcceptsSignedTokenWithExpectedClaims(): void
     {
         [$privateKey, $jwks] = $this->createSigningMaterial('test-key');
-        $issuer = 'https://issuer.example';
+        $issuer = 'https://login.microsoftonline.com/test-tenant/v2.0';
         $nonce = 'expected-nonce';
         $client = $this->createConfiguredClient(
             [
@@ -199,7 +199,7 @@ final class OidcClientTest extends TestCase
             ],
             [
                 'client_id' => 'kiwi-client',
-                'issuer' => 'http://internal-issuer',
+                'issuer' => $issuer,
             ],
         );
 
@@ -208,6 +208,7 @@ final class OidcClientTest extends TestCase
             'aud' => 'kiwi-client',
             'nonce' => $nonce,
             'exp' => time() + 300,
+            'sub' => 'test-user', 'tid' => 'test-tenant',
         ], $privateKey, 'RS256', 'test-key');
 
         $client->validateIdToken([
@@ -219,7 +220,7 @@ final class OidcClientTest extends TestCase
         self::assertTrue(true);
     }
 
-    public function testValidateIdTokenAcceptsMicrosoftTenantPlaceholderIssuer(): void
+    public function testValidateIdTokenRejectsMicrosoftCommonIssuer(): void
     {
         [$privateKey, $jwks] = $this->createSigningMaterial('tenant-key');
         $tokenIssuer = 'https://login.microsoftonline.com/0c9debd2-7a4b-4383-9608-99e5238f646c/v2.0';
@@ -243,8 +244,11 @@ final class OidcClientTest extends TestCase
             'aud' => 'kiwi-client',
             'nonce' => $nonce,
             'exp' => time() + 300,
+            'sub' => 'test-user', 'tid' => 'test-tenant',
         ], $privateKey, 'RS256', 'tenant-key');
 
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage('An explicit tenant issuer is required');
         $client->validateIdToken([
             'oidc_auth_token' => [
                 'id_token' => $token,
@@ -259,7 +263,7 @@ final class OidcClientTest extends TestCase
         [$privateKey, $jwks] = $this->createSigningMaterial('alg-less-key');
         unset($jwks['keys'][0]['alg']);
 
-        $issuer = 'https://issuer.example';
+        $issuer = 'https://login.microsoftonline.com/test-tenant/v2.0';
         $nonce = 'expected-nonce';
         $client = $this->createConfiguredClient(
             [
@@ -280,6 +284,7 @@ final class OidcClientTest extends TestCase
             'aud' => 'kiwi-client',
             'nonce' => $nonce,
             'exp' => time() + 300,
+            'sub' => 'test-user', 'tid' => 'test-tenant',
         ], $privateKey, 'RS256', 'alg-less-key');
 
         $client->validateIdToken([
@@ -291,12 +296,43 @@ final class OidcClientTest extends TestCase
         self::assertTrue(true);
     }
 
+    /** @dataProvider invalidAuthorizationClaims */
+    public function testSignedInvalidAuthorizationClaimsAreRejected(array $overrides): void
+    {
+        [$privateKey, $jwks] = $this->createSigningMaterial('claims-key');
+        $issuer = 'https://login.microsoftonline.com/test-tenant/v2.0';
+        $client = $this->createConfiguredClient([
+            new MockResponse(json_encode(['issuer' => $issuer, 'jwks_uri' => 'https://keys.invalid/jwks'])),
+            new MockResponse(json_encode($jwks)),
+        ], ['client_id' => 'kiwi-client', 'issuer' => $issuer]);
+        $claims = array_replace([
+            'iss' => $issuer, 'aud' => 'kiwi-client', 'nonce' => 'nonce', 'exp' => time() + 300,
+            'sub' => 'user', 'tid' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.admin'],
+        ], $overrides);
+        $token = JWT::encode($claims, $privateKey, 'RS256', 'claims-key');
+        $this->expectException(\UnexpectedValueException::class);
+        $client->validateIdToken(['oidc_auth_token' => ['id_token' => $token]], 'nonce');
+    }
+
+    public static function invalidAuthorizationClaims(): iterable
+    {
+        yield 'audience' => [['aud' => 'different-app']];
+        yield 'tenant' => [['tid' => 'different-tenant']];
+        yield 'issuer' => [['iss' => 'https://login.microsoftonline.com/another-tenant/v2.0']];
+        yield 'expiry' => [['exp' => 1]];
+        yield 'missing expiry' => [['exp' => null]];
+        yield 'nonce' => [['nonce' => 'different-nonce']];
+        yield 'roles type' => [['roles' => 'bink8s.app.kiwi.admin']];
+        yield 'role value type' => [['roles' => [123]]];
+        yield 'identity' => [['sub' => null]];
+    }
+
     public function testValidateIdTokenRejectsAlgorithmOutsideMetadataAllowlist(): void
     {
         [, $jwks] = $this->createSigningMaterial('alg-less-key');
         unset($jwks['keys'][0]['alg']);
 
-        $issuer = 'https://issuer.example';
+        $issuer = 'https://login.microsoftonline.com/test-tenant/v2.0';
         $nonce = 'expected-nonce';
         $client = $this->createConfiguredClient(
             [
@@ -318,6 +354,7 @@ final class OidcClientTest extends TestCase
             'aud' => 'kiwi-client',
             'nonce' => $nonce,
             'exp' => time() + 300,
+            'sub' => 'test-user', 'tid' => 'test-tenant',
         ], 'oidc-algorithm-allowlist-test-key', 'HS256', 'alg-less-key');
 
         $this->expectException(\UnexpectedValueException::class);
@@ -334,7 +371,7 @@ final class OidcClientTest extends TestCase
     {
         [$validPrivateKey, $validJwks] = $this->createSigningMaterial('valid-key');
         [$invalidPrivateKey] = $this->createSigningMaterial('invalid-key');
-        $issuer = 'https://issuer.example';
+        $issuer = 'https://login.microsoftonline.com/test-tenant/v2.0';
         $nonce = 'expected-nonce';
         $client = $this->createConfiguredClient(
             [
@@ -346,7 +383,7 @@ final class OidcClientTest extends TestCase
             ],
             [
                 'client_id' => 'kiwi-client',
-                'issuer' => 'http://internal-issuer',
+                'issuer' => $issuer,
             ],
         );
 
@@ -355,6 +392,7 @@ final class OidcClientTest extends TestCase
             'aud' => 'kiwi-client',
             'nonce' => $nonce,
             'exp' => time() + 300,
+            'sub' => 'test-user', 'tid' => 'test-tenant',
         ], $invalidPrivateKey, 'RS256', 'invalid-key');
 
         $this->expectException(\UnexpectedValueException::class);
