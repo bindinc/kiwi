@@ -1,3 +1,4 @@
+import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
 
 const ORDER_SLICE_NAMESPACE = 'kiwiOrderSlice';
@@ -618,8 +619,10 @@ function readArticleSaleFormData(dependencies) {
         middleName: getInputValue('articleMiddleName'),
         lastName: getInputValue('articleLastName'),
         postalCode: getInputValue('articlePostalCode').toUpperCase(),
-        houseNumber: houseExt ? `${houseNumber}${houseExt}` : houseNumber,
-        address: `${address} ${houseNumber}${houseExt}`,
+        houseNumber,
+        houseNumberAddition: houseExt,
+        ...getAddressSubmission('article'),
+        address: `${address} ${houseNumber}${houseExt ? ` ${houseExt}` : ''}`,
         city: getInputValue('articleCity'),
         email: getInputValue('articleEmail'),
         phone: getInputValue('articlePhone'),
@@ -658,6 +661,9 @@ async function submitArticleOrderViaApi(dependencies, options = {}) {
             birthday: formData.birthday,
             postalCode: formData.postalCode,
             houseNumber: formData.houseNumber,
+            houseNumberAddition: formData.houseNumberAddition,
+            street: formData.street,
+            formSessionId: formData.formSessionId,
             address: formData.address,
             city: formData.city,
             email: formData.email,

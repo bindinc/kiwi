@@ -140,7 +140,7 @@ test('waits for selection and never sends or filters on a manually edited additi
     f.fields.addition.value = 'B'; f.form.manualInput('addition'); f.flush();
     assert.equal(f.requests.length, 1);
     f.form.select(0);
-    assert.equal(f.fields.addition.value, '');
+    assert.equal(f.fields.addition.value, 'B');
 });
 
 test('unknown Webabo addition preserves manual input and old choices cannot be selected', async () => {
@@ -209,4 +209,70 @@ test('a copied address during debounce cancels the old scheduled lookup', () => 
     f.fields.street.value = 'Copied street'; f.fields.city.value = 'Copied city';
     f.flush();
     assert.equal(f.requests.length, 0);
+});
+
+test('selection closes the choices and only a new search can offer them again', async () => {
+    const states = [];
+    const f = fixture({ report: (status, choices = []) => states.push({ status, choices }) });
+    f.form.input(); f.flush();
+    f.pending[0].resolve(matched()); await tick();
+    assert.equal(states.at(-1).choices.length, 1);
+    f.form.select(0);
+    assert.deepEqual(states.at(-1), { status: 'matched', choices: [] });
+    f.fields.addition.value = 'Manual'; f.form.manualInput('addition');
+    f.form.select(0);
+    assert.equal(f.fields.addition.value, 'MANUAL');
+    f.fields.houseNumber.value = '2'; f.form.input(); f.flush();
+    f.pending[1].resolve(matched('Rembrandtlaan', '', '2')); await tick();
+    assert.equal(states.at(-1).status, 'results');
+    assert.equal(states.at(-1).choices.length, 1);
+});
+
+test('retains full results after selection to reject invented additions without searching', async () => {
+    const f = fixture();
+    let validity = '';
+    f.fields.addition.setCustomValidity = value => { validity = value; };
+    f.form.input(); f.flush();
+    f.pending[0].resolve({ ...matched(), complete: true,
+        candidates: [{ ...matched().candidates[0], verified: true }, { ...matched().candidates[0], houseNumber: '1A', verified: true }] });
+    await tick(); f.form.select(0);
+    f.fields.addition.value = 'B'; f.form.manualInput('addition');
+    assert.notEqual(validity, '');
+    assert.equal(await f.form.validate(), false);
+    assert.equal(f.requests.length, 1);
+    f.fields.addition.value = ''; f.form.manualInput('addition');
+    assert.equal(validity, '');
+});
+
+test('incomplete results require backend confirmation rather than proving nonexistence', async () => {
+    const f = fixture();
+    f.form.input(); f.flush();
+    f.pending[0].resolve({ ...matched(), complete: false, limited: true }); await tick(); f.form.select(0);
+    f.fields.addition.value = 'B'; f.form.manualInput('addition');
+    const checking = f.form.validate();
+    assert.equal(f.requests.at(-1).path, '/validate');
+    f.pending[1].reject(new Error('unconfirmed'));
+    assert.equal(await checking, false);
+    assert.equal(f.reports.at(-1), 'unconfirmed');
+});
+
+test('addition changed during server confirmation is never overwritten', async () => {
+    const f = fixture();
+    f.fields.street.value = 'Rembrandtlaan'; f.fields.city.value = 'Loosdrecht';
+    const checking = f.form.validate();
+    f.fields.addition.value = 'B'; f.form.manualInput('addition');
+    f.pending[0].resolve({status: 'confirmed', address: {...matched().candidates[0], houseNumberAddition: ''}});
+    assert.equal(await checking, false);
+    assert.equal(f.fields.addition.value, 'B');
+});
+
+test('changing a prefilled profile postcode does not filter by its old street and city', () => {
+    const fields = Object.fromEntries(Object.entries({postalCode: '1231AA', houseNumber: '1', addition: '', street: 'Old street', city: 'Old city'}).map(([key, value]) => [key, {value}]));
+    const f = fixture({fields, prefilledAddress: true});
+    assert.equal(f.requests.length, 0);
+    f.form.input(); f.flush();
+    assert.equal(f.requests[0].payload.street, undefined);
+    assert.equal(f.requests[0].payload.city, undefined);
+    assert.equal(fields.street.value, '');
+    assert.equal(fields.city.value, '');
 });

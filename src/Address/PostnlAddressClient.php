@@ -39,7 +39,7 @@ final class PostnlAddressClient
                         'q' => '',
         ];
         foreach (['postalCode' => $query->postalCode, 'houseNumber' => $query->houseNumber,
-            'streetName' => $query->street, 'cityName' => $query->city] as $field => $value) {
+            'streetName' => $query->street, 'cityName' => mb_strtoupper($query->city)] as $field => $value) {
             if ('' !== $value) {
                 $parameters[$field] = $value;
             }
