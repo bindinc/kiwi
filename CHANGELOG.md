@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Prepare explicit customer and bank mutation contracts and server-reported editing capabilities; keep all new source mutations blocked pending verified upstream concurrency guarantees (SC-202883).
+
 - Enforce validated Entra roles and session expiry for every API route, protect mutations with CSRF, and reject business writes from view/dev roles without requiring mandant roles (SC-202883).
 
 - Show selectable address results from any two postcode, house number, street or city fields, including alternatives for conflicting postcodes; fill additions only from selection, never use them as search filters. [sc-200162]

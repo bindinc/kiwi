@@ -12,6 +12,7 @@ use App\Oidc\OidcRoleAccess;
 use App\Oidc\RequestOidcContext;
 use App\SubscriptionApi\AggregatedPersonSearchService;
 use App\SubscriptionApi\PersonDetailService;
+use App\SubscriptionApi\CustomerMutationPolicy;
 use App\SubscriptionApi\SubscriptionApiResponseException;
 use App\SubscriptionApi\SubscriptionSummaryService;
 use App\Service\PocStateService;
@@ -32,6 +33,7 @@ final class CustomerController extends AbstractApiController
         private readonly PersonDetailService $personDetailService,
         private readonly SubscriptionSummaryService $subscriptionSummaryService,
         private readonly CustomerAuditService $customerAuditService,
+        private readonly CustomerMutationPolicy $customerMutationPolicy,
     ) {
         parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
@@ -151,6 +153,7 @@ final class CustomerController extends AbstractApiController
         $credentialKey = trim((string) $request->query->get('credentialKey', ''));
         if ('' !== $credentialKey) {
             $customer = $this->readSubscriptionApiCustomer($customerId, $credentialKey);
+            $customer['editing'] = $this->customerMutationPolicy->capabilities();
         } else {
             $numericCustomerId = $this->parseIntValue($customerId, 'customerId', required: true, errorCode: 'invalid_route_parameter');
             $customer = $this->stateService->getCustomer($request->getSession(), $numericCustomerId);
