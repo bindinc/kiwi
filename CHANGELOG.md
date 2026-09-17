@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
-- Fix Dutch address completion across customer forms with PostNL, form-scoped UUID reuse and Webabo fallback; preserve manual entry during outages. [sc-200162]
+- Fix Dutch address completion across customer forms with PostNL, form-scoped UUID reuse and Webabo fallback; preserve manual entry during outages and provide safe interactive SOPS key entry. [sc-200162]
 
 - Rename the new-subscription payment option to Factuur in Dutch and Invoice in English, preserving payment code AC and existing IBAN behavior.
 

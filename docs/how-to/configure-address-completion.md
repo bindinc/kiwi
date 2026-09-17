@@ -28,6 +28,31 @@ first usable configured HUP credential is used, regardless of person-search supp
 mandant or title. Authentication failures permit the next configured credential;
 401 refreshes its token once. No additional Webabo credential is needed.
 
+### Interactive SOPS entry
+
+Run this yourself in a local Linux terminal with Python 3, SOPS 3.11 or newer,
+and your existing SOPS decryption access. The dedicated GitOps worktree below
+has been prepared on branch `codex/configure-postnl-api-key`:
+
+```bash
+python3 /home/bartdeijkers/_worktrees/fix-address-completion-with-postnl/scripts/configure-postnl-api-key.py \
+  /home/bartdeijkers/_worktrees/configure-postnl-api-key/clusters/prod/secrets/kiwi/oidc-client-secrets.sops.yaml
+```
+
+Enter the key twice at the hidden prompts. Do not put it in arguments, environment
+variables or chat. Success reports that the key was saved encrypted and verified.
+The script preserves all other client settings, supports both Kubernetes `data`
+and `stringData`, and retains existing SOPS recipients. Decrypted content stays in
+process memory; temporary files contain ciphertext only. SOPS diagnostics are
+suppressed because they can contain sensitive content. Failures before replacement
+leave the target unchanged. Tests use synthetic values and mocked SOPS, not real keys.
+
+This updates only the local encrypted GitOps file. It does not commit, push,
+reconcile Flux or restart workloads. Those steps require the separately approved
+GitOps deployment workflow. The production context is `bink8s`; it is distinct
+from the local Flux/kind acceptance environment. Both Kiwi deployments mount
+`client_secrets.json` from `kiwi-oidc-client`.
+
 ## API and behaviour
 
 - `POST /api/v1/addresses/search`: JSON strings `formSessionId` (UUID), `postalCode`,
