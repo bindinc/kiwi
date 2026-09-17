@@ -26,8 +26,25 @@ def sops(*args, value=None):
     )
     if result.returncode:
         # SOPS diagnostics can contain decrypted values (including MAC errors).
-        raise ConfigurationError('SOPS failed. Check local key access and SOPS version; no file was replaced.')
+        stages = {'--decrypt': 'decrypt/verify', 'set': 'update', 'filestatus': 'check encryption'}
+        stage = 'check SOPS support' if '--help' in args else stages.get(args[0], 'operation')
+        raise ConfigurationError(
+            f'SOPS failed during {stage} (exit {result.returncode}); no file was replaced. '
+            'Check your local decryption access. For the documented age identity, use '
+            '--age-key-file ~/age.agekey or export SOPS_AGE_KEY_FILE=~/age.agekey. '
+            'Raw diagnostics are hidden to protect secrets.'
+        )
     return result.stdout
+
+
+def configure_age_identity(path):
+    if path is None:
+        return
+    path = path.expanduser().absolute()
+    if not path.is_file() or not os.access(path, os.R_OK):
+        raise ConfigurationError('The selected age identity file is missing or unreadable.')
+    # Only SOPS reads this file. Keep the private identity out of this process.
+    os.environ['SOPS_AGE_KEY_FILE'] = str(path)
 
 
 def update_document(document, key):
@@ -84,10 +101,12 @@ def configure(target, key):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('secret_file', type=Path, help='Existing oidc-client-secrets.sops.yaml in your GitOps worktree')
+    parser.add_argument('--age-key-file', type=Path, help='Local age identity path; otherwise retain existing SOPS configuration')
     args = parser.parse_args()
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     os.umask(0o077)
     try:
+        configure_age_identity(args.age_key_file)
         if not sys.stdin.isatty() or not sys.stderr.isatty():
             raise ConfigurationError('Run interactively in a local terminal; piped key input is disabled.')
         if not shutil.which('sops'):

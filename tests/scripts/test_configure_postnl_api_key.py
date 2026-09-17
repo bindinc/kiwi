@@ -12,6 +12,23 @@ spec.loader.exec_module(module)
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_identity_option_sets_path_without_reading_identity(self):
+        with patch.dict(module.os.environ, {}, clear=True):
+            with patch.object(Path, 'is_file', return_value=True), patch.object(module.os, 'access', return_value=True):
+                with patch.object(Path, 'read_bytes', side_effect=AssertionError('Do not read identity')):
+                    module.configure_age_identity(Path('/synthetic/identity'))
+            self.assertEqual(module.os.environ['SOPS_AGE_KEY_FILE'], '/synthetic/identity')
+
+    def test_identity_option_preserves_environment_when_omitted(self):
+        with patch.dict(module.os.environ, {'SOPS_AGE_KEY_FILE': '/synthetic/existing'}, clear=True):
+            module.configure_age_identity(None)
+            self.assertEqual(module.os.environ['SOPS_AGE_KEY_FILE'], '/synthetic/existing')
+
+    def test_missing_identity_is_rejected(self):
+        with patch.object(Path, 'is_file', return_value=False):
+            with self.assertRaises(module.ConfigurationError):
+                module.configure_age_identity(Path('/synthetic/missing'))
+
     def document(self, section='stringData'):
         config = {'web': {'client_id': 'fixture'}, 'hup': {'credentials': ['fixture']}, 'postnl': {'other': True}}
         value = json.dumps(config)
@@ -96,6 +113,8 @@ class ConfigurationTests(unittest.TestCase):
             with self.assertRaises(module.ConfigurationError) as error:
                 module.sops('set')
             self.assertNotIn('synthetic-sensitive-diagnostic', str(error.exception))
+            self.assertIn('during update (exit 1)', str(error.exception))
+            self.assertIn('--age-key-file', str(error.exception))
 
 
 if __name__ == '__main__':

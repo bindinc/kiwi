@@ -36,11 +36,17 @@ has been prepared on branch `codex/configure-postnl-api-key`:
 
 ```bash
 python3 /home/bartdeijkers/_worktrees/fix-address-completion-with-postnl/scripts/configure-postnl-api-key.py \
+  --age-key-file ~/age.agekey \
   /home/bartdeijkers/_worktrees/configure-postnl-api-key/clusters/prod/secrets/kiwi/oidc-client-secrets.sops.yaml
 ```
 
 Enter the key twice at the hidden prompts. Do not put it in arguments, environment
 variables or chat. Success reports that the key was saved encrypted and verified.
+The identity path follows the GitOps repository's SOPS instructions. Adjust the
+path if your identity is stored elsewhere. The option passes the path to SOPS via
+`SOPS_AGE_KEY_FILE`; the script does not read the private identity. Omit the option
+if your existing SOPS environment already provides decryption access. Failure
+messages identify the SOPS stage and exit code without printing raw diagnostics.
 The script preserves all other client settings, supports both Kubernetes `data`
 and `stringData`, and retains existing SOPS recipients. Decrypted content stays in
 process memory; temporary files contain ciphertext only. SOPS diagnostics are
