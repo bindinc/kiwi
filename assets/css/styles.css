@@ -4560,3 +4560,18 @@ select option {
     padding-left: 1.2rem;
     margin: 0;
 }
+
+.address-completion-status {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 4px 0 12px;
+}
+
+.address-completion-status:empty,
+.address-completion-status button[hidden] {
+    display: none;
+}
+
+.address-completion-status button {
+    margin-left: 8px;
+}

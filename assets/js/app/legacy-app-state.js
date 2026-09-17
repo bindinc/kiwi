@@ -1,3 +1,4 @@
+import { endAddressSessions } from './address-completion.js';
 // State and utility functions previously in app.js.
 // Exposed as window globals so classic runtime scripts
 // (call-agent-runtime.js, subscription-role-runtime.js) can access them
@@ -352,7 +353,7 @@ function upsertCustomerInCache(customer) {
         customers: state.customers,
         currentCustomer: state.currentCustomer,
         setCustomers(v) { state.customers = v; },
-        setCurrentCustomer(v) { state.currentCustomer = v; }
+        setCurrentCustomer(v) { setCurrentCustomer(v); }
     });
 }
 
@@ -449,7 +450,7 @@ function getCustomerDetailSliceDependencies() {
         },
         upsertCustomerInCache,
         getCurrentCustomer: () => state.currentCustomer,
-        setCurrentCustomer: (v) => { state.currentCustomer = v; },
+        setCurrentCustomer: (v) => { setCurrentCustomer(v); },
         startCustomerSelection(customer) {
             return invokeSliceMethod(CUSTOMER_WORK_SESSION_SLICE_NAMESPACE, 'startCustomerSelection', [customer]);
         },
@@ -488,7 +489,7 @@ function getCustomerWorkSessionSliceDependencies() {
         showToast,
         resetCustomerBoundState() {
             state.customers = [];
-            state.currentCustomer = null;
+            setCurrentCustomer(null);
             state.selectedOffer = null;
             state.contactHistoryState.currentPage = 1;
             state.contactHistoryState.highlightId = null;
@@ -582,7 +583,7 @@ function getAppShellSliceDependencies() {
         resetAllSubscriptionDuplicateStates: globalScope?.resetAllSubscriptionDuplicateStates || (() => {}),
         isCallSessionActive: () => Boolean(state.callSession && state.callSession.active),
         endCallSession: globalScope?.endCallSession || (() => {}),
-        setCurrentCustomer: (v) => { state.currentCustomer = v; },
+        setCurrentCustomer: (v) => { setCurrentCustomer(v); },
         setSelectedOffer: (v) => { state.selectedOffer = v; },
         setAdditionalFiltersOpen: globalScope?.setAdditionalFiltersOpen || (() => {}),
         updateCustomerActionButtons,
@@ -632,7 +633,7 @@ export function installLegacyAppState() {
     for (const key of mutableKeys) {
         Object.defineProperty(globalScope, key, {
             get() { return state[key]; },
-            set(v) { state[key] = v; },
+            set(v) { if (key === 'currentCustomer') setCurrentCustomer(v); else state[key] = v; },
             configurable: true
         });
     }
@@ -719,7 +720,7 @@ export function installLegacyAppState() {
     globalScope.kiwiLegacyCustomerSearchBridge = {
         getCustomers: () => state.customers,
         getCurrentCustomer: () => state.currentCustomer,
-        setCurrentCustomer: (v) => { state.currentCustomer = v; },
+        setCurrentCustomer: (v) => { setCurrentCustomer(v); },
         getCallSession: () => state.callSession
     };
 
@@ -742,3 +743,9 @@ export function installLegacyAppState() {
 
 // Expose low-level state for index.js bootstrap orchestration
 export { state as legacyState };
+
+function setCurrentCustomer(customer) {
+    const identity = (value) => value ? `${value.sourceSystem || ""}:${value.credentialKey || ""}:${value.id}` : null;
+    if (identity(state.currentCustomer) !== identity(customer)) endAddressSessions();
+    state.currentCustomer = customer;
+}
