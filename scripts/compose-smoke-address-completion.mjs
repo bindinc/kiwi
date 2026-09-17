@@ -28,6 +28,10 @@ async function fill(prefix, postcode, number = '1') {
         const text = document.getElementById(id)?.textContent || '';
         return text && !text.includes('opzoeken…') && !text.includes('Looking up');
     }, `${prefix}AddressStatus`);
+    const choices = page.locator(`#${prefix}AddressChoices`);
+    if (await choices.isVisible()) {
+        await choices.selectOption('0');
+    }
 }
 
 try {
@@ -51,6 +55,21 @@ try {
     await page.waitForFunction(() => document.getElementById('editAddress').value === 'Rembrandtlaan');
     assert.equal(await page.inputValue('#editCity'), 'Loosdrecht');
     const first = requests.at(-1).formSessionId;
+    assert.equal('houseNumberAddition' in requests.at(-1), false);
+    const callsBeforeAddition = requests.length;
+    await page.selectOption('#editAddressChoices', '1');
+    assert.equal(await page.inputValue('#editHouseExt'), 'A');
+    await page.fill('#editHouseExt', 'MANUAL');
+    await page.waitForTimeout(450);
+    assert.equal(requests.length, callsBeforeAddition);
+    await page.locator('#editAddressChoices').focus();
+    await page.keyboard.press('ArrowUp');
+    assert.equal(await page.inputValue('#editHouseExt'), '');
+    await page.locator('#editAddressStatus').screenshot({ path: `${evidence}/address-choices-desktop.png` });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('#editAddressStatus').screenshot({ path: `${evidence}/address-choices-narrow.png` });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
+    await page.setViewportSize({ width: 1440, height: 1100 });
     await fill('edit', '1231AA', '2');
     assert.equal(requests.at(-1).formSessionId, first);
     const box = await page.locator('#editPostalCode').boundingBox();

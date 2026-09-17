@@ -88,6 +88,33 @@ final class AddressLookupTest extends TestCase
         return new AddressLookupService(new PostnlAddressClient($loader, $http), new WebaboAddressClient($config, new WebaboAccessTokenProvider($config, $http), $http), new AddressSessionStore(), $logger);
     }
 
+    public function testChoiceLookupIgnoresAdditionAndReturnsEveryVariant(): void
+    {
+        $first = $this->postnlAddress();
+        $second = array_replace($first, ['houseNumberAddition' => 'A']);
+        $service = $this->service([$this->response(['uuid' => self::UUID]), $this->response([$first, $second, $first])]);
+        $result = $service->search($this->query('1A', '2'), self::UUID, new Session(new MockArraySessionStorage()), true);
+        self::assertSame('ambiguous', $result['status']);
+        self::assertCount(2, $result['candidates']);
+        self::assertSame(['', 'A'], array_column($result['candidates'], 'houseNumberAddition'));
+        self::assertArrayNotHasKey('address', $result);
+        parse_str((string) parse_url($this->requests[1]['url'], PHP_URL_QUERY), $parameters);
+        self::assertArrayNotHasKey('houseNumberAddition', $parameters);
+        self::assertSame('1', $parameters['houseNumber']);
+    }
+
+    public function testStreetOnlyChoiceDoesNotInventAnAddition(): void
+    {
+        $candidate = $this->address();
+        $candidate['houseNumber'] = null;
+        $result = AddressLookupService::choices($this->query('1', 'B'), [$candidate], true);
+        self::assertSame('matched', $result['status']);
+        self::assertNull($result['candidates'][0]['houseNumberAddition']);
+        self::assertSame('1', $result['candidates'][0]['houseNumber']);
+        self::assertSame([], AddressLookupService::choices($this->query(), [$candidate])['candidates']);
+        self::assertSame([], AddressLookupService::choices($this->query(), [$this->address('Wrong', '2')])['candidates']);
+    }
+
     public function testNormalizationAndExactMatching(): void
     {
         $query = $this->query('1a', 'A-2');

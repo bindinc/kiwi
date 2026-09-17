@@ -17,14 +17,18 @@ final class AddressLookupService
     ) {
     }
 
-    public function search(AddressQuery $query, string $formId, SessionInterface $session): array
+    public function search(AddressQuery $query, string $formId, SessionInterface $session, bool $includeCandidates = false): array
     {
+        if ($includeCandidates) {
+            $query = new AddressQuery($query->postalCode, $query->houseNumber, '');
+        }
         $started = microtime(true);
         $budget = new LookupBudget();
         $this->sessions->assertOpen($session, $formId);
         try {
             $uuid = $this->sessions->uuid($session, $formId, fn (): string => $this->postnl->token($budget));
-            $result = self::match($query, $this->postnl->search($query, $uuid, $budget));
+            $candidates = $this->postnl->search($query, $uuid, $budget);
+            $result = $includeCandidates ? self::choices($query, $candidates) : self::match($query, $candidates);
             $this->log('postnl', $result['status'], $started);
 
             return $result;
@@ -35,7 +39,8 @@ final class AddressLookupService
             }
         }
         try {
-            $result = self::match($query, $this->webabo->search($query, $budget), allowStreetCompletion: true);
+            $candidates = $this->webabo->search($query, $budget);
+            $result = $includeCandidates ? self::choices($query, $candidates, true) : self::match($query, $candidates, allowStreetCompletion: true);
             $this->log('webabo', $result['status'], $started);
 
             return $result;
@@ -44,6 +49,33 @@ final class AddressLookupService
 
             return ['status' => 'unavailable'];
         }
+    }
+
+    public static function choices(AddressQuery $query, array $candidates, bool $allowStreetCompletion = false): array
+    {
+        $choices = [];
+        foreach ($candidates as $candidate) {
+            $samePostcode = AddressQuery::compact($candidate['postalCode']) === $query->postalCode;
+            $streetOnly = $allowStreetCompletion && null === $candidate['houseNumber'];
+            $sameNumber = $streetOnly || $candidate['houseNumber'] === $query->houseNumber;
+            if (!$samePostcode || !$sameNumber) {
+                continue;
+            }
+            $choice = [
+                'postalCode' => $query->postalCode,
+                'houseNumber' => $query->houseNumber,
+                // Null means Webabo did not supply a number/addition; preserve manual input.
+                'houseNumberAddition' => $streetOnly ? null : $candidate['addition'],
+                'street' => $candidate['street'],
+                'city' => $candidate['city'],
+            ];
+            $key = strtoupper(json_encode($choice, JSON_THROW_ON_ERROR));
+            $choices[$key] = $choice;
+        }
+        $choices = array_values($choices);
+        $status = [] === $choices ? 'not_found' : (count($choices) === 1 ? 'matched' : 'ambiguous');
+
+        return ['status' => $status, 'candidates' => $choices];
     }
 
     public static function match(AddressQuery $query, array $candidates, bool $allowStreetCompletion = false): array

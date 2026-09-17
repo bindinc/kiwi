@@ -1,7 +1,8 @@
 # Configure address completion
 
-Kiwi completes Dutch street and city fields from postcode, house number and optional
-house number addition. This applies to recipient/requester creation, article orders,
+Kiwi searches Dutch addresses by postcode and house number and shows a result list.
+Selecting a result completes street, city and the house number addition. The addition
+input never filters searches, including a letter typed in the number field. This applies to recipient/requester creation, article orders,
 customer edits and restitution transfers. Screenshot selection is outside sc-200162.
 
 ## Configuration
@@ -62,9 +63,14 @@ from the local Flux/kind acceptance environment. Both Kiwi deployments mount
 ## API and behaviour
 
 - `POST /api/v1/addresses/search`: JSON strings `formSessionId` (UUID), `postalCode`,
-  `houseNumber`, optional `houseNumberAddition`. Authentication and a Kiwi role are required.
-- Responses: `{"status":"matched","address":{"street":"...","city":"..."}}`,
-  or status `not_found`, `ambiguous`, `unavailable` without an address. Responses are not cached.
+  `houseNumber`. Any supplied `houseNumberAddition` is ignored. Authentication and a Kiwi role are required.
+- Responses contain `status` and, for successful lookups, `candidates`: objects with
+  `postalCode`, `houseNumber`, `houseNumberAddition`, `street` and `city`.
+  A single candidate has status `matched`; multiple candidates have `ambiguous`.
+  Both require explicit user selection. An empty list has `not_found`; technical
+  failure has `unavailable`. Responses are not cached and contain no provider HTML.
+  A null addition indicates Webabo did not supply it; selecting this result preserves
+  the user's addition. An empty string is a known absence and clears the addition.
 - `DELETE /api/v1/addresses/sessions/{formSessionId}` ends the form session (204).
   A late search for a closed session is rejected (409). Invalid input is rejected (400).
 - All routes use the deployment prefix, including `/kiwi-preview`.
@@ -74,13 +80,11 @@ malformed responses permit Webabo fallback. Empty or ambiguous valid results do 
 PostNL 400 is an integration error. Each external call, including HUP authentication,
 is capped at three seconds within a ten-second total lookup budget.
 
-PostNL results must match postcode/number/addition. Webabo may omit the optional
-`houseNo` response field; these candidates can complete street and city for a matching
-postcode without validating or changing the entered number/addition. If Webabo does
-return `houseNo`, it must match the input. All matching candidates must agree on street
-and city before automatic completion. A full Webabo page
-(20 results) is not considered proof of an unambiguous match. The internal address
-extension is never submitted to either provider. Returned HTML is never rendered.
+Candidates must match postcode and house number. Distinct additions remain separate
+choices even when street and city agree. Webabo may omit `houseNo`; street-level
+results are then selectable for the matching postcode, without validating the user's
+number or addition. A full Webabo page (20 rows) remains unavailable to avoid presenting
+an incomplete candidate set. The internal address extension is never sent to providers.
 
 Each form/tab gets its own local form identifier. The PostNL UUID is requested lazily
 and stored in the existing PostgreSQL-backed authenticated session under its advisory
@@ -91,7 +95,9 @@ most 100 form sessions prevents unbounded session growth. Closed entries retain 
 PostNL UUID and expire with the same retention period.
 
 The UI waits 350 ms after typing, suppresses duplicate requests, ignores old results,
-and preserves manual edits. Copied/prefilled values trigger no provider request.
+and preserves manual edits. Selection is explicit, also for a single result.
+The native labelled result list supports keyboard navigation. Changing only the
+addition does not trigger or narrow a search. Copied/prefilled values trigger no provider request.
 An unavailable service offers a retry; manual entry and saving remain available.
 
 ## Verification

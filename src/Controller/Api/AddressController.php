@@ -20,8 +20,9 @@ final class AddressController extends AbstractApiController
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
         $id = AddressSessionStore::validateId($payload['formSessionId'] ?? null);
+        unset($payload['houseNumberAddition']);
         $query = AddressQuery::fromPayload($payload);
-        $result = $lookup->search($query, $id, $request->getSession());
+        $result = $lookup->search($query, $id, $request->getSession(), includeCandidates: true);
 
         return new JsonResponse($result, 200, ['Cache-Control' => 'no-store']);
     }
