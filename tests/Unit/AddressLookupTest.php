@@ -133,6 +133,51 @@ final class AddressLookupTest extends TestCase
         self::assertStringContainsString('test-two', $this->requests[5]['options']['body']);
     }
 
+    /** @dataProvider webaboCompletionCases */
+    public function testWebaboStreetCompletion(array $candidates, string $addition, string $expected): void
+    {
+        $service = $this->service([
+            $this->response([], 503),
+            $this->response(['access_token' => '<token>']),
+            $this->response($candidates),
+        ]);
+        $result = $service->search($this->query('1', $addition), self::UUID, new Session(new MockArraySessionStorage()));
+        self::assertSame($expected, $result['status']);
+        if ('matched' === $expected) {
+            self::assertSame(['street' => 'Rembrandtlaan', 'city' => 'Loosdrecht'], $result['address']);
+        }
+        self::assertCount(3, $this->requests);
+        self::assertSame(['zipcode' => '1231AA', 'houseNo' => trim('1 '.$addition)], json_decode($this->requests[2]['options']['body'], true));
+    }
+
+    public static function webaboCompletionCases(): iterable
+    {
+        $address = ['zipcode' => '1231 AA', 'streetName' => 'Rembrandtlaan', 'city' => 'Loosdrecht'];
+        yield 'number omitted' => [[$address], '', 'matched'];
+        yield 'input addition retained' => [[$address], 'A 2', 'matched'];
+        yield 'duplicate streets agree' => [[$address, $address], '', 'matched'];
+        yield 'conflicting streets' => [[$address, array_replace($address, ['streetName' => 'Other'])], '', 'ambiguous'];
+        yield 'conflicting cities' => [[$address, array_replace($address, ['city' => 'Other'])], '', 'ambiguous'];
+        yield 'wrong postcode' => [[array_replace($address, ['zipcode' => '9999ZZ'])], '', 'not_found'];
+        yield 'explicit number matches' => [[$address + ['houseNo' => '1']], '', 'matched'];
+        yield 'explicit number differs' => [[$address + ['houseNo' => '2']], '', 'not_found'];
+        yield 'explicit addition matches' => [[$address + ['houseNo' => '1A 2']], 'A 2', 'matched'];
+        yield 'explicit addition differs' => [[$address + ['houseNo' => '1B']], 'A', 'not_found'];
+        yield 'empty response' => [[], '', 'not_found'];
+        yield 'truncated page' => [array_fill(0, 20, $address), '', 'unavailable'];
+        yield 'malformed number' => [[$address + ['houseNo' => 'invalid']], '', 'unavailable'];
+        yield 'null number' => [[$address + ['houseNo' => null]], '', 'unavailable'];
+        yield 'empty number' => [[$address + ['houseNo' => '']], '', 'unavailable'];
+        yield 'missing street' => [[['zipcode' => '1231AA', 'city' => 'Loosdrecht']], '', 'unavailable'];
+    }
+
+    public function testPostnlStillRequiresHouseNumber(): void
+    {
+        $candidate = $this->address();
+        $candidate['houseNumber'] = null;
+        self::assertSame(['status' => 'not_found'], AddressLookupService::match($this->query(), [$candidate]));
+    }
+
     public function testEmptyResultsDoNotFallBack(): void
     {
         $service = $this->service([$this->response(['uuid' => self::UUID]), $this->response([])]);

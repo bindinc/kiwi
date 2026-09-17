@@ -83,18 +83,25 @@ final class WebaboAddressClient
             if (!is_array($item)) {
                 throw new ProviderFailure('invalid_response');
             }
-            foreach (['zipcode', 'houseNo', 'streetName', 'city'] as $field) {
+            foreach (['zipcode', 'streetName', 'city'] as $field) {
                 if (!isset($item[$field]) || !is_string($item[$field]) || '' === trim($item[$field])) {
                     throw new ProviderFailure('invalid_response');
                 }
             }
-            if (!preg_match('/^([1-9][0-9]*)(.*)$/D', trim($item['houseNo']), $parts)) {
-                throw new ProviderFailure('invalid_response');
+            // Webabo can return street-level completion without echoing houseNo.
+            $number = null;
+            $addition = '';
+            if (array_key_exists('houseNo', $item)) {
+                if (!is_string($item['houseNo']) || !preg_match('/^([1-9][0-9]*)(.*)$/D', trim($item['houseNo']), $parts)) {
+                    throw new ProviderFailure('invalid_response');
+                }
+                $number = $parts[1];
+                $addition = trim($parts[2]);
             }
 
             return [
-                'postalCode' => $item['zipcode'], 'houseNumber' => $parts[1],
-                'addition' => trim($parts[2]), 'street' => trim($item['streetName']), 'city' => trim($item['city']),
+                'postalCode' => $item['zipcode'], 'houseNumber' => $number,
+                'addition' => $addition, 'street' => trim($item['streetName']), 'city' => trim($item['city']),
             ];
         }, $payload);
     }

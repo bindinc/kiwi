@@ -74,8 +74,11 @@ malformed responses permit Webabo fallback. Empty or ambiguous valid results do 
 PostNL 400 is an integration error. Each external call, including HUP authentication,
 is capped at three seconds within a ten-second total lookup budget.
 
-Only matching postcode/number/addition results can fill a form. Where no addition
-was supplied, multiple candidates must agree on street and city. A full Webabo page
+PostNL results must match postcode/number/addition. Webabo may omit the optional
+`houseNo` response field; these candidates can complete street and city for a matching
+postcode without validating or changing the entered number/addition. If Webabo does
+return `houseNo`, it must match the input. All matching candidates must agree on street
+and city before automatic completion. A full Webabo page
 (20 results) is not considered proof of an unambiguous match. The internal address
 extension is never submitted to either provider. Returned HTML is never rendered.
 
