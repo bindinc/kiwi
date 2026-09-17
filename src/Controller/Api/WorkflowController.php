@@ -57,10 +57,16 @@ final class WorkflowController extends AbstractApiController
 
     #[Route('/subscription', name: 'api_workflow_subscription_queue', methods: ['POST'])]
     #[Route('/subscription-signup', name: 'api_workflow_subscription_signup', methods: ['POST'])]
-    public function queueSubscription(Request $request): JsonResponse
+    public function queueSubscription(Request $request, \App\Address\AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
+
+        foreach (['recipient', 'requester'] as $role) {
+            if (is_array($payload[$role]['person'] ?? null) && !isset($payload[$role]['personId'])) {
+                $payload[$role]['person'] = $validator->validatePerson($request->getSession(), $payload[$role]['person']);
+            }
+        }
 
         return $this->json(
             $this->subscriptionQueueService->queueSubscription(
@@ -73,13 +79,16 @@ final class WorkflowController extends AbstractApiController
     }
 
     #[Route('/article-order', name: 'api_workflow_article_order', methods: ['POST'])]
-    public function articleOrder(Request $request): JsonResponse
+    public function articleOrder(Request $request, \App\Address\AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
 
         $customerId = $this->parseIntValue($payload['customerId'] ?? null, 'customerId', null, false, 1);
         $customer = \is_array($payload['customer'] ?? null) ? $payload['customer'] : null;
+        if (null !== $customer) {
+            $customer = $validator->validatePerson($request->getSession(), $customer);
+        }
         $order = \is_array($payload['order'] ?? null) ? $payload['order'] : [];
         $contactEntry = \is_array($payload['contactEntry'] ?? null) ? $payload['contactEntry'] : null;
 

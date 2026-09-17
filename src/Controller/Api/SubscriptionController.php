@@ -77,16 +77,18 @@ final class SubscriptionController extends AbstractApiController
     }
 
     #[Route('/{customerId}/{subscriptionId}/restitution-transfer', name: 'api_subscription_restitution_transfer', methods: ['POST'], requirements: ['customerId' => '\d+', 'subscriptionId' => '\d+'])]
-    public function completeRestitutionTransfer(Request $request, int $customerId, int $subscriptionId): JsonResponse
+    public function completeRestitutionTransfer(Request $request, int $customerId, int $subscriptionId, \App\Address\AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
+
+        $transferData = $validator->validatePerson($request->getSession(), \is_array($payload['transferData'] ?? null) ? $payload['transferData'] : []);
 
         return $this->json($this->stateService->completeRestitutionTransfer(
             $request->getSession(),
             $customerId,
             $subscriptionId,
-            \is_array($payload['transferData'] ?? null) ? $payload['transferData'] : [],
+            $transferData,
         ));
     }
 }

@@ -1,3 +1,4 @@
+import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
 
 const WINBACK_SLICE_NAMESPACE = 'kiwiWinbackSlice';
@@ -12,7 +13,8 @@ const winbackState = {
     cancellingSubscriptionId: null,
     isWinbackForEndedSub: false,
     deceasedSubscriptionActions: null,
-    restitutionRevertSubId: null
+    restitutionRevertSubId: null,
+    restitutionAddressSessionId: null
 };
 const changeHandlerByElement = new WeakMap();
 
@@ -820,6 +822,7 @@ export function revertRestitution(subscriptionId) {
 }
 
 export function showRestitutionTransferForm(subscription) {
+    winbackState.restitutionAddressSessionId = globalThis.crypto.randomUUID();
     setDisplayValue('restitutionTransferForm', 'flex');
 
     const titleElement = getElementById('restitutionTransferTitle');
@@ -880,8 +883,11 @@ export async function completeRestitutionTransfer(event) {
         phone: readTextInputValue('restitutionTransferPhone'),
         postalCode: shouldUseSameAddress ? currentCustomer.postalCode : readTextInputValue('restitutionTransferPostalCode'),
         houseNumber: shouldUseSameAddress ? currentCustomer.houseNumber : readTextInputValue('restitutionTransferHouseNumber'),
+        houseNumberAddition: shouldUseSameAddress ? currentCustomer.houseNumberAddition || '' : readTextInputValue('restitutionTransferHouseExt'),
+        formSessionId: winbackState.restitutionAddressSessionId,
         address: shouldUseSameAddress ? currentCustomer.address : readTextInputValue('restitutionTransferAddress'),
-        city: shouldUseSameAddress ? currentCustomer.city : readTextInputValue('restitutionTransferCity')
+        city: shouldUseSameAddress ? currentCustomer.city : readTextInputValue('restitutionTransferCity'),
+        ...(!shouldUseSameAddress ? getAddressSubmission('restitutionTransfer') : {})
     };
 
     const hasRequiredIdentityFields = transferData.firstName && transferData.lastName && transferData.email && transferData.phone;
@@ -929,6 +935,9 @@ export async function completeRestitutionTransfer(event) {
         saveCustomers();
     }
 
+    if (shouldUseSameAddress && typeof apiClient?.delete === 'function') {
+        void apiClient.delete(`/api/v1/addresses/sessions/${winbackState.restitutionAddressSessionId}`).catch(() => {});
+    }
     closeForm('restitutionTransferForm');
     await selectCustomer(currentCustomer.id);
 

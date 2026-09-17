@@ -3,7 +3,8 @@
 Kiwi searches Dutch addresses using any two or more of postcode, house number, street
 and city, and shows a result list. An invalid postcode is ignored when two other
 fields are usable. House numbers must be valid; street and city support prefixes.
-Selecting a result completes postcode, house number, street, city and the addition. The addition
+Selecting a result completes postcode, house number, street, city and the addition.
+The panel floats below street/city and closes after selection; its validation buffer remains. The addition
 input never filters searches, including a letter typed in the number field. This applies to recipient/requester creation, article orders,
 customer edits and restitution transfers. Screenshot selection is outside sc-200162.
 
@@ -104,7 +105,7 @@ The UI waits 350 ms after typing, suppresses duplicate requests, ignores old res
 and preserves manual edits. Selection is explicit, also for a single result.
 The native labelled result list supports keyboard navigation. Changing only the
 addition does not trigger or narrow a search. Copied/prefilled values trigger no provider request.
-An unavailable service offers a retry; manual entry and saving remain available.
+An unavailable service offers a retry. Manual editing remains available, but saving a new or changed address is blocked until the complete address is confirmed.
 
 ## Verification
 
@@ -156,3 +157,39 @@ then run `php tests/Support/address-session-worker.php` concurrently in each app
 container. The shared `/app/var/address-concurrency-smoke-count` must contain `1`.
 The fixture creates its own session and does not read real authenticated sessions.
 The same replica check still needs to be repeated on the required Flux/kind cluster.
+
+## Mandatory address confirmation
+
+`POST /api/v1/addresses/validate` accepts `formSessionId`, `postalCode`,
+`houseNumber`, `houseNumberAddition`, `street` and `city`. A confirmed address is
+returned with status `confirmed`. Mutating address APIs independently perform the
+same check before writing or queueing. Client-supplied confirmation flags are ignored.
+Existing, unchanged customer addresses are not rewritten by this feature.
+
+Search responses include `verified` per candidate, `limited`, and `complete`.
+The browser keeps results after dismissing the panel. PostgreSQL session storage
+keeps the provider result for the form; API validation and submission reuse it without
+another external call when a full candidate matches. Results expire with the form
+session, after twelve hours or at the next UTC date, and are erased on close.
+There is no shared cache across users or forms.
+
+Only an untruncated postcode/base-number search with fully structured results can
+prove a missing variant invalid. A broad, partial, malformed or street-only response
+cannot prove absence. In that case validation searches postcode/base number again
+using the same UUID and normal lookup budget. A positive complete-address candidate
+can confirm existence even in a limited list. Otherwise saving is blocked; Webabo
+street-only completion and total provider failure never confirm an address.
+
+Canonical payloads keep the single uppercase house letter attached to the number
+(`123A`) and retain the remaining suffix separately (`houseNumberAddition: "2"`).
+For the ACI combined suffix, the conversion rule treats a single letter, optionally
+followed by a numeric suffix, as that house letter. This API does not expose separate
+BAG house-letter and addition fields; this rule is a formatting convention, not an
+independent BAG classification. Multiple letters are not moved into houseNumber.
+Postcodes have no spaces and city names are uppercase; countryCode is NL.
+Internal addressExtension remains separate. The queue preserves houseNumberAddition
+as its own field; this PR does not implement a new Paradise delivery worker.
+
+PostNL documentation bills unique UUID sessions rather than each search in the same
+session/day. The buffer reduces requests and latency; it does not necessarily reduce
+session credits beyond the existing UUID reuse.

@@ -113,10 +113,12 @@ final class CustomerController extends AbstractApiController
     }
 
     #[Route('', name: 'api_customers_create', methods: ['POST'])]
-    public function createCustomer(Request $request): JsonResponse
+    public function createCustomer(Request $request, \App\Address\AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
+
+        $payload = $validator->validatePerson($request->getSession(), $payload);
 
         return $this->json($this->stateService->createCustomer($request->getSession(), $payload), 201);
     }
@@ -130,7 +132,7 @@ final class CustomerController extends AbstractApiController
     }
 
     #[Route('/state', name: 'api_customers_state_write', methods: ['PUT'])]
-    public function writeCustomerState(Request $request): JsonResponse
+    public function writeCustomerState(Request $request, \App\Address\AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
@@ -139,6 +141,20 @@ final class CustomerController extends AbstractApiController
         if (!\is_array($customers)) {
             throw new ApiProblemException(400, 'invalid_payload', 'customers must be an array');
         }
+
+        $existing = $this->stateService->getCustomerState($request->getSession())['customers'];
+        $byId = array_column($existing, null, 'id');
+        $addressFields = array_flip(['postalCode', 'houseNumber', 'houseNumberAddition', 'address', 'street', 'city']);
+        foreach ($customers as &$customer) {
+            if (!is_array($customer)) {
+                throw new ApiProblemException(400, 'invalid_payload', 'Invalid customer');
+            }
+            $previous = $byId[$customer['id'] ?? ''] ?? [];
+            if (array_intersect_key($previous, $addressFields) !== array_intersect_key($customer, $addressFields)) {
+                $customer = $validator->validatePerson($request->getSession(), $customer);
+            }
+        }
+        unset($customer);
 
         return $this->json($this->stateService->replaceCustomers($request->getSession(), $customers));
     }
@@ -167,10 +183,15 @@ final class CustomerController extends AbstractApiController
     }
 
     #[Route('/{customerId}', name: 'api_customer_update', methods: ['PATCH'], requirements: ['customerId' => '\d+'])]
-    public function updateCustomer(Request $request, int $customerId): JsonResponse
+    public function updateCustomer(Request $request, int $customerId, \App\Address\AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
+
+        if (array_intersect(['postalCode', 'houseNumber', 'houseNumberAddition', 'address', 'street', 'city'], array_keys($payload))) {
+            $existing = $this->stateService->getCustomer($request->getSession(), $customerId);
+            $payload = $validator->validatePerson($request->getSession(), array_replace($existing, $payload));
+        }
 
         return $this->json($this->stateService->updateCustomer($request->getSession(), $customerId, $payload));
     }

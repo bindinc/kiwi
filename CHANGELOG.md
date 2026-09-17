@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
-- Show address choices in a floating panel below street and city without shifting the form, and close and clear it after selection. [sc-200162]
+- Float address choices below street and city and hide them after selection; retain server-validated candidates, block unconfirmed addresses and preserve separate house letters/additions with canonical Dutch address formatting. [sc-200162]
 
 - Show selectable address results from any two postcode, house number, street or city fields, including alternatives for conflicting postcodes; fill additions only from selection, never use them as search filters. [sc-200162]
 

@@ -69,27 +69,37 @@ final class AddressLookupService
         foreach ($candidates as $candidate) {
             $samePostcode = '' === $query->postalCode || AddressQuery::compact($candidate['postalCode']) === $query->postalCode;
             $streetOnly = $allowStreetCompletion && null === $candidate['houseNumber'];
-            $sameNumber = '' === $query->houseNumber || $streetOnly || $candidate['houseNumber'] === $query->houseNumber;
+            $sameNumber = '' === $query->houseNumber || $streetOnly || preg_replace('/[A-Z]$/i', '', $candidate['houseNumber'] ?? '') === $query->houseNumber;
             $sameStreet = '' === $query->street || str_starts_with(mb_strtolower($candidate['street']), mb_strtolower($query->street));
             $sameCity = '' === $query->city || str_starts_with(mb_strtolower($candidate['city']), mb_strtolower($query->city));
             if (!$samePostcode || !$sameNumber || !$sameStreet || !$sameCity) {
                 continue;
             }
-            $choice = [
-                'postalCode' => AddressQuery::compact($candidate['postalCode']),
-                'houseNumber' => $candidate['houseNumber'] ?? $query->houseNumber,
-                // Null means Webabo did not supply a number/addition; preserve manual input.
-                'houseNumberAddition' => $streetOnly ? null : $candidate['addition'],
-                'street' => $candidate['street'],
-                'city' => $candidate['city'],
-            ];
+            if (!$streetOnly) {
+                try {
+                    $choice = PostalAddress::fromCandidate($candidate) + ['verified' => true];
+                } catch (\App\Http\ApiProblemException) {
+                    continue;
+                }
+            } else {
+                $choice = ['postalCode' => AddressQuery::compact($candidate['postalCode']),
+                    'houseNumber' => $query->houseNumber, 'houseNumberAddition' => null,
+                    'street' => $candidate['street'], 'city' => mb_strtoupper($candidate['city']),
+                    'countryCode' => 'NL', 'verified' => false];
+            }
             $key = strtoupper(json_encode($choice, JSON_THROW_ON_ERROR));
             $choices[$key] = $choice;
         }
         $choices = array_values($choices);
         $status = [] === $choices ? 'not_found' : (count($choices) === 1 ? 'matched' : 'ambiguous');
 
-        return ['status' => $status, 'candidates' => $choices, 'limited' => count($candidates) >= ($allowStreetCompletion ? 20 : 50)];
+        $limited = count($candidates) >= ($allowStreetCompletion ? 20 : 50);
+        $complete = !$limited && '' !== $query->postalCode && '' !== $query->houseNumber
+            && '' === $query->street && '' === $query->city
+            && count($choices) === count(array_filter($choices, static fn (array $choice): bool => $choice['verified']))
+            && count($candidates) === count($choices);
+
+        return ['status' => $status, 'candidates' => $choices, 'limited' => $limited, 'complete' => $complete];
     }
 
     public static function match(AddressQuery $query, array $candidates, bool $allowStreetCompletion = false): array

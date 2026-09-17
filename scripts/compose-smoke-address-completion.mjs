@@ -60,7 +60,7 @@ try {
     });
     await fill('edit', '1231 aa');
     await page.waitForFunction(() => document.getElementById('editAddress').value === 'Rembrandtlaan');
-    assert.equal(await page.inputValue('#editCity'), 'Loosdrecht');
+    assert.equal(await page.inputValue('#editCity'), 'LOOSDRECHT');
     const first = requests.at(-1).formSessionId;
     assert.equal('houseNumberAddition' in requests.at(-1), false);
     const callsBeforeAddition = requests.length;
@@ -68,6 +68,21 @@ try {
     await page.fill('#editHouseExt', 'MANUAL');
     await page.waitForTimeout(450);
     assert.equal(requests.length, callsBeforeAddition);
+    assert.equal(await page.locator('#editHouseExt').evaluate((field) => field.validity.valid), false);
+    const validation = await page.evaluate(async () => {
+        const address = window.kiwiAddressCompletion.getSubmission('edit');
+        const post = async (path, payload) => {
+            const response = await fetch(`${window.kiwiBasePath}/api/v1/${path}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            return response.status;
+        };
+        return { invalid: await post('addresses/validate', address),
+            invalidSave: await post('persons', { ...address, firstName: 'Test', lastName: 'Invalid' }),
+            valid: await post('addresses/validate', { ...address, houseNumberAddition: '' }) };
+    });
+    assert.deepEqual(validation, { invalid: 422, invalidSave: 422, valid: 200 });
+
     assert.equal(await page.locator('#editAddressChoices').isVisible(), false);
     await page.fill('#editHouseNumber', '3');
     await page.waitForSelector('#editAddressChoices:not([hidden])');
@@ -87,7 +102,7 @@ try {
     await page.screenshot({ path: `${evidence}/address-completed.png`, clip: { x: box.x - 12, y: box.y - 12, width: (await page.locator('#editPostalCode').locator('..').boundingBox()).width + 24, height: bottom.y + bottom.height - box.y + 24 } });
     await fill('edit', '9998ZZ');
     await page.waitForFunction(() => document.getElementById('editAddress').value === 'Fallbackstraat');
-    assert.equal(await page.inputValue('#editCity'), 'Teststad');
+    assert.equal(await page.inputValue('#editCity'), 'TESTSTAD');
     await fill('edit', '9997ZZ');
     await page.waitForSelector('#editAddressStatus button:not([hidden])');
     await page.fill('#editAddress', 'Handmatige straat');
@@ -101,7 +116,7 @@ try {
     for (const pair of [['PostalCode', 'HouseNumber'], ['PostalCode', 'Address'], ['PostalCode', 'City'], ['HouseNumber', 'Address'], ['HouseNumber', 'City'], ['Address', 'City']]) {
         await page.click('#editCustomerForm [data-action="close-form"]');
         await page.evaluate(() => window.editCustomer());
-        const values = { PostalCode: '1231AA', HouseNumber: '1', Address: 'Rembrandt', City: 'Loosdrecht' };
+        const values = { PostalCode: '1231AA', HouseNumber: '1', Address: 'Rembrandt', City: 'LOOSDRECHT' };
         for (const field of pair) await page.fill(`#edit${field}`, values[field]);
         await page.waitForSelector('#editAddressChoices:not([hidden])');
         await page.selectOption('#editAddressChoices', '0');
@@ -114,7 +129,7 @@ try {
     await page.fill('#editPostalCode', '9999ZZ');
     await page.fill('#editHouseNumber', '1');
     await page.fill('#editAddress', 'Rembrandtlaan');
-    await page.fill('#editCity', 'Loosdrecht');
+    await page.fill('#editCity', 'LOOSDRECHT');
     await page.waitForSelector('#editAddressChoices:not([hidden])');
     assert.equal(await page.inputValue('#editPostalCode'), '9999ZZ');
     assert.match(await page.locator('#editAddressStatus').innerText(), /alternatieven/);

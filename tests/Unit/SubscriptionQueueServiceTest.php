@@ -94,10 +94,11 @@ final class SubscriptionQueueServiceTest extends TestCase
                     'lastName' => 'Tester',
                     'birthday' => '1980-01-01',
                     'postalCode' => '1234AB',
-                    'houseNumber' => '10A2',
+                    'houseNumber' => '10A',
+                    'houseNumberAddition' => '2',
                     'street' => 'Teststraat',
                     'addressExtension' => '310',
-                    'address' => 'Teststraat 10A2',
+                    'address' => 'Teststraat 10A 2',
                     'city' => 'Teststad',
                     'email' => 'piet.tester@example.org',
                     'landlinePhone' => '0351234567',
@@ -182,11 +183,13 @@ final class SubscriptionQueueServiceTest extends TestCase
                     'street' => 'Teststraat',
                     'postCode' => '1234AB',
                     'city' => 'Teststad',
-                    'housenumber' => ['housenumber' => '10A2'],
+                    'housenumber' => ['housenumber' => '10A'],
                 ],
             ]],
         ], $requestPayload['recipient']['person']['contacts']);
-        self::assertSame('10A2', $requestPayload['recipient']['person']['houseNumber']);
+        self::assertSame('10A', $requestPayload['recipient']['person']['houseNumber']);
+        self::assertSame('2', $requestPayload['recipient']['person']['houseNumberAddition']);
+        self::assertSame('NL', $requestPayload['recipient']['person']['countryCode']);
         self::assertSame('310', $requestPayload['recipient']['person']['addressExtension']);
 
         $secondResponse = $service->queueSubscription($session, $payload, $currentUserContext);

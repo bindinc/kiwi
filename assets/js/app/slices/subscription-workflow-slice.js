@@ -1,3 +1,4 @@
+import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
 import {
     buildSubscriptionPaymentDetails,
@@ -1058,9 +1059,11 @@ export function editCustomer() {
     setInputValue('editLastName', currentCustomer.lastName || '');
 
     setInputValue('editPostalCode', currentCustomer.postalCode || '');
-    const houseNumberParts = splitHouseNumber(currentCustomer.houseNumber || '');
+    const houseNumberParts = currentCustomer.houseNumberAddition !== undefined
+        ? { houseNumber: currentCustomer.houseNumber || '', houseExt: currentCustomer.houseNumberAddition }
+        : splitHouseNumber(currentCustomer.houseNumber || '');
     setInputValue('editHouseNumber', houseNumberParts.houseNumber);
-    setInputValue('editHouseExt', houseNumberParts.houseExt);
+    setInputValue('editHouseExt', currentCustomer.houseNumberAddition ?? houseNumberParts.houseExt);
 
     const streetName = String(currentCustomer.address || '').replace(/ \d+.*$/, '');
     setInputValue('editAddress', streetName);
@@ -1117,10 +1120,8 @@ export async function saveCustomerEdit(event) {
         optinPost: getCheckedValue('editOptinPost')
     };
 
-    const houseNumber = getInputValue('editHouseNumber');
-    const houseExt = getInputValue('editHouseExt');
-    updates.houseNumber = houseExt ? `${houseNumber}${houseExt}` : houseNumber;
-    updates.address = `${getInputValue('editAddress')} ${updates.houseNumber}`;
+    Object.assign(updates, getAddressSubmission('edit'));
+    updates.address = `${updates.street} ${updates.houseNumber}${updates.houseNumberAddition ? ` ${updates.houseNumberAddition}` : ''}`;
 
     const { personsApiUrl } = getApiEndpoints();
     const apiClient = getApiClient();
