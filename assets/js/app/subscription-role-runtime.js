@@ -352,7 +352,7 @@ function renderCustomerForm(containerId, prefix, config = {}) {
             </div>
             <div class="customer-address-field">
                 <label for="${prefix}HouseExt">${translate('forms.houseExtensionPlaceholder', {}, 'Huisnummer toevoeging')}</label>
-                <input type="text" id="${prefix}HouseExt" data-feedback-sensitive="address" maxlength="10">
+                <input type="text" id="${prefix}HouseExt" readonly data-feedback-sensitive="address" maxlength="10">
             </div>
             <div class="customer-address-field">
                 <label for="${prefix}AddressExtension">${translate('forms.addressExtensionPlaceholder', {}, '(interne) Toevoeging 1')}</label>

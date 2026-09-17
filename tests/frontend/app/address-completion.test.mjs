@@ -276,3 +276,20 @@ test('changing a prefilled profile postcode does not filter by its old street an
     assert.equal(fields.street.value, '');
     assert.equal(fields.city.value, '');
 });
+
+
+test('provider additions stay read-only through selection, reset and form reopening', async () => {
+    const f = fixture();
+    assert.equal(f.fields.addition.readOnly, true);
+    f.form.input(); f.flush();
+    f.pending[0].resolve(matched('Rembrandtlaan', '2')); await tick();
+    f.form.select(0);
+    assert.equal(f.fields.addition.value, '2');
+    assert.equal(f.fields.addition.readOnly, true);
+    f.form.reset();
+    assert.equal(f.fields.addition.readOnly, true);
+    f.form.destroy();
+    const reopened = fixture();
+    assert.equal(reopened.fields.addition.readOnly, true);
+    assert.equal(reopened.requests.length, 0);
+});

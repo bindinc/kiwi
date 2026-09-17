@@ -45,6 +45,8 @@ export function endAddressSessions(root = null) {
 }
 
 export function createAddressCompletion({ fields, request, report, uuid = () => crypto.randomUUID(), schedule = setTimeout, cancel = clearTimeout, now = Date.now, isActive = () => true, includeNumber = false, prefilledAddress = false, invalidMessage = messages.nl.invalid }) {
+    // Provider additions belong to the selected address; internal additions remain editable.
+    if (fields.addition) fields.addition.readOnly = true;
     let sessionId = null;
     let startedAt = 0;
     let timer = null;

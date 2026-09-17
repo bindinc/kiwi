@@ -19,6 +19,8 @@ page.on('request', (request) => {
     }
 });
 async function fill(prefix, postcode, number = '1') {
+    const addition = page.locator(`#${prefix}HouseExt`);
+    if (await addition.count()) assert.equal(await addition.isEditable(), false);
     const row = page.locator(`#${prefix}City`).locator('..');
     const before = await row.boundingBox();
     const completed = page.waitForResponse((response) => response.url().endsWith('/addresses/search') && response.request().method() === 'POST');
@@ -65,10 +67,17 @@ try {
     assert.equal('houseNumberAddition' in requests.at(-1), false);
     const callsBeforeAddition = requests.length;
     assert.equal(await page.locator('#editAddressChoices').isVisible(), false);
-    await page.fill('#editHouseExt', 'MANUAL');
+    await page.locator('#editHouseExt').focus();
+    await page.keyboard.type('MANUAL');
+    assert.equal(await page.inputValue('#editHouseExt'), '');
+    // Simulate DOM tampering: the backend must still reject an invented addition.
+    await page.locator('#editHouseExt').evaluate((field) => {
+        field.value = 'MANUAL';
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     await page.waitForTimeout(450);
     assert.equal(requests.length, callsBeforeAddition);
-    assert.equal(await page.locator('#editHouseExt').evaluate((field) => field.validity.valid), false);
+    assert.match(await page.locator('#editAddressStatus').innerText(), /komt niet voor/);
     const validation = await page.evaluate(async () => {
         const address = window.kiwiAddressCompletion.getSubmission('edit');
         const post = async (path, payload) => {
@@ -151,6 +160,13 @@ try {
     await page.evaluate(() => window.setSubscriptionRoleMode('recipient', 'create'));
     await fill('subRecipient', '1231AA');
     await page.waitForFunction(() => document.getElementById('subRecipientAddress').value === 'Rembrandtlaan');
+    assert.equal(await page.locator('#subRecipientAddressExtension').isEditable(), true);
+    await page.fill('#subRecipientAddressExtension', '310');
+    assert.equal(await page.inputValue('#subRecipientAddressExtension'), '310');
+    await page.locator('#subRecipientHouseExt').focus();
+    await page.keyboard.type('B');
+    assert.equal(await page.inputValue('#subRecipientHouseExt'), '');
+    await page.locator('#subRecipientHouseExt').locator('..').locator('..').screenshot({ path: `${evidence}/house-number-addition-readonly.png` });
     await page.uncheck('#requesterSameAsRecipient');
     await page.evaluate(() => window.setSubscriptionRoleMode('requester', 'create'));
     await fill('subRequester', '1231AA');
