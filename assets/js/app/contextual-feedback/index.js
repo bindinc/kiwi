@@ -142,6 +142,7 @@ async function submitFeedback({ apiUrl, payload, screenshots }) {
     const response = await fetch(apiUrl, {
         method: 'POST',
         body: formData,
+        headers: { 'X-CSRF-Token': document.querySelector('meta[name="kiwi-csrf-token"]')?.content || '' },
         credentials: 'same-origin'
     });
 

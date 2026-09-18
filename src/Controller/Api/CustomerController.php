@@ -198,30 +198,9 @@ final class CustomerController extends AbstractApiController
     public function correctExternalAddress(Request $request, string $customerId, AddressValidationService $validator, PersonSearchClient $client): JsonResponse
     {
         $this->requireApiAccess($request);
-        $credentialKey = trim((string) $request->query->get('credentialKey', ''));
-        if ('' === $credentialKey) {
-            throw new ApiProblemException(400, 'invalid_customer_lookup', 'credentialKey is required');
-        }
-        $payload = $this->parseJsonObject($request);
-        $allowed = ['formSessionId', 'postalCode', 'houseNumber', 'houseNumberAddition', 'street', 'city', 'countryCode'];
-        if (array_diff(array_keys($payload), $allowed)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'Only address fields may be changed through this endpoint.');
-        }
-        $address = $validator->validatePerson($request->getSession(), $payload);
-        // Resolve the person with the selected credential before modifying its main address.
-        $this->readSubscriptionApiCustomer($customerId, $credentialKey);
-        try {
-            $client->updateMainAddress($customerId, $credentialKey, $address);
-        } catch (\RuntimeException) {
-            throw new ApiProblemException(503, 'address_correction_unconfirmed', 'De adreswijziging kon niet worden bevestigd. Controleer opnieuw voordat je nogmaals opslaat.');
-        }
-        $customer = $this->readSubscriptionApiCustomer($customerId, $credentialKey);
-        if (!PostalAddress::same($address, $customer)) {
-            throw new ApiProblemException(409, 'address_correction_unconfirmed', 'Het bronsysteem bevestigt het gewijzigde adres nog niet. Controleer opnieuw.');
-        }
-        $this->addressGate->rememberCorrection($request, $customer);
-        $customer['addressValidation'] = $this->addressGate->check($request, $customer);
-        return $this->json($customer);
+        \App\Security\BusinessAccess::requireSessionWrite($request->getSession());
+        throw new ApiProblemException(409, 'upstream_concurrency_unverified',
+            'Address writes require verified atomic upstream version control.');
     }
 
     #[Route('/{customerId}', name: 'api_customer_update', methods: ['PATCH'], requirements: ['customerId' => '\d+'])]
@@ -232,7 +211,10 @@ final class CustomerController extends AbstractApiController
 
         if (array_intersect(['postalCode', 'houseNumber', 'houseNumberAddition', 'address', 'street', 'city'], array_keys($payload))) {
             $existing = $this->stateService->getCustomer($request->getSession(), $customerId);
-            $payload = $validator->validatePerson($request->getSession(), array_replace($existing, $payload));
+            $validated = $validator->validatePerson($request->getSession(), array_replace($existing, $payload));
+            // Use existing fields only as validation context, never as writable input.
+            $fields = array_merge(array_keys($payload), ['postalCode', 'houseNumber', 'houseNumberAddition', 'street', 'city', 'countryCode', 'address']);
+            $payload = array_intersect_key($validated, array_flip($fields));
         } else {
             $this->addressGate->requireCustomer($request, $customerId);
         }

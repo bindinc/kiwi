@@ -117,7 +117,7 @@ final class CustomerControllerTest extends WebTestCase
         $auditEvent = $this->readAuditEventForResponse($client->getResponse()->headers->get('X-Kiwi-Request-Id'));
         self::assertSame('CUSTOMER_SEARCH_PERFORMED', $auditEvent['action']);
         self::assertSame('success', $auditEvent['result']);
-        self::assertSame('test@example.org', $auditEvent['actor_identifier']);
+        self::assertSame('test-tenant:test-user', $auditEvent['actor_identifier']);
         self::assertContains('name', $auditEvent['metadata']['filterFields']);
         self::assertContains('email', $auditEvent['metadata']['filterFields']);
         self::assertStringNotContainsString('Jane van Dijk', json_encode($auditEvent['metadata'], \JSON_THROW_ON_ERROR));

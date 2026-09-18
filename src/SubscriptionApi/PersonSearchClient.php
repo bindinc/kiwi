@@ -71,16 +71,9 @@ final class PersonSearchClient
 
     public function updateMainAddress(string $personId, string $credentialName, array $address): void
     {
-        $contact = ['address' => [
-            'street' => $address['street'],
-            'postCode' => $address['postalCode'],
-            'city' => $address['city'],
-            'isoCountryCode' => 'NL',
-            'housenumber' => ['housenumber' => trim($address['houseNumber'].' '.$address['houseNumberAddition'])],
-        ]];
-        // PPA documents rid=0 as the main address. Merge-patch preserves internal supplements.
-        $this->requestJson($credentialName, $this->buildPersonUrl($personId).'/contacts/addresses/0',
-            'address correction', false, 'PATCH', $contact);
+        // This legacy path cannot bypass the protected writer's activation requirements.
+        throw new \App\Http\ApiProblemException(409, 'upstream_concurrency_unverified',
+            'Address writes require verified atomic upstream version control.');
     }
 
     private function buildPersonUrl(string $personId): string

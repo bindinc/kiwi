@@ -113,6 +113,7 @@ final class OidcAuthenticatorTest extends WebTestCase
             ],
         ]);
         $oidcClient->method('getUserRoles')->willReturn(['bink8s.app.kiwi.user']);
+        $oidcClient->method('validateIdToken')->willReturn(['actor' => 'test-user', 'tenant' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.user'], 'expiresAt' => time() + 3600]);
         $oidcClient->method('buildUserIdentity')->willReturn([
             'first_name' => 'Kiwi',
             'last_name' => 'User',

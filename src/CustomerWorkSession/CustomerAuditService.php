@@ -44,7 +44,7 @@ final class CustomerAuditService
             $currentUserContext,
             CustomerAuditAction::SearchPerformed,
             CustomerAuditResult::Success,
-            CustomerReference::fromRequestHeaders($request),
+            null,
             [
                 'filterFields' => $filterFields,
                 'resultCount' => max(0, $resultCount),
@@ -155,16 +155,10 @@ final class CustomerAuditService
      */
     private function resolveActorIdentifier(array $currentUserContext): string
     {
-        $identity = \is_array($currentUserContext['identity'] ?? null)
-            ? $currentUserContext['identity']
-            : [];
-        foreach (['email', 'full_name'] as $fieldName) {
-            $value = $identity[$fieldName] ?? null;
-            if (\is_string($value) && '' !== trim($value)) {
-                return trim($value);
-            }
+        $context = $currentUserContext['authorization'] ?? [];
+        if (!is_string($context['actor'] ?? null) || !is_string($context['tenant'] ?? null)) {
+            throw new ApiProblemException(401, 'unauthorized', 'Verified audit actor required');
         }
-
-        return 'unknown-authenticated-user';
+        return $context['tenant'].':'.$context['actor'];
     }
 }

@@ -195,9 +195,9 @@ class OidcClient
      *
      * @throws \UnexpectedValueException
      */
-    public function validateIdToken(array $sessionData, string $expectedNonce): void
+    public function validateIdToken(array $sessionData, string $expectedNonce): array
     {
-        $this->tokenInspector()->validateIdToken($sessionData, $expectedNonce);
+        return $this->tokenInspector()->validateIdToken($sessionData, $expectedNonce);
     }
 
     public function buildEndSessionLogoutUrl(

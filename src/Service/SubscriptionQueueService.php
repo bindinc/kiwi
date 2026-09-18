@@ -43,6 +43,7 @@ final class SubscriptionQueueService
      */
     public function queueSubscription(SessionInterface $session, array $payload, array $currentUserContext): array
     {
+        $authorization = \App\Security\BusinessAccess::requireSessionWrite($session);
         $submissionId = $this->normalizeSubmissionId($payload['submissionId'] ?? null);
         $this->ensureQueueSchema();
 
@@ -53,6 +54,7 @@ final class SubscriptionQueueService
 
         $normalizedPayload = $this->normalizeQueuePayload($session, $payload);
         $normalizedPayload['submissionId'] = $submissionId;
+        $normalizedPayload['authorization'] = $authorization->toArray();
         $summaryPayload = $this->buildSummaryPayload($normalizedPayload, $currentUserContext);
         $queuedAt = $this->createUtcNow();
 

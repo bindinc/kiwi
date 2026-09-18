@@ -82,54 +82,18 @@ final class CustomerAddressGateTest extends WebTestCase
         self::assertResponseStatusCodeSame(409);
     }
 
-    public function testExternalCorrectionPersistsOnlyAddressAndRequiresReadback(): void
+    public function testExternalCorrectionCannotBypassWriteActivation(): void
     {
-        file_put_contents($this->configFile, json_encode([
-            'postnl' => ['api_key' => '<api-key>'],
-            'hup' => ['hup_oidc_token' => 'https://identity.invalid/token', 'webabo_base_url' => 'https://webabo.invalid',
-                'ppa_base_url' => 'https://subscription.invalid',
-                'credentials' => ['demo' => ['username' => 'fixture', 'password' => '<password>']]],
-        ]));
         $client = $this->createAuthenticatedClient();
         $client->disableReboot();
-        static::getContainer()->set('address.http_client', AddressSmokeHttpClientFactory::create());
-        $contact = ['extension' => 'Internal supplement', 'address' => ['street' => 'Wrong street', 'postCode' => '1231AA',
-            'city' => 'WRONG CITY', 'housenumber' => ['housenumber' => '1']]];
-        $writes = [];
-        $persist = true;
-        $http = new \Symfony\Component\HttpClient\MockHttpClient(function ($method, $url, $options) use (&$contact, &$writes, &$persist) {
-            if (str_contains($url, 'identity.invalid')) $data = ['access_token' => '<token>', 'expires_in' => 300];
-            elseif (str_contains($url, '/public/orders')) $data = ['content' => []];
-            elseif ('PATCH' === $method) {
-                $writes[] = json_decode($options['body'], true);
-                if ($persist) $contact['address'] = array_replace($contact['address'], $writes[array_key_last($writes)]['address']);
-                $data = $contact;
-            } elseif (str_contains($url, '/contacts/addresses/0')) $data = $contact;
-            else $data = ['rId' => '123', 'lastName' => 'External fixture', 'contacts' => ['addresses' => [$contact]]];
-            return new \Symfony\Component\HttpClient\Response\MockResponse(json_encode($data));
-        });
-        static::getContainer()->set('http_client', $http);
-        $client->request('GET', '/api/v1/persons/123?credentialKey=demo');
-        self::assertResponseIsSuccessful();
-        self::assertSame('blocked', json_decode($client->getResponse()->getContent(), true)['addressValidation']['status']);
-        $payload = ['formSessionId' => 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', 'postalCode' => '1231AA',
-            'houseNumber' => '1A', 'houseNumberAddition' => '', 'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT'];
-        $client->jsonRequest('PATCH', '/api/v1/persons/123/address?credentialKey=demo', $payload + ['email' => 'must-not-change@example.invalid']);
-        self::assertResponseStatusCodeSame(400);
-        self::assertCount(0, $writes);
-        $client->jsonRequest('PATCH', '/api/v1/persons/123/address?credentialKey=demo', array_replace($payload, ['houseNumberAddition' => 'B']));
-        self::assertResponseStatusCodeSame(422);
-        self::assertCount(0, $writes);
-        $client->jsonRequest('PATCH', '/api/v1/persons/123/address?credentialKey=demo', $payload);
-        self::assertResponseIsSuccessful();
-        self::assertCount(1, $writes);
-        self::assertSame(['address'], array_keys($writes[0]));
-        self::assertSame('Internal supplement', $contact['extension']);
-        self::assertSame('confirmed', json_decode($client->getResponse()->getContent(), true)['addressValidation']['status']);
-        $persist = false;
-        $client->jsonRequest('PATCH', '/api/v1/persons/123/address?credentialKey=demo', array_replace($payload, ['houseNumber' => '1']));
+        static::getContainer()->set('http_client', new \Symfony\Component\HttpClient\MockHttpClient(function () {
+            self::fail('A disabled mutation must not contact upstream.');
+        }));
+        $client->jsonRequest('PATCH', '/api/v1/persons/123/address?credentialKey=forged', [
+            'postalCode' => '1231AA', 'houseNumber' => '1A', 'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT',
+        ]);
         self::assertResponseStatusCodeSame(409);
-        self::assertSame('address_correction_unconfirmed', json_decode($client->getResponse()->getContent(), true)['error']['code']);
+        self::assertSame('upstream_concurrency_unverified', json_decode($client->getResponse()->getContent(), true)['error']['code']);
     }
 
     public function testWorkflowIsolationAndReset(): void

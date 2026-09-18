@@ -74,6 +74,13 @@
             headers: buildHeaders(options && options.headers, options)
         };
 
+        if (isWrite) {
+            const csrf = typeof document !== 'undefined'
+                ? document.querySelector('meta[name="kiwi-csrf-token"]')?.content
+                : null;
+            if (csrf) requestOptions.headers['X-CSRF-Token'] = csrf;
+        }
+
         if (options && options.signal) {
             requestOptions.signal = options.signal;
         }

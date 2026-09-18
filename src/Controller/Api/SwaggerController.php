@@ -23,6 +23,7 @@ final class SwaggerController extends AbstractApiController
         OidcConfiguration $oidcConfiguration,
         JsonRequestDecoder $jsonRequestDecoder,
         private readonly RouterInterface $router,
+        private readonly \Symfony\Component\Security\Csrf\CsrfTokenManagerInterface $csrf,
     ) {
         parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
@@ -51,6 +52,7 @@ final class SwaggerController extends AbstractApiController
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="kiwi-csrf-token" content="%s" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kiwi API Swagger</title>
     <link rel="icon" type="image/png" href="%s" sizes="32x32" />
@@ -78,6 +80,12 @@ final class SwaggerController extends AbstractApiController
           SwaggerUIBundle.plugins.DownloadUrl,
         ],
         layout: "StandaloneLayout",
+        requestInterceptor: (request) => {
+          if (!['GET', 'HEAD'].includes(request.method.toUpperCase())) {
+            request.headers['X-CSRF-Token'] = document.querySelector('meta[name="kiwi-csrf-token"]').content;
+          }
+          return request;
+        },
       });
     </script>
   </body>
@@ -86,6 +94,7 @@ HTML;
 
         return new Response(sprintf(
             $html,
+            htmlspecialchars($this->csrf->getToken('kiwi_api')->getValue(), \ENT_QUOTES),
             htmlspecialchars($swaggerUiFavicon32, \ENT_QUOTES),
             htmlspecialchars($swaggerUiFavicon16, \ENT_QUOTES),
             htmlspecialchars($swaggerUiCss, \ENT_QUOTES),
@@ -130,6 +139,7 @@ HTML;
             foreach ($methods as $method) {
                 $operation = [
                     'operationId' => strtolower($method).'_'.$name,
+                    'x-kiwi-policy' => \App\Security\ApiRoutePolicy::ROUTES[$name] ?? 'unclassified',
                     'summary' => sprintf('%s %s', $method, str_replace('_', ' ', $name)),
                     'tags' => [$this->resolveTag($path)],
                     'responses' => $this->buildResponses(),

@@ -44,7 +44,7 @@ final class CustomerWorkSessionControllerTest extends WebTestCase
             [$requestId],
         );
         self::assertIsArray($auditEvent);
-        self::assertSame('test@example.org', $auditEvent['actor_identifier']);
+        self::assertSame('test-tenant:test-user', $auditEvent['actor_identifier']);
         self::assertSame('CUSTOMER_SESSION_RESET', $auditEvent['action']);
         self::assertSame('success', $auditEvent['result']);
         self::assertSame('workflow-reset-audit', $auditEvent['workflow_session_id']);

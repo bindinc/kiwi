@@ -35,7 +35,7 @@ final class RequestOidcContext
     public function isAuthenticated(Request $request, ?OidcUser $authenticatedUser = null): bool
     {
         $sessionData = $this->getSessionData($request, $authenticatedUser);
-        if (!$this->tokenInspector->hasFreshSessionToken($sessionData)) {
+        if (null === \App\Security\AuthorizationContext::fromSessionData($sessionData)) {
             return false;
         }
 
@@ -57,6 +57,7 @@ final class RequestOidcContext
         return [
             'identity' => $this->userIdentityMapper->buildUserIdentity($profile),
             'roles' => $this->tokenInspector->getUserRoles($sessionData),
+            'authorization' => \App\Security\AuthorizationContext::fromSessionData($sessionData)?->toArray(),
         ];
     }
 }
