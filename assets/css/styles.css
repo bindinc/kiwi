@@ -2999,7 +2999,8 @@ select option {
     color: var(--text-primary);
 }
 
-.onepager-container .customer-address-field input {
+.onepager-container .customer-address-field input,
+.onepager-container .customer-address-field select {
     width: 100%;
 }
 

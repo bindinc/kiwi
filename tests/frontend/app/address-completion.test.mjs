@@ -293,3 +293,108 @@ test('provider additions stay read-only through selection, reset and form reopen
     assert.equal(reopened.fields.addition.readOnly, true);
     assert.equal(reopened.requests.length, 0);
 });
+
+const variants = () => {
+    const address = { postalCode: '1223CK', houseNumber: '2A', street: 'Kometenstraat', city: 'HILVERSUM', verified: true };
+    return { complete: true, candidates: [
+        { ...address, houseNumber: '2', houseNumberAddition: '' },
+        { ...address, houseNumberAddition: '1' }, { ...address, houseNumberAddition: '2' },
+        { ...address, houseNumberAddition: '3', verified: false },
+        { ...address, houseNumberAddition: null },
+    ] };
+};
+async function additionFixture(options = {}) {
+    const states = [];
+    const f = fixture({ reportAdditions: (candidates, selected) => states.push({ additions: candidates.map(c => c.houseNumberAddition), selected }), ...options });
+    f.fields.postalCode.value = '1223CK'; f.fields.houseNumber.value = '2A';
+    f.form.input(); f.flush(); f.pending[0].resolve(variants()); await tick();
+    return { ...f, states };
+}
+
+test('offers only verified additions for the exact number and letter before and after selection', async () => {
+    const f = await additionFixture();
+    assert.deepEqual(f.states.at(-1), { additions: ['1', '2'], selected: null });
+    f.form.select(1);
+    assert.deepEqual(f.states.at(-1), { additions: ['1', '2'], selected: '1' });
+    f.form.selectAddition('2');
+    assert.equal(f.fields.addition.value, '2');
+    assert.equal(f.fields.houseNumber.value, '2A');
+    assert.equal(f.fields.street.value, 'Kometenstraat');
+    assert.deepEqual(f.states.at(-1), { additions: ['1', '2'], selected: '2' });
+    f.form.selectAddition('1'); f.form.input(); f.flush();
+    assert.equal(f.fields.addition.value, '1');
+    assert.equal(f.requests.length, 1);
+    for (const invalid of ['', '3', 'B']) f.form.selectAddition(invalid);
+    assert.equal(f.fields.addition.value, '1');
+});
+
+test('choosing an addition can complete the address directly from exact postcode and number', async () => {
+    const f = await additionFixture();
+    f.form.selectAddition('2');
+    assert.equal(f.fields.street.value, 'Kometenstraat');
+    assert.equal(f.fields.city.value, 'HILVERSUM');
+    assert.equal(f.fields.addition.value, '2');
+    assert.equal(f.reports.at(-1), 'matched');
+    assert.equal(f.requests.length, 1);
+});
+
+test('number edits, copied addresses, reset and disposal cannot reuse old addition choices', async () => {
+    for (const change of [f => { f.fields.houseNumber.value = '2B'; f.form.input(); },
+        f => { f.fields.street.value = 'Copied street'; }, f => f.form.reset(), f => f.form.destroy()]) {
+        const f = await additionFixture();
+        change(f); f.form.selectAddition('2');
+        assert.equal(f.fields.addition.value, '');
+    }
+});
+
+test('expired addition choices are removed instead of applying stale confirmation', async () => {
+    let time = Date.parse('2026-09-18T10:00:00Z');
+    const f = await additionFixture({ now: () => time });
+    time += 43200000;
+    f.form.selectAddition('2');
+    assert.equal(f.fields.addition.value, '');
+    assert.deepEqual(f.states.at(-1).additions, []);
+});
+
+test('partial buffers allow known verified variants without inventing missing options', async () => {
+    const f = fixture();
+    f.fields.postalCode.value = '1223CK'; f.fields.houseNumber.value = '2A';
+    f.form.input(); f.flush(); f.pending[0].resolve({ ...variants(), complete: false, limited: true }); await tick();
+    f.form.selectAddition('2');
+    assert.equal(f.fields.addition.value, '2');
+    f.form.selectAddition('9');
+    assert.equal(f.fields.addition.value, '2');
+    assert.equal(f.requests.length, 1);
+});
+
+test('different streets at the same number require full address selection', async () => {
+    const states = [];
+    const f = fixture({ reportAdditions: c => states.push(c) });
+    f.fields.postalCode.value = '1223CK'; f.fields.houseNumber.value = '2A';
+    f.form.input(); f.flush();
+    const result = variants(); result.candidates[2].street = 'Other street';
+    f.pending[0].resolve(result); await tick();
+    assert.deepEqual(states.at(-1), []);
+    f.form.selectAddition('2');
+    assert.equal(f.fields.street.value, '');
+});
+
+test('a verified empty addition is selectable but an unknown Webabo addition is not', async () => {
+    const f = await additionFixture();
+    f.form.select(0);
+    f.form.selectAddition('');
+    assert.equal(f.fields.houseNumber.value, '2');
+    assert.equal(f.fields.addition.value, '');
+    assert.deepEqual(f.states.at(-1), { additions: [''], selected: '' });
+    assert.equal(f.requests.length, 1);
+});
+
+test('switching buffered additions while validating invalidates the old confirmation', async () => {
+    const f = await additionFixture();
+    f.form.selectAddition('1');
+    const checking = f.form.validate();
+    f.form.selectAddition('2');
+    f.pending[1].resolve({ status: 'confirmed', address: variants().candidates[1] });
+    assert.equal(await checking, false);
+    assert.equal(f.fields.addition.value, '2');
+});

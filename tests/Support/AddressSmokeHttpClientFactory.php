@@ -29,6 +29,10 @@ final class AddressSmokeHttpClientFactory
                 $postcode = $query['postalCode'] ?? '';
                 if (in_array($postcode, ['9998ZZ', '9997ZZ'], true)) return self::respond([], 503);
                 if ('9999ZZ' === $postcode) return self::respond([]);
+                if ('1223CK' === $postcode) {
+                    $address = ['postalCode' => '1223CK', 'houseNumber' => '2', 'houseNumberAddition' => '', 'streetName' => 'Kometenstraat', 'cityName' => 'Hilversum'];
+                    return self::respond([$address, array_replace($address, ['houseNumberAddition' => 'A 1']), array_replace($address, ['houseNumberAddition' => 'A 2'])]);
+                }
                 $address = ['postalCode' => $postcode ?: '1231AA', 'houseNumber' => $query['houseNumber'] ?? '1', 'houseNumberAddition' => '', 'streetName' => 'Rembrandtlaan', 'cityName' => 'Loosdrecht'];
                 return self::respond([$address, array_replace($address, ['houseNumberAddition' => 'A'])]);
             }
