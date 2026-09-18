@@ -1,8 +1,8 @@
 const activeForms = new Set();
 const prefixes = ['subRecipient', 'subRequester', 'article', 'edit', 'restitutionTransfer'];
 const messages = {
-    nl: { invalid: 'Dit adres komt niet voor in de adresdatabase. Kies een geldig adres.', unconfirmed: 'Het volledige adres is niet bevestigd. Opslaan is geblokkeerd; probeer opnieuw.', validating: 'Volledig adres controleren…', loading: 'Adres opzoeken…', matched: 'Adres aangevuld vanuit je keuze.', results: 'Kies het juiste adres.', alternatives: 'Geen match met deze postcode. Controleer de alternatieven; kiezen vervangt de postcode.', limited: 'Er zijn veel resultaten. Vul een extra adresveld in om gerichter te zoeken.', choose: 'Kies een adres', unknownAddition: 'toevoeging niet beschikbaar', not_found: 'Geen adres gevonden. Controleer de invoer; alleen bevestigde adressen kunnen worden opgeslagen.', ambiguous: 'Meerdere adressen gevonden. Vul straat en plaats zelf in.', unavailable: 'Adres opzoeken is tijdelijk niet beschikbaar. Opslaan vereist een bevestigd adres.', retry: 'Opnieuw proberen' },
-    en: { invalid: 'This address is not in the address database. Choose a valid address.', unconfirmed: 'The complete address is unconfirmed. Saving is blocked; try again.', validating: 'Checking the complete address…', loading: 'Looking up address…', matched: 'Address completed from your selection.', results: 'Choose the correct address.', alternatives: 'No match for this postcode. Check the alternatives; selecting one replaces the postcode.', limited: 'Many results found. Enter another address field to narrow the search.', choose: 'Choose an address', unknownAddition: 'addition unavailable', not_found: 'No address found. Check your input; only confirmed addresses can be saved.', ambiguous: 'Multiple addresses found. Enter street and city manually.', unavailable: 'Address lookup is temporarily unavailable. Saving requires a confirmed address.', retry: 'Try again' }
+    nl: { additionLabel: 'Huisnummer toevoeging', chooseAddition: 'Kies een toevoeging', noAddition: 'Geen toevoeging', invalid: 'Dit adres komt niet voor in de adresdatabase. Kies een geldig adres.', unconfirmed: 'Het volledige adres is niet bevestigd. Opslaan is geblokkeerd; probeer opnieuw.', validating: 'Volledig adres controleren…', loading: 'Adres opzoeken…', matched: 'Adres aangevuld vanuit je keuze.', results: 'Kies het juiste adres.', alternatives: 'Geen match met deze postcode. Controleer de alternatieven; kiezen vervangt de postcode.', limited: 'Er zijn veel resultaten. Vul een extra adresveld in om gerichter te zoeken.', choose: 'Kies een adres', unknownAddition: 'toevoeging niet beschikbaar', not_found: 'Geen adres gevonden. Controleer de invoer; alleen bevestigde adressen kunnen worden opgeslagen.', ambiguous: 'Meerdere adressen gevonden. Vul straat en plaats zelf in.', unavailable: 'Adres opzoeken is tijdelijk niet beschikbaar. Opslaan vereist een bevestigd adres.', retry: 'Opnieuw proberen' },
+    en: { additionLabel: 'House number addition', chooseAddition: 'Choose an addition', noAddition: 'No addition', invalid: 'This address is not in the address database. Choose a valid address.', unconfirmed: 'The complete address is unconfirmed. Saving is blocked; try again.', validating: 'Checking the complete address…', loading: 'Looking up address…', matched: 'Address completed from your selection.', results: 'Choose the correct address.', alternatives: 'No match for this postcode. Check the alternatives; selecting one replaces the postcode.', limited: 'Many results found. Enter another address field to narrow the search.', choose: 'Choose an address', unknownAddition: 'addition unavailable', not_found: 'No address found. Check your input; only confirmed addresses can be saved.', ambiguous: 'Multiple addresses found. Enter street and city manually.', unavailable: 'Address lookup is temporarily unavailable. Saving requires a confirmed address.', retry: 'Try again' }
 };
 
 export function normalizeAddressInput(postalCode, houseNumber, street = '', city = '') {
@@ -44,7 +44,7 @@ export function endAddressSessions(root = null) {
     }
 }
 
-export function createAddressCompletion({ fields, request, report, uuid = () => crypto.randomUUID(), schedule = setTimeout, cancel = clearTimeout, now = Date.now, isActive = () => true, includeNumber = false, prefilledAddress = false, invalidMessage = messages.nl.invalid }) {
+export function createAddressCompletion({ fields, request, report, reportAdditions = () => {}, uuid = () => crypto.randomUUID(), schedule = setTimeout, cancel = clearTimeout, now = Date.now, isActive = () => true, includeNumber = false, prefilledAddress = false, invalidMessage = messages.nl.invalid }) {
     // Provider additions belong to the selected address; internal additions remain editable.
     if (fields.addition) fields.addition.readOnly = true;
     let sessionId = null;
@@ -58,6 +58,7 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
     let choices = [];
     let selected = null;
     let choicesFingerprint = '';
+    let additionsFingerprint = '';
     const read = () => {
         let street = fields.street.value === automatic?.street ? '' : fields.street.value;
         if (includeNumber) {
@@ -96,6 +97,50 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
         return { matched, rejected };
     }
 
+    function additionCandidates() {
+        validateBuffer();
+        const current = addressValues(fields, includeNumber);
+        const candidates = (validationBuffer?.candidates || []).filter(candidate =>
+            candidate.verified === true && typeof candidate.houseNumberAddition === 'string'
+            && candidate.postalCode === current.postalCode && candidate.houseNumber === current.houseNumber);
+        // A short addition label is only safe when every option identifies the same street and city.
+        const addresses = new Set(candidates.map(candidate => JSON.stringify([candidate.street.toUpperCase(), candidate.city.toUpperCase()])));
+        if (addresses.size !== 1) return [];
+        return candidates.filter((candidate, index) => candidates.findIndex(other => other.houseNumberAddition === candidate.houseNumberAddition) === index);
+    }
+
+    function updateAdditions() {
+        const candidates = additionCandidates();
+        additionsFingerprint = fingerprint();
+        const current = addressValues(fields, includeNumber);
+        const matched = candidates.find(candidate => sameAddress(candidate, current));
+        reportAdditions(candidates, matched?.houseNumberAddition ?? null);
+    }
+
+    function applyChoice(choice) {
+        ++revision;
+        cancel(timer);
+        selected = choice;
+        const addition = choice.houseNumberAddition;
+        const effectiveAddition = addition === null ? fields.addition?.value || '' : addition;
+        const street = includeNumber ? `${choice.street} ${choice.houseNumber}${effectiveAddition ? ` ${effectiveAddition}` : ''}` : choice.street;
+        const city = choice.city.toUpperCase();
+        automatic = { street, city };
+        fields.street.value = street;
+        fields.city.value = city;
+        if (addition !== null && fields.addition) {
+            fields.addition.value = addition;
+            automatic.addition = addition;
+        }
+        fields.houseNumber.value = choice.houseNumber;
+        fields.postalCode.value = choice.postalCode;
+        choicesFingerprint = fingerprint();
+        lastFingerprint = choicesFingerprint;
+        choices = [];
+        updateAdditions();
+        report(choice.verified === false ? 'unconfirmed' : 'matched');
+    }
+
     function reset() {
         ++revision;
         cancel(timer);
@@ -106,6 +151,7 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
         (fields.addition || fields.houseNumber).setCustomValidity?.('');
         choices = [];
         selected = null;
+        reportAdditions([], null);
         report('');
     }
 
@@ -123,6 +169,7 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
         (fields.addition || fields.houseNumber).setCustomValidity?.('');
         choices = [];
         selected = null;
+        reportAdditions([], null);
         report('');
         if (automatic) {
             for (const key of ['street', 'city', 'addition']) {
@@ -163,6 +210,7 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
                     && typeof candidate.city === 'string' && (candidate.houseNumberAddition === null || typeof candidate.houseNumberAddition === 'string'));
                 if (choices.length) {
                     choicesFingerprint = expectedFingerprint;
+                    updateAdditions();
                     report(response.postcodeRelaxed ? 'alternatives' : response.limited ? 'limited' : 'results', choices);
                     return;
                 }
@@ -182,25 +230,13 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
         select(index) {
             const choice = choices[index];
             if (!choice || destroyed || !isActive() || fingerprint() !== choicesFingerprint) return;
-            selected = choice;
-            const addition = choice.houseNumberAddition;
-            const effectiveAddition = addition === null ? fields.addition?.value || '' : addition;
-            const street = includeNumber ? `${choice.street} ${choice.houseNumber}${effectiveAddition ? ` ${effectiveAddition}` : ''}` : choice.street;
-            const city = choice.city.toUpperCase();
-            automatic = { street, city };
-            fields.street.value = street;
-            fields.city.value = city;
-            if (addition !== null && fields.addition) {
-                fields.addition.value = addition;
-                automatic.addition = addition;
-            }
-            fields.houseNumber.value = choice.houseNumber;
-            fields.postalCode.value = choice.postalCode;
-            choicesFingerprint = fingerprint();
-            lastFingerprint = choicesFingerprint;
-            choices = [];
-            validateBuffer();
-            report(choice.verified === false ? 'unconfirmed' : 'matched');
+            applyChoice(choice);
+        },
+        selectAddition(addition) {
+            if (destroyed || !isActive() || fingerprint() !== additionsFingerprint) return;
+            const choice = additionCandidates().find(candidate => candidate.houseNumberAddition === addition);
+            if (!choice) { updateAdditions(); return; }
+            applyChoice(choice);
         },
         manualInput(field) {
             if (automatic) delete automatic[field];
@@ -244,6 +280,7 @@ export function createAddressCompletion({ fields, request, report, uuid = () => 
                 fields.street.value = includeNumber ? `${address.street} ${address.houseNumber}${address.houseNumberAddition ? ` ${address.houseNumberAddition}` : ''}` : address.street;
                 (fields.addition || fields.houseNumber).setCustomValidity?.('');
                 choices = [];
+                updateAdditions();
                 report('matched');
                 return true;
             } catch {
@@ -265,8 +302,11 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
     const isVisible = (element) => element.isConnected && !element.disabled && !element.closest('[hidden]') && element.getClientRects().length > 0;
 
     async function request(path, options) {
+        const headers = { 'Content-Type': 'application/json' };
+        const csrf = documentRef.querySelector('meta[name="kiwi-csrf-token"]')?.content;
+        if (csrf) headers['X-CSRF-Token'] = csrf;
         const response = await windowRef.fetch(`${base}/api/v1/addresses${path}`, {
-            ...options, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }
+            ...options, credentials: 'same-origin', headers
         });
         if (!response.ok) throw new Error('Address lookup unavailable');
         return response.status === 204 ? null : response.json();
@@ -305,7 +345,38 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
         choicesSelect.className = 'address-completion-choices';
         choicesSelect.hidden = choicesLabel.hidden = true;
         status.append(label, retry, choicesLabel, choicesSelect);
+        const additionSelect = documentRef.createElement('select');
+        additionSelect.id = `${prefix}HouseExtChoices`;
+        additionSelect.setAttribute('aria-label', text('additionLabel'));
+        additionSelect.setAttribute('data-feedback-sensitive', 'address');
+        additionSelect.hidden = true;
+        const additionLabels = Array.from(fields.addition?.labels || []);
+        // Keep the existing field for copied addresses and submission readers; show one control at a time.
+        documentRef.getElementById(additionSelect.id)?.remove();
+        fields.addition?.after(additionSelect);
         const form = createAddressCompletion({ fields, request, prefilledAddress: prefix === 'edit', invalidMessage: text('invalid'), uuid: () => windowRef.crypto.randomUUID(), includeNumber: prefix === 'restitutionTransfer', isActive: () => isVisible(fields.postalCode),
+            reportAdditions(candidates, selectedAddition) {
+                if (!fields.addition) return;
+                const visible = candidates.length > 0;
+                additionSelect.hidden = !visible;
+                fields.addition.hidden = visible;
+                additionSelect.disabled = fields.addition.disabled;
+                for (const label of additionLabels) label.htmlFor = visible ? additionSelect.id : fields.addition.id;
+                additionSelect.replaceChildren();
+                if (!visible) return;
+                const prompt = documentRef.createElement('option');
+                prompt.textContent = text('chooseAddition');
+                prompt.disabled = true;
+                prompt.value = '__choose__';
+                additionSelect.append(prompt);
+                for (const candidate of candidates) {
+                    const option = documentRef.createElement('option');
+                    option.value = candidate.houseNumberAddition;
+                    option.textContent = option.value || text('noAddition');
+                    additionSelect.append(option);
+                }
+                additionSelect.value = selectedAddition ?? '__choose__';
+            },
             report(value, candidates = []) {
                 label.textContent = text(value);
                 status.hidden = !value || value === 'matched';
@@ -337,6 +408,7 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
             }
         });
         choicesSelect.addEventListener('change', () => { if (choicesSelect.value !== '') form.select(Number(choicesSelect.value)); });
+        additionSelect.addEventListener('change', () => form.selectAddition(additionSelect.value));
         retry.addEventListener('click', () => form.retry());
         forms.set(prefix, form);
         return form;

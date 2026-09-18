@@ -43,6 +43,43 @@ async function fill(prefix, postcode, number = '1') {
     }
 }
 
+
+async function checkAdditionVariants(prefix) {
+    await page.fill(`#${prefix}HouseNumber`, '2A');
+    await page.fill(`#${prefix}PostalCode`, '1223CK');
+    const select = page.locator(`#${prefix}HouseExtChoices`);
+    await page.waitForFunction(id => [...(document.getElementById(id)?.options || [])].some(option => option.value === '2'), `${prefix}HouseExtChoices`);
+    assert.deepEqual(await select.locator('option:not([disabled])').evaluateAll(options => options.map(option => option.value)), ['1', '2']);
+    const calls = requests.length;
+    await select.selectOption('1');
+    assert.equal(await page.inputValue(`#${prefix}HouseNumber`), '2A');
+    assert.equal(await page.inputValue(`#${prefix}HouseExt`), '1');
+    assert.equal(await page.inputValue(`#${prefix}Address`), 'Kometenstraat');
+    assert.equal(await page.locator(`#${prefix}AddressChoices`).isVisible(), false);
+    await select.focus();
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await page.inputValue(`#${prefix}HouseExt`), '2');
+    await page.waitForTimeout(450);
+    assert.equal(requests.length, calls, 'switching additions must not search again');
+    const status = await page.evaluate(async prefix => {
+        const address = window.kiwiAddressCompletion.getSubmission(prefix);
+        const validate = async addition => (await fetch(`${window.kiwiBasePath}/api/v1/addresses/validate`, {
+            method: 'POST', headers: {'Content-Type':'application/json', 'X-CSRF-Token': document.querySelector('meta[name="kiwi-csrf-token"]').content}, body: JSON.stringify({...address, houseNumberAddition: addition})
+        })).status;
+        return [await validate('1'), await validate('2'), await validate('B')];
+    }, prefix);
+    assert.deepEqual(status, [200, 200, 422]);
+    assert.equal(requests.length, calls);
+    if (prefix === 'subRecipient') {
+        await select.locator('..').locator('..').screenshot({ path: `${evidence}/addition-choices-desktop.png` });
+        await page.setViewportSize({width:390, height:844});
+        await select.locator('..').locator('..').screenshot({ path: `${evidence}/addition-choices-narrow.png` });
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        await page.setViewportSize({width:1440, height:1100});
+    }
+    console.log(`PASS: ${prefix} 1223CK/2A additions 1 and 2; buffered switches and server rejection of B`);
+}
+
 try {
     console.log("Opening isolated application");
     await page.goto(baseUrl);
@@ -67,8 +104,8 @@ try {
     assert.equal('houseNumberAddition' in requests.at(-1), false);
     const callsBeforeAddition = requests.length;
     assert.equal(await page.locator('#editAddressChoices').isVisible(), false);
-    await page.locator('#editHouseExt').focus();
-    await page.keyboard.type('MANUAL');
+    assert.equal(await page.locator('#editHouseExtChoices').isVisible(), true);
+    assert.deepEqual(await page.locator('#editHouseExtChoices option:not([disabled])').evaluateAll(options => options.map(option => option.value)), ['']);
     assert.equal(await page.inputValue('#editHouseExt'), '');
     // Simulate DOM tampering: the backend must still reject an invented addition.
     await page.locator('#editHouseExt').evaluate((field) => {
@@ -82,7 +119,7 @@ try {
         const address = window.kiwiAddressCompletion.getSubmission('edit');
         const post = async (path, payload) => {
             const response = await fetch(`${window.kiwiBasePath}/api/v1/${path}`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="kiwi-csrf-token"]').content }, body: JSON.stringify(payload)
             });
             return response.status;
         };
@@ -149,6 +186,7 @@ try {
     await page.setViewportSize({ width: 1440, height: 1100 });
     await page.selectOption('#editAddressChoices', '0');
     assert.equal(await page.inputValue('#editPostalCode'), '1231AA');
+    await checkAdditionVariants('edit');
     console.log('PASS: all six input pairs and explicit postcode correction');
     console.log('PASS: PostNL, Webabo fallback, total failure, manual input, UUID reuse and form reopening');
     await page.click('#editCustomerForm [data-action="close-form"]');
@@ -163,19 +201,21 @@ try {
     assert.equal(await page.locator('#subRecipientAddressExtension').isEditable(), true);
     await page.fill('#subRecipientAddressExtension', '310');
     assert.equal(await page.inputValue('#subRecipientAddressExtension'), '310');
-    await page.locator('#subRecipientHouseExt').focus();
-    await page.keyboard.type('B');
+    assert.equal(await page.locator('#subRecipientHouseExtChoices').isVisible(), true);
     assert.equal(await page.inputValue('#subRecipientHouseExt'), '');
     await page.locator('#subRecipientHouseExt').locator('..').locator('..').screenshot({ path: `${evidence}/house-number-addition-readonly.png` });
+    await checkAdditionVariants('subRecipient');
     await page.uncheck('#requesterSameAsRecipient');
     await page.evaluate(() => window.setSubscriptionRoleMode('requester', 'create'));
     await fill('subRequester', '1231AA');
     await page.waitForFunction(() => document.getElementById('subRequesterAddress').value === 'Rembrandtlaan');
     assert.notEqual(requests.at(-1).formSessionId, requests.at(-2).formSessionId);
+    await checkAdditionVariants('subRequester');
     await page.evaluate(() => window.closeForm('newSubscriptionForm'));
     await page.click('[data-action="open-article-sale-form"]');
     await fill('article', '1231AA');
     await page.waitForFunction(() => document.getElementById('articleAddress').value === 'Rembrandtlaan');
+    await checkAdditionVariants('article');
     await page.evaluate(() => window.closeForm('articleSaleForm'));
     await page.evaluate(() => window.kiwiWinbackSlice.showRestitutionTransferForm({ id: 999, magazine: 'Test' }));
     await page.uncheck('#restitutionTransferSameAddress');
