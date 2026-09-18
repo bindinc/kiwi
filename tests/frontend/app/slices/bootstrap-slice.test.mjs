@@ -234,6 +234,7 @@ function testUpdateCustomerActionButtons() {
         currentCustomer: { id: 1, sourceSystem: 'subscription-api' }
     });
     assert.equal(editCustomerButton.style.display, 'inline-flex');
+    assert.equal(editCustomerButton.textContent, 'Gegevens bekijken');
     assert.equal(editorialComplaintButton.style.display, 'none');
     assert.equal(resendButton.style.display, 'none');
     assert.equal(winbackButton.style.display, 'none');

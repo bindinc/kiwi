@@ -140,10 +140,36 @@ async function testLateCustomerAResponseCannotOverwriteCustomerB() {
     }
 }
 
+
+async function testRequiredSourceReloadNeverFallsBackToCachedSuccess() {
+    const previousDocument = globalThis.document;
+    const previousApi = globalThis.kiwiApi;
+    globalThis.document = {};
+    let requestedUrl;
+    globalThis.kiwiApi = { async get(url) { requestedUrl = url; throw new Error('source unavailable'); } };
+    const source = { id: 123, personId: '123', credentialKey: 'correct-source', sourceSystem: 'subscription-api' };
+    configureCustomerDetailSliceDependencies(() => ({
+        personsApiUrl: '/api/v1/persons',
+        findCustomerById() { return { ...source, credentialKey: 'wrong-source' }; }
+    }));
+    try {
+        await assert.rejects(selectCustomer(123, { sourceCustomer: source, requireFresh: true }), /source unavailable/);
+        assert.ok(requestedUrl.includes('credentialKey=correct-source'));
+        assert.ok(!requestedUrl.includes('wrong-source'));
+    } finally { globalThis.document = previousDocument; globalThis.kiwiApi = previousApi; }
+}
+
 async function run() {
+    const refreshed = __customerDetailTestUtils.mergeCustomerDetail(
+        { firstName: 'Old cached name', email: 'old@example.org', sourceSystem: 'subscription-api' },
+        { firstName: '', email: '', sourceSystem: 'subscription-api' }
+    );
+    assert.equal(refreshed.firstName, '');
+    assert.equal(refreshed.email, '');
     testBuildCustomerHeaderIncludesPersonId();
     testBuildCustomerHeaderFallsBackToNameWithoutPersonId();
     await testLateCustomerAResponseCannotOverwriteCustomerB();
+    await testRequiredSourceReloadNeverFallsBackToCachedSuccess();
     console.log('customer detail slice tests passed');
 }
 

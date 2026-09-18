@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Add protected, section-based customer and bank editing, strict field and bank validation, source resource checks, masked account views and durable shared mutation intent tracking; keep source writes disabled pending verified atomic upstream concurrency and bank-link guarantees (SC-202883).
+
 - Enforce validated Entra roles and session expiry for every API route, protect mutations with CSRF, and reject business writes from view/dev roles without requiring mandant roles (SC-202883).
 - Make house number additions read-only in every address form and populate them from address selection; keep internal additions editable and retain server-side address validation. [sc-200162]
 

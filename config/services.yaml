@@ -62,3 +62,19 @@ services:
         class: App\Webabo\WebaboAccessTokenProvider
         arguments:
             $httpClient: '@address.http_client'
+
+    customer_editing.persons:
+        class: App\SubscriptionApi\PersonSearchClient
+        arguments:
+            $httpClient: '@address.http_client'
+            $accessTokenProvider: '@address.webabo_tokens'
+
+    App\SubscriptionApi\CustomerEditingService:
+        arguments:
+            $persons: '@customer_editing.persons'
+
+    App\SubscriptionApi\CustomerWriteClient:
+        arguments:
+            $httpClient: '@address.http_client'
+            $tokens: '@address.webabo_tokens'
+            $persons: '@customer_editing.persons'

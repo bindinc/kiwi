@@ -109,7 +109,7 @@ HTML;
     private function buildOpenApiDocument(Request $request): array
     {
         $scriptRoot = rtrim($request->getBasePath(), '/');
-        $serverUrl = '' !== $scriptRoot ? $scriptRoot.'/api/v1' : '/api/v1';
+        $serverUrl = '' !== $scriptRoot ? $scriptRoot : '/';
         $paths = [];
 
         foreach ($this->router->getRouteCollection() as $name => $route) {
@@ -182,6 +182,32 @@ HTML;
                     $operation['responses'] = ['204' => ['description' => 'Address form session closed']];
                 }
 
+
+                $customerOperation = $route->getDefault('operation');
+                if (is_string($customerOperation) && isset(\App\SubscriptionApi\CustomerMutationInput::FIELDS[$customerOperation])) {
+                    $properties = [];
+                    foreach (\App\SubscriptionApi\CustomerMutationInput::FIELDS[$customerOperation] as $field) {
+                        $properties[$field] = ['type' => 'string', 'maxLength' => 254];
+                    }
+                    $operation['description'] = 'Requires admin, supervisor or user, an unexpired verified session and CSRF. New source writes remain disabled pending verified upstream atomic version controls. No automatic retry on an uncertain result.';
+                    $operation['parameters'] = array_merge($operation['parameters'] ?? [], [
+                        ['in' => 'header', 'name' => 'X-CSRF-Token', 'required' => true, 'schema' => ['type' => 'string']],
+                        ['in' => 'header', 'name' => 'Idempotency-Key', 'required' => true, 'schema' => ['type' => 'string', 'format' => 'uuid']],
+                    ]);
+                    $operation['requestBody'] = ['required' => true, 'content' => ['application/json' => ['schema' => [
+                        'type' => 'object', 'additionalProperties' => false, 'required' => ['credentialKey', 'changes'],
+                        'properties' => [
+                            'credentialKey' => ['type' => 'string', 'description' => 'Configured source credential selector; never grants permissions'],
+                            'expectedVersion' => ['type' => 'string', 'nullable' => true, 'description' => 'Supplier version; unavailable until the source concurrency contract is verified'],
+                            'changes' => ['type' => 'object', 'additionalProperties' => false, 'properties' => (object) $properties],
+                        ],
+                    ]]]];
+                    foreach ([409 => 'Source writes disabled, stale version, unverified resource or duplicate request',
+                        415 => 'application/json required', 422 => 'Unknown field or invalid input', 428 => 'Verified source version required',
+                        503 => 'Audit unavailable, source unavailable or outcome unknown; do not retry automatically'] as $code => $description) {
+                        $operation['responses'][(string) $code] = ['description' => $description];
+                    }
+                }
                 $paths[$openApiPath][strtolower($method)] = $operation;
             }
         }

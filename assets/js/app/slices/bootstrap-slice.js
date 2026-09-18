@@ -232,6 +232,7 @@ export function createBootstrapSlice(options = {}) {
 
         if (editCustomerButton) {
             editCustomerButton.style.display = hasCustomer ? 'inline-flex' : 'none';
+            editCustomerButton.textContent = hasCustomer && !hasLegacyCustomer ? 'Gegevens bekijken' : 'Bewerken';
         }
         if (editorialComplaintButton) {
             editorialComplaintButton.style.display = hasLegacyCustomer ? 'inline-flex' : 'none';

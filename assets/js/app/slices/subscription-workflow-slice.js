@@ -1,4 +1,6 @@
 import { getAddressSubmission } from '../address-completion.js';
+import { selectCustomer as reloadSourceCustomer } from './customer-detail-slice.js';
+import { openCustomerEditor } from '../customer-editor.js';
 import { getGlobalScope } from '../services.js';
 import {
     buildSubscriptionPaymentDetails,
@@ -1044,14 +1046,18 @@ export function editCustomer() {
     if (!currentCustomer) {
         return;
     }
-    const addressOnly = isSubscriptionApiCustomer(currentCustomer);
-    const form = getElementById('customerEditForm');
-    const addressIds = ['editPostalCode', 'editHouseNumber', 'editHouseExt', 'editAddress', 'editCity'];
-    form?.querySelectorAll('input, select').forEach((field) => {
-        field.disabled = addressOnly && field.type !== 'hidden' && !addressIds.includes(field.id);
-    });
-    const note = getElementById('externalAddressCorrectionNote');
-    if (note) note.hidden = !addressOnly;
+    if (isSubscriptionApiCustomer(currentCustomer)) {
+        openCustomerEditor(currentCustomer, {
+            api: getApiClient(),
+            refresh: () => reloadSourceCustomer(currentCustomer.id, { sourceCustomer: currentCustomer, requireFresh: true }),
+            isCurrent: () => {
+                const selected = readCurrentCustomer();
+                return selected && String(selected.personId || selected.id) === String(currentCustomer.personId || currentCustomer.id)
+                    && selected.credentialKey === currentCustomer.credentialKey;
+            }
+        });
+        return;
+    }
 
     setInputValue('editCustomerId', currentCustomer.id);
 
@@ -1150,30 +1156,7 @@ export async function saveCustomerEdit(event) {
         return;
     }
 
-    customer.salutation = updates.salutation;
-    customer.firstName = updates.firstName;
-    customer.middleName = updates.middleName;
-    customer.lastName = updates.lastName;
-    customer.birthday = updates.birthday;
-    customer.postalCode = updates.postalCode;
-    customer.houseNumber = updates.houseNumber;
-    customer.address = updates.address;
-    customer.city = updates.city;
-    customer.email = updates.email;
-    customer.phone = updates.phone;
-    customer.optinEmail = updates.optinEmail;
-    customer.optinPhone = updates.optinPhone;
-    customer.optinPost = updates.optinPost;
-
-    pushContactHistory(customer, {
-        type: 'Gegevens gewijzigd',
-        description: 'Klantgegevens bijgewerkt.'
-    });
-
-    saveCustomers();
-    closeForm('editCustomerForm');
-    showToast(translateKey('customer.updated', {}, 'Klantgegevens succesvol bijgewerkt!'), 'success');
-    await selectCustomer(customerId);
+    showToast('Opslaan is niet beschikbaar: de verbinding met de backend ontbreekt.', 'error');
 }
 
 export function showResendMagazine() {

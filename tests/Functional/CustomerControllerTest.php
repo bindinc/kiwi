@@ -356,6 +356,9 @@ final class CustomerControllerTest extends WebTestCase
         self::assertSame('HMC', $payload['mandant']);
         self::assertSame('14', $payload['divisionId']);
         self::assertSame('subscription-api', $payload['sourceSystem']);
+        self::assertTrue($payload['editing']['roleCanWrite']);
+        self::assertFalse($payload['editing']['operations']['bank.delete']['enabled']);
+        self::assertSame('upstream_concurrency_unverified', $payload['editing']['operations']['person.update']['reason']);
         self::assertSame('NL91ABNA0417164300', $payload['iban']);
         self::assertSame([['origin' => 'PPA', 'identifier' => 'REF-11860448']], $payload['references']);
         self::assertCount(1, $payload['subscriptions']);
