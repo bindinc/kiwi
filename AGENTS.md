@@ -129,7 +129,7 @@ When reporting completion, always explicitly include:
 
 ## requirements dev/local/prod
 - For local development we want to use the docker-compose.yaml to mimic the kubernetes gitops environment without actually starting a complete kubernetes cluster
-- Kiwi must be tested and approved using a flux bootstrapped bink8s-cluster-management repo on a kind 3 node docker-desktop local cluster.
+- Local Kubernetes validation is never required unless explicitly requested by the user. Use Docker Compose for local development and manual validation; an unavailable local Kubernetes cluster is not an acceptance blocker.
 - Kiwi will be deployed on the flux bootstrapped bink8s-cluster-management repo (prod) on the 3 master node + reverse proxy bink8s cluster
 - for local/prod k8s: we have 3 master nodes and require that kiwi is replicated on each master node. 
 - for local/prod k8s: We use `sessionAffinity: None`, since ------the reverse proxy uses round robin to access each master node. This means that we need to take into account that each https:// call could reach a different replica of the kiwi app pod.
