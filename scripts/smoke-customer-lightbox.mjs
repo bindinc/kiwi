@@ -21,7 +21,7 @@ await page.route('http://lightbox.test/**', async route => {
             api: { get: async () => { if (window.loadError) throw Error('test'); return window.model; } }, refresh: async () => {}
         });
     </script></html>` });
-    if (!['/assets/css/styles.css', '/assets/js/app/customer-editor.js', '/assets/js/app/address-fields.js', '/assets/js/app/address-completion.js'].includes(path)) return route.abort();
+    if (!['/assets/css/styles.css', '/assets/js/app/customer-editor.js', '/assets/js/app/address-fields.js', '/assets/js/app/address-completion.js', '/assets/js/app/lightbox-drafts.js'].includes(path)) return route.abort();
     return route.fulfill({ contentType: path.endsWith('.css') ? 'text/css' : 'text/javascript', body: await readFile(new URL(path.slice(1), root), 'utf8') });
 });
 async function geometry(selector) {
@@ -50,25 +50,36 @@ try {
             assert.equal(await page.evaluate(() => document.querySelector('.customer-editor').matches(':modal') && (document.activeElement === document.body || document.querySelector('.customer-editor').contains(document.activeElement))), true);
         }
         await page.keyboard.press('Escape');
-        await page.locator('.customer-editor').waitFor({ state: 'detached' });
+        await page.locator('.customer-editor').waitFor({ state: 'hidden' });
         assert.equal(await page.evaluate(() => document.activeElement.id), 'open');
         console.log(`Matching subscription geometry, backdrop, overflow and keyboard checks: ${width}px`);
     }
-    await page.evaluate(() => window.model.capabilities.operations['person.update'] = { enabled: true });
+    await page.evaluate(async () => {
+        const { resetLightboxDrafts } = await import('/assets/js/app/lightbox-drafts.js');
+        resetLightboxDrafts(document);
+        window.model.capabilities.operations['person.update'] = { enabled: true };
+    });
     await page.click('#open');
     await page.locator('input[name="firstName"]').fill('Changed');
-    page.once('dialog', dialog => dialog.dismiss());
     await page.locator('.customer-editor .btn-close').click();
-    assert.equal(await page.locator('.customer-editor').isVisible(), true);
-    page.once('dialog', dialog => dialog.accept());
+    assert.equal(await page.locator('.customer-editor').isVisible(), false);
+    await page.click('#open');
+    assert.equal(await page.inputValue('input[name="firstName"]'), 'Changed');
     await page.locator('.customer-editor .form-actions button').click();
-    await page.locator('.customer-editor').waitFor({ state: 'detached' });
-    await page.evaluate(() => window.loadError = true);
+    await page.locator('.customer-editor').waitFor({ state: 'hidden' });
+    await page.evaluate(async () => {
+        const { resetLightboxDrafts } = await import('/assets/js/app/lightbox-drafts.js');
+        resetLightboxDrafts(document);
+        window.loadError = true;
+    });
     await page.click('#open');
     await page.getByText('Klantgegevens konden niet worden geladen.', { exact: false }).waitFor();
     await page.locator('.customer-editor .btn-close').click();
-    await page.locator('.customer-editor').waitFor({ state: 'detached' });
-    console.log('Dirty close protection, both close controls and load-error recovery passed');
+    await page.locator('.customer-editor').waitFor({ state: 'hidden' });
+    await page.evaluate(() => window.loadError = false);
+    await page.click('#open');
+    await page.locator('input[name="firstName"]').waitFor();
+    console.log('Draft retention, both close controls and load-error recovery passed');
 } finally {
     await browser.close();
 }

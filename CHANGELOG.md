@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Preserve lightbox drafts when dismissed by the close button, backdrop or Escape; keep session reset available without a selected customer and discard drafts on reset or successful submission. Document Docker Compose as the local validation workflow, with local Kubernetes checks only on explicit user request. [sc-202840]
+
 - Unify customer and subscription lightboxes and reuse one responsive address component and autocomplete across all eight address-entry flows; preserve separate provider/internal additions, validate transfer recipients and retain guarded closing and keyboard navigation. [sc-202883] [sc-200162]
 
 - Allow selecting confirmed house number additions for the exact postcode and house number including its letter from buffered address results, without extra lookup calls; keep internal additions editable and include the required CSRF header on address requests. [sc-200162]

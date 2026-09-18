@@ -35,3 +35,39 @@ test('source resource paths preserve opaque identifiers', () => {
     assert.equal(mutationPath('A/B', 'email', 'e?1'), '/api/v1/persons/A%2FB/emails/e%3F1');
     assert.equal(mutationPath('123', 'bank'), '/api/v1/persons/123/bank-accounts');
 });
+
+test('dismissed source edits retain input and version until a workspace reset', async () => {
+    const { resetLightboxDrafts } = await import('../../../assets/js/app/lightbox-drafts.js');
+    const previousDocument = globalThis.document;
+    globalThis.document = createEditorDocument();
+    let reads = 0;
+    const customer = { id: '123', credentialKey: 'test', lastName: 'Test' };
+    const options = {
+        api: { async get() {
+            reads++;
+            return {
+                capabilities: { roleCanWrite: true, operations: { 'person.update': { enabled: true } } },
+                version: 'original-version',
+                sections: { person: [{ id: '123', fields: { firstName: 'Alex' } }] }
+            };
+        } },
+        refresh() {}
+    };
+    try {
+        await openCustomerEditor(customer, options);
+        const dialog = document.body.children[0];
+        const input = dialog.querySelectorAll('input')[0];
+        input.value = 'Unsubmitted draft';
+        input.emit('input');
+        dialog.querySelectorAll('button')[0].emit('click');
+        assert.equal(dialog.open, false);
+        await openCustomerEditor(customer, options);
+        assert.equal(dialog.open, true);
+        assert.equal(input.value, 'Unsubmitted draft');
+        assert.equal(reads, 1, 'Reopening must not replace the model or its concurrency version');
+        resetLightboxDrafts(document);
+        await openCustomerEditor(customer, options);
+        assert.equal(reads, 2);
+        assert.equal(document.body.children.at(-1).querySelectorAll('input')[0].value, 'Alex');
+    } finally { globalThis.document = previousDocument; }
+});

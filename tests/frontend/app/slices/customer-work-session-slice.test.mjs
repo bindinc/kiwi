@@ -25,6 +25,7 @@ async function testRendersAndResetsAnExplicitCustomerWorkSession() {
     const previousDocument = globalThis.document;
     const elements = {
         customerWorkSessionBar: createElement(),
+        customerWorkSessionIdentity: createElement(),
         customerWorkSessionName: createElement(),
         customerWorkSessionPersonId: createElement(),
         customerWorkSessionSource: createElement(),
@@ -75,7 +76,8 @@ async function testRendersAndResetsAnExplicitCustomerWorkSession() {
             mandant: 'HMC'
         };
         const selectionContext = startCustomerSelection(customer);
-        assert.equal(elements.customerWorkSessionBar.hidden, true);
+        assert.equal(elements.customerWorkSessionBar.hidden, false);
+        assert.equal(elements.customerWorkSessionIdentity.hidden, true);
 
         assert.equal(await confirmCustomerSelection(selectionContext, customer), true);
         assert.equal(elements.customerWorkSessionBar.hidden, false);
@@ -100,7 +102,8 @@ async function testRendersAndResetsAnExplicitCustomerWorkSession() {
 
         assert.equal(await endCustomerWorkSession(), true);
         assert.equal(resetCount, 1);
-        assert.equal(elements.customerWorkSessionBar.hidden, true);
+        assert.equal(elements.customerWorkSessionBar.hidden, false);
+        assert.equal(elements.customerWorkSessionIdentity.hidden, true);
         assert.equal(elements.queuedCustomerChoice.hidden, true);
         assert.equal(auditPayloads.length, 1);
         assert.equal(auditPayloads[0].url, '/api/v1/customer-work-sessions/reset');

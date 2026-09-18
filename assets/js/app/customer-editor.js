@@ -1,5 +1,8 @@
 import { renderAddressFields, sourceAddressValues, sourceAddressChanges, sourceAddressInputName } from './address-fields.js';
 import { endAddressSessions } from './address-completion.js';
+import { registerDraftCleanup } from './lightbox-drafts.js';
+
+const editorsByDocument = new WeakMap();
 
 const sections = {
     person: { title: 'Persoonsgegevens', path: 'profile', fields: { firstName: 'Voornaam', initials: 'Initialen', surName: 'Tussenvoegsel', lastName: 'Achternaam', salutation: 'Aanhef', birthDay: 'Geboortedatum' } },
@@ -25,7 +28,22 @@ function element(tag, text, className) {
 }
 
 export async function openCustomerEditor(customer, { api, refresh, isCurrent = () => true }) {
+    let editors = editorsByDocument.get(document);
+    if (!editors) {
+        editors = new Map();
+        editorsByDocument.set(document, editors);
+    }
+    const key = JSON.stringify([customer.credentialKey, String(customer.personId || customer.id)]);
+    const retained = editors.get(key);
+    if (retained) {
+        await retained();
+        return;
+    }
     const dialog = element('dialog', '', 'form-lightbox customer-editor');
+    editors.set(key, async () => {
+        dialog.showModal();
+        if (loadFailed) await loadWithStatus();
+    });
     const card = element('div', '', 'card onepager-container');
     const header = element('div', '', 'form-header');
     const title = element('h2', 'Klantgegevens');
@@ -47,6 +65,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
     dialog.append(card);
     document.body.append(dialog);
     const abort = new AbortController();
+    let loadFailed = false;
     let dirty = false;
     let saving = false;
     let requiresReload = false;
@@ -68,7 +87,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
         }
     }
     function canClose() {
-        return !saving && (!dirty || window.confirm('Niet-opgeslagen wijzigingen sluiten?'));
+        return !saving;
     }
     function requestClose() {
         if (canClose()) dialog.close();
@@ -76,7 +95,16 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
     close.addEventListener('click', requestClose);
     dismiss.addEventListener('click', requestClose);
     dialog.addEventListener('cancel', (event) => { if (!canClose()) event.preventDefault(); });
-    dialog.addEventListener('close', () => { abort.abort(); endAddressSessions(dialog); dialog.remove(); });
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) requestClose();
+    });
+    registerDraftCleanup(document, () => {
+        abort.abort();
+        endAddressSessions(dialog);
+        dialog.close();
+        dialog.remove();
+        editors.delete(key);
+    });
     dialog.showModal();
     const personId = String(customer.personId || customer.id);
     const credentialKey = customer.credentialKey;
@@ -84,7 +112,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
 
     async function load() {
         const model = await api.get(readUrl, { signal: abort.signal });
-        if (!dialog.open || !isCurrent()) return;
+        if (abort.signal.aborted || !isCurrent()) return;
         unlockOtherSections();
         endAddressSessions(content);
         content.replaceChildren();
@@ -259,7 +287,14 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
         // Person is a single object; contact and bank collections always require selection.
         if (section === 'person' && items.length === 1) { select.value = '0'; previousSelection = '0'; choose(); }
     }
-    try { await load(); } catch (error) {
-        if (!abort.signal.aborted) status.textContent = 'Klantgegevens konden niet worden geladen. Sluit dit venster en probeer opnieuw.';
+    async function loadWithStatus() {
+        try {
+            await load();
+            loadFailed = false;
+        } catch (error) {
+            loadFailed = true;
+            if (!abort.signal.aborted) status.textContent = 'Klantgegevens konden niet worden geladen. Sluit dit venster en probeer opnieuw.';
+        }
     }
+    await loadWithStatus();
 }

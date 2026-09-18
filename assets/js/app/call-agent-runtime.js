@@ -904,6 +904,7 @@ function showDispositionModal() {
     
     // Use lastCallSession data (saved when call ended)
     const sessionData = lastCallSession || {};
+    if (window.kiwiAppShellSlice?.resumeFormDraft(modal, lastCallSession)) return;
     
     // Pre-fill information
     const customerNameEl = document.getElementById('dispCustomerName');
@@ -1139,6 +1140,7 @@ function saveDisposition() {
     }
     
     // Close modal
+    window.kiwiAppShellSlice?.clearFormDraft(document.getElementById('dispositionModal'));
     document.getElementById('dispositionModal').style.display = 'none';
     
     runtimeShowToast(translate('calls.completed', {}, 'Gesprek succesvol afgerond'), 'success');

@@ -1,3 +1,4 @@
+import { resumeFormDraft, clearFormDraft, registerDraftCleanup } from '../lightbox-drafts.js';
 import { splitAddressHouseNumber } from '../address-fields.js';
 import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
@@ -422,6 +423,9 @@ export function showArticleSale() {
         return;
     }
 
+    if (resumeFormDraft(getElementById('articleSaleForm'))) return;
+    registerDraftCleanup(getDocumentRef(), () => resetOrderItems(dependencies));
+
     if (currentCustomer) {
         prefillArticleSaleForm(currentCustomer, dependencies);
     } else {
@@ -680,6 +684,7 @@ async function submitArticleOrderViaApi(dependencies, options = {}) {
         }
 
         await resetOrderEditorState(dependencies);
+        clearFormDraft(getElementById('articleSaleForm'));
         closeForm(dependencies, 'articleSaleForm');
         showToast(
             dependencies,
@@ -749,6 +754,7 @@ async function submitArticleOrderLocally(dependencies, options = {}) {
 
         saveCustomers(dependencies);
         await resetOrderEditorState(dependencies);
+        clearFormDraft(getElementById('articleSaleForm'));
         closeForm(dependencies, 'articleSaleForm');
         showToast(dependencies, translateLabel(dependencies, 'articleOrders.created', {}, 'Artikel bestelling succesvol aangemaakt!'), 'success');
         await selectCustomer(dependencies, currentCustomer.id);
@@ -765,6 +771,7 @@ async function submitArticleOrderLocally(dependencies, options = {}) {
 
         saveCustomers(dependencies);
         await resetOrderEditorState(dependencies);
+        clearFormDraft(getElementById('articleSaleForm'));
         closeForm(dependencies, 'articleSaleForm');
         showToast(
             dependencies,

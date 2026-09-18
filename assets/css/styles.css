@@ -137,10 +137,16 @@ body {
     border-radius: 999px;
 }
 
+.customer-work-session-identity[hidden],
 .customer-work-session-bar[hidden],
 .customer-work-session-warning[hidden],
 .queued-customer-choice[hidden] {
     display: none !important;
+}
+
+.customer-work-session-bar:has(.customer-work-session-identity[hidden]) {
+    width: auto;
+    justify-self: end;
 }
 
 .customer-work-session-content {

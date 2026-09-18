@@ -62,15 +62,12 @@ function renderCustomerWorkSession() {
     const summary = createCustomerDisplaySummary(snapshot.activeCustomer);
     const hasActiveCustomer = Boolean(snapshot.customerReference && summary);
 
-    setHidden('customerWorkSessionBar', !hasActiveCustomer);
+    setHidden('customerWorkSessionBar', false);
+    setHidden('customerWorkSessionIdentity', !hasActiveCustomer);
     renderAddressCheck(snapshot);
-    if (!hasActiveCustomer) {
-        return;
-    }
-
-    setText('customerWorkSessionName', summary.name);
-    setText('customerWorkSessionPersonId', summary.personId);
-    setText('customerWorkSessionSource', summary.sourceLabel);
+    setText('customerWorkSessionName', summary?.name || '');
+    setText('customerWorkSessionPersonId', summary?.personId || '');
+    setText('customerWorkSessionSource', summary?.sourceLabel || '');
 
     const endButton = getElement('endCustomerWorkSessionButton');
     if (endButton) {
@@ -210,7 +207,7 @@ export function markCustomerWorkSessionChanged() {
 
 function trackCustomerDraft(event) {
     const target = event.target;
-    const editor = target?.closest?.('.form-container, #editDeliveryRemarksModal');
+    const editor = target?.closest?.('.form-container, #editDeliveryRemarksModal, .customer-editor');
     if (!editor) {
         return;
     }

@@ -82,7 +82,8 @@ try {
     console.log('Retained draft blocks switching');
 
     await page.click('#endCustomerWorkSessionButton');
-    await page.waitForSelector('#customerWorkSessionBar', { state: 'hidden' });
+    await page.waitForSelector('#customerWorkSessionIdentity', { state: 'hidden' });
+    assert.equal(await page.locator('#endCustomerWorkSessionButton').isVisible(), true);
     await search('Jansen');
     await openFirstResult();
     assert.equal((await readContext()).customerReference.personId, firstContext.customerReference.personId);

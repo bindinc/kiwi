@@ -1,3 +1,4 @@
+import { resetLightboxDrafts, resumeFormDraft, clearFormDraft } from '../lightbox-drafts.js';
 import { endAddressSessions } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
 import { DIRECT_DEBIT_PAYMENT_METHOD, syncSubscriptionIbanRequirement } from '../subscription-payment.js';
@@ -87,7 +88,7 @@ function hideVisibleFormContainers(documentRef) {
         return;
     }
 
-    const openForms = documentRef.querySelectorAll('.form-container');
+    const openForms = documentRef.querySelectorAll('.form-container, #editDeliveryRemarksModal, #allArticlesModal, #dispositionModal');
     openForms.forEach((form) => {
         if (!form || !form.style) {
             return;
@@ -133,6 +134,20 @@ function resetCustomerForms(documentRef) {
             }
             control.value = '';
         });
+
+    documentRef.querySelectorAll('.modal').forEach((modal) => {
+        modal.style.display = 'none';
+        modal.classList?.remove('show');
+    });
+    documentRef.querySelectorAll('.modal input, .modal select, .modal textarea').forEach((control) => {
+        if (control.type === 'checkbox' || control.type === 'radio') {
+            control.checked = control.defaultChecked;
+        } else if (control.tagName === 'SELECT') {
+            control.selectedIndex = 0;
+        } else {
+            control.value = control.defaultValue || '';
+        }
+    });
 }
 
 function focusSearchInput() {
@@ -168,14 +183,6 @@ export function closeForm(formId) {
         return;
     }
 
-    const dependencies = resolveDependencies();
-    const shouldResetDuplicateState = formId === 'newSubscriptionForm';
-    if (shouldResetDuplicateState) {
-        callDependency(dependencies, 'resetAllSubscriptionDuplicateStates');
-    }
-
-    const addressForm = getElementById(formId);
-    if (addressForm) endAddressSessions(addressForm);
     setElementDisplay(formId, 'none');
 }
 
@@ -359,6 +366,12 @@ function handleGlobalClick(event) {
         return;
     }
 
+    const backdrop = event?.target;
+    if (backdrop?.matches?.('.form-container, #editDeliveryRemarksModal, #allArticlesModal, #dispositionModal')) {
+        closeForm(backdrop.id);
+        return;
+    }
+
     const modal = getElementById('debugModal');
     const statusMenu = getElementById('agentStatusMenu');
     const profileTrigger = getElementById('agentProfileTrigger');
@@ -497,6 +510,8 @@ export function resetCustomerWorkspace() {
     clearElementContent('pagination');
 
     callDependency(dependencies, 'resetAllSubscriptionDuplicateStates');
+    resetLightboxDrafts(documentRef);
+    endAddressSessions(documentRef);
     resetCustomerForms(documentRef);
 
     callDependency(dependencies, 'updateCustomerActionButtons');
@@ -528,6 +543,8 @@ function exposeAppShellSliceApi() {
 
     globalScope[APP_SHELL_SLICE_NAMESPACE] = {
         closeForm,
+        resumeFormDraft,
+        clearFormDraft,
         mapToastTypeToContactType,
         showToast,
         isDebugModalEnabled,

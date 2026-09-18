@@ -1,5 +1,8 @@
 import { AnnotationCanvas } from './annotation-canvas.js';
 import { feedbackText } from './i18n.js';
+import { registerDraftCleanup } from '../lightbox-drafts.js';
+
+const dialogsByDocument = new WeakMap();
 
 const TOOLS = [
     ['hand', '✥'],
@@ -16,6 +19,11 @@ export async function openFeedbackDialog({
     onSubmit,
     onCancel
 }) {
+    const retained = dialogsByDocument.get(documentRef);
+    if (retained) {
+        retained();
+        return;
+    }
     const modal = documentRef.createElement('div');
     modal.className = 'contextual-feedback-modal';
     modal.dataset.feedbackIgnore = 'true';
@@ -43,10 +51,16 @@ export async function openFeedbackDialog({
     let screenshot = null;
     let annotationCanvas = null;
 
-    modal.querySelector('[data-feedback-close]').addEventListener('click', () => {
-        cleanup();
+    function dismiss() {
+        if (submitButton.disabled || screenshotButton.disabled) return;
+        suspendDialogForCapture();
         onCancel?.();
-    });
+    }
+    modal.querySelector('[data-feedback-close]').addEventListener('click', dismiss);
+    modal.addEventListener('click', (event) => { if (event.target === modal) dismiss(); });
+    modal.addEventListener('keydown', (event) => { if (event.key === 'Escape') dismiss(); });
+    dialogsByDocument.set(documentRef, resumeDialogAfterCapture);
+    const unregisterCleanup = registerDraftCleanup(documentRef, () => { cleanup(); onCancel?.(); });
 
     for (const button of modal.querySelectorAll('[data-feedback-tool]')) {
         button.addEventListener('click', () => {
@@ -218,9 +232,12 @@ export async function openFeedbackDialog({
         modal.hidden = false;
         modal.classList.remove('is-capturing');
         documentRef.body.classList.add('contextual-feedback-reviewing');
+        modal.querySelector('textarea[name="comment"]')?.focus();
     }
 
     function cleanup() {
+        unregisterCleanup();
+        dialogsByDocument.delete(documentRef);
         annotationCanvas?.destroy();
         modal.remove();
         documentRef.body.classList.remove('contextual-feedback-reviewing');

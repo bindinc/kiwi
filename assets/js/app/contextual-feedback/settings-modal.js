@@ -1,4 +1,7 @@
 import { feedbackApiError, feedbackText } from './i18n.js';
+import { registerDraftCleanup } from '../lightbox-drafts.js';
+
+const settingsByDocument = new WeakMap();
 
 export function initContextualFeedbackSettings({ documentRef = document } = {}) {
     const button = documentRef.getElementById('contextualFeedbackSettingsButton');
@@ -23,6 +26,12 @@ async function openSettingsModal({ button, documentRef }) {
     button.classList.add('is-active');
 
     try {
+        const retained = settingsByDocument.get(documentRef);
+        if (retained) {
+            retained.hidden = false;
+            retained.querySelector('input')?.focus();
+            return;
+        }
         const settings = await fetchSettings(settingsUrl);
         const modal = renderSettingsModal(documentRef, settings);
         wireSettingsModal({
@@ -66,7 +75,16 @@ function renderSettingsModal(documentRef, settings) {
 }
 
 function wireSettingsModal({ modal, settingsUrl, documentRef, onClose }) {
+    settingsByDocument.set(documentRef, modal);
+    registerDraftCleanup(documentRef, () => {
+        modal.remove();
+        settingsByDocument.delete(documentRef);
+        onClose?.();
+    });
+    modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
+    modal.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
     const form = modal.querySelector('[data-feedback-settings-form]');
+    form.querySelector('input')?.focus();
     const errorBox = modal.querySelector('[data-feedback-settings-error]');
     const statusBox = modal.querySelector('[data-feedback-settings-status]');
     const feedbackButton = documentRef.getElementById('contextualFeedbackButton');
@@ -99,7 +117,7 @@ function wireSettingsModal({ modal, settingsUrl, documentRef, onClose }) {
     });
 
     function close() {
-        modal.remove();
+        modal.hidden = true;
         onClose?.();
     }
 }
