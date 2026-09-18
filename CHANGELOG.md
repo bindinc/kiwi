@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Reuse the subscription lightbox layout, card, header, actions and form controls for customer viewing and editing, preserving guarded closing and native keyboard navigation. [sc-202883]
+
 - Allow selecting confirmed house number additions for the exact postcode and house number including its letter from buffered address results, without extra lookup calls; keep internal additions editable and include the required CSRF header on address requests. [sc-200162]
 
 - Add protected, section-based customer and bank editing, strict field and bank validation, source resource checks, masked account views and durable shared mutation intent tracking; keep source writes disabled pending verified atomic upstream concurrency and bank-link guarantees (SC-202883).

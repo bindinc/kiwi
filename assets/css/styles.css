@@ -2239,7 +2239,8 @@ select option {
 }
 
 /* Form Container */
-.form-container {
+.form-container,
+.form-lightbox {
     position: fixed;
     top: 0;
     left: 0;
@@ -2255,12 +2256,32 @@ select option {
     overflow-y: auto;
 }
 
-.form-container .card {
+.form-container .card,
+.form-lightbox .card {
     width: 100%;
     max-width: 800px;
     max-height: none;
     overflow-y: visible;
     margin-bottom: 3rem;
+}
+
+/* Native dialogs share the form overlay; only browser defaults need resetting. */
+dialog.form-lightbox {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border: 0;
+    color: inherit;
+}
+
+dialog.form-lightbox:not([open]) {
+    display: none;
+}
+
+dialog.form-lightbox::backdrop {
+    background: transparent;
 }
 
 .form-header {
@@ -4605,19 +4626,15 @@ select option {
 .address-completion-status select[hidden],
 .address-completion-status label[hidden] { display: none; }
 
-/* Section-oriented source customer editor. */
-.customer-editor { width: min(760px, calc(100vw - 32px)); max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-color, #cbd5e1); border-radius: 8px; padding: 24px; color: var(--text-color, #243746); background: var(--surface-color, #fff); }
-.customer-editor::backdrop { background: rgb(0 0 0 / 35%); }
-.customer-editor h2 { margin-top: 0; }
-.customer-editor section { border-top: 1px solid #cbd5e1; padding: 16px 0; }
-.customer-editor form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
-.customer-editor label { display: flex; flex-direction: column; gap: 4px; }
-.customer-editor input, .customer-editor select { width: 100%; min-height: 40px; box-sizing: border-box; padding: 8px; border: 1px solid #94a3b8; border-radius: 4px; }
-.customer-editor input:read-only { background: #f1f5f9; color: #475569; }
+/* Customer-specific content; the lightbox shell uses the shared form styles. */
+.customer-editor section { border-top: 1px solid var(--border-color); padding: 1rem 0; }
+.customer-editor form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+.customer-editor label { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.customer-editor input:read-only { background: var(--bg-primary); color: var(--text-secondary); }
 .customer-editor button:disabled { opacity: .65; cursor: not-allowed; }
-.customer-editor :focus-visible { outline: 2px solid #116a86; outline-offset: 2px; }
+.customer-editor :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 .customer-editor form > p { grid-column: 1 / -1; }
-@media (max-width: 600px) { .customer-editor { padding: 16px; } .customer-editor form { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .customer-editor form { grid-template-columns: 1fr; } }
 .address-completion-anchor { position: relative; }
 .address-completion-status[hidden] { display: none; }
 

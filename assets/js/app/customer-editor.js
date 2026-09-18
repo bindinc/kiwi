@@ -22,17 +22,26 @@ function element(tag, text, className) {
 }
 
 export async function openCustomerEditor(customer, { api, refresh, isCurrent = () => true }) {
-    const dialog = element('dialog', '', 'customer-editor');
+    const dialog = element('dialog', '', 'form-lightbox customer-editor');
+    const card = element('div', '', 'card onepager-container');
+    const header = element('div', '', 'form-header');
     const title = element('h2', 'Klantgegevens');
     title.id = 'customer-editor-title';
     dialog.setAttribute('aria-labelledby', title.id);
     const context = element('p', `${customer.firstName || customer.initials || ''} ${customer.middleName || ''} ${customer.lastName || ''} · ${customer.personNumber || customer.personId || customer.id} · ${customer.mandant || ''}`);
-    const close = element('button', 'Sluiten', 'btn btn-secondary');
+    const close = element('button', '✕', 'btn-close');
+    close.setAttribute('aria-label', 'Sluiten');
     close.type = 'button';
     const status = element('p', 'Klantgegevens laden…');
     status.setAttribute('role', 'status');
     const content = element('div');
-    dialog.append(title, context, status, content, close);
+    const actions = element('div', '', 'form-actions');
+    const dismiss = element('button', 'Sluiten', 'btn btn-secondary');
+    dismiss.type = 'button';
+    actions.append(dismiss);
+    header.append(title, close);
+    card.append(header, context, status, content, actions);
+    dialog.append(card);
     document.body.append(dialog);
     const abort = new AbortController();
     let dirty = false;
@@ -58,7 +67,11 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
     function canClose() {
         return !saving && (!dirty || window.confirm('Niet-opgeslagen wijzigingen sluiten?'));
     }
-    close.addEventListener('click', () => { if (canClose()) dialog.close(); });
+    function requestClose() {
+        if (canClose()) dialog.close();
+    }
+    close.addEventListener('click', requestClose);
+    dismiss.addEventListener('click', requestClose);
     dialog.addEventListener('cancel', (event) => { if (!canClose()) event.preventDefault(); });
     dialog.addEventListener('close', () => { abort.abort(); dialog.remove(); });
     dialog.showModal();
@@ -84,7 +97,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
         const region = element('section');
         region.append(element('h3', config.title));
         const items = model.sections[section] || [];
-        const select = element('select');
+        const select = element('select', '', 'form-control');
         select.setAttribute('aria-label', `${config.title} kiezen`);
         const placeholder = element('option', items.length ? 'Kies het te bekijken onderdeel' : 'Geen gegevens beschikbaar');
         placeholder.value = '';
@@ -121,7 +134,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
             const controls = {};
             for (const [field, label] of Object.entries(config.fields)) {
                 const row = element('label', label);
-                const input = element('input');
+                const input = element('input', '', 'form-control');
                 input.name = field;
                 input.type = field === 'birthDay' ? 'date' : field === 'emailAddress' ? 'email' : 'text';
                 input.value = item.fields[field] || '';
@@ -177,6 +190,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
                     : `Bankgegevens voor ${customer.lastName || 'deze klant'} opslaan? Controleer het ingevoerde IBAN.`)) return;
                 saving = true;
                 close.disabled = true;
+                dismiss.disabled = true;
                 select.disabled = true;
                 for (const button of form.querySelectorAll('button')) button.disabled = true;
                 feedback.textContent = 'Bezig met opslaan…';
@@ -203,6 +217,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
                 } finally {
                     saving = false;
                     close.disabled = false;
+                    dismiss.disabled = false;
                     select.disabled = false;
                 }
             }
