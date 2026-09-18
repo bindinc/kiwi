@@ -1,3 +1,4 @@
+import { createEditorDocument } from '../../support/editor-dom.mjs';
 import assert from 'node:assert/strict';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
 import {
@@ -460,7 +461,9 @@ function testShowNewSubscriptionPrefillsPrimaryIbanFromCurrentCustomer() {
     }
 }
 
-function testEditCustomerBlocksSubscriptionApiCustomers() {
+async function testEditCustomerOpensSubscriptionApiViewer() {
+    const previousDocument = globalThis.document;
+    globalThis.document = createEditorDocument();
     const previousBridge = globalThis.kiwiLegacyCustomerSearchBridge;
     const previousShowToast = globalThis.showToast;
 
@@ -485,10 +488,11 @@ function testEditCustomerBlocksSubscriptionApiCustomers() {
         registerSubscriptionWorkflowSlice(createRouter());
         globalThis.editCustomer();
 
-        assert.equal(toasts.length, 1);
-        assert.equal(toasts[0].type, 'error');
-        assert.equal(toasts[0].message.includes('subscription-api detaildata'), true);
+        assert.equal(toasts.length, 0);
+        assert.equal(globalThis.document.body.children[0].tag, 'dialog');
+        assert.equal(globalThis.document.body.children[0].open, true);
     } finally {
+        globalThis.document = previousDocument;
         if (previousBridge === undefined) {
             delete globalThis.kiwiLegacyCustomerSearchBridge;
         } else {
@@ -512,7 +516,7 @@ async function run() {
     testQueueToggleUpdatesPanelVisibilityAndButtonState();
     testQueueRenderingUsesBackendDisplayFields();
     testShowNewSubscriptionPrefillsPrimaryIbanFromCurrentCustomer();
-    testEditCustomerBlocksSubscriptionApiCustomers();
+    await testEditCustomerOpensSubscriptionApiViewer();
     console.log('subscription workflow slice tests passed');
 }
 

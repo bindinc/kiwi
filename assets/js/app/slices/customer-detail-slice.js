@@ -106,7 +106,7 @@ function mergeCustomerDetail(cachedCustomer, detailCustomer) {
     stringFields.forEach((fieldName) => {
         const detailValue = detailCustomer[fieldName];
         if (typeof detailValue === 'string') {
-            mergedCustomer[fieldName] = detailValue.trim() !== ''
+            mergedCustomer[fieldName] = detailCustomer.sourceSystem === 'subscription-api' || detailValue.trim() !== ''
                 ? detailValue
                 : (cachedCustomer[fieldName] ?? detailValue);
             return;
@@ -481,7 +481,7 @@ export function displaySubscriptions() {
     subscriptionsList.innerHTML = sections;
 }
 
-export async function selectCustomer(customerId) {
+export async function selectCustomer(customerId, options = {}) {
     if (typeof document === 'undefined') {
         return;
     }
@@ -492,9 +492,9 @@ export async function selectCustomer(customerId) {
     }
 
     const normalizedCustomerId = normalizeCustomerId(customerId);
-    const cachedCustomer = dependencies.findCustomerById
+    const cachedCustomer = options.sourceCustomer || (dependencies.findCustomerById
         ? dependencies.findCustomerById(normalizedCustomerId)
-        : null;
+        : null);
     const customerForSelection = cachedCustomer || {
         id: normalizedCustomerId,
         personId: normalizedCustomerId,
@@ -504,10 +504,14 @@ export async function selectCustomer(customerId) {
         ? dependencies.startCustomerSelection(customerForSelection)
         : null;
     if (selectionContext && selectionContext.blocked) {
+        if (options.requireFresh) throw new Error('Customer reload is blocked');
         return;
     }
     let customer = cachedCustomer;
     const apiClient = resolveApiClient();
+    if (options.requireFresh && (!apiClient || !dependencies.personsApiUrl)) {
+        throw new Error('A source reload requires the backend');
+    }
 
     if (apiClient && dependencies.personsApiUrl) {
         try {
@@ -519,10 +523,15 @@ export async function selectCustomer(customerId) {
                 || typeof dependencies.isCustomerContextCurrent !== 'function'
                 || dependencies.isCustomerContextCurrent(selectionContext);
             if (!contextIsCurrent) {
+                if (options.requireFresh) throw new Error('The selected customer changed during reload');
                 return;
             }
             customer = mergeCustomerDetail(cachedCustomer, customer);
         } catch (error) {
+            if (options.requireFresh) {
+                if (selectionContext && typeof dependencies.abandonCustomerSelection === 'function') dependencies.abandonCustomerSelection(selectionContext);
+                throw error;
+            }
             const stale = selectionContext && typeof dependencies.isCustomerContextCurrent === 'function'
                 && !dependencies.isCustomerContextCurrent(selectionContext);
             if (stale || (error && error.name === 'AbortError')) {
@@ -642,6 +651,7 @@ export function registerCustomerDetailSlice(actionRouter) {
 }
 
 export const __customerDetailTestUtils = {
+    mergeCustomerDetail,
     buildCustomerFullName,
     buildCustomerHeader
 };

@@ -231,7 +231,8 @@ export function createBootstrapSlice(options = {}) {
         const winbackButton = documentRef.getElementById('winbackFlowBtn');
 
         if (editCustomerButton) {
-            editCustomerButton.style.display = hasLegacyCustomer ? 'inline-flex' : 'none';
+            editCustomerButton.style.display = hasCustomer ? 'inline-flex' : 'none';
+            editCustomerButton.textContent = hasCustomer && !hasLegacyCustomer ? 'Gegevens bekijken' : 'Bewerken';
         }
         if (editorialComplaintButton) {
             editorialComplaintButton.style.display = hasLegacyCustomer ? 'inline-flex' : 'none';
