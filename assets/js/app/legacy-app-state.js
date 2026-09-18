@@ -1,3 +1,4 @@
+import { renderAddressFields } from './address-fields.js';
 import { endAddressSessions } from './address-completion.js';
 // State and utility functions previously in app.js.
 // Exposed as window globals so classic runtime scripts
@@ -686,6 +687,7 @@ export function installLegacyAppState() {
 
     // Functions
     const functionBindings = {
+        renderAddressFields,
         upsertCustomerInCache,
         refreshAgentStatusLabels,
         getSubscriptionHelpers,

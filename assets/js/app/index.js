@@ -1,3 +1,4 @@
+import { mountAddressFields } from './address-fields.js';
 import { initAddressCompletion } from './address-completion.js';
 import { createActionRouter } from './actions.js';
 import { getDispositionCategories } from './disposition-categories.js';
@@ -219,6 +220,7 @@ async function runBootstrapInitialization() {
 
 async function bootstrapApplication() {
     try {
+        mountAddressFields();
         await ensureRuntimeScriptsLoaded();
         wireCallAgentRuntimeDependencies();
         await runBootstrapInitialization();

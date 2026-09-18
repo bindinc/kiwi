@@ -1,3 +1,4 @@
+import { splitAddressHouseNumber } from '../address-fields.js';
 import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
 
@@ -391,16 +392,12 @@ function prefillArticleSaleForm(currentCustomer, dependencies) {
     setInputValue('articleLastName', currentCustomer.lastName || '');
     setInputValue('articlePostalCode', currentCustomer.postalCode || '');
 
-    const houseNumberMatch = currentCustomer.houseNumber
-        ? String(currentCustomer.houseNumber).match(/^(\d+)(.*)$/)
-        : null;
-    if (houseNumberMatch) {
-        setInputValue('articleHouseNumber', houseNumberMatch[1] || '');
-        setInputValue('articleHouseExt', houseNumberMatch[2] || '');
-    } else {
-        setInputValue('articleHouseNumber', currentCustomer.houseNumber || '');
-        setInputValue('articleHouseExt', '');
-    }
+    const number = currentCustomer.houseNumberAddition !== undefined
+        ? { HouseNumber: currentCustomer.houseNumber || '', HouseExt: currentCustomer.houseNumberAddition }
+        : splitAddressHouseNumber(currentCustomer.houseNumber);
+    setInputValue('articleHouseNumber', number.HouseNumber);
+    setInputValue('articleHouseExt', number.HouseExt);
+    setInputValue('articleAddressExtension', currentCustomer.addressExtension || '');
 
     const streetName = String(currentCustomer.address || '').replace(/\s+\d+.*$/, '');
     setInputValue('articleAddress', streetName);
@@ -662,6 +659,7 @@ async function submitArticleOrderViaApi(dependencies, options = {}) {
             postalCode: formData.postalCode,
             houseNumber: formData.houseNumber,
             houseNumberAddition: formData.houseNumberAddition,
+            addressExtension: formData.addressExtension,
             street: formData.street,
             formSessionId: formData.formSessionId,
             address: formData.address,

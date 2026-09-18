@@ -1,3 +1,4 @@
+import { renderAddressFields } from '../../../assets/js/app/address-fields.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -136,6 +137,7 @@ function createRuntimeContext(options = {}) {
     const requesterSelectedPerson = options.requesterSelectedPerson || null;
 
     const contextObject = {
+        renderAddressFields,
         console,
         Date,
         URLSearchParams,

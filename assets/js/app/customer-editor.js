@@ -1,6 +1,9 @@
+import { renderAddressFields, sourceAddressValues, sourceAddressChanges, sourceAddressInputName } from './address-fields.js';
+import { endAddressSessions } from './address-completion.js';
+
 const sections = {
     person: { title: 'Persoonsgegevens', path: 'profile', fields: { firstName: 'Voornaam', initials: 'Initialen', surName: 'Tussenvoegsel', lastName: 'Achternaam', salutation: 'Aanhef', birthDay: 'Geboortedatum' } },
-    address: { title: 'Adres', path: 'addresses', fields: { street: 'Straat', housenumber: 'Huisnummer en toevoeging', postCode: 'Postcode', city: 'Plaats', isoCountryCode: 'Landcode', extension: 'Toevoeging 1', additionalExtension: 'Toevoeging 2' } },
+    address: { title: 'Adres', path: 'addresses' },
     email: { title: 'E-mail', path: 'emails', fields: { emailAddress: 'E-mailadres' } },
     phone: { title: 'Vaste telefoon', path: 'phones', fields: { areaCode: 'Netnummer', number: 'Telefoonnummer' } },
     mobile: { title: 'Mobiel', path: 'mobiles', fields: { areaCode: 'Netnummer', number: 'Mobiel nummer' } },
@@ -22,17 +25,26 @@ function element(tag, text, className) {
 }
 
 export async function openCustomerEditor(customer, { api, refresh, isCurrent = () => true }) {
-    const dialog = element('dialog', '', 'customer-editor');
+    const dialog = element('dialog', '', 'form-lightbox customer-editor');
+    const card = element('div', '', 'card onepager-container');
+    const header = element('div', '', 'form-header');
     const title = element('h2', 'Klantgegevens');
     title.id = 'customer-editor-title';
     dialog.setAttribute('aria-labelledby', title.id);
     const context = element('p', `${customer.firstName || customer.initials || ''} ${customer.middleName || ''} ${customer.lastName || ''} · ${customer.personNumber || customer.personId || customer.id} · ${customer.mandant || ''}`);
-    const close = element('button', 'Sluiten', 'btn btn-secondary');
+    const close = element('button', '✕', 'btn-close');
+    close.setAttribute('aria-label', 'Sluiten');
     close.type = 'button';
     const status = element('p', 'Klantgegevens laden…');
     status.setAttribute('role', 'status');
     const content = element('div');
-    dialog.append(title, context, status, content, close);
+    const actions = element('div', '', 'form-actions');
+    const dismiss = element('button', 'Sluiten', 'btn btn-secondary');
+    dismiss.type = 'button';
+    actions.append(dismiss);
+    header.append(title, close);
+    card.append(header, context, status, content, actions);
+    dialog.append(card);
     document.body.append(dialog);
     const abort = new AbortController();
     let dirty = false;
@@ -58,9 +70,13 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
     function canClose() {
         return !saving && (!dirty || window.confirm('Niet-opgeslagen wijzigingen sluiten?'));
     }
-    close.addEventListener('click', () => { if (canClose()) dialog.close(); });
+    function requestClose() {
+        if (canClose()) dialog.close();
+    }
+    close.addEventListener('click', requestClose);
+    dismiss.addEventListener('click', requestClose);
     dialog.addEventListener('cancel', (event) => { if (!canClose()) event.preventDefault(); });
-    dialog.addEventListener('close', () => { abort.abort(); dialog.remove(); });
+    dialog.addEventListener('close', () => { abort.abort(); endAddressSessions(dialog); dialog.remove(); });
     dialog.showModal();
     const personId = String(customer.personId || customer.id);
     const credentialKey = customer.credentialKey;
@@ -70,6 +86,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
         const model = await api.get(readUrl, { signal: abort.signal });
         if (!dialog.open || !isCurrent()) return;
         unlockOtherSections();
+        endAddressSessions(content);
         content.replaceChildren();
         requiresReload = false;
         status.textContent = Object.values(model.capabilities.operations).some((item) => item.enabled)
@@ -84,7 +101,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
         const region = element('section');
         region.append(element('h3', config.title));
         const items = model.sections[section] || [];
-        const select = element('select');
+        const select = element('select', '', 'form-control');
         select.setAttribute('aria-label', `${config.title} kiezen`);
         const placeholder = element('option', items.length ? 'Kies het te bekijken onderdeel' : 'Geen gegevens beschikbaar');
         placeholder.value = '';
@@ -109,6 +126,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
         let previousSelection = '';
         let submitListener = null;
         function choose() {
+            endAddressSessions(form);
             form.replaceChildren();
             feedback.textContent = '';
             if (select.value === '') return;
@@ -117,21 +135,39 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
             const operation = `${section}.${create ? 'create' : 'update'}`;
             const permitted = model.capabilities.operations[operation]?.enabled === true;
             const hasIdentity = create || item.id !== null;
-            const editable = permitted && hasIdentity && Boolean(model.version) && !requiresReload;
+            const domesticAddress = section !== 'address' || item.fields.isoCountryCode === 'NL';
+            const editable = permitted && hasIdentity && Boolean(model.version) && !requiresReload && domesticAddress;
             const controls = {};
-            for (const [field, label] of Object.entries(config.fields)) {
-                const row = element('label', label);
-                const input = element('input');
-                input.name = field;
-                input.type = field === 'birthDay' ? 'date' : field === 'emailAddress' ? 'email' : 'text';
-                input.value = item.fields[field] || '';
-                input.readOnly = !editable;
-                input.autocomplete = 'off';
-                input.setAttribute('data-feedback-sensitive', field);
-                input.addEventListener('input', () => { dirty = true; lockOtherSections(region); });
-                controls[field] = input;
-                row.append(input);
-                form.append(row);
+            const initialAddress = section === 'address' ? sourceAddressValues(item.fields) : null;
+            if (initialAddress) {
+                const address = element('div');
+                address.innerHTML = renderAddressFields('customerEditorAddress', { source: true });
+                form.append(address);
+                for (const [suffix, value] of Object.entries(initialAddress)) {
+                    const input = address.querySelector(`#customerEditorAddress${suffix}`);
+                    input.name = sourceAddressInputName(suffix);
+                    input.value = value;
+                    input.readOnly = !editable || ['HouseExt', 'CountryCode'].includes(suffix);
+                    controls[suffix] = input;
+                }
+                const markDirty = () => { if (editable) { dirty = true; lockOtherSections(region); } };
+                address.addEventListener('input', markDirty);
+                address.addEventListener('change', markDirty);
+            } else {
+                for (const [field, label] of Object.entries(config.fields)) {
+                    const row = element('label', label);
+                    const input = element('input', '', 'form-control');
+                    input.name = field;
+                    input.type = field === 'birthDay' ? 'date' : field === 'emailAddress' ? 'email' : 'text';
+                    input.value = item.fields[field] || '';
+                    input.readOnly = !editable;
+                    input.autocomplete = 'off';
+                    input.setAttribute('data-feedback-sensitive', field);
+                    input.addEventListener('input', () => { dirty = true; lockOtherSections(region); });
+                    controls[field] = input;
+                    row.append(input);
+                    form.append(row);
+                }
             }
             if (section === 'bank' && !create) form.prepend(element('p', `Huidige rekening: ${item.maskedIban}`));
             const save = element('button', create ? 'Bankrekening toevoegen' : `${config.title} opslaan`, 'btn btn-primary');
@@ -143,7 +179,8 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
             reset.disabled = !editable;
             reset.addEventListener('click', () => {
                 if (saving) return;
-                for (const [field, input] of Object.entries(controls)) input.value = item.fields[field] || '';
+                endAddressSessions(form);
+                for (const [field, input] of Object.entries(controls)) input.value = (initialAddress || item.fields)[field] || '';
                 dirty = false;
                 unlockOtherSections();
             });
@@ -161,9 +198,12 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
             submitListener = (event) => {
                 event.preventDefault();
                 if (!editable || saving) return;
-                const changes = {};
-                for (const [field, input] of Object.entries(controls)) {
-                    if (input.value !== (item.fields[field] || '')) changes[field] = input.value;
+                const values = Object.fromEntries(Object.entries(controls).map(([field, input]) => [field, input.value]));
+                const changes = initialAddress ? sourceAddressChanges(initialAddress, values) : {};
+                if (!initialAddress) {
+                    for (const [field, value] of Object.entries(values)) {
+                        if (value !== (item.fields[field] || '')) changes[field] = value;
+                    }
                 }
                 if (!Object.keys(changes).length) { feedback.textContent = 'Er zijn geen wijzigingen.'; return; }
                 if (section === 'bank' && !changes.iban) { feedback.textContent = 'Vul het volledige nieuwe IBAN in.'; controls.iban.focus(); return; }
@@ -177,6 +217,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
                     : `Bankgegevens voor ${customer.lastName || 'deze klant'} opslaan? Controleer het ingevoerde IBAN.`)) return;
                 saving = true;
                 close.disabled = true;
+                dismiss.disabled = true;
                 select.disabled = true;
                 for (const button of form.querySelectorAll('button')) button.disabled = true;
                 feedback.textContent = 'Bezig met opslaan…';
@@ -198,11 +239,12 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
                             ? 'Opslaan is geblokkeerd. Laad de klant opnieuw; er wordt niets automatisch overschreven.'
                             : 'Opslaan is niet bevestigd. Controleer de invoer of laad de klant opnieuw.';
                     const invalidField = error.payload?.error?.details?.field;
-                    controls[invalidField]?.focus();
+                    Object.values(controls).find(input => input.name === invalidField)?.focus();
                     // No automatic retry after an error; reloading starts a fresh version.
                 } finally {
                     saving = false;
                     close.disabled = false;
+                    dismiss.disabled = false;
                     select.disabled = false;
                 }
             }

@@ -651,6 +651,8 @@ const en = {
         "houseNumberPlaceholder": "House no. (and suffix)*",
         "houseNumberTitle": "Enter a valid house number (e.g. 123 or 123A)",
         "houseExtensionPlaceholder": "House number addition",
+        "additionalAddressExtensionLabel": "(internal) Addition 2",
+        "countryCodeLabel": "Country code",
         "addressExtensionPlaceholder": "(internal) Addition 1",
         "streetPlaceholder": "Street*",
         "cityPlaceholder": "City*",
