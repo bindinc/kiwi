@@ -95,6 +95,14 @@ for attempt in $(seq 1 60); do
     exit 1
   fi
 
+  LOGIN_REDIRECT="${login_redirect}" node - "${gateway_base_url}/kiwi/auth/callback" <<'NODE'
+const callback = new URL(process.env.LOGIN_REDIRECT).searchParams.get('redirect_uri');
+if (callback !== process.argv[2]) {
+  console.error('[compose-smoke-oidc] Callback origin or application prefix is incorrect; check trusted proxy settings.');
+  process.exit(1);
+}
+NODE
+
   echo "[compose-smoke-oidc] Login redirect targets public fallback OIDC URL with fallback scopes."
   login_redirect_ready=1
   break

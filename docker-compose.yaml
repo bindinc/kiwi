@@ -92,7 +92,7 @@ services:
         condition: service_healthy
     environment: &app-environment
       KIWI_LOCAL_OIDC: "1"
-      TRUSTED_PROXIES: "127.0.0.1,172.16.0.0/12"
+      TRUSTED_PROXIES: "${KIWI_COMPOSE_TRUSTED_PROXIES:-127.0.0.1,::1,172.16.0.0/12,fd00::/8}"
       APP_ENV: dev
       APP_DEBUG: 1
       APP_SECRET: kiwi-local-compose-session-secret
