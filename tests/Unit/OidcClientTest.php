@@ -318,6 +318,8 @@ final class OidcClientTest extends TestCase
     {
         yield 'audience' => [['aud' => 'different-app']];
         yield 'tenant' => [['tid' => 'different-tenant']];
+        yield 'authorized party' => [['azp' => 'another-client']];
+        yield 'multiple audiences without authorized party' => [['aud' => ['kiwi-client', 'another-client']]];
         yield 'issuer' => [['iss' => 'https://login.microsoftonline.com/another-tenant/v2.0']];
         yield 'expiry' => [['exp' => 1]];
         yield 'missing expiry' => [['exp' => null]];
@@ -402,6 +404,22 @@ final class OidcClientTest extends TestCase
                 'id_token' => $token,
             ],
         ], $nonce);
+    }
+
+    public function testProductionRejectsLocalIssuerEvenWhenFallbackFlagIsSet(): void
+    {
+        [$privateKey, $jwks] = $this->createSigningMaterial('local-key');
+        $issuer = 'https://local.example/realms/test';
+        $client = $this->createConfiguredClient([
+            new MockResponse(json_encode(['issuer' => $issuer, 'jwks_uri' => 'https://keys.invalid/jwks'])),
+            new MockResponse(json_encode($jwks)),
+        ], ['client_id' => 'kiwi-client', 'issuer' => $issuer]);
+        $token = JWT::encode(['iss' => $issuer, 'aud' => 'kiwi-client', 'nonce' => 'nonce',
+            'exp' => time() + 300, 'sub' => 'local-user', 'roles' => ['bink8s.app.kiwi.admin']], $privateKey, 'RS256', 'local-key');
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage('Only the configured Entra issuer is allowed');
+        $this->withEnvironment(['APP_ENV' => 'prod', 'KIWI_LOCAL_OIDC' => '1'],
+            static fn () => $client->validateIdToken(['oidc_auth_token' => ['id_token' => $token]], 'nonce'));
     }
 
     public function testNormalizeTokenDataOmitsRefreshToken(): void

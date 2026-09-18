@@ -182,6 +182,12 @@ final class OidcTokenInspector
             throw new \UnexpectedValueException('Invalid OIDC audience.');
         }
 
+        $multipleAudiences = is_array($claims['aud'] ?? null) && count($claims['aud']) > 1;
+        $authorizedParty = $claims['azp'] ?? null;
+        if (($multipleAudiences || null !== $authorizedParty) && $authorizedParty !== $clientId) {
+            throw new \UnexpectedValueException('Invalid OIDC authorized party.');
+        }
+
         $receivedNonce = trim((string) ($claims['nonce'] ?? ''));
         $normalizedExpectedNonce = trim($expectedNonce);
         if ('' === $normalizedExpectedNonce || '' === $receivedNonce || !hash_equals($normalizedExpectedNonce, $receivedNonce)) {
@@ -201,7 +207,8 @@ final class OidcTokenInspector
         }
         $configuredIssuer = rtrim(trim((string) ($this->configuration->getConfig()['issuer'] ?? '')), '/');
         $microsoftIssuer = $this->isMicrosoftIssuer($tokenIssuer);
-        $localFallback = '1' === (string) getenv('KIWI_LOCAL_OIDC');
+        $localEnvironment = in_array((string) getenv('APP_ENV'), ['dev', 'test'], true);
+        $localFallback = $localEnvironment && '1' === (string) getenv('KIWI_LOCAL_OIDC');
         $localConfiguredIssuer = 'http://fallback-oidc:8080/kiwi-oidc/realms/kiwi-local' === $configuredIssuer;
         // Local Keycloak advertises the browser-facing issuer through its internal discovery URL.
         $localAliasAllowed = !$microsoftIssuer && $localFallback && $localConfiguredIssuer;
