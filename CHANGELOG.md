@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
-- Prepare explicit customer and bank mutation contracts and server-reported editing capabilities; keep all new source mutations blocked pending verified upstream concurrency guarantees (SC-202883).
+- Add protected, section-based customer and bank editing, strict field and bank validation, source resource checks, masked account views and durable shared mutation intent tracking; keep source writes disabled pending verified atomic upstream concurrency and bank-link guarantees (SC-202883).
 
 - Enforce validated Entra roles and session expiry for every API route, protect mutations with CSRF, and reject business writes from view/dev roles without requiring mandant roles (SC-202883).
 

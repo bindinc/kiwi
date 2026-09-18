@@ -62,4 +62,10 @@ final class CustomerMutationPolicy
             'Customer and bank writes require verified atomic upstream concurrency controls.',
         );
     }
+
+    /** No version header is guessed from the incomplete supplier specification. */
+    public function verifiedVersionCondition(string $version): array
+    {
+        throw new ApiProblemException(409, 'upstream_concurrency_unverified', 'No supported atomic source version condition has been confirmed');
+    }
 }
