@@ -651,6 +651,8 @@ const nl = {
         "houseNumberPlaceholder": "Huisnr. (en letter)*",
         "houseNumberTitle": "Voer een geldig huisnummer in (bijv. 123 of 123A)",
         "houseExtensionPlaceholder": "Huisnummer toevoeging",
+        "additionalAddressExtensionLabel": "(interne) Toevoeging 2",
+        "countryCodeLabel": "Landcode",
         "addressExtensionPlaceholder": "(interne) Toevoeging 1",
         "streetPlaceholder": "Straat*",
         "cityPlaceholder": "Plaats*",

@@ -737,16 +737,7 @@
                                 <input type="text" id="articleLastName" placeholder="Achternaam*" data-feedback-sensitive="name" required data-i18n-placeholder="indexHtml.placeholder.achternaam_9db9e9c5">
                             </div>
 
-                            <div class="form-row">
-                                <input type="text" id="articlePostalCode" placeholder="Postcode*" data-feedback-sensitive="postal-code" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44" data-i18n-title="indexHtml.title.voer_een_geldige_postcode_in_bijv_1234ab_5781c72b">
-                                <input type="text" id="articleHouseNumber" placeholder="Huisnr. (en letter)*" data-feedback-sensitive="address" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in (bijv. 123 of 123A)" required data-i18n-placeholder="indexHtml.placeholder.huisnr_en_letter_2865c592" data-i18n-title="indexHtml.title.voer_een_geldig_huisnummer_in_bijv_123_of_123a_fc80f369">
-                                <input type="text" id="articleHouseExt" readonly placeholder="Toevoeging" data-feedback-sensitive="address" maxlength="10" data-i18n-placeholder="indexHtml.placeholder.toevoeging_26fd8370">
-                            </div>
-                            
-                            <div class="form-row">
-                                <input type="text" id="articleAddress" placeholder="Straat*" data-feedback-sensitive="address" required data-i18n-placeholder="indexHtml.placeholder.straat_e57ebd14">
-                                <input type="text" id="articleCity" placeholder="Plaats*" data-feedback-sensitive="address" required data-i18n-placeholder="indexHtml.placeholder.plaats_abe00810">
-                            </div>
+                            <div data-address-fields="article"></div>
 
                             <div class="form-row">
                                 <input type="tel" id="articlePhone" placeholder="Telefoonnummer*" data-feedback-sensitive="phone" required data-i18n-placeholder="indexHtml.placeholder.telefoonnummer_069b377b">
@@ -965,16 +956,7 @@
                                 <input type="text" id="editLastName" placeholder="Achternaam*" data-feedback-sensitive="name" required data-i18n-placeholder="indexHtml.placeholder.achternaam_9db9e9c5">
                             </div>
 
-                            <div class="form-row">
-                                <input type="text" id="editPostalCode" placeholder="Postcode*" data-feedback-sensitive="postal-code" pattern="^[1-9][0-9]{3}[a-zA-Z]{2}$" title="Voer een geldige postcode in (bijv. 1234AB)" required data-i18n-placeholder="indexHtml.placeholder.postcode_d5840c44" data-i18n-title="indexHtml.title.voer_een_geldige_postcode_in_bijv_1234ab_5781c72b">
-                                <input type="text" id="editHouseNumber" placeholder="Huisnr. (en letter)*" data-feedback-sensitive="address" maxlength="7" pattern="^[1-9][0-9]{0,5}[A-Z]?$" title="Voer een geldig huisnummer in" required data-i18n-placeholder="indexHtml.placeholder.huisnr_en_letter_2865c592" data-i18n-title="indexHtml.title.voer_een_geldig_huisnummer_in_98a34b45">
-                                <input type="text" id="editHouseExt" readonly placeholder="Toevoeging" data-feedback-sensitive="address" maxlength="10" data-i18n-placeholder="indexHtml.placeholder.toevoeging_26fd8370">
-                            </div>
-                            
-                            <div class="form-row">
-                                <input type="text" id="editAddress" placeholder="Straat*" data-feedback-sensitive="address" required data-i18n-placeholder="indexHtml.placeholder.straat_e57ebd14">
-                                <input type="text" id="editCity" placeholder="Plaats*" data-feedback-sensitive="address" required data-i18n-placeholder="indexHtml.placeholder.plaats_abe00810">
-                            </div>
+                            <div data-address-fields="edit"></div>
 
                             <div class="form-row">
                                 <input type="tel" id="editPhone" placeholder="Telefoonnummer" data-feedback-sensitive="phone" data-i18n-placeholder="indexHtml.placeholder.telefoonnummer_80ab4353">
@@ -1247,24 +1229,7 @@
                             </div>
                             
                             <div id="restitutionTransferAddressFields">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="restitutionTransferPostalCode" data-i18n="indexHtml.text.postcode_a4d0ac68">Postcode *</label>
-                                        <input type="text" id="restitutionTransferPostalCode" class="form-control" data-feedback-sensitive="postal-code" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="restitutionTransferHouseNumber" data-i18n="indexHtml.text.huisnummer_86db3120">Huisnummer *</label>
-                                        <input type="text" id="restitutionTransferHouseNumber" class="form-control" data-feedback-sensitive="address" required>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="restitutionTransferAddress" data-i18n="indexHtml.text.straat_en_nummer_dda17a89">Straat en nummer *</label>
-                                    <input type="text" id="restitutionTransferAddress" class="form-control" data-feedback-sensitive="address" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="restitutionTransferCity" data-i18n="indexHtml.text.plaats_33c59bec">Plaats *</label>
-                                    <input type="text" id="restitutionTransferCity" class="form-control" data-feedback-sensitive="address" required>
-                                </div>
+                                <div data-address-fields="restitutionTransfer"></div>
                             </div>
                             
                             <div class="form-actions">

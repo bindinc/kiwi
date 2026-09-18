@@ -72,13 +72,19 @@ final class SubscriptionController extends AbstractApiController
     }
 
     #[Route('/{customerId}/deceased-actions', name: 'api_subscription_deceased_actions', methods: ['POST'], requirements: ['customerId' => '\d+'])]
-    public function processDeceasedActions(Request $request, int $customerId): JsonResponse
+    public function processDeceasedActions(Request $request, int $customerId, AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
         $actions = \is_array($payload['actions'] ?? null) ? $payload['actions'] : [];
+        foreach ($actions as $index => $action) {
+            if (is_array($action) && 'transfer' === ($action['action'] ?? null)) {
+                $transfer = is_array($action['transferData'] ?? null) ? $action['transferData'] : [];
+                $actions[$index]['transferData'] = $validator->validatePerson($request->getSession(), $transfer);
+            }
+        }
 
         return $this->json($this->stateService->processDeceasedActions($request->getSession(), $customerId, $actions));
     }

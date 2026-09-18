@@ -354,7 +354,10 @@ function readTransferFormData(prefix) {
         postalCode,
         houseNumber,
         address,
-        city
+        city,
+        ...(shouldUseCurrentCustomerAddress
+            ? { houseNumberAddition: currentCustomer.houseNumberAddition || '', addressExtension: currentCustomer.addressExtension || '' }
+            : getAddressSubmission(prefix))
     };
 }
 
@@ -749,7 +752,9 @@ export function showDeceasedTransferForm() {
         callLegacyFunction('setCustomerFormData', 'transfer', {
             postalCode: currentCustomer.postalCode,
             houseNumber: currentCustomer.houseNumber,
-            address: currentCustomer.address,
+            houseNumberAddition: currentCustomer.houseNumberAddition || '',
+            addressExtension: currentCustomer.addressExtension || '',
+            address: currentCustomer.street || String(currentCustomer.address || '').replace(/\s+\d+.*$/, ''),
             city: currentCustomer.city
         });
     });
@@ -798,7 +803,9 @@ export function showDeceasedCombinedForm() {
         callLegacyFunction('setCustomerFormData', 'transfer2', {
             postalCode: currentCustomer.postalCode,
             houseNumber: currentCustomer.houseNumber,
-            address: currentCustomer.address,
+            houseNumberAddition: currentCustomer.houseNumberAddition || '',
+            addressExtension: currentCustomer.addressExtension || '',
+            address: currentCustomer.street || String(currentCustomer.address || '').replace(/\s+\d+.*$/, ''),
             city: currentCustomer.city
         });
     });
@@ -884,11 +891,16 @@ export async function completeRestitutionTransfer(event) {
         postalCode: shouldUseSameAddress ? currentCustomer.postalCode : readTextInputValue('restitutionTransferPostalCode'),
         houseNumber: shouldUseSameAddress ? currentCustomer.houseNumber : readTextInputValue('restitutionTransferHouseNumber'),
         houseNumberAddition: shouldUseSameAddress ? currentCustomer.houseNumberAddition || '' : readTextInputValue('restitutionTransferHouseExt'),
+        addressExtension: shouldUseSameAddress ? currentCustomer.addressExtension || '' : readTextInputValue('restitutionTransferAddressExtension'),
         formSessionId: winbackState.restitutionAddressSessionId,
         address: shouldUseSameAddress ? currentCustomer.address : readTextInputValue('restitutionTransferAddress'),
         city: shouldUseSameAddress ? currentCustomer.city : readTextInputValue('restitutionTransferCity'),
         ...(!shouldUseSameAddress ? getAddressSubmission('restitutionTransfer') : {})
     };
+
+    if (!shouldUseSameAddress) {
+        transferData.address = `${transferData.street} ${transferData.houseNumber}${transferData.houseNumberAddition ? ` ${transferData.houseNumberAddition}` : ''}`;
+    }
 
     const hasRequiredIdentityFields = transferData.firstName && transferData.lastName && transferData.email && transferData.phone;
     if (!hasRequiredIdentityFields) {
@@ -1002,6 +1014,11 @@ export async function completeAllDeceasedActions() {
     const currentCustomer = readCurrentCustomer();
     if (!currentCustomer) {
         return;
+    }
+
+    const visibleStep = ['winbackStep1d', 'winbackStep1e'].find(isElementVisible);
+    if (visibleStep && globalThis.kiwiAddressCompletion) {
+        if (!await globalThis.kiwiAddressCompletion.validate(getElementById(visibleStep))) return;
     }
 
     let transferData = null;

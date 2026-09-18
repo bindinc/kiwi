@@ -91,13 +91,13 @@ test('form reset ends UUID; failed submit does not end UUID', async () => {
     assert.equal(f.requests.at(-1).payload.formSessionId, 'form-2');
 });
 
-test('restitution preserves street and number format', async () => {
-    const f = fixture({ includeNumber: true });
+test('all forms keep the street separate from the number and provider addition', async () => {
+    const f = fixture();
     f.fields.houseNumber.value = '1A'; f.fields.addition.value = '2';
     f.form.input(); f.flush(); f.pending[0].resolve(matched('Rembrandtlaan', 'A 2')); await tick(); f.form.select(0);
-    assert.equal(f.fields.street.value, 'Rembrandtlaan 1 A 2');
+    assert.equal(f.fields.street.value, 'Rembrandtlaan');
     f.fields.addition.value = 'B'; f.form.manualInput('addition'); f.flush();
-    assert.equal(f.fields.street.value, 'Rembrandtlaan 1 B');
+    assert.equal(f.fields.street.value, 'Rembrandtlaan');
     assert.equal(f.requests.length, 1);
 });
 

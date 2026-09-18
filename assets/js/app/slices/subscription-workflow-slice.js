@@ -1074,6 +1074,7 @@ export function editCustomer() {
         : splitHouseNumber(currentCustomer.houseNumber || '');
     setInputValue('editHouseNumber', houseNumberParts.houseNumber);
     setInputValue('editHouseExt', currentCustomer.houseNumberAddition ?? houseNumberParts.houseExt);
+    setInputValue('editAddressExtension', currentCustomer.addressExtension || '');
 
     const streetName = String(currentCustomer.address || '').replace(/ \d+.*$/, '');
     setInputValue('editAddress', streetName);

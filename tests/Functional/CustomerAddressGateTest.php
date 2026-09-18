@@ -64,7 +64,7 @@ final class CustomerAddressGateTest extends WebTestCase
         self::assertSame($customer['email'], json_decode($client->getResponse()->getContent(), true)['email']);
 
         $corrected = ['formSessionId' => 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', 'postalCode' => '1231AA',
-            'houseNumber' => '1A', 'houseNumberAddition' => '', 'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT', 'email' => 'changed@example.invalid'];
+            'houseNumber' => '1A', 'houseNumberAddition' => '', 'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT', 'addressExtension' => '310', 'email' => 'changed@example.invalid'];
         $client->jsonRequest('PATCH', '/api/v1/persons/1', $corrected);
         self::assertResponseIsSuccessful();
         self::assertSame('confirmed', json_decode($client->getResponse()->getContent(), true)['addressValidation']['status']);
@@ -73,6 +73,8 @@ final class CustomerAddressGateTest extends WebTestCase
         $client->request('GET', '/api/v1/persons/1');
         self::assertSame('confirmed', json_decode($client->getResponse()->getContent(), true)['addressValidation']['status']);
 
+        self::assertSame('310', json_decode($client->getResponse()->getContent(), true)['addressExtension']);
+
         // A later changed address cannot borrow the old confirmation.
         $session = $this->newSession();
         $session->setId($this->resolveClientSessionId($client));
@@ -80,6 +82,31 @@ final class CustomerAddressGateTest extends WebTestCase
         $session->save();
         $client->jsonRequest('PATCH', '/api/v1/persons/1', ['email' => 'forbidden@example.invalid']);
         self::assertResponseStatusCodeSame(409);
+    }
+
+    public function testDeceasedTransferValidatesTheRecipientBeforeSaving(): void
+    {
+        $client = $this->createAuthenticatedClient();
+        $client->disableReboot();
+        static::getContainer()->set('address.http_client', AddressSmokeHttpClientFactory::create());
+        $address = ['postalCode' => '1231AA', 'houseNumber' => '1A', 'houseNumberAddition' => '',
+            'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT', 'addressExtension' => '310'];
+        $client->jsonRequest('PATCH', '/api/v1/persons/1', $address);
+        self::assertResponseIsSuccessful();
+        $transfer = ['subscriptionId' => 1, 'action' => 'transfer', 'transferData' => $address];
+        $transfer['transferData']['houseNumberAddition'] = 'INVALID';
+        $client->jsonRequest('POST', '/api/v1/subscriptions/1/deceased-actions', ['actions' => [$transfer]]);
+        self::assertResponseStatusCodeSame(422);
+        $client->request('GET', '/api/v1/persons/1');
+        $before = json_decode($client->getResponse()->getContent(), true);
+        self::assertArrayNotHasKey('transferredTo', $before['subscriptions'][0]);
+        $transfer['transferData'] = $address;
+        $client->jsonRequest('POST', '/api/v1/subscriptions/1/deceased-actions', ['actions' => [$transfer]]);
+        self::assertResponseIsSuccessful();
+        $client->request('GET', '/api/v1/persons/1');
+        $after = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame('310', $after['subscriptions'][0]['transferredTo']['addressExtension']);
+        self::assertSame('Rembrandtlaan 1A', $after['subscriptions'][0]['transferredTo']['address']);
     }
 
     public function testExternalCorrectionCannotBypassWriteActivation(): void

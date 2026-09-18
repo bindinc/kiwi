@@ -220,7 +220,7 @@ try {
     await page.evaluate(() => window.kiwiWinbackSlice.showRestitutionTransferForm({ id: 999, magazine: 'Test' }));
     await page.uncheck('#restitutionTransferSameAddress');
     await fill('restitutionTransfer', '1231AA');
-    await page.waitForFunction(() => document.getElementById('restitutionTransferAddress').value === 'Rembrandtlaan 1');
+    await page.waitForFunction(() => document.getElementById('restitutionTransferAddress').value === 'Rembrandtlaan');
     console.log('PASS: recipient, requester, article and restitution forms; independent form UUIDs');
 } catch (error) {
     await page.screenshot({ path: `${evidence}/failure.png` });

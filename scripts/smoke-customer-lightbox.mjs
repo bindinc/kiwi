@@ -21,7 +21,7 @@ await page.route('http://lightbox.test/**', async route => {
             api: { get: async () => { if (window.loadError) throw Error('test'); return window.model; } }, refresh: async () => {}
         });
     </script></html>` });
-    if (!['/assets/css/styles.css', '/assets/js/app/customer-editor.js'].includes(path)) return route.abort();
+    if (!['/assets/css/styles.css', '/assets/js/app/customer-editor.js', '/assets/js/app/address-fields.js', '/assets/js/app/address-completion.js'].includes(path)) return route.abort();
     return route.fulfill({ contentType: path.endsWith('.css') ? 'text/css' : 'text/javascript', body: await readFile(new URL(path.slice(1), root), 'utf8') });
 });
 async function geometry(selector) {
