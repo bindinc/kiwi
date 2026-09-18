@@ -21,3 +21,12 @@ Debug and bulk state-replacement routes require a write role and are unavailable
 ## Verification
 
 Run PHP tests with an isolated PostgreSQL database, `make js-test`, `make guardrail`, and `make compose-smoke-oidc`. Verify admin/supervisor/user writes, viewer denial, dev-only business denial, direct HTTP requests, CSRF, expired/invalid tokens, and fresh login after rollout. Validate three-node Flux/kind behavior before production approval. No production rollout is implicit in this PR.
+
+## Local IPv6 gateway traffic
+
+Docker Desktop may resolve Compose service names to private IPv6 addresses. The
+Compose-only proxy allowlist therefore includes loopback, Docker IPv4 and private
+IPv6 ranges. Override `KIWI_COMPOSE_TRUSTED_PROXIES` for a narrower local network.
+Production must explicitly configure `TRUSTED_PROXIES` for its actual ingress peers;
+Compose defaults are not production defaults. The OIDC smoke verifies that the
+callback retains HTTPS, the public port and the `/kiwi` prefix.
