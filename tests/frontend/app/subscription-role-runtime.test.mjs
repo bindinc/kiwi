@@ -322,6 +322,7 @@ function testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext() 
         lastName: 'Gebruiker',
         postalCode: '1217AA',
         houseNumber: '7',
+            houseNumberAddition: '',
         address: 'Voorbeeldstraat 7',
         city: 'Hilversum',
         email: 'demo@example.org',
@@ -367,6 +368,7 @@ function testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext() 
             personNumber: '',
             postalCode: '1217AA',
             houseNumber: '7',
+            houseNumberAddition: '',
             address: 'Voorbeeldstraat 7',
             city: 'Hilversum',
             email: 'demo@example.org',
@@ -441,8 +443,11 @@ function testNewSubscriptionPersonKeepsAddressExtensionsSeparate() {
 
     const payload = JSON.parse(JSON.stringify(runtime.buildSubscriptionRolePayload('recipient')));
 
-    assert.equal(payload.person.houseNumber, '10A2');
-    assert.equal(payload.person.address, 'Teststraat 10A2');
+    assert.equal(payload.person.houseNumber, '10A');
+    assert.equal(payload.person.houseNumberAddition, '2');
+    assert.equal(payload.person.postalCode, '1234AB');
+    assert.equal(payload.person.city, 'HILVERSUM');
+    assert.equal(payload.person.address, 'Teststraat 10A 2');
     assert.equal(payload.person.street, 'Teststraat');
     assert.equal(payload.person.addressExtension, '310');
 }

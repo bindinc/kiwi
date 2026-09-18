@@ -60,11 +60,12 @@ Andere beschikbare acties staan in het klantprofiel bij de klant en de abonnemen
 - **Controle:** controleer of Kiwi bereikbaar blijft en probeer dezelfde zoekopdracht nogmaals.
 - **Oplossing:** meld de storing wanneer een nieuwe poging dezelfde fout geeft.
 
-### Klantgegevens kunnen niet worden gewijzigd
+### Address confirmation before saving
 
-- **Symptoom:** Kiwi meldt dat de klant Subscription API-detailgegevens gebruikt en daarom tijdelijk niet kan worden bewerkt.
-- **Controle:** controleer de melding die na het kiezen van **Bewerken** verschijnt.
-- **Oplossing:** behandel de gegevens in Kiwi als alleen-lezen. Gebruik voor een wijziging het daarvoor aangewezen bronsysteem.
+- Opening a person checks the address. An unconfirmed address does not prevent editing.
+- Use **Adres corrigeren** to correct it, then save. Other entered profile changes remain available after a failed save.
+- For subscription-API persons, Kiwi can correct the primary address; other profile fields remain read-only.
+- Use **Opnieuw controleren** after a provider outage. Other mutations remain blocked until the full address is confirmed.
 
 ### Geen contactgeschiedenis beschikbaar
 

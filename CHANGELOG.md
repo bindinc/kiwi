@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add protected, section-based customer and bank editing, strict field and bank validation, source resource checks, masked account views and durable shared mutation intent tracking; keep source writes disabled pending verified atomic upstream concurrency and bank-link guarantees (SC-202883).
 
 - Enforce validated Entra roles and session expiry for every API route, protect mutations with CSRF, and reject business writes from view/dev roles without requiring mandant roles (SC-202883).
+- Make house number additions read-only in every address form and populate them from address selection; keep internal additions editable and retain server-side address validation. [sc-200162]
+
+- Float address choices below street and city and hide them after selection; retain server-validated candidates, block unconfirmed addresses and preserve separate house letters/additions with canonical Dutch address formatting. Check existing-person addresses on session entry, require confirmation before mutations, and allow primary-address correction for subscription-API persons. [sc-200162]
 
 - Show selectable address results from any two postcode, house number, street or city fields, including alternatives for conflicting postcodes; fill additions only from selection, never use them as search filters. [sc-200162]
 

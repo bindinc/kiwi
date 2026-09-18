@@ -9,7 +9,7 @@ final class ApiRoutePolicy
     public const ROUTES = [
         'api_customer_editing_read' => 'kiwi.read',
         'api_customer_person_update' => 'kiwi.write',
-        'api_customer_address_update' => 'kiwi.write',
+        'api_customer_legacy_address_update' => 'kiwi.write',
         'api_customer_email_update' => 'kiwi.write',
         'api_customer_phone_update' => 'kiwi.write',
         'api_customer_mobile_update' => 'kiwi.write',
@@ -17,6 +17,8 @@ final class ApiRoutePolicy
         'api_customer_bank_update' => 'kiwi.write',
         'api_customer_bank_delete' => 'kiwi.write',
         'api_address_search' => 'kiwi.read',
+        'api_address_validate' => 'kiwi.read',
+        'api_customer_address_update' => 'kiwi.write',
         'api_address_session_close' => 'kiwi.session',
         'api_agent_status_read' => 'kiwi.session',
         'api_agent_status_update' => 'kiwi.session',

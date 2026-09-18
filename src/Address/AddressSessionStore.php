@@ -32,14 +32,14 @@ final class AddressSessionStore
             throw new ApiProblemException(409, 'address_session_closed', 'Start a new address form session');
         }
         $sameDay = null !== $entry && gmdate('Y-m-d', $entry['createdAt']) === gmdate('Y-m-d', $now);
-        if ($sameDay) {
+        if ($sameDay && is_string($entry['uuid'])) {
             return $entry['uuid'];
         }
         if (count($entries) >= 100 && !isset($entries[$id])) {
             throw new ApiProblemException(429, 'too_many_address_sessions', 'Too many address form sessions');
         }
         $uuid = $createToken();
-        $entries[$id] = ['uuid' => $uuid, 'createdAt' => $now, 'closed' => false];
+        $entries[$id] = ['uuid' => $uuid, 'createdAt' => $now, 'closed' => false] + ($entry ?? []);
         $session->set(self::KEY, $entries);
 
         return $uuid;
@@ -51,6 +51,33 @@ final class AddressSessionStore
         if ($entries[$id]['closed'] ?? false) {
             throw new ApiProblemException(409, 'address_session_closed', 'Start a new address form session');
         }
+    }
+
+    public function remember(SessionInterface $session, string $id, AddressQuery $query, array $result): void
+    {
+        $session->start();
+        $this->assertOpen($session, $id);
+        $entries = $this->entries($session, time());
+        if (count($entries) >= 100 && !isset($entries[$id])) {
+            throw new ApiProblemException(429, 'too_many_address_sessions', 'Too many address form sessions');
+        }
+        $entries[$id] ??= ['uuid' => null, 'createdAt' => time(), 'closed' => false];
+        $entries[$id]['validation'] = ['postalCode' => $query->postalCode, 'houseNumber' => $query->houseNumber,
+            'result' => $result, 'checkedAt' => time()];
+        $session->set(self::KEY, $entries);
+    }
+
+    public function remembered(SessionInterface $session, string $id): ?array
+    {
+        $session->start();
+        $this->assertOpen($session, $id);
+        $entry = $this->entries($session, time())[$id] ?? null;
+        $buffer = $entry['validation'] ?? null;
+        if (null === $buffer || gmdate('Y-m-d', $buffer['checkedAt']) !== gmdate('Y-m-d')) {
+            return null;
+        }
+
+        return $buffer;
     }
 
     public function close(SessionInterface $session, string $id): void

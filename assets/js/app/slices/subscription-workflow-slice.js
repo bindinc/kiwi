@@ -1,3 +1,4 @@
+import { getAddressSubmission } from '../address-completion.js';
 import { selectCustomer as reloadSourceCustomer } from './customer-detail-slice.js';
 import { openCustomerEditor } from '../customer-editor.js';
 import { getGlobalScope } from '../services.js';
@@ -1068,9 +1069,11 @@ export function editCustomer() {
     setInputValue('editLastName', currentCustomer.lastName || '');
 
     setInputValue('editPostalCode', currentCustomer.postalCode || '');
-    const houseNumberParts = splitHouseNumber(currentCustomer.houseNumber || '');
+    const houseNumberParts = currentCustomer.houseNumberAddition !== undefined
+        ? { houseNumber: currentCustomer.houseNumber || '', houseExt: currentCustomer.houseNumberAddition }
+        : splitHouseNumber(currentCustomer.houseNumber || '');
     setInputValue('editHouseNumber', houseNumberParts.houseNumber);
-    setInputValue('editHouseExt', houseNumberParts.houseExt);
+    setInputValue('editHouseExt', currentCustomer.houseNumberAddition ?? houseNumberParts.houseExt);
 
     const streetName = String(currentCustomer.address || '').replace(/ \d+.*$/, '');
     setInputValue('editAddress', streetName);
@@ -1102,12 +1105,9 @@ export async function saveCustomerEdit(event) {
     if (!customer) {
         return;
     }
-    if (isSubscriptionApiCustomer(customer)) {
-        showReadonlySubscriptionApiToast('bewerkt');
-        return;
-    }
+    const addressOnly = isSubscriptionApiCustomer(customer);
 
-    const birthday = callLegacyFunction('ensureBirthdayValue', 'edit', false);
+    const birthday = addressOnly ? '' : callLegacyFunction('ensureBirthdayValue', 'edit', false);
     if (birthday === null) {
         return;
     }
@@ -1127,17 +1127,22 @@ export async function saveCustomerEdit(event) {
         optinPost: getCheckedValue('editOptinPost')
     };
 
-    const houseNumber = getInputValue('editHouseNumber');
-    const houseExt = getInputValue('editHouseExt');
-    updates.houseNumber = houseExt ? `${houseNumber}${houseExt}` : houseNumber;
-    updates.address = `${getInputValue('editAddress')} ${updates.houseNumber}`;
+    Object.assign(updates, getAddressSubmission('edit'));
+    updates.address = `${updates.street} ${updates.houseNumber}${updates.houseNumberAddition ? ` ${updates.houseNumberAddition}` : ''}`;
 
     const { personsApiUrl } = getApiEndpoints();
     const apiClient = getApiClient();
     if (apiClient && typeof apiClient.patch === 'function' && typeof apiClient.post === 'function') {
         try {
-            await apiClient.patch(`${personsApiUrl}/${customerId}`, updates);
-            await apiClient.post(`${personsApiUrl}/${customerId}/contact-history`, {
+            const workSession = getCustomerWorkSessionApi();
+            const saveContext = workSession?.getRequestContext?.();
+            const url = addressOnly
+                ? `${personsApiUrl}/${customerId}/address?credentialKey=${encodeURIComponent(customer.credentialKey)}`
+                : `${personsApiUrl}/${customerId}`;
+            const saved = await apiClient.patch(url, addressOnly ? getAddressSubmission('edit') : updates);
+            if (saveContext && !workSession.isCurrent(saveContext)) return;
+            workSession?.acceptCorrectedCustomer?.(saved);
+            if (!addressOnly) await apiClient.post(`${personsApiUrl}/${customerId}/contact-history`, {
                 type: 'Gegevens gewijzigd',
                 description: 'Klantgegevens bijgewerkt.'
             });

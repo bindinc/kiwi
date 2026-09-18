@@ -45,3 +45,10 @@ for (const [method, url] of [
     assert.equal(requests.at(-1).options.headers['X-Kiwi-Workflow-Session-Id'], 'session-a');
 }
 console.log('API client customer session tests passed');
+
+window.kiwiCustomerWorkSession.addressAllowsMutation = () => false;
+const requestsBeforeBlockedSave = requests.length;
+await assert.rejects(window.kiwiApi.patch('/api/v1/persons/1', {email: 'edited@example.invalid'}), error => error.status === 409);
+assert.equal(requests.length, requestsBeforeBlockedSave);
+await window.kiwiApi.get('/api/v1/persons/1');
+assert.equal(requests.length, requestsBeforeBlockedSave + 1);

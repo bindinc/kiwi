@@ -291,6 +291,8 @@ final class CustomerControllerTest extends WebTestCase
                     ],
                 ],
             ], \JSON_THROW_ON_ERROR), ['http_code' => 200]),
+            new MockResponse(json_encode(['address' => ['street' => 'Dorpsstraat', 'postCode' => '1217AA',
+                'city' => 'Hilversum', 'housenumber' => ['housenumber' => '10']]])),
             new MockResponse((string) json_encode([
                 'content' => [
                     [
@@ -363,14 +365,14 @@ final class CustomerControllerTest extends WebTestCase
         self::assertSame('SO-9001', $payload['subscriptions'][0]['orderNumber']);
         self::assertSame('Mikrogids', $payload['subscriptions'][0]['magazine']);
 
-        self::assertCount(3, $requests);
+        self::assertCount(4, $requests);
         self::assertSame(
             'https://example.invalid/subscription/public/persons/11860448',
             $requests[1]['url'],
         );
         self::assertSame(
             'https://example.invalid/subscription/public/orders?page=0&pagesize=500&customerPersonId=11860448',
-            $requests[2]['url'],
+            $requests[3]['url'],
         );
 
         $requestId = $client->getResponse()->headers->get('X-Kiwi-Request-Id');

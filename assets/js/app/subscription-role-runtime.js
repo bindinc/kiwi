@@ -352,7 +352,7 @@ function renderCustomerForm(containerId, prefix, config = {}) {
             </div>
             <div class="customer-address-field">
                 <label for="${prefix}HouseExt">${translate('forms.houseExtensionPlaceholder', {}, 'Huisnummer toevoeging')}</label>
-                <input type="text" id="${prefix}HouseExt" data-feedback-sensitive="address" maxlength="10">
+                <input type="text" id="${prefix}HouseExt" readonly data-feedback-sensitive="address" maxlength="10">
             </div>
             <div class="customer-address-field">
                 <label for="${prefix}AddressExtension">${translate('forms.addressExtensionPlaceholder', {}, '(interne) Toevoeging 1')}</label>
@@ -429,7 +429,9 @@ function setCustomerFormData(prefix, data) {
     if (data.birthday) setBirthdayFields(prefix, data.birthday);
     if (data.postalCode) document.getElementById(`${prefix}PostalCode`).value = data.postalCode;
     if (data.houseNumber) document.getElementById(`${prefix}HouseNumber`).value = data.houseNumber;
-    if (data.houseExt) document.getElementById(`${prefix}HouseExt`).value = data.houseExt;
+    if (data.houseNumberAddition !== undefined && document.getElementById(`${prefix}HouseExt`)) {
+        document.getElementById(`${prefix}HouseExt`).value = data.houseNumberAddition;
+    } else if (data.houseExt) document.getElementById(`${prefix}HouseExt`).value = data.houseExt;
     if (data.addressExtension && document.getElementById(`${prefix}AddressExtension`)) {
         document.getElementById(`${prefix}AddressExtension`).value = data.addressExtension;
     }
@@ -665,6 +667,7 @@ function buildExistingPersonSnapshot(selectedPerson) {
         personNumber: String(selectedPerson.personNumber || '').trim(),
         postalCode: String(selectedPerson.postalCode || '').trim(),
         houseNumber: String(selectedPerson.houseNumber || '').trim(),
+        houseNumberAddition: String(selectedPerson.houseNumberAddition || '').trim(),
         address: String(selectedPerson.address || '').trim(),
         city: String(selectedPerson.city || '').trim(),
         email: String(selectedPerson.email || '').trim(),
@@ -2138,10 +2141,10 @@ function createPersonPayloadFromForm(prefix, optinData = null) {
     const middleName = data.middleName.trim();
     const lastName = data.lastName.trim();
     const street = data.address.trim();
-    const houseNumber = data.houseNumber.trim();
-    const houseExt = data.houseExt.trim();
+    const houseNumber = data.houseNumber.trim().toUpperCase();
+    const houseExt = data.houseExt.trim().toUpperCase();
     const addressExtension = data.addressExtension.trim();
-    const combinedHouseNumber = `${houseNumber}${houseExt}`.trim();
+    const combinedHouseNumber = `${houseNumber}${houseExt ? ` ${houseExt}` : ''}`.trim();
 
     if (!initials || !lastName || !street || !houseNumber || !data.postalCode.trim() || !data.city.trim() || !data.email.trim()) {
         showToast(translate('forms.required', {}, 'Vul alle verplichte velden in'), 'error');
@@ -2155,10 +2158,12 @@ function createPersonPayloadFromForm(prefix, optinData = null) {
         middleName: middleName,
         lastName: fullLastName,
         birthday: birthday,
-        postalCode: data.postalCode.trim().toUpperCase(),
-        houseNumber: combinedHouseNumber,
+        postalCode: data.postalCode.replace(/\s+/g, '').toUpperCase(),
+        houseNumber: houseNumber,
+        houseNumberAddition: houseExt,
+        ...(window.kiwiAddressCompletion?.getSubmission(prefix) || {}),
         address: `${street} ${combinedHouseNumber}`.trim(),
-        city: data.city.trim(),
+        city: data.city.trim().toUpperCase(),
         email: data.email.trim(),
         landlinePhone: data.landlinePhone.trim(),
         mobilePhone: data.mobilePhone.trim()

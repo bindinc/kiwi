@@ -7,6 +7,10 @@ namespace App\Controller\Api;
 use App\CustomerWorkSession\CustomerAuditService;
 use App\Http\ApiProblemException;
 use App\Http\JsonRequestDecoder;
+use App\Address\CustomerAddressGate;
+use App\Address\AddressValidationService;
+use App\Address\PostalAddress;
+use App\SubscriptionApi\PersonSearchClient;
 use App\Oidc\OidcConfiguration;
 use App\Oidc\OidcRoleAccess;
 use App\Oidc\RequestOidcContext;
@@ -28,6 +32,7 @@ final class CustomerController extends AbstractApiController
         OidcRoleAccess $oidcRoleAccess,
         OidcConfiguration $oidcConfiguration,
         JsonRequestDecoder $jsonRequestDecoder,
+        private readonly CustomerAddressGate $addressGate,
         private readonly PocStateService $stateService,
         private readonly AggregatedPersonSearchService $aggregatedPersonSearchService,
         private readonly PersonDetailService $personDetailService,
@@ -115,10 +120,12 @@ final class CustomerController extends AbstractApiController
     }
 
     #[Route('', name: 'api_customers_create', methods: ['POST'])]
-    public function createCustomer(Request $request): JsonResponse
+    public function createCustomer(Request $request, AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
+
+        $payload = $validator->validatePerson($request->getSession(), $payload);
 
         return $this->json($this->stateService->createCustomer($request->getSession(), $payload), 201);
     }
@@ -132,7 +139,7 @@ final class CustomerController extends AbstractApiController
     }
 
     #[Route('/state', name: 'api_customers_state_write', methods: ['PUT'])]
-    public function writeCustomerState(Request $request): JsonResponse
+    public function writeCustomerState(Request $request, AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
@@ -140,6 +147,25 @@ final class CustomerController extends AbstractApiController
         $customers = $payload['customers'] ?? null;
         if (!\is_array($customers)) {
             throw new ApiProblemException(400, 'invalid_payload', 'customers must be an array');
+        }
+
+        $existing = $this->stateService->getCustomerState($request->getSession())['customers'];
+        $byId = array_column($existing, null, 'id');
+        foreach ($customers as &$customer) {
+            if (!is_array($customer)) {
+                throw new ApiProblemException(400, 'invalid_payload', 'Invalid customer');
+            }
+            $previous = $byId[$customer['id'] ?? ''] ?? [];
+            if ($previous !== $customer) {
+                $customer = $validator->validatePerson($request->getSession(), $customer);
+            }
+        }
+        unset($customer);
+        $retainedIds = array_column($customers, 'id');
+        foreach ($existing as $previous) {
+            if (!in_array($previous['id'], $retainedIds, true)) {
+                $this->addressGate->requireCustomer($request, $previous['id']);
+            }
         }
 
         return $this->json($this->stateService->replaceCustomers($request->getSession(), $customers));
@@ -166,16 +192,42 @@ final class CustomerController extends AbstractApiController
             $customerId,
         );
 
+        $customer['addressValidation'] = $this->addressGate->check($request, $customer);
+
         return $this->json($customer);
     }
 
+    #[Route('/{customerId}/address', name: 'api_customer_legacy_address_update', methods: ['PATCH'], requirements: ['customerId' => '[^/]+'])]
+    public function correctExternalAddress(Request $request, string $customerId, AddressValidationService $validator, PersonSearchClient $client): JsonResponse
+    {
+        $this->requireApiAccess($request);
+        \App\Security\BusinessAccess::requireSessionWrite($request->getSession());
+        throw new ApiProblemException(409, 'upstream_concurrency_unverified',
+            'Address writes require verified atomic upstream version control.');
+    }
+
     #[Route('/{customerId}', name: 'api_customer_update', methods: ['PATCH'], requirements: ['customerId' => '\d+'])]
-    public function updateCustomer(Request $request, int $customerId): JsonResponse
+    public function updateCustomer(Request $request, int $customerId, AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
 
-        return $this->json($this->stateService->updateCustomer($request->getSession(), $customerId, $payload));
+        if (array_intersect(['postalCode', 'houseNumber', 'houseNumberAddition', 'address', 'street', 'city'], array_keys($payload))) {
+            $existing = $this->stateService->getCustomer($request->getSession(), $customerId);
+            $validated = $validator->validatePerson($request->getSession(), array_replace($existing, $payload));
+            // Use existing fields only as validation context, never as writable input.
+            $fields = array_merge(array_keys($payload), ['postalCode', 'houseNumber', 'houseNumberAddition', 'street', 'city', 'countryCode', 'address']);
+            $payload = array_intersect_key($validated, array_flip($fields));
+        } else {
+            $this->addressGate->requireCustomer($request, $customerId);
+        }
+        $customer = $this->stateService->updateCustomer($request->getSession(), $customerId, $payload);
+        if (isset($payload['street'])) {
+            $this->addressGate->rememberCorrection($request, $customer);
+        }
+        $customer['addressValidation'] = $this->addressGate->check($request, $customer);
+
+        return $this->json($customer);
     }
 
     #[Route('/{customerId}/contact-history', name: 'api_customer_contact_history_read', methods: ['GET'], requirements: ['customerId' => '\d+'])]
@@ -192,6 +244,7 @@ final class CustomerController extends AbstractApiController
     public function createContactHistory(Request $request, int $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
+        $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->createContactHistoryEntry($request->getSession(), $customerId, $payload), 201);
@@ -201,6 +254,7 @@ final class CustomerController extends AbstractApiController
     public function updateDeliveryRemarks(Request $request, int $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
+        $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->updateDeliveryRemarks(
@@ -215,6 +269,7 @@ final class CustomerController extends AbstractApiController
     public function createEditorialComplaint(Request $request, int $customerId): JsonResponse
     {
         $this->requireApiAccess($request);
+        $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
         return $this->json($this->stateService->createEditorialComplaint($request->getSession(), $customerId, $payload), 201);
@@ -234,7 +289,7 @@ final class CustomerController extends AbstractApiController
     private function readSubscriptionApiCustomer(string $customerId, string $credentialKey): array
     {
         try {
-            return $this->personDetailService->getPerson($customerId, $credentialKey);
+            return $this->personDetailService->getPerson($customerId, $credentialKey, true);
         } catch (SubscriptionApiResponseException $exception) {
             if (404 === $exception->getStatusCode()) {
                 throw new ApiProblemException(404, 'customer_not_found', 'Customer not found');

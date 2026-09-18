@@ -884,6 +884,13 @@ const en = {
         "resetFailed": "Reset via backend failed"
     },
     "customerWorkSession": {
+        "addressChecking": "Checking the address. You can edit details; saving requires a confirmed address.",
+        "addressBlocked": "This address has not been confirmed. You can edit details. Correct the address before saving changes.",
+        "addressSaveBlocked": "Confirm the customer address before saving. Use Correct address; your changes are preserved.",
+        "correctAddress": "Correct address",
+        "retryAddress": "Check again",
+        "externalAddressOnly": "Only the primary address will be updated. Other details remain unchanged.",
+
         "activeCustomer": "Active customer",
         "personNumber": "Person no.",
         "source": "Source/tenant",

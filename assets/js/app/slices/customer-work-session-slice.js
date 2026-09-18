@@ -63,6 +63,7 @@ function renderCustomerWorkSession() {
     const hasActiveCustomer = Boolean(snapshot.customerReference && summary);
 
     setHidden('customerWorkSessionBar', !hasActiveCustomer);
+    renderAddressCheck(snapshot);
     if (!hasActiveCustomer) {
         return;
     }
@@ -78,6 +79,53 @@ function renderCustomerWorkSession() {
     }
 
     setHidden('customerWorkSessionPendingMutation', !snapshot.resetBlocked);
+}
+
+function renderAddressCheck(snapshot) {
+    const customer = snapshot.activeCustomer;
+    const blocked = Boolean(customer) && (snapshot.selectionPending || customer.addressValidation?.status !== 'confirmed');
+    setHidden('customerAddressGate', !blocked);
+    setText('customerAddressGateMessage', snapshot.selectionPending
+        ? translate('customerWorkSession.addressChecking', 'Adres wordt gecontroleerd. Je kunt gegevens aanpassen; opslaan kan na bevestiging.')
+        : translate('customerWorkSession.addressBlocked', 'Dit adres is nog niet bevestigd. Je kunt gegevens aanpassen. Corrigeer het adres voordat je wijzigingen opslaat.'));
+    const retry = getElement('customerAddressRetry');
+    if (retry) retry.disabled = snapshot.selectionPending;
+}
+
+export function addressAllowsMutation(method, url, payload) {
+    const snapshot = customerWorkSession.getSnapshot();
+    if (!snapshot.customerReference) return true;
+    if (!snapshot.selectionPending && snapshot.activeCustomer?.addressValidation?.status === 'confirmed') return true;
+    // A correction can save the complete profile atomically; its address is checked by the server.
+    const ownPerson = encodeURIComponent(snapshot.customerReference.personId);
+    const path = url.split('?')[0];
+    const correction = method === 'PATCH' && (path === `/api/v1/persons/${ownPerson}` || path === `/api/v1/persons/${ownPerson}/address`);
+    if (correction && payload?.postalCode && payload?.houseNumber && payload?.city) return true;
+    showToast(translate('customerWorkSession.addressSaveBlocked', 'Opslaan kan pas nadat het klantadres is bevestigd. Gebruik Adres corrigeren; je invoer blijft behouden.'), 'warning');
+    return false;
+}
+
+export function rejectCustomerAddress(context) {
+    if (!customerWorkSession.isCurrent(context)) return;
+    const customer = customerWorkSession.getSnapshot().activeCustomer;
+    if (customer) customer.addressValidation = { status: 'blocked' };
+    renderCustomerWorkSession();
+}
+
+export function acceptCorrectedCustomer(customer) {
+    const context = customerWorkSession.getRequestContext();
+    if (customerWorkSession.confirmCustomer(context, customer)) renderCustomerWorkSession();
+}
+
+function correctCustomerAddress() {
+    const form = getElement('editCustomerForm');
+    if (!form || form.style.display === 'none') getGlobalScope()?.editCustomer?.();
+    getElement('editPostalCode')?.focus();
+}
+
+async function retryCustomerAddress() {
+    const customer = customerWorkSession.getSnapshot().activeCustomer;
+    if (customer) await getGlobalScope()?.kiwiCustomerDetailSlice?.selectCustomer(customer.id);
 }
 
 export function startCustomerSelection(customer) {
@@ -286,6 +334,9 @@ function exposeCustomerWorkSessionApi() {
 
     globalScope[CUSTOMER_WORK_SESSION_NAMESPACE] = {
         abandonCustomerSelection,
+        addressAllowsMutation,
+        acceptCorrectedCustomer,
+        rejectCustomerAddress,
         beginMutation: beginCustomerMutation,
         confirmCustomerSelection,
         continueCustomerWorkSession,
@@ -315,6 +366,8 @@ export function registerCustomerWorkSessionSlice(actionRouter) {
     }
 
     actionRouter.registerMany({
+        'customer-address.correct': correctCustomerAddress,
+        'customer-address.retry': () => { void retryCustomerAddress(); },
         'customer-work-session.continue': () => {
             continueCustomerWorkSession();
         },

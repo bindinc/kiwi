@@ -6,6 +6,8 @@ namespace App\Controller\Api;
 
 use App\Http\ApiProblemException;
 use App\Http\JsonRequestDecoder;
+use App\Address\CustomerAddressGate;
+use App\Address\AddressValidationService;
 use App\Oidc\OidcConfiguration;
 use App\Oidc\OidcRoleAccess;
 use App\Oidc\RequestOidcContext;
@@ -23,6 +25,7 @@ final class WorkflowController extends AbstractApiController
         OidcRoleAccess $oidcRoleAccess,
         OidcConfiguration $oidcConfiguration,
         JsonRequestDecoder $jsonRequestDecoder,
+        private readonly CustomerAddressGate $addressGate,
         private readonly PocStateService $stateService,
         private readonly SubscriptionQueueService $subscriptionQueueService,
     ) {
@@ -57,10 +60,20 @@ final class WorkflowController extends AbstractApiController
 
     #[Route('/subscription', name: 'api_workflow_subscription_queue', methods: ['POST'])]
     #[Route('/subscription-signup', name: 'api_workflow_subscription_signup', methods: ['POST'])]
-    public function queueSubscription(Request $request): JsonResponse
+    public function queueSubscription(Request $request, AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
+
+        foreach (['recipient', 'requester'] as $role) {
+            if (isset($payload[$role]['personId'])) {
+                $credentialKey = (string) ($payload[$role]['credentialKey'] ?? $payload[$role]['person']['credentialKey'] ?? '');
+                $payload[$role]['person'] = $this->addressGate->requireCustomer($request, (string) $payload[$role]['personId'], $credentialKey);
+            }
+            if (is_array($payload[$role]['person'] ?? null) && !isset($payload[$role]['personId'])) {
+                $payload[$role]['person'] = $validator->validatePerson($request->getSession(), $payload[$role]['person']);
+            }
+        }
 
         return $this->json(
             $this->subscriptionQueueService->queueSubscription(
@@ -73,13 +86,19 @@ final class WorkflowController extends AbstractApiController
     }
 
     #[Route('/article-order', name: 'api_workflow_article_order', methods: ['POST'])]
-    public function articleOrder(Request $request): JsonResponse
+    public function articleOrder(Request $request, AddressValidationService $validator): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
 
         $customerId = $this->parseIntValue($payload['customerId'] ?? null, 'customerId', null, false, 1);
+        if (null !== $customerId) {
+            $this->addressGate->requireCustomer($request, $customerId);
+        }
         $customer = \is_array($payload['customer'] ?? null) ? $payload['customer'] : null;
+        if (null !== $customer) {
+            $customer = $validator->validatePerson($request->getSession(), $customer);
+        }
         $order = \is_array($payload['order'] ?? null) ? $payload['order'] : [];
         $contactEntry = \is_array($payload['contactEntry'] ?? null) ? $payload['contactEntry'] : null;
 

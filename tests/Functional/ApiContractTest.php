@@ -108,6 +108,7 @@ final class ApiContractTest extends WebTestCase
         $client->request('GET', '/api/v1/persons');
         self::assertResponseIsSuccessful();
         $existingCustomers = json_decode($client->getResponse()->getContent(), true);
+        $this->rememberCustomerAddresses($client, array_slice($existingCustomers['items'], 0, 2));
         $recipientId = $existingCustomers['items'][0]['id'];
         $requesterId = $existingCustomers['items'][1]['id'];
         $submissionId = 'sc-187755-functional-submission';
@@ -214,8 +215,8 @@ final class ApiContractTest extends WebTestCase
         $client->request('PATCH', sprintf('/api/v1/persons/%d', $recipientId), server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'city' => 'Zwolle',
         ], JSON_THROW_ON_ERROR));
-        self::assertResponseIsSuccessful();
-        self::assertSame('Zwolle', json_decode($client->getResponse()->getContent(), true)['city']);
+        self::assertResponseStatusCodeSame(503);
+        self::assertSame('address_unconfirmed', json_decode($client->getResponse()->getContent(), true)['error']['code']);
 
         $client->request('PUT', sprintf('/api/v1/persons/%d/delivery-remarks', $recipientId), server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'default' => 'Test opmerking',
@@ -223,6 +224,34 @@ final class ApiContractTest extends WebTestCase
         ], JSON_THROW_ON_ERROR));
         self::assertResponseIsSuccessful();
         self::assertSame('Test opmerking', json_decode($client->getResponse()->getContent(), true)['deliveryRemarks']['default']);
+    }
+
+    private function rememberCustomerAddresses(\Symfony\Bundle\FrameworkBundle\KernelBrowser $client, array $customers): void
+    {
+        $session = $this->newSession();
+        $session->setId($this->resolveClientSessionId($client));
+        $request = \Symfony\Component\HttpFoundation\Request::create('/');
+        $request->setSession($session);
+        $gate = static::getContainer()->get(\App\Address\CustomerAddressGate::class);
+        foreach ($customers as $customer) {
+            $customer['street'] = preg_replace('/ \d+.*$/', '', $customer['address']);
+            $gate->rememberCorrection($request, $customer);
+        }
+        $session->save();
+    }
+
+    private function rememberAddress(\Symfony\Bundle\FrameworkBundle\KernelBrowser $client, array $payload): string
+    {
+        $id = 'cccccccc-cccc-4ccc-accc-cccccccccccc';
+        $session = $this->newSession();
+        $session->setId($this->resolveClientSessionId($client));
+        $address = \App\Address\PostalAddress::fromPayload($payload) + ['verified' => true];
+        (new \App\Address\AddressSessionStore())->remember($session, $id,
+            new \App\Address\AddressQuery($address['postalCode'], $address['houseNumber'], ''),
+            ['status' => 'matched', 'complete' => true, 'candidates' => [$address]]);
+        $session->save();
+
+        return $id;
     }
 
     public function testCatalogOrderAndCallFlow(): void
@@ -233,10 +262,12 @@ final class ApiContractTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $article = json_decode($client->getResponse()->getContent(), true)['items'][0];
 
+        $formId = $this->rememberAddress($client, ['postalCode' => '1234AB', 'houseNumber' => '10', 'street' => 'Teststraat', 'city' => 'Teststad']);
         $client->request('POST', '/api/v1/workflows/article-order', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'customer' => [
                 'salutation' => 'Mevr.',
                 'firstName' => 'Order',
+                'formSessionId' => $formId,
                 'middleName' => '',
                 'lastName' => 'Tester',
                 'birthday' => '1980-01-01',
@@ -330,6 +361,8 @@ final class ApiContractTest extends WebTestCase
         self::assertSame(2, $calendar['month']);
         self::assertArrayHasKey('recommendedDate', $calendar);
 
+        $client->request('GET', '/api/v1/persons');
+        $this->rememberCustomerAddresses($client, json_decode($client->getResponse()->getContent(), true)['items']);
         $client->request('PATCH', '/api/v1/subscriptions/1/1', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'status' => 'active',
             'duration' => '2-jaar',
