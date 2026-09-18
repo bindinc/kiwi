@@ -15,7 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AddressController extends AbstractApiController
 {
     #[Route('/search', name: 'api_address_search', methods: ['POST'])]
-    public function search(Request $request, AddressLookupService $lookup): JsonResponse
+    public function search(Request $request, AddressLookupService $lookup, AddressSessionStore $sessions): JsonResponse
     {
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
@@ -24,7 +24,18 @@ final class AddressController extends AbstractApiController
         $query = AddressQuery::fromSearchPayload($payload);
         $result = $lookup->search($query, $id, $request->getSession(), includeCandidates: true);
 
+        $sessions->remember($request->getSession(), $id, $query, $result);
+
         return new JsonResponse($result, 200, ['Cache-Control' => 'no-store']);
+    }
+
+    #[Route('/validate', name: 'api_address_validate', methods: ['POST'])]
+    public function validateAddress(Request $request, \App\Address\AddressValidationService $validator): JsonResponse
+    {
+        $this->requireApiAccess($request);
+        $address = $validator->validate($request->getSession(), $this->parseJsonObject($request));
+
+        return new JsonResponse(['status' => 'confirmed', 'address' => $address], 200, ['Cache-Control' => 'no-store']);
     }
 
     #[Route('/sessions/{formSessionId}', name: 'api_address_session_close', methods: ['DELETE'])]

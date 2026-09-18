@@ -88,6 +88,85 @@ final class AddressLookupTest extends TestCase
         return new AddressLookupService(new PostnlAddressClient($loader, $http), new WebaboAddressClient($config, new WebaboAccessTokenProvider($config, $http), $http), new AddressSessionStore(), $logger);
     }
 
+    public function testConfirmedBufferRejectsInventedAdditionWithoutAnotherProviderCall(): void
+    {
+        $service = $this->service([]);
+        $store = new AddressSessionStore();
+        $session = new Session(new MockArraySessionStorage());
+        $query = $this->query();
+        $result = AddressLookupService::choices($query, [$this->address(), $this->address('Rembrandtlaan', '1', 'A')]);
+        self::assertTrue($result['complete']);
+        $store->remember($session, self::UUID, $query, $result);
+        $validator = new \App\Address\AddressValidationService($service, $store);
+        $payload = ['formSessionId' => self::UUID, 'postalCode' => '1231 aa', 'houseNumber' => '1a',
+            'houseNumberAddition' => '', 'street' => 'Rembrandtlaan', 'city' => 'Loosdrecht'];
+        $confirmed = $validator->validate($session, $payload);
+        self::assertSame('1A', $confirmed['houseNumber']);
+        self::assertSame('LOOSDRECHT', $confirmed['city']);
+        self::assertSame('NL', $confirmed['countryCode']);
+        self::assertCount(0, $this->requests);
+        $this->expectException(ApiProblemException::class);
+        $validator->validate($session, array_replace($payload, ['houseNumberAddition' => 'B']));
+    }
+
+    public function testTruncatedBufferCannotRejectAnUnseenValidAddress(): void
+    {
+        $service = $this->service([$this->response(['uuid' => self::UUID]), $this->response([$this->postnlAddress()])]);
+        $store = new AddressSessionStore();
+        $session = new Session(new MockArraySessionStorage());
+        $store->remember($session, self::UUID, $this->query(), ['candidates' => [], 'complete' => false, 'limited' => true]);
+        $validator = new \App\Address\AddressValidationService($service, $store);
+        $result = $validator->validate($session, ['formSessionId' => self::UUID, 'postalCode' => '1231AA', 'houseNumber' => '1',
+            'street' => 'Rembrandtlaan', 'city' => 'Loosdrecht']);
+        self::assertSame('1', $result['houseNumber']);
+        self::assertCount(2, $this->requests);
+    }
+
+    public function testStreetOnlyFallbackCannotConfirmAnAddress(): void
+    {
+        $service = $this->service([$this->response([], 503), $this->response(['access_token' => '<token>']),
+            $this->response([['zipcode' => '1231AA', 'streetName' => 'Rembrandtlaan', 'city' => 'Loosdrecht']])]);
+        $validator = new \App\Address\AddressValidationService($service, new AddressSessionStore());
+        $this->expectException(ApiProblemException::class);
+        $validator->validate(new Session(new MockArraySessionStorage()), ['formSessionId' => self::UUID,
+            'postalCode' => '1231AA', 'houseNumber' => '1', 'street' => 'Rembrandtlaan', 'city' => 'Loosdrecht']);
+    }
+
+    public function testExpiredAndClosedBuffersCannotConfirmAnAddress(): void
+    {
+        $store = new AddressSessionStore();
+        $session = new Session(new MockArraySessionStorage());
+        $store->remember($session, self::UUID, $this->query(), AddressLookupService::choices($this->query(), [$this->address()]));
+        self::assertNotNull($store->remembered($session, self::UUID));
+        $entries = $session->get('address_form_sessions');
+        $entries[self::UUID]['createdAt'] = time() - 43201;
+        $session->set('address_form_sessions', $entries);
+        self::assertNull($store->remembered($session, self::UUID));
+        self::assertNull($store->remembered($session, 'bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbbbb'));
+        $store->close($session, self::UUID);
+        $this->expectException(ApiProblemException::class);
+        $store->remembered($session, self::UUID);
+    }
+
+    public function testTotalOutageCannotConfirmManuallyEnteredAddress(): void
+    {
+        $service = $this->service([$this->response([], 503), $this->response(['access_token' => '<token>']), $this->response([], 503)]);
+        $validator = new \App\Address\AddressValidationService($service, new AddressSessionStore());
+        $this->expectException(ApiProblemException::class);
+        $validator->validate(new Session(new MockArraySessionStorage()), ['formSessionId' => self::UUID,
+            'postalCode' => '1231AA', 'houseNumber' => '1', 'street' => 'Rembrandtlaan', 'city' => 'Loosdrecht']);
+    }
+
+    public function testParadiseAddressKeepsLetterAndAdditionSeparate(): void
+    {
+        $address = \App\Address\PostalAddress::fromCandidate(['postalCode' => '1234 ab', 'houseNumber' => '123',
+            'addition' => 'a 2', 'street' => 'Kerkstraat', 'city' => 'Tiel']);
+        self::assertSame(['postalCode' => '1234AB', 'houseNumber' => '123A', 'houseNumberAddition' => '2',
+            'street' => 'Kerkstraat', 'city' => 'TIEL', 'countryCode' => 'NL'], $address);
+        $this->expectException(ApiProblemException::class);
+        \App\Address\PostalAddress::fromPayload(array_replace($address, ['houseNumber' => '123-A']));
+    }
+
     public function testAllSixSearchPairsUseStructuredProviderFields(): void
     {
         $values = ['postalCode' => '1231AA', 'houseNumber' => '1', 'street' => 'Rembrandtlaan', 'city' => 'Loosdrecht'];
@@ -105,7 +184,7 @@ final class AddressLookupTest extends TestCase
                 parse_str((string) parse_url($this->requests[1]['url'], PHP_URL_QUERY), $parameters);
                 self::assertSame('', $parameters['q']);
                 foreach (['postalCode' => 'postalCode', 'houseNumber' => 'houseNumber', 'street' => 'streetName', 'city' => 'cityName'] as $input => $parameter) {
-                    if (isset($payload[$input])) self::assertSame($payload[$input], $parameters[$parameter]);
+                    if (isset($payload[$input])) self::assertSame('city' === $input ? mb_strtoupper($payload[$input]) : $payload[$input], $parameters[$parameter]);
                     else self::assertArrayNotHasKey($parameter, $parameters);
                 }
                 self::assertArrayNotHasKey('houseNumberAddition', $parameters);
@@ -194,7 +273,8 @@ final class AddressLookupTest extends TestCase
         $result = $service->search($this->query('1A', '2'), self::UUID, new Session(new MockArraySessionStorage()), true);
         self::assertSame('ambiguous', $result['status']);
         self::assertCount(2, $result['candidates']);
-        self::assertSame(['', 'A'], array_column($result['candidates'], 'houseNumberAddition'));
+        self::assertSame(['1', '1A'], array_column($result['candidates'], 'houseNumber'));
+        self::assertSame(['', ''], array_column($result['candidates'], 'houseNumberAddition'));
         self::assertArrayNotHasKey('address', $result);
         parse_str((string) parse_url($this->requests[1]['url'], PHP_URL_QUERY), $parameters);
         self::assertArrayNotHasKey('houseNumberAddition', $parameters);

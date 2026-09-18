@@ -3,7 +3,8 @@
 Kiwi searches Dutch addresses using any two or more of postcode, house number, street
 and city, and shows a result list. An invalid postcode is ignored when two other
 fields are usable. House numbers must be valid; street and city support prefixes.
-Selecting a result completes postcode, house number, street, city and the addition. The addition
+Selecting a result completes postcode, house number, street, city and the addition.
+The panel floats below street/city and closes after selection; its validation buffer remains. The addition
 input never filters searches, including a letter typed in the number field. This applies to recipient/requester creation, article orders,
 customer edits and restitution transfers. Screenshot selection is outside sc-200162.
 
@@ -104,7 +105,7 @@ The UI waits 350 ms after typing, suppresses duplicate requests, ignores old res
 and preserves manual edits. Selection is explicit, also for a single result.
 The native labelled result list supports keyboard navigation. Changing only the
 addition does not trigger or narrow a search. Copied/prefilled values trigger no provider request.
-An unavailable service offers a retry; manual entry and saving remain available.
+An unavailable service offers a retry. Manual editing remains available, but saving a new or changed address is blocked until the complete address is confirmed.
 
 ## Verification
 
@@ -143,6 +144,7 @@ To reproduce the isolated mock-provider browser checks from the PR worktree:
 python3 scripts/prepare-address-smoke.py
 GATEWAY_HTTPS_PORT=9443 docker compose -p sc200162 -f docker-compose.yaml -f /tmp/sc-200162-smoke/compose.yaml up -d gateway
 node scripts/compose-smoke-address-completion.mjs
+node scripts/compose-smoke-customer-address.mjs
 KIWI_SMOKE_BASE_URL=https://bdc.rtvmedia.org.local:9443/kiwi-preview/ node scripts/compose-smoke-address-completion.mjs
 ```
 
@@ -156,3 +158,80 @@ then run `php tests/Support/address-session-worker.php` concurrently in each app
 container. The shared `/app/var/address-concurrency-smoke-count` must contain `1`.
 The fixture creates its own session and does not read real authenticated sessions.
 The same replica check still needs to be repeated on the required Flux/kind cluster.
+
+## Mandatory address confirmation
+
+`POST /api/v1/addresses/validate` accepts `formSessionId`, `postalCode`,
+`houseNumber`, `houseNumberAddition`, `street` and `city`. A confirmed address is
+returned with status `confirmed`. Mutating address APIs independently perform the
+same check before writing or queueing. Client-supplied confirmation flags are ignored.
+Existing, unchanged customer addresses are not rewritten by this feature.
+
+Search responses include `verified` per candidate, `limited`, and `complete`.
+The browser keeps results after dismissing the panel. PostgreSQL session storage
+keeps the provider result for the form; API validation and submission reuse it without
+another external call when a full candidate matches. Results expire with the form
+session, after twelve hours or at the next UTC date, and are erased on close.
+There is no shared cache across users or forms.
+
+Only an untruncated postcode/base-number search with fully structured results can
+prove a missing variant invalid. A broad, partial, malformed or street-only response
+cannot prove absence. In that case validation searches postcode/base number again
+using the same UUID and normal lookup budget. A positive complete-address candidate
+can confirm existence even in a limited list. Otherwise saving is blocked; Webabo
+street-only completion and total provider failure never confirm an address.
+
+Canonical payloads keep the single uppercase house letter attached to the number
+(`123A`) and retain the remaining suffix separately (`houseNumberAddition: "2"`).
+For the ACI combined suffix, the conversion rule treats a single letter, optionally
+followed by a numeric suffix, as that house letter. This API does not expose separate
+BAG house-letter and addition fields; this rule is a formatting convention, not an
+independent BAG classification. Multiple letters are not moved into houseNumber.
+Postcodes have no spaces and city names are uppercase; countryCode is NL.
+Internal addressExtension remains separate. The queue preserves houseNumberAddition
+as its own field; this PR does not implement a new Paradise delivery worker.
+
+PostNL documentation bills unique UUID sessions rather than each search in the same
+session/day. The buffer reduces requests and latency; it does not necessarily reduce
+session credits beyond the existing UUID reuse.
+
+## Existing-person sessions
+
+Opening a person checks the authoritative address immediately. The profile remains
+readable and editable when confirmation fails. A persistent warning links to address
+correction; saving other changes is blocked until the address is confirmed. Local
+profile edits and an address correction can be saved together. Failed saves retain
+entered values. Changing postcode/number in a prefilled correction form discards the
+old street/city as search filters.
+
+Person detail responses include `addressValidation.status` (`confirmed` or `blocked`).
+This is a presentation hint, not an authorization token. Mutation endpoints recheck
+server-loaded person data, including subscription actions, existing-person subscription
+orders, article orders, contact history, complaints and bulk state writes. Existing
+person snapshots in queue requests are replaced by authoritative person data.
+
+The server derives an address-session identifier from workflow id, person id and
+credential key, scoped to the authenticated PostgreSQL session. Matching cached
+provider candidates avoid additional provider searches during the same customer
+session. Reset closes this address session. Normal twelve-hour/day expiry still
+applies, and changed addresses cannot inherit an earlier confirmation.
+
+For subscription-API persons, **Correct address** enables only the address fields.
+`PATCH /api/v1/persons/{personId}/address?credentialKey=...` first confirms the complete
+address and then updates the source's main address using
+`PATCH /public/persons/{personid}/contacts/addresses/0` with
+`Content-Type: application/merge-patch+json`. The PPA contract defines resource `0` as
+the primary address. The same resource is read when opening a profile, so another
+contact address cannot accidentally be validated or overwritten.
+
+Only street, postCode, city, isoCountryCode and housenumber are patched. Internal
+`extension`/`additionalExtension` and other profile data are preserved. PPA documents
+one house-number string including supplements; the adapter writes `123A 2`, while
+Kiwi retains `123A` and `2` separately. A readback must confirm persistence before
+success is reported. Transport failures are not retried automatically; only a 401
+permits one token refresh. No credentials are sent to the browser.
+
+Contract source: the PPA Subscription OpenAPI document available locally at
+`/home/bartdeijkers/security2026/Docs/Abel/API/PPA-Subscription/subscription-api-docs.json`.
+A real external-person write is not part of the local smoke test: browser responses
+are controlled, and the adapter/persistence contract is covered by functional tests.

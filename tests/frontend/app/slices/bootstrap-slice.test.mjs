@@ -233,7 +233,7 @@ function testUpdateCustomerActionButtons() {
         documentRef,
         currentCustomer: { id: 1, sourceSystem: 'subscription-api' }
     });
-    assert.equal(editCustomerButton.style.display, 'none');
+    assert.equal(editCustomerButton.style.display, 'inline-flex');
     assert.equal(editorialComplaintButton.style.display, 'none');
     assert.equal(resendButton.style.display, 'none');
     assert.equal(winbackButton.style.display, 'none');

@@ -8,6 +8,8 @@ final class ApiRoutePolicy
 {
     public const ROUTES = [
         'api_address_search' => 'kiwi.read',
+        'api_address_validate' => 'kiwi.read',
+        'api_customer_address_update' => 'kiwi.write',
         'api_address_session_close' => 'kiwi.session',
         'api_agent_status_read' => 'kiwi.session',
         'api_agent_status_update' => 'kiwi.session',

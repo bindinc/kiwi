@@ -120,6 +120,11 @@ final class PersonSearchResultNormalizer
         $mandant = $credential->mandant ?? $divisionId ?? '';
         $primaryAddress = $this->extractPrimaryAddress($rawPerson['contacts'] ?? null);
         $houseNumber = $primaryAddress['houseNumber'] ?? null;
+        $addition = '';
+        if (is_string($houseNumber) && preg_match('/^([1-9][0-9]*[A-Z]?)(?:\s+(.+)|([0-9].*))?$/iD', trim($houseNumber), $parts)) {
+            $houseNumber = strtoupper($parts[1]);
+            $addition = strtoupper(trim($parts[2] ?? '') ?: trim($parts[3] ?? ''));
+        }
 
         return [
             'id' => $normalizedId,
@@ -133,9 +138,10 @@ final class PersonSearchResultNormalizer
             'birthday' => $this->normalizeNullableString($rawPerson['birthDay'] ?? null) ?? '',
             'postalCode' => $primaryAddress['postalCode'] ?? '',
             'houseNumber' => $houseNumber ?? '',
+            'houseNumberAddition' => $addition,
             'street' => $primaryAddress['street'] ?? '',
             'addressExtension' => $primaryAddress['addressExtension'] ?? '',
-            'address' => $this->buildAddress($primaryAddress['street'] ?? null, $houseNumber),
+            'address' => $this->buildAddress($primaryAddress['street'] ?? null, trim(($houseNumber ?? '').' '.$addition)),
             'city' => $primaryAddress['city'] ?? '',
             'email' => $this->extractPrimaryContactValue($rawPerson['contacts'] ?? null, 'emails', 'emailAddress') ?? '',
             'phone' => $this->extractPrimaryPhoneNumber($rawPerson['contacts'] ?? null) ?? '',

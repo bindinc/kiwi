@@ -132,7 +132,7 @@ final class PocStateService
             throw new ApiProblemException(409, 'upstream_edit_required', 'Use the protected upstream editing endpoints');
         }
         $allowedFields = ['salutation', 'firstName', 'middleName', 'lastName', 'birthday', 'postalCode',
-            'city', 'email', 'phone', 'optinEmail', 'optinPhone', 'optinPost', 'houseNumber', 'address'];
+            'street', 'houseNumberAddition', 'countryCode', 'city', 'email', 'phone', 'optinEmail', 'optinPhone', 'optinPost', 'houseNumber', 'address'];
         if ([] !== array_diff(array_keys($payload), $allowedFields)) {
             throw new ApiProblemException(400, 'invalid_fields', 'Unknown or protected customer fields');
         }

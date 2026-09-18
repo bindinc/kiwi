@@ -532,7 +532,7 @@ export async function selectCustomer(customerId) {
             const canUseCachedCustomer = !selectionContext?.previousContext && cachedCustomer
                 && String(cachedCustomer.sourceSystem || '').trim() === 'subscription-api';
             if (canUseCachedCustomer) {
-                customer = cachedCustomer;
+                customer = { ...cachedCustomer, addressValidation: { status: 'blocked' } };
             } else {
                 if (typeof dependencies.showToast === 'function') {
                     dependencies.showToast(

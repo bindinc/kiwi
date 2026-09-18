@@ -34,6 +34,20 @@ final class PersonSearchClientTest extends TestCase
         parent::tearDown();
     }
 
+    public function testLegacyAddressCorrectionCannotBypassWriteActivation(): void
+    {
+        $this->writeClientSecretsFile(['username' => 'demo-user', 'password' => '<password>',
+            'ppa_base_url' => 'https://example.invalid/subscription']);
+        $http = new MockHttpClient(function () {
+            self::fail('A disabled mutation must not access credentials or upstream.');
+        });
+        $config = new HupApiConfigProvider(new ClientSecretsLoader($this->tempDir));
+        $client = new PersonSearchClient($config, new WebaboAccessTokenProvider($config, $http), $http);
+        $this->expectException(\App\Http\ApiProblemException::class);
+        $this->expectExceptionMessage('Address writes require verified atomic upstream version control.');
+        $client->updateMainAddress('123', 'demo', []);
+    }
+
     public function testSearchUsesPpaBaseUrlAndBearerToken(): void
     {
         $clientSecretsPath = $this->writeClientSecretsFile([

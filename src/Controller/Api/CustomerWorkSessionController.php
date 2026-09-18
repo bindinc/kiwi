@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\CustomerWorkSession\CustomerAuditService;
 use App\Http\JsonRequestDecoder;
+use App\Address\CustomerAddressGate;
 use App\Http\RequestCorrelationId;
 use App\Oidc\OidcConfiguration;
 use App\Oidc\OidcRoleAccess;
@@ -22,6 +23,7 @@ final class CustomerWorkSessionController extends AbstractApiController
         OidcRoleAccess $oidcRoleAccess,
         OidcConfiguration $oidcConfiguration,
         JsonRequestDecoder $jsonRequestDecoder,
+        private readonly CustomerAddressGate $addressGate,
         private readonly CustomerAuditService $customerAuditService,
         private readonly RequestCorrelationId $requestCorrelationId,
     ) {
@@ -38,6 +40,8 @@ final class CustomerWorkSessionController extends AbstractApiController
             $this->getCurrentUserContext($request),
             $payload,
         );
+
+        $this->addressGate->close($request, $payload);
 
         return $this->json([
             'status' => 'customer_work_session_reset_recorded',

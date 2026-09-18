@@ -19,10 +19,18 @@ final class PersonDetailService
     /**
      * @return array<string, mixed>
      */
-    public function getPerson(string|int $personId, string $credentialName): array
+    public function getPerson(string|int $personId, string $credentialName, bool $loadMainAddress = false): array
     {
         $credential = $this->configProvider->getConfig()->getCredential($credentialName);
         $payload = $this->personSearchClient->getPerson($personId, $credential->name);
+        if ($loadMainAddress) {
+            try {
+                $payload['contacts']['addresses'] = [$this->personSearchClient->getMainAddress((string) $personId, $credential->name)];
+            } catch (\RuntimeException) {
+                // A failed primary-address read must never validate an arbitrary secondary address.
+                $payload['contacts']['addresses'] = [];
+            }
+        }
         $normalizedPerson = $this->personSearchResultNormalizer->normalizeDetailPerson($payload, $credential, (string) $personId);
 
         $normalizedPerson['subscriptions'] = $this->loadSubscriptions($personId, $credential);
