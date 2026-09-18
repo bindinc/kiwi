@@ -92,7 +92,7 @@ function testRegistersItemTwelveActionAndNamespace() {
     });
 }
 
-function testCloseFormResetsDuplicateStateForNewSubscriptionForm() {
+function testCloseFormPreservesDuplicateStateForNewSubscriptionForm() {
     withGlobalState(() => {
         const formElement = {
             style: { display: 'flex' }
@@ -114,7 +114,7 @@ function testCloseFormResetsDuplicateStateForNewSubscriptionForm() {
         closeForm('newSubscriptionForm');
 
         assert.equal(formElement.style.display, 'none');
-        assert.equal(resetCount, 1);
+        assert.equal(resetCount, 0);
     });
 }
 
@@ -398,7 +398,7 @@ function testCustomerWorkspaceResetDoesNotEndTheCallSession() {
 
 function run() {
     testRegistersItemTwelveActionAndNamespace();
-    testCloseFormResetsDuplicateStateForNewSubscriptionForm();
+    testCloseFormPreservesDuplicateStateForNewSubscriptionForm();
     testShowToastUsesContactHistoryAndDeduplicatesRecentSuccessToast();
     testShowToastFallsBackToVisualToastForSubscriptionApiCustomer();
     testGlobalListenersHandleKeyboardClickAndChangeEvents();

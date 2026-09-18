@@ -1,3 +1,4 @@
+import { resumeFormDraft, clearFormDraft } from '../lightbox-drafts.js';
 import { getGlobalScope } from '../services.js';
 
 const DELIVERY_REMARKS_SLICE_NAMESPACE = 'kiwiDeliveryRemarksSlice';
@@ -174,6 +175,8 @@ export function editDeliveryRemarks() {
         return;
     }
 
+    if (resumeFormDraft(modal, String(currentCustomer.id))) return;
+
     customerName.textContent = buildCustomerName(currentCustomer);
     remarksTextarea.value = currentCustomer.deliveryRemarks?.default || '';
     modal.style.display = 'flex';
@@ -237,6 +240,7 @@ async function saveDeliveryRemarksViaApi(dependencies, currentCustomer, newRemar
             currentCustomer.deliveryRemarks = payload.deliveryRemarks;
         }
 
+        clearFormDraft(getElementById('editDeliveryRemarksModal'));
         closeEditRemarksModal();
         showToast(
             dependencies,
@@ -285,6 +289,7 @@ function saveDeliveryRemarksLocally(dependencies, currentCustomer, newRemarks) {
     currentCustomer.deliveryRemarks.lastUpdated = new Date().toISOString();
 
     saveCustomers(dependencies);
+    clearFormDraft(getElementById('editDeliveryRemarksModal'));
     closeEditRemarksModal();
     showToast(
         dependencies,

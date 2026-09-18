@@ -166,6 +166,7 @@
     padding: 16px;
 }
 
+.contextual-feedback-settings-modal[hidden],
 .contextual-feedback-modal[hidden],
 .contextual-feedback-modal.is-capturing {
     display: none;

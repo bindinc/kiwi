@@ -1,3 +1,4 @@
+import { resumeFormDraft, clearFormDraft } from '../lightbox-drafts.js';
 import { getAddressSubmission } from '../address-completion.js';
 import { selectCustomer as reloadSourceCustomer } from './customer-detail-slice.js';
 import { openCustomerEditor } from '../customer-editor.js';
@@ -285,6 +286,7 @@ function setCheckedValue(inputName, value) {
 }
 
 function closeForm(formId) {
+    clearFormDraft(getElementById(formId));
     const closeFormFn = getLegacyFunction('closeForm');
     if (closeFormFn) {
         closeFormFn(formId);
@@ -753,6 +755,7 @@ function getSubscriptionChanges(previousSubscription, nextSubscription) {
 }
 
 export function showNewSubscription() {
+    if (resumeFormDraft(getElementById('newSubscriptionForm'))) return;
     const form = getElementById('subscriptionForm');
     if (form && typeof form.reset === 'function') {
         form.reset();
@@ -1059,6 +1062,8 @@ export function editCustomer() {
         return;
     }
 
+    if (resumeFormDraft(getElementById('editCustomerForm'), String(currentCustomer.id))) return;
+
     setInputValue('editCustomerId', currentCustomer.id);
 
     const salutation = currentCustomer.salutation || 'Dhr.';
@@ -1171,6 +1176,8 @@ export function showResendMagazine() {
         return;
     }
 
+    if (resumeFormDraft(getElementById('resendMagazineForm'), String(currentCustomer.id))) return;
+
     const subscriptionSelect = getElementById('resendSubscription');
     if (!subscriptionSelect) {
         return;
@@ -1261,6 +1268,8 @@ export function showEditorialComplaintForm() {
         showReadonlySubscriptionApiToast('geregistreerd');
         return;
     }
+
+    if (resumeFormDraft(getElementById('editorialComplaintForm'), String(currentCustomer.id))) return;
 
     const magazineSelect = getElementById('editorialComplaintMagazine');
     if (!magazineSelect) {
@@ -1397,6 +1406,8 @@ export function editSubscription(subscriptionId) {
         showToast(translateKey('subscription.notFound', {}, 'Abonnement niet gevonden'), 'error');
         return;
     }
+
+    if (resumeFormDraft(getElementById('editSubscriptionForm'), String(subscriptionId))) return;
 
     setInputValue('editSubId', subscriptionId);
     setInputValue('editSubMagazine', subscription.magazine);

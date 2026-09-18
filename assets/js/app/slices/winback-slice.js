@@ -1,3 +1,4 @@
+import { resumeFormDraft, clearFormDraft, registerDraftCleanup } from '../lightbox-drafts.js';
 import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
 
@@ -17,6 +18,15 @@ const winbackState = {
     restitutionAddressSessionId: null
 };
 const changeHandlerByElement = new WeakMap();
+
+function resetWinbackDraftState() {
+    winbackState.selectedOffer = null;
+    winbackState.cancellingSubscriptionId = null;
+    winbackState.isWinbackForEndedSub = false;
+    winbackState.deceasedSubscriptionActions = null;
+    winbackState.restitutionRevertSubId = null;
+    winbackState.restitutionAddressSessionId = null;
+}
 
 function getDocumentRef() {
     if (typeof document === 'undefined') {
@@ -182,6 +192,7 @@ function formatDate(dateString) {
 }
 
 function closeForm(formId) {
+    clearFormDraft(getElementById(formId));
     const closeFormFn = getLegacyFunction('closeForm');
     if (closeFormFn) {
         closeFormFn(formId);
@@ -472,6 +483,10 @@ export function showWinbackFlow() {
             winbackState.cancellingSubscriptionId = Number(subscriptions[0].id);
         }
     }
+
+    const draftContext = `${winbackState.cancellingSubscriptionId}:${winbackState.isWinbackForEndedSub}`;
+    if (resumeFormDraft(getElementById('winbackFlow'), draftContext)) return;
+    registerDraftCleanup(getDocumentRef(), resetWinbackDraftState);
 
     showWinbackStep(1);
     setActiveStepIndicator(1);
@@ -829,6 +844,8 @@ export function revertRestitution(subscriptionId) {
 }
 
 export function showRestitutionTransferForm(subscription) {
+    if (resumeFormDraft(getElementById('restitutionTransferForm'), String(subscription.id))) return;
+    registerDraftCleanup(getDocumentRef(), resetWinbackDraftState);
     winbackState.restitutionAddressSessionId = globalThis.crypto.randomUUID();
     setDisplayValue('restitutionTransferForm', 'flex');
 

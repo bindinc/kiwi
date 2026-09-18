@@ -1,3 +1,4 @@
+import { resumeFormDraft } from '../lightbox-drafts.js';
 import { getGlobalScope } from '../services.js';
 
 const articlesApiBaseUrl = '/api/v1/catalog/articles';
@@ -356,6 +357,8 @@ export async function showAllArticles() {
         createAllArticlesModal();
     }
 
+    if (resumeFormDraft(documentRef.getElementById('allArticlesModal'))) return;
+
     await renderAllArticlesTabs();
 
     const allArticlesModal = documentRef.getElementById('allArticlesModal');
@@ -519,10 +522,6 @@ export function closeAllArticlesModal() {
         modal.style.display = 'none';
     }
 
-    const searchInput = documentRef.getElementById('modalArticleSearch');
-    if (searchInput) {
-        searchInput.value = '';
-    }
 }
 
 export function handleArticleKeyNav(event) {
