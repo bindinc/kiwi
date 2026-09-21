@@ -27,6 +27,20 @@ final class OidcRoleAccess
 
     /**
      * @param string[] $roles
+     * @return string[]
+     */
+    public function getApplicationRoleLabels(array $roles): array
+    {
+        $applicationRoles = array_intersect(self::ALLOWED_ROLES, $roles);
+
+        return array_values(array_map(
+            static fn (string $role): string => 'KIWI '.substr($role, strlen('bink8s.app.kiwi.')),
+            $applicationRoles,
+        ));
+    }
+
+    /**
+     * @param string[] $roles
      */
     public function userHasAccess(array $roles): bool
     {

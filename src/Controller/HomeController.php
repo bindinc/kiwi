@@ -75,6 +75,7 @@ final class HomeController extends AbstractController
             'user_last_name' => $identity['last_name'],
             'user_initials' => $identity['initials'],
             'user_profile_image' => $profileImage,
+            'user_application_roles' => $this->oidcRoleAccess->getApplicationRoleLabels($roles),
             'logout_url' => $logoutUrl,
             'contextual_feedback_available' => $this->developmentFeedbackSettings->isAllowedForRoles($roles),
             'contextual_feedback_enabled' => $this->developmentFeedbackSettings->isEnabled(),

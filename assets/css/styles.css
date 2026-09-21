@@ -508,10 +508,18 @@ body {
 }
 
 .profile-menu-user-name {
-    padding: 0.7rem 1rem 0.55rem;
+    padding: 0.7rem 1rem 0.2rem;
     font-size: 0.92rem;
     font-weight: 700;
     color: #0f172a;
+}
+
+.profile-menu-roles {
+    padding: 0 1rem 0.55rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
     border-bottom: 1px solid var(--border-color);
 }
 
