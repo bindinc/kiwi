@@ -81,6 +81,49 @@ final class HomeControllerTest extends WebTestCase
         }
     }
 
+    public static function applicationRoles(): iterable
+    {
+        foreach (['/kiwi', '/kiwi-preview'] as $prefix) {
+            foreach (['admin', 'dev', 'supervisor', 'user', 'view'] as $role) {
+                yield $prefix.' '.$role => [$prefix, $role];
+            }
+        }
+    }
+
+    /** @dataProvider applicationRoles */
+    public function testProfileShowsApplicationRoleBelowName(string $prefix, string $role): void
+    {
+        $client = $this->createAuthenticatedClient([
+            'bink8s.app.kiwi.'.$role,
+            'bink8s.app.kiwi.mandant.tenant-example',
+            'unrelated.role',
+        ]);
+        $crawler = $client->request('GET', '/', server: [
+            'HTTP_X_FORWARDED_PREFIX' => $prefix,
+            'REMOTE_ADDR' => '127.0.0.1',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('KIWI '.$role, $crawler->filter('#agentStatusMenu .profile-menu-user-name + .profile-menu-roles')->text());
+        self::assertCount(1, $crawler->filter('.profile-menu-role'));
+    }
+
+    public function testProfileShowsAllAssignedApplicationRolesOnce(): void
+    {
+        $client = $this->createAuthenticatedClient([
+            'bink8s.app.kiwi.supervisor',
+            'bink8s.app.kiwi.admin',
+            'bink8s.app.kiwi.admin',
+            'bink8s.app.kiwi.mandant.tenant-example',
+        ]);
+        $crawler = $client->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['KIWI admin', 'KIWI supervisor'], $crawler->filter('.profile-menu-role')->each(
+            static fn ($node): string => $node->text(),
+        ));
+    }
+
     public function testLogoutRedirectsToLoggedOutPageWithCsrfToken(): void
     {
         $previousClientSecretsPath = getenv('OIDC_CLIENT_SECRETS');

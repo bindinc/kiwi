@@ -103,6 +103,11 @@
                                             {{ user_full_name }}
                                         {% endif %}
                                     </div>
+                                    <div class="profile-menu-roles">
+                                        {% for role in user_application_roles %}
+                                            <div class="profile-menu-role">{{ role }}</div>
+                                        {% endfor %}
+                                    </div>
                                     <div class="profile-menu-header" data-i18n="indexHtml.text.status_005ef20f">Status</div>
                                     <button type="button" class="status-menu-item" data-status-option="ready" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.beschikbaar_f6f1ea58">Beschikbaar</button>
                                     <button type="button" class="status-menu-item" data-status-option="busy" data-action="agent-status.set" data-action-event="click" data-i18n="indexHtml.text.bezet_57d4daff">Bezet</button>
