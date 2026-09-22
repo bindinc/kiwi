@@ -40,6 +40,8 @@ body {
 
 /* Header */
 .header {
+    /* Keep gestures starting on the toolbar from moving the zoomed page. */
+    touch-action: none;
     background: #000 url(../img/Bindinc-Logo-RGB-WIT-2023.svg) no-repeat center left;
     color: white;
     box-shadow: var(--shadow-md);

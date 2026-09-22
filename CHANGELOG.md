@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Prevent touch gestures and pinch-zoomed trackpad scrolling on the top header from panning the page, while preserving gestures in the page content.
+
 - Group customer changes into a shared, revision-protected session outbox with a 60-second correction window, pause/resume, supervisor cancellation and an immutable worker contract. [sc-202851]
 
 - Display TROS for the HMC mandant in customer search filters and the customer session summary, while preserving HMC in API requests. [sc-203138]
