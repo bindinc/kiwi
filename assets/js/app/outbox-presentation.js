@@ -30,7 +30,7 @@ export function outboxIconButton(label, name, callback, onError, withLabel = fal
     control.append(outboxIcon(name));
     control.setAttribute('aria-label', label);
     control.title = label;
-    control.addEventListener('click', () => { void Promise.resolve(callback()).catch(onError); });
+    control.addEventListener('click', event => { void Promise.resolve(callback(event)).catch(onError); });
     if (withLabel) {
         const text = document.createElement('span');
         text.textContent = label;
@@ -48,12 +48,14 @@ export function outboxActionMenu(item, actions, onError) {
     popover.className = 'session-outbox-menu';
     popover.setAttribute('popover', 'auto');
     popover.setAttribute('aria-label', `Acties voor ${item.summary.customer}`);
-    const trigger = outboxIconButton(`Acties voor ${item.summary.customer}`, 'more', () => {
+    const trigger = outboxIconButton(`Acties voor ${item.summary.customer}`, 'more', event => {
         const bounds = trigger.getBoundingClientRect();
-        popover.style.left = `${Math.max(8, Math.min(innerWidth - 204, bounds.right - 196))}px`;
-        popover.style.top = `${Math.max(8, Math.min(innerHeight - 164, bounds.bottom + 4))}px`;
+        popover.style.left = `${Math.max(8, Math.min(innerWidth - 212, bounds.right - 204))}px`;
+        const menuHeight = actions.length * 40 + 20;
+        const top = bounds.bottom + menuHeight + 8 <= innerHeight ? bounds.bottom + 4 : bounds.top - menuHeight - 4;
+        popover.style.top = `${Math.max(8, top)}px`;
         popover.showPopover();
-        popover.querySelector('button')?.focus();
+        if (event.detail === 0) popover.querySelector('button')?.focus();
     }, onError);
     trigger.setAttribute('aria-expanded', 'false');
     trigger.setAttribute('aria-controls', popover.id);

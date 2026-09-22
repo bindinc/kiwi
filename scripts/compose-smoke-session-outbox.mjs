@@ -11,7 +11,11 @@ const browser = await chromium.launch({ headless: true, executablePath: '/usr/bi
 async function captureOutbox(page, path) {
     const clip = await page.locator('#subscriptionQueuePanel').boundingBox();
     const menu = await page.locator('.session-outbox-menu:popover-open').first().boundingBox().catch(() => null);
-    if (menu) clip.height = Math.max(clip.height, menu.y + menu.height - clip.y + 8);
+    if (menu) {
+        const bottom = Math.max(clip.y + clip.height, menu.y + menu.height + 8);
+        clip.y = Math.min(clip.y, menu.y);
+        clip.height = bottom - clip.y;
+    }
     await page.screenshot({path, clip});
 }
 try {
@@ -82,14 +86,19 @@ try {
         await page.waitForFunction(() => !document.querySelector('#toast')?.classList.contains('show'));
         await page.locator('#subscriptionQueuePanel').screenshot({path:`${evidence}/${prefix}-outbox-narrow.png`});
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),false);
+        assert.equal(await page.locator('#subscriptionQueueList').evaluate(element => element.clientHeight >= 80),true);
         await page.setViewportSize({width:1440,height:1100});
+        await page.evaluate(() => scrollTo({top: document.querySelector('#subscriptionQueuePanel').getBoundingClientRect().top + scrollY - 100, behavior:'instant'}));
         await row.getByRole('button',{name:/Acties voor/}).click();
+        await page.mouse.move(4, 4);
         await captureOutbox(page, `${evidence}/${prefix}-outbox-menu.png`);
         await page.keyboard.press('Escape');
         await row.getByRole('button',{name:/Acties voor/}).press('Enter');
         await row.getByRole('button',{name:'Hervatten',exact:true}).click();
         await page.waitForFunction(() => document.querySelector('.session-outbox-item').textContent.includes('Wacht op verzending'));
-        await row.getByRole('button',{name:/Acties voor/}).press('Enter');
+        await page.evaluate(() => scrollTo({top: document.querySelector('#subscriptionQueuePanel').getBoundingClientRect().top + scrollY - 100, behavior:'instant'}));
+        await row.getByRole('button',{name:/Acties voor/}).click();
+        await page.mouse.move(4, 4);
         await captureOutbox(page, `${evidence}/${prefix}-outbox-pause-menu.png`);
         await row.getByRole('button',{name:'Pauzeren',exact:true}).focus();
         await page.keyboard.press('Enter');
