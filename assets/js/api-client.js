@@ -74,6 +74,7 @@
             headers: buildHeaders(options && options.headers, options)
         };
 
+        Object.assign(requestOptions.headers, window.kiwiOutbox?.prepareWrite?.(method, url, payload, customerContext) || {}, options?.headers || {});
         if (isWrite) {
             const csrf = typeof document !== 'undefined'
                 ? document.querySelector('meta[name="kiwi-csrf-token"]')?.content
@@ -102,6 +103,7 @@
         }
 
         if (!response.ok) {
+            window.kiwiOutbox?.rejectWrite?.(method, url, payload, response.status);
             const addressBlocked = ['customer_address_unconfirmed', 'address_correction_unconfirmed'].includes(body?.error?.code);
             if (addressBlocked && customerContext) window.kiwiCustomerWorkSession?.rejectCustomerAddress?.(customerContext);
             const errorMessage = body && body.error && body.error.message
@@ -113,6 +115,8 @@
             throw error;
         }
 
+        if (!isWrite) window.kiwiOutbox?.acceptRead?.(body);
+        window.kiwiOutbox?.acceptWrite?.(method, url, payload, body, customerContext);
         return body;
     }
 

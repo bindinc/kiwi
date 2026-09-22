@@ -1,3 +1,4 @@
+import { initializeSessionOutbox, refreshOutbox } from '../session-outbox.js';
 import { resumeFormDraft, clearFormDraft } from '../lightbox-drafts.js';
 import { getAddressSubmission } from '../address-completion.js';
 import { selectCustomer as reloadSourceCustomer } from './customer-detail-slice.js';
@@ -513,22 +514,10 @@ function renderSubscriptionQueueItems(items = []) {
 }
 
 async function loadSubscriptionQueueItems(options = {}) {
-    const apiClient = getApiClient();
-    if (!apiClient || typeof apiClient.get !== 'function') {
-        return [];
-    }
+    initializeSessionOutbox();
+    await refreshOutbox();
+    return [];
 
-    try {
-        const response = await apiClient.get(`${getApiEndpoints().workflowsApiUrl}/subscription?limit=6`);
-        const items = Array.isArray(response && response.items) ? response.items : [];
-        renderSubscriptionQueueItems(items);
-        return items;
-    } catch (error) {
-        if (options.showErrors === true) {
-            showToast(error.message || 'Aanvraagqueue laden mislukt', 'error');
-        }
-        return [];
-    }
 }
 
 function parsePersonIdFromPayload(payload) {
@@ -784,6 +773,11 @@ export async function createSubscription(event) {
     const werfsleutelSelections = getSelectedWerfsleutelSelections();
     if (werfsleutelSelections.length === 0) {
         showToast(translateKey('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
+        return;
+    }
+
+    if (globalThis.window?.kiwiOutbox?.isCorrectingSubscription() && werfsleutelSelections.length !== 1) {
+        showToast('Bewerk één opgeslagen bestelling tegelijk. Voeg extra bestellingen daarna apart toe.', 'error');
         return;
     }
 
@@ -1148,7 +1142,7 @@ export async function saveCustomerEdit(event) {
             const saved = await apiClient.patch(url, addressOnly ? getAddressSubmission('edit') : updates);
             if (saveContext && !workSession.isCurrent(saveContext)) return;
             workSession?.acceptCorrectedCustomer?.(saved);
-            if (!addressOnly) await apiClient.post(`${personsApiUrl}/${customerId}/contact-history`, {
+            if (!addressOnly && !saved.provisional) await apiClient.post(`${personsApiUrl}/${customerId}/contact-history`, {
                 type: 'Gegevens gewijzigd',
                 description: 'Klantgegevens bijgewerkt.'
             });
@@ -1460,8 +1454,8 @@ export async function saveSubscriptionEdit(event) {
     const apiClient = getApiClient();
     if (apiClient && typeof apiClient.patch === 'function' && typeof apiClient.post === 'function') {
         try {
-            await apiClient.patch(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, updates);
-            await apiClient.post(`${personsApiUrl}/${currentCustomer.id}/contact-history`, {
+            const saved = await apiClient.patch(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, updates);
+            if (!saved.provisional) await apiClient.post(`${personsApiUrl}/${currentCustomer.id}/contact-history`, {
                 type: 'Abonnement gewijzigd',
                 description: `Abonnement bewerkt. ${descriptionText}.`
             });
@@ -1517,6 +1511,7 @@ function installLegacyCompatibilityExports() {
 }
 
 export function registerSubscriptionWorkflowSlice(actionRouter) {
+    initializeSessionOutbox();
     if (!actionRouter || typeof actionRouter.registerMany !== 'function') {
         return;
     }

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ asset('css/delivery-date-picker.css') }}">
     <link rel="stylesheet" href="{{ asset('css/article-search.css') }}">
     <link rel="stylesheet" href="{{ asset('css/contextual-feedback.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/session-outbox.css') }}">
 </head>
 <body>
     {% if contextual_feedback_available %}
@@ -475,10 +476,25 @@
                     </div>
                 </section>
                 <div id="customerDetail" class="customer-detail" style="display: none;">
+                    <details id="customerSessionChanges" class="card session-changes-disclosure" hidden>
+                        <summary>Wijzigingen in deze klantwerksessie</summary>
+                        <div id="sessionOutboxChanges" hidden></div>
+                    </details>
+                    <dialog id="sessionOutboxEditor" class="form-lightbox customer-editor" aria-labelledby="sessionOutboxEditorTitle">
+                        <form>
+                            <h2 id="sessionOutboxEditorTitle">Opgeslagen wijziging</h2>
+                            <p>Voorlopige gegevens. De sessie blijft gepauzeerd na opslaan.</p>
+                            <div id="sessionOutboxEditorFields" class="form-grid"></div>
+                            <p id="sessionOutboxEditorError" role="alert"></p>
+                            <button type="submit" class="btn btn-primary">Correctie opslaan</button>
+                            <button type="button" id="sessionOutboxEditorClose" class="btn btn-secondary">Sluiten</button>
+                        </form>
+                    </dialog>
                     <div class="card">
                         <div class="customer-header">
                             <div class="customer-info">
                                 <h2 id="customerName" data-feedback-sensitive="name"></h2>
+                                <p id="customerOutboxPreview" class="session-outbox-preview" style="display: none;">Voorlopige weergave met opgeslagen outboxwijzigingen. Nog niet verwerkt in het bronsysteem.</p>
                                 <p class="customer-meta">
                                     <span id="customerAddress" data-feedback-sensitive="address"></span> •
                                     <span id="customerEmail" data-feedback-sensitive="email"></span> •
@@ -1440,11 +1456,14 @@
                 </section>
                 <section id="subscriptionQueuePanel" class="card history-card subscription-queue-panel" hidden>
                     <div class="subscription-queue-header">
-                        <h2 data-i18n="indexHtml.text.outbox_4d30835f">📮 Outbox</h2>
+                        <h2 id="sessionOutboxTitle">Outbox</h2>
                     </div>
                     <div id="subscriptionQueueMeta" class="subscription-queue-summary">Nog geen aanvragen in beeld</div>
                     <div id="subscriptionQueueEmpty" class="empty-state-small subscription-queue-empty">Nog geen aanvragen in de wachtrij.</div>
+                    <p id="sessionOutboxStatus" role="status"></p>
                     <div id="subscriptionQueueList" class="subscription-queue-list"></div>
+                    <div id="sessionOutboxPages"></div>
+                    <details id="sessionOutboxHistorical" hidden><summary>Historische aanvragen (alleen lezen)</summary></details>
                 </section>
             </aside>
         </div>
