@@ -4,7 +4,9 @@ The session outbox groups supported business changes for one canonical customer 
 
 ## Deployment
 
-Run `php bin/console app:outbox-sessions:migrate` once before deploying the new writers and UI together. The migration is additive and serialized with a database advisory lock. Historical subscription orders are retained as read-only records. Do not mix old and new writers during deployment.
+The standard container startup runs `php bin/console app:outbox-sessions:migrate --no-interaction` before starting the web server, in both Docker Compose and production. Every version upgrade therefore prepares the outbox schema automatically. A migration failure stops startup, leaving the replica unready instead of serving customer requests against an incomplete schema. The migration is additive, repeatable and serialized across replicas with a database advisory lock. Historical subscription orders are retained as read-only records. Do not mix old and new writers during deployment.
+
+For an existing deployment that predates this startup hook, run the same command once using the deployed application container. Custom commands that bypass the standard web-server startup must run the migration explicitly before using the outbox.
 
 Set `KIWI_OUTBOX_ACCEPT_WRITES=0` to stop new writes and claims during rollback. Retain the session tables and do not restore direct writers while pending sessions exist. Production delivery is a separate acceptance gate: SC-187756 must provide a worker with current authorization and upstream version checks. This change does not enable blocked source mutations.
 
@@ -34,7 +36,7 @@ A valid contribution grants shared access only after the transaction succeeds. A
 
 ## Local validation
 
-Use an isolated Docker Compose project and run the migration before opening the app. PostgreSQL tests use independent database connections and private temporary schemas. Run PHP tests and browser smokes sequentially: existing feedback-settings tests and browser bootstrap can otherwise update the same local settings table concurrently.
+Use an isolated Docker Compose project; standard app startup runs the migration before opening the app. PostgreSQL tests use independent database connections and private temporary schemas. Run PHP tests and browser smokes sequentially: existing feedback-settings tests and browser bootstrap can otherwise update the same local settings table concurrently.
 
 - `make phpunit` (the full test environment requires PHP `intl`, including existing phone-country validation tests).
 - `make js-test` and `make guardrail`.

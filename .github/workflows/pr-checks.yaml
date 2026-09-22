@@ -49,6 +49,9 @@ jobs:
       - name: Run guardrails
         run: node script/check
 
+      - name: Verify startup migration ordering and failure handling
+        run: python3 -m unittest discover -s tests/scripts -p 'test_app_entrypoint.py'
+
       - name: Build production image
         run: docker build -f infra/docker/app/Dockerfile --target prod --build-arg APP_VERSION=v0.0.0-ci -t kiwi:ci .
 
