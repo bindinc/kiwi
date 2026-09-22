@@ -220,6 +220,18 @@ async function runBootstrapInitialization() {
 
 async function bootstrapApplication() {
     try {
+        const header = document.querySelector('.header');
+        header?.addEventListener('wheel', (event) => {
+            const isPinchZoomed = window.visualViewport?.scale > 1;
+            const headerBounds = header.getBoundingClientRect();
+            const isToolbar = event.clientY >= headerBounds.top && event.clientY < headerBounds.bottom;
+
+            // Trackpads use wheel events, which are not covered by touch-action.
+            // Leave browser zoom and scrolling inside dropdowns available.
+            if (isPinchZoomed && isToolbar && !event.ctrlKey) {
+                event.preventDefault();
+            }
+        }, { passive: false });
         mountAddressFields();
         await ensureRuntimeScriptsLoaded();
         wireCallAgentRuntimeDependencies();
