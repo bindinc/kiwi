@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Run the customer session outbox migration before starting the web server on every container start, including version upgrades; stop startup if migration fails so customer detail requests cannot reach an incomplete schema. [sc-203213]
+
 - Prevent touch gestures and pinch-zoomed trackpad scrolling on the top header from panning the page, while preserving gestures in the page content.
 
 - Group customer changes into a shared, revision-protected session outbox with a 60-second correction window, pause/resume, supervisor cancellation and an immutable worker contract. [sc-202851]

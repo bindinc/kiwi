@@ -141,6 +141,9 @@ if [ "$should_bootstrap_sessions" = "1" ]; then
   php bin/console app:sessions:bootstrap --no-interaction
 fi
 
+printf '[app-entrypoint] Preparing the customer session outbox schema.\n'
+php bin/console app:outbox-sessions:migrate --no-interaction
+
 should_sync_webabo_offers="${WEBABO_OFFER_SYNC_ON_START:-${WERFSLEUTEL_SYNC_ON_START:-0}}"
 if [ "$should_sync_webabo_offers" = "1" ]; then
   if [ "$OIDC_MODE" = "fallback" ]; then
