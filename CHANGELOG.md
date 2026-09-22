@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Group customer changes into a shared, revision-protected session outbox with a 60-second correction window, pause/resume, supervisor cancellation and an immutable worker contract. [sc-202851]
+
 - Display TROS for the HMC mandant in customer search filters and the customer session summary, while preserving HMC in API requests. [sc-203138]
 
 - Show all assigned Kiwi application roles beneath the profile name in the profile menu, excluding tenant roles. [sc-202842]
