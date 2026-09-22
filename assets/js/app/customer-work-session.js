@@ -94,7 +94,7 @@ export function createCustomerDisplaySummary(customer) {
     return {
         name,
         personId: reference.personId,
-        sourceLabel
+        sourceLabel: sourceLabel.toUpperCase() === 'HMC' ? 'TROS' : sourceLabel
     };
 }
 
