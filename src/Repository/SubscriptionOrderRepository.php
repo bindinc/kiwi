@@ -50,10 +50,23 @@ final class SubscriptionOrderRepository extends ServiceEntityRepository
     /**
      * @return list<SubscriptionOrder>
      */
-    public function findRecent(int $limit): array
+    public function findRecent(int $limit, ?\App\Security\AuthorizationContext $actor = null): array
     {
         $safeLimit = max(1, min($limit, 50));
 
+        // Filter in PostgreSQL before applying the limit; JSON is historical immutable data.
+        if (null !== $actor) {
+            $params = [$actor->tenant];
+            $where = "request_payload->'authorization'->>'tenant' = ?";
+            if (!\App\OutboxSession\SessionOutbox::managesAll($actor)) {
+                if (!$actor->canWrite()) return [];
+                $where .= " AND request_payload->'authorization'->>'actor' = ?";
+                $params[] = $actor->actor;
+            }
+            $ids = $this->getEntityManager()->getConnection()->fetchFirstColumn(
+                'SELECT id FROM subscription_orders WHERE '.$where.' ORDER BY queued_at DESC, id DESC LIMIT '.$safeLimit, $params);
+            return array_values(array_filter(array_map(fn ($id) => $this->findOneDetailed((int) $id), $ids)));
+        }
         /** @var list<SubscriptionOrder> */
         return array_values($this->createQueryBuilder('subscriptionOrder')
             ->leftJoin('subscriptionOrder.outboxEvents', 'outboxEvent')

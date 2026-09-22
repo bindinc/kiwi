@@ -100,7 +100,7 @@ final class EntraAuthorizationTest extends WebTestCase
             if (!in_array(ApiRoutePolicy::ROUTES[$name] ?? null, ['kiwi.write', 'kiwi.local.write'], true)) {
                 continue;
             }
-            $url = preg_replace('/\{[^}]+\}/', '1', $route->getPath());
+            $url = preg_replace('/\{[^}]+\}/', '1', str_replace('{action}', 'pause', $route->getPath()));
             $client->request($route->getMethods()[0], $url, server: ['CONTENT_TYPE' => 'application/json'], content: '{}');
             self::assertResponseStatusCodeSame(403, $name);
         }

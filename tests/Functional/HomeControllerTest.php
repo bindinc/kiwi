@@ -62,7 +62,9 @@ final class HomeControllerTest extends WebTestCase
     public function testRendersReleaseVersionWithoutTranslationBinding(): void
     {
         $previousVersion = $_SERVER['APP_VERSION'] ?? null;
-        $_SERVER['APP_VERSION'] = 'v9.8.7-rc.1';
+        $previousEnvVersion = $_ENV['APP_VERSION'] ?? null;
+        // Symfony reads ENV before SERVER, including values loaded by the test bootstrap.
+        $_ENV['APP_VERSION'] = $_SERVER['APP_VERSION'] = 'v9.8.7-rc.1';
 
         try {
             $client = $this->createAuthenticatedClient(['bink8s.app.kiwi.user']);
@@ -73,6 +75,11 @@ final class HomeControllerTest extends WebTestCase
             self::assertNull($crawler->filter('#kiwiVersion')->attr('data-i18n'));
         } finally {
             self::ensureKernelShutdown();
+            if (null === $previousEnvVersion) {
+                unset($_ENV['APP_VERSION']);
+            } else {
+                $_ENV['APP_VERSION'] = $previousEnvVersion;
+            }
             if (null === $previousVersion) {
                 unset($_SERVER['APP_VERSION']);
             } else {

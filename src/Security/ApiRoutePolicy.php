@@ -7,6 +7,9 @@ namespace App\Security;
 final class ApiRoutePolicy
 {
     public const ROUTES = [
+        'api_outbox_sessions_list' => 'kiwi.read',
+        'api_outbox_sessions_get' => 'kiwi.read',
+        'api_outbox_sessions_action' => 'kiwi.write',
         'api_customer_editing_read' => 'kiwi.read',
         'api_customer_person_update' => 'kiwi.write',
         'api_customer_legacy_address_update' => 'kiwi.write',

@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 final class CustomerAddressGateTest extends WebTestCase
 {
     use AuthenticatedClientTrait;
+    use OutboxTestTrait;
     private string $configFile;
     private string|false $previousConfig;
 
@@ -34,6 +35,7 @@ final class CustomerAddressGateTest extends WebTestCase
     public function testLoadingInvalidPersonAllowsReadsButBlocksAllMutationPathsUntilCorrection(): void
     {
         $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
         $client->disableReboot();
         static::getContainer()->set('address.http_client', AddressSmokeHttpClientFactory::create());
         $client->request('GET', '/api/v1/persons/1');
@@ -55,6 +57,7 @@ final class CustomerAddressGateTest extends WebTestCase
             ['POST', '/api/v1/workflows/article-order', ['customerId' => 1]],
             ['POST', '/api/v1/workflows/subscription', ['recipient' => ['personId' => 1, 'person' => ['verified' => true]]]],
         ] as [$method, $url, $payload]) {
+        $this->prepareOutboxWrite($client);
             $client->jsonRequest($method, $url, $payload);
             self::assertResponseStatusCodeSame(409, $url);
             self::assertSame('customer_address_unconfirmed', json_decode($client->getResponse()->getContent(), true)['error']['code']);
@@ -65,9 +68,11 @@ final class CustomerAddressGateTest extends WebTestCase
 
         $corrected = ['formSessionId' => 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', 'postalCode' => '1231AA',
             'houseNumber' => '1A', 'houseNumberAddition' => '', 'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT', 'addressExtension' => '310', 'email' => 'changed@example.invalid'];
+        $this->prepareOutboxWrite($client);
         $client->jsonRequest('PATCH', '/api/v1/persons/1', $corrected);
         self::assertResponseIsSuccessful();
         self::assertSame('confirmed', json_decode($client->getResponse()->getContent(), true)['addressValidation']['status']);
+        $this->prepareOutboxWrite($client);
         $client->jsonRequest('PUT', '/api/v1/persons/1/delivery-remarks', ['default' => 'Now permitted']);
         self::assertResponseIsSuccessful();
         $client->request('GET', '/api/v1/persons/1');
@@ -75,11 +80,14 @@ final class CustomerAddressGateTest extends WebTestCase
 
         self::assertSame('310', json_decode($client->getResponse()->getContent(), true)['addressExtension']);
 
+        // Remove only this test's pending projection before changing definitive source data.
+        $this->resetOutboxStorage();
         // A later changed address cannot borrow the old confirmation.
         $session = $this->newSession();
         $session->setId($this->resolveClientSessionId($client));
         static::getContainer()->get(PocStateService::class)->updateCustomer($session, 1, ['houseNumberAddition' => 'B']);
         $session->save();
+        $this->prepareOutboxWrite($client);
         $client->jsonRequest('PATCH', '/api/v1/persons/1', ['email' => 'forbidden@example.invalid']);
         self::assertResponseStatusCodeSame(409);
     }
@@ -87,20 +95,24 @@ final class CustomerAddressGateTest extends WebTestCase
     public function testDeceasedTransferValidatesTheRecipientBeforeSaving(): void
     {
         $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
         $client->disableReboot();
         static::getContainer()->set('address.http_client', AddressSmokeHttpClientFactory::create());
         $address = ['postalCode' => '1231AA', 'houseNumber' => '1A', 'houseNumberAddition' => '',
             'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT', 'addressExtension' => '310'];
+        $this->prepareOutboxWrite($client);
         $client->jsonRequest('PATCH', '/api/v1/persons/1', $address);
         self::assertResponseIsSuccessful();
         $transfer = ['subscriptionId' => 1, 'action' => 'transfer', 'transferData' => $address];
         $transfer['transferData']['houseNumberAddition'] = 'INVALID';
+        $this->prepareOutboxWrite($client);
         $client->jsonRequest('POST', '/api/v1/subscriptions/1/deceased-actions', ['actions' => [$transfer]]);
         self::assertResponseStatusCodeSame(422);
         $client->request('GET', '/api/v1/persons/1');
         $before = json_decode($client->getResponse()->getContent(), true);
         self::assertArrayNotHasKey('transferredTo', $before['subscriptions'][0]);
         $transfer['transferData'] = $address;
+        $this->prepareOutboxWrite($client);
         $client->jsonRequest('POST', '/api/v1/subscriptions/1/deceased-actions', ['actions' => [$transfer]]);
         self::assertResponseIsSuccessful();
         $client->request('GET', '/api/v1/persons/1');
@@ -112,10 +124,12 @@ final class CustomerAddressGateTest extends WebTestCase
     public function testExternalCorrectionCannotBypassWriteActivation(): void
     {
         $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
         $client->disableReboot();
         static::getContainer()->set('http_client', new \Symfony\Component\HttpClient\MockHttpClient(function () {
             self::fail('A disabled mutation must not contact upstream.');
         }));
+        $this->prepareOutboxWrite($client);
         $client->jsonRequest('PATCH', '/api/v1/persons/123/address?credentialKey=forged', [
             'postalCode' => '1231AA', 'houseNumber' => '1A', 'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT',
         ]);
@@ -126,6 +140,7 @@ final class CustomerAddressGateTest extends WebTestCase
     public function testWorkflowIsolationAndReset(): void
     {
         $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
         $client->disableReboot();
         static::getContainer()->set('address.http_client', AddressSmokeHttpClientFactory::create());
         $first = ['HTTP_X_KIWI_WORKFLOW_SESSION_ID' => 'workflow-one'];
@@ -134,6 +149,7 @@ final class CustomerAddressGateTest extends WebTestCase
         $id = json_decode($client->getResponse()->getContent(), true)['addressValidation']['formSessionId'];
         $client->request('GET', '/api/v1/persons/1', server: $second);
         self::assertNotSame($id, json_decode($client->getResponse()->getContent(), true)['addressValidation']['formSessionId']);
+        $this->prepareOutboxWrite($client);
         $client->jsonRequest('POST', '/api/v1/customer-work-sessions/reset', ['workflowSessionId' => 'workflow-one', 'customerReference' => ['personId' => '1']]);
         self::assertResponseIsSuccessful();
         $client->request('GET', '/api/v1/persons/1', server: $first);

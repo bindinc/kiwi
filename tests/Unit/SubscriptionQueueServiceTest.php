@@ -341,6 +341,7 @@ final class SubscriptionQueueServiceTest extends TestCase
             'submissionId' => 'unit-test-existing-person-snapshot',
             'recipient' => [
                 'personId' => 11860448,
+                'divisionId' => 'administration-2',
                 'credentialKey' => 'tvk',
                 'credentialTitle' => 'TV Krant',
                 'mandant' => 'HMC',
@@ -400,6 +401,7 @@ final class SubscriptionQueueServiceTest extends TestCase
         ), true, 512, JSON_THROW_ON_ERROR);
 
         self::assertSame(11860448, $response['summary']['recipient']['personId']);
+        self::assertSame('administration-2', $requestPayload['recipient']['person']['divisionId']);
         self::assertSame('Mevr. Meeringa', $response['summary']['recipient']['displayName']);
         self::assertSame('41929371', $requestPayload['recipient']['person']['personNumber']);
         self::assertSame('NL80INGB0001340187', $requestPayload['recipient']['person']['iban']);

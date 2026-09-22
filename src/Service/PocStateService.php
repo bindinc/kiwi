@@ -16,12 +16,26 @@ final class PocStateService
      * @var array<string, mixed>|null
      */
     private ?array $defaultState = null;
+    private ?\DateTimeImmutable $projectionTime = null;
 
     public function __construct(
         private readonly PocCatalogService $catalog,
         #[Autowire('%kernel.project_dir%')]
         private readonly string $projectDir,
+        private readonly ?\App\OutboxSession\SessionOutbox $outbox = null,
     ) {
+    }
+
+    /** Freeze generated timestamps while replaying one validated command on an isolated session. */
+    public function previewOperation(SessionInterface $session, string $operation, array $arguments, string $recordedAt): array
+    {
+        if (!$session->get('kiwi_outbox_projection')) throw new \LogicException('A projection requires an isolated session');
+        $this->projectionTime = new \DateTimeImmutable($recordedAt);
+        try {
+            return $this->$operation($session, ...$arguments);
+        } finally {
+            $this->projectionTime = null;
+        }
     }
 
     /**
@@ -31,6 +45,9 @@ final class PocStateService
     public function searchCustomers(SessionInterface $session, array $filters, int $page, int $pageSize): array
     {
         $state = $this->getState($session);
+        if ($this->outbox && !$session->get('kiwi_outbox_projection', false)) {
+            $state['customers'] = $this->outbox->overlayCustomers($state['customers'] ?? []);
+        }
         $customers = $state['customers'] ?? [];
         if (!\is_array($customers)) {
             $customers = [];
@@ -78,6 +95,9 @@ final class PocStateService
     public function getCustomerState(SessionInterface $session): array
     {
         $state = $this->getState($session);
+        if ($this->outbox && !$session->get('kiwi_outbox_projection', false)) {
+            $state['customers'] = $this->outbox->overlayCustomers($state['customers'] ?? []);
+        }
 
         return [
             'customers' => $state['customers'] ?? [],
@@ -107,6 +127,9 @@ final class PocStateService
     public function getCustomer(SessionInterface $session, int $customerId): array
     {
         $state = $this->getState($session);
+        if ($this->outbox && !$session->get('kiwi_outbox_projection', false)) {
+            $state['customers'] = $this->outbox->overlayCustomers($state['customers'] ?? []);
+        }
         $index = $this->findCustomerIndex($state, $customerId);
         if (null === $index) {
             throw new ApiProblemException(404, 'customer_not_found', 'Customer not found');
@@ -1362,12 +1385,12 @@ final class PocStateService
 
     private function utcNowIso(): string
     {
-        return (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM);
+        return ($this->projectionTime ?? new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM);
     }
 
     private function utcTodayIso(): string
     {
-        return (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d');
+        return ($this->projectionTime ?? new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d');
     }
 
     private function currentTimestampMs(): int

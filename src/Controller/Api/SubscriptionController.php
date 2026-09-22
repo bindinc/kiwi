@@ -26,6 +26,7 @@ final class SubscriptionController extends AbstractApiController
         JsonRequestDecoder $jsonRequestDecoder,
         private readonly CustomerAddressGate $addressGate,
         private readonly PocStateService $stateService,
+        private readonly \App\OutboxSession\DeferredCustomerWrites $deferredWrites,
     ) {
         parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
@@ -37,7 +38,7 @@ final class SubscriptionController extends AbstractApiController
         $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
-        return $this->json($this->stateService->updateSubscription($request->getSession(), $customerId, $subscriptionId, $payload));
+        return $this->json($this->deferredWrites->stage($request, 'updateSubscription', $customerId, $subscriptionId, $payload));
     }
 
     #[Route('/{customerId}/{subscriptionId}/complaint', name: 'api_subscription_complaint', methods: ['POST'], requirements: ['customerId' => '\d+', 'subscriptionId' => '\d+'])]
@@ -47,8 +48,7 @@ final class SubscriptionController extends AbstractApiController
         $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
-        return $this->json($this->stateService->createSubscriptionComplaint(
-            $request->getSession(),
+        return $this->json($this->deferredWrites->stage($request, 'createSubscriptionComplaint',
             $customerId,
             $subscriptionId,
             (string) ($payload['reason'] ?? 'other'),
@@ -62,8 +62,7 @@ final class SubscriptionController extends AbstractApiController
         $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
-        return $this->json($this->stateService->completeWinback(
-            $request->getSession(),
+        return $this->json($this->deferredWrites->stage($request, 'completeWinback',
             $customerId,
             $subscriptionId,
             \is_string($payload['result'] ?? null) ? $payload['result'] : null,
@@ -86,7 +85,7 @@ final class SubscriptionController extends AbstractApiController
             }
         }
 
-        return $this->json($this->stateService->processDeceasedActions($request->getSession(), $customerId, $actions));
+        return $this->json($this->deferredWrites->stage($request, 'processDeceasedActions', $customerId, $actions));
     }
 
     #[Route('/{customerId}/{subscriptionId}/restitution-transfer', name: 'api_subscription_restitution_transfer', methods: ['POST'], requirements: ['customerId' => '\d+', 'subscriptionId' => '\d+'])]
@@ -98,8 +97,7 @@ final class SubscriptionController extends AbstractApiController
 
         $transferData = $validator->validatePerson($request->getSession(), \is_array($payload['transferData'] ?? null) ? $payload['transferData'] : []);
 
-        return $this->json($this->stateService->completeRestitutionTransfer(
-            $request->getSession(),
+        return $this->json($this->deferredWrites->stage($request, 'completeRestitutionTransfer',
             $customerId,
             $subscriptionId,
             $transferData,
