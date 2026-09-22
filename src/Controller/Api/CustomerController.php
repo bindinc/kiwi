@@ -34,11 +34,13 @@ final class CustomerController extends AbstractApiController
         JsonRequestDecoder $jsonRequestDecoder,
         private readonly CustomerAddressGate $addressGate,
         private readonly PocStateService $stateService,
+        private readonly \App\OutboxSession\DeferredCustomerWrites $deferredWrites,
         private readonly AggregatedPersonSearchService $aggregatedPersonSearchService,
         private readonly PersonDetailService $personDetailService,
         private readonly SubscriptionSummaryService $subscriptionSummaryService,
         private readonly CustomerAuditService $customerAuditService,
         private readonly CustomerMutationPolicy $customerMutationPolicy,
+        private readonly \App\OutboxSession\SessionOutbox $outbox,
     ) {
         parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
@@ -127,7 +129,7 @@ final class CustomerController extends AbstractApiController
 
         $payload = $validator->validatePerson($request->getSession(), $payload);
 
-        return $this->json($this->stateService->createCustomer($request->getSession(), $payload), 201);
+        return $this->json($this->deferredWrites->stage($request, 'createCustomer', $payload), 201);
     }
 
     #[Route('/state', name: 'api_customers_state_read', methods: ['GET'])]
@@ -144,31 +146,7 @@ final class CustomerController extends AbstractApiController
         $this->requireApiAccess($request);
         $payload = $this->parseJsonObject($request);
 
-        $customers = $payload['customers'] ?? null;
-        if (!\is_array($customers)) {
-            throw new ApiProblemException(400, 'invalid_payload', 'customers must be an array');
-        }
-
-        $existing = $this->stateService->getCustomerState($request->getSession())['customers'];
-        $byId = array_column($existing, null, 'id');
-        foreach ($customers as &$customer) {
-            if (!is_array($customer)) {
-                throw new ApiProblemException(400, 'invalid_payload', 'Invalid customer');
-            }
-            $previous = $byId[$customer['id'] ?? ''] ?? [];
-            if ($previous !== $customer) {
-                $customer = $validator->validatePerson($request->getSession(), $customer);
-            }
-        }
-        unset($customer);
-        $retainedIds = array_column($customers, 'id');
-        foreach ($existing as $previous) {
-            if (!in_array($previous['id'], $retainedIds, true)) {
-                $this->addressGate->requireCustomer($request, $previous['id']);
-            }
-        }
-
-        return $this->json($this->stateService->replaceCustomers($request->getSession(), $customers));
+        throw new ApiProblemException(409, 'bulk_customer_write_disabled', 'Use individual customer forms to save changes in the outbox.');
     }
 
     #[Route('/{customerId}', name: 'api_customer_read', methods: ['GET'], requirements: ['customerId' => '[^/]+' ])]
@@ -180,6 +158,7 @@ final class CustomerController extends AbstractApiController
         if ('' !== $credentialKey) {
             $customer = $this->readSubscriptionApiCustomer($customerId, $credentialKey);
             $customer['editing'] = $this->customerMutationPolicy->capabilities();
+            $customer = $this->outbox->overlayExternalCustomer($customer);
         } else {
             $numericCustomerId = $this->parseIntValue($customerId, 'customerId', required: true, errorCode: 'invalid_route_parameter');
             $customer = $this->stateService->getCustomer($request->getSession(), $numericCustomerId);
@@ -221,7 +200,7 @@ final class CustomerController extends AbstractApiController
         } else {
             $this->addressGate->requireCustomer($request, $customerId);
         }
-        $customer = $this->stateService->updateCustomer($request->getSession(), $customerId, $payload);
+        $customer = $this->deferredWrites->stage($request, 'updateCustomer', $customerId, $payload);
         if (isset($payload['street'])) {
             $this->addressGate->rememberCorrection($request, $customer);
         }
@@ -247,7 +226,7 @@ final class CustomerController extends AbstractApiController
         $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
-        return $this->json($this->stateService->createContactHistoryEntry($request->getSession(), $customerId, $payload), 201);
+        return $this->json($this->deferredWrites->stage($request, 'createContactHistoryEntry', $customerId, $payload), 201);
     }
 
     #[Route('/{customerId}/delivery-remarks', name: 'api_customer_delivery_remarks', methods: ['PUT'], requirements: ['customerId' => '\d+'])]
@@ -257,8 +236,7 @@ final class CustomerController extends AbstractApiController
         $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
-        return $this->json($this->stateService->updateDeliveryRemarks(
-            $request->getSession(),
+        return $this->json($this->deferredWrites->stage($request, 'updateDeliveryRemarks',
             $customerId,
             trim((string) ($payload['default'] ?? '')),
             (string) ($payload['updatedBy'] ?? 'Agent'),
@@ -272,7 +250,7 @@ final class CustomerController extends AbstractApiController
         $this->addressGate->requireCustomer($request, $customerId);
         $payload = $this->parseJsonObject($request);
 
-        return $this->json($this->stateService->createEditorialComplaint($request->getSession(), $customerId, $payload), 201);
+        return $this->json($this->deferredWrites->stage($request, 'createEditorialComplaint', $customerId, $payload), 201);
     }
 
     #[Route('/{customerId}/article-orders', name: 'api_customer_article_orders', methods: ['GET'], requirements: ['customerId' => '\d+'])]

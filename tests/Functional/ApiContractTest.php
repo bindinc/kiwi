@@ -13,6 +13,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 final class ApiContractTest extends WebTestCase
 {
     use AuthenticatedClientTrait;
+    use OutboxTestTrait;
 
     private ?string $previousClientSecretsPath = null;
     private ?string $tempClientSecretsDir = null;
@@ -61,6 +62,7 @@ final class ApiContractTest extends WebTestCase
     public function testMeAndBootstrapReturnAuthenticatedContext(): void
     {
         $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
 
         $client->request('GET', '/api/v1/me');
         self::assertResponseIsSuccessful();
@@ -103,6 +105,7 @@ final class ApiContractTest extends WebTestCase
         $this->disableSubscriptionApiCustomerSearch();
 
         $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
         $this->resetSubscriptionQueueStorage();
 
         $client->request('GET', '/api/v1/persons');
@@ -150,6 +153,7 @@ final class ApiContractTest extends WebTestCase
             ],
         ];
 
+        $this->prepareOutboxWrite($client, $submissionId);
         $client->request('POST', '/api/v1/workflows/subscription', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($requestPayload, JSON_THROW_ON_ERROR));
         self::assertResponseStatusCodeSame(202);
         $payload = json_decode($client->getResponse()->getContent(), true);
@@ -160,57 +164,24 @@ final class ApiContractTest extends WebTestCase
         self::assertSame('avrotros', $payload['summary']['offer']['credentialKey']);
         self::assertSame('B', $payload['summary']['subscription']['paymentMethod']);
         self::assertSame('NL80INGB0001340187', $payload['summary']['subscription']['iban']);
-        self::assertSame('Aanvraag', $payload['summary']['typeLabel']);
-        self::assertSame('pending', $payload['event']['status']);
-        self::assertSame('Aanvraag', $payload['display']['typeLabel']);
-        self::assertSame('TU', $payload['display']['agentBadge']);
-        self::assertSame('in behandeling', $payload['display']['statusLabel']);
-        self::assertStringNotContainsString('T. User', $payload['display']['line']);
-        self::assertStringContainsString("Aanvraag '1 jaar Avrobode voor maar EUR52' (AVRV519)", $payload['display']['line']);
-        $orderId = $payload['orderId'];
+        $sessionId = $payload['outbox']['id'];
+        self::assertTrue($payload['provisional']);
+        self::assertSame('pending', $payload['outbox']['status']);
+        self::assertCount(1, $payload['outbox']['changes']);
 
+        $this->prepareOutboxWrite($client, $submissionId);
         $client->request('POST', '/api/v1/workflows/subscription', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($requestPayload, JSON_THROW_ON_ERROR));
         self::assertResponseStatusCodeSame(202);
-        $duplicatePayload = json_decode($client->getResponse()->getContent(), true);
-        self::assertSame($orderId, $duplicatePayload['orderId']);
-        self::assertSame($submissionId, $duplicatePayload['submissionId']);
-        self::assertSame($payload['display'], $duplicatePayload['display']);
-
+        self::assertSame($sessionId, json_decode($client->getResponse()->getContent(), true)['outbox']['id']);
         $client->request('GET', '/api/v1/workflows/subscription/submission/'.rawurlencode($submissionId));
         self::assertResponseIsSuccessful();
-        $submissionStatusPayload = json_decode($client->getResponse()->getContent(), true);
-        self::assertSame($orderId, $submissionStatusPayload['orderId']);
-        self::assertSame($submissionId, $submissionStatusPayload['submissionId']);
-
-        $client->request('GET', sprintf('/api/v1/workflows/subscription/%d', $orderId));
+        self::assertSame($sessionId, json_decode($client->getResponse()->getContent(), true)['outbox']['id']);
+        $client->request('GET', '/api/v1/outbox-sessions/'.$sessionId);
         self::assertResponseIsSuccessful();
-        $statusPayload = json_decode($client->getResponse()->getContent(), true);
-        self::assertSame($submissionId, $statusPayload['submissionId']);
-        self::assertSame('queued', $statusPayload['status']);
-        self::assertSame($payload['display'], $statusPayload['display']);
-
-        $client->request('GET', '/api/v1/workflows/subscription?limit=5');
-        self::assertResponseIsSuccessful();
-        $listPayload = json_decode($client->getResponse()->getContent(), true);
-        self::assertSame($submissionId, $listPayload['items'][0]['submissionId']);
-        self::assertSame($payload['display'], $listPayload['items'][0]['display']);
-
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $connection = $entityManager->getConnection();
-        self::assertSame(1, (int) $connection->fetchOne(
-            'SELECT COUNT(*) FROM subscription_orders WHERE submission_id = ?',
-            [$submissionId],
-        ));
-        self::assertSame(1, (int) $connection->fetchOne(
-            'SELECT COUNT(*) FROM outbox_events WHERE order_id = ?',
-            [$orderId],
-        ));
-        $storedRequestPayload = json_decode((string) $connection->fetchOne(
-            'SELECT request_payload FROM subscription_orders WHERE submission_id = ?',
-            [$submissionId],
-        ), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertSame($requestPayload['customerContext'], $storedRequestPayload['customerContext']);
+        self::assertCount(1, json_decode($client->getResponse()->getContent(), true)['changes']);
+        $connection = static::getContainer()->get(EntityManagerInterface::class)->getConnection();
+        self::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM subscription_orders WHERE submission_id = ?', [$submissionId]));
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM customer_outbox_sessions WHERE id = ?', [$sessionId]));
 
         $client->request('PATCH', sprintf('/api/v1/persons/%d', $recipientId), server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'city' => 'Zwolle',
@@ -218,6 +189,7 @@ final class ApiContractTest extends WebTestCase
         self::assertResponseStatusCodeSame(503);
         self::assertSame('address_unconfirmed', json_decode($client->getResponse()->getContent(), true)['error']['code']);
 
+        $this->prepareOutboxWrite($client);
         $client->request('PUT', sprintf('/api/v1/persons/%d/delivery-remarks', $recipientId), server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'default' => 'Test opmerking',
             'updatedBy' => 'Unit Test',
@@ -240,6 +212,44 @@ final class ApiContractTest extends WebTestCase
         $session->save();
     }
 
+
+    public function testNewSubscriptionOrdersShareStableCustomerAndCanBeCorrected(): void
+    {
+        $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
+        $client->request('GET', '/api/v1/persons');
+        $formId = $this->rememberAddress($client, ['postalCode'=>'1234AB', 'houseNumber'=>'10', 'street'=>'Teststraat', 'city'=>'Teststad']);
+        $payload = [
+            'recipient' => ['person' => ['salutation'=>'Dhr.', 'firstName'=>'New', 'lastName'=>'Reader',
+                'postalCode'=>'1234AB', 'houseNumber'=>'10', 'street'=>'Teststraat', 'address'=>'Teststraat 10',
+                'city'=>'Teststad', 'email'=>'reader@example.invalid', 'formSessionId'=>$formId]],
+            'requester' => ['sameAsRecipient'=>true],
+            'subscription' => ['magazine'=>'Test magazine', 'startDate'=>'2026-10-01', 'paymentMethod'=>'AC'],
+            'offer' => ['salesCode'=>'TEST-OUTBOX', 'title'=>'Test offer'],
+        ];
+        $client->setServerParameter('HTTP_X_KIWI_NEW_CUSTOMER_ID', 'new-reader');
+        $this->prepareOutboxWrite($client, 'signup-a');
+        $client->request('POST', '/api/v1/workflows/subscription', server:['CONTENT_TYPE'=>'application/json'], content:json_encode($payload, JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(202);
+        $first = json_decode($client->getResponse()->getContent(), true)['outbox'];
+        $client->setServerParameter('HTTP_X_KIWI_OUTBOX_ID', (string)$first['id']);
+        $this->prepareOutboxWrite($client, 'signup-b');
+        $client->request('POST', '/api/v1/workflows/subscription', server:['CONTENT_TYPE'=>'application/json'], content:json_encode($payload, JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(202);
+        $second = json_decode($client->getResponse()->getContent(), true)['outbox'];
+        self::assertSame($first['customerReference'], $second['customerReference']);
+        self::assertCount(2, $second['customers'][0]['subscriptions']);
+        $client->setServerParameter('HTTP_X_KIWI_CHANGE_ID', 'signup-a');
+        $this->prepareOutboxWrite($client, 'signup-corrected');
+        $payload['recipient']['person']['firstName'] = 'Corrected';
+        $client->request('POST', '/api/v1/workflows/subscription', server:['CONTENT_TYPE'=>'application/json'], content:json_encode($payload, JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(202);
+        $corrected = json_decode($client->getResponse()->getContent(), true)['outbox'];
+        self::assertCount(2, $corrected['changes']);
+        self::assertSame('Corrected', $corrected['customers'][0]['firstName']);
+        self::assertCount(2, $corrected['customers'][0]['subscriptions']);
+    }
+
     private function rememberAddress(\Symfony\Bundle\FrameworkBundle\KernelBrowser $client, array $payload): string
     {
         $id = 'cccccccc-cccc-4ccc-accc-cccccccccccc';
@@ -257,12 +267,14 @@ final class ApiContractTest extends WebTestCase
     public function testCatalogOrderAndCallFlow(): void
     {
         $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
 
         $client->request('GET', '/api/v1/catalog/articles?popular=true&limit=1');
         self::assertResponseIsSuccessful();
         $article = json_decode($client->getResponse()->getContent(), true)['items'][0];
 
         $formId = $this->rememberAddress($client, ['postalCode' => '1234AB', 'houseNumber' => '10', 'street' => 'Teststraat', 'city' => 'Teststad']);
+        $this->prepareOutboxWrite($client);
         $client->request('POST', '/api/v1/workflows/article-order', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'customer' => [
                 'salutation' => 'Mevr.',
@@ -322,18 +334,20 @@ final class ApiContractTest extends WebTestCase
         $lastCall = json_decode($client->getResponse()->getContent(), true)['last_call_session'];
         self::assertSame($accepted['customerId'], $lastCall['customerId']);
 
+        $this->prepareOutboxWrite($client);
         $client->request('POST', '/api/v1/call-session/disposition', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'category' => 'general',
             'outcome' => 'info_provided',
             'notes' => 'Handled in test',
         ], JSON_THROW_ON_ERROR));
         self::assertResponseIsSuccessful();
-        self::assertSame('saved', json_decode($client->getResponse()->getContent(), true)['status']);
+        self::assertTrue(json_decode($client->getResponse()->getContent(), true)['provisional']);
     }
 
     public function testCatalogAndSubscriptionEndpoints(): void
     {
         $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
         $this->seedWebaboOfferCache();
 
         $client->request('GET', '/api/v1/webabo/offers?query=avro&limit=5');
@@ -363,6 +377,7 @@ final class ApiContractTest extends WebTestCase
 
         $client->request('GET', '/api/v1/persons');
         $this->rememberCustomerAddresses($client, json_decode($client->getResponse()->getContent(), true)['items']);
+        $this->prepareOutboxWrite($client);
         $client->request('PATCH', '/api/v1/subscriptions/1/1', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'status' => 'active',
             'duration' => '2-jaar',
@@ -370,6 +385,7 @@ final class ApiContractTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSame('2-jaar', json_decode($client->getResponse()->getContent(), true)['subscription']['duration']);
 
+        $this->prepareOutboxWrite($client);
         $client->request('POST', '/api/v1/subscriptions/1/1/complaint', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'reason' => 'damaged',
         ], JSON_THROW_ON_ERROR));

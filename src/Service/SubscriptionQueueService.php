@@ -33,6 +33,7 @@ final class SubscriptionQueueService
         private readonly PpaPhoneContactMapper $ppaPhoneContactMapper,
         private readonly WebaboOfferCacheSchemaManager $webaboOfferCacheSchemaManager,
         private readonly WebaboOfferRepository $webaboOfferRepository,
+        private readonly ?\App\Security\BusinessAccess $access = null,
     ) {
     }
 
@@ -123,7 +124,7 @@ final class SubscriptionQueueService
             return [
                 'items' => array_map(
                     fn (SubscriptionOrder $subscriptionOrder): array => $this->mapOrderToApiPayload($subscriptionOrder),
-                    $this->repository->findRecent($limit),
+                    $this->repository->findRecent($limit, $this->access?->context()),
                 ),
             ];
         } catch (\Throwable $exception) {
@@ -207,7 +208,7 @@ final class SubscriptionQueueService
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
-    private function normalizeQueuePayload(SessionInterface $session, array $payload): array
+    public function normalizeQueuePayload(SessionInterface $session, array $payload): array
     {
         $recipient = $this->normalizeRolePayload($session, $payload['recipient'] ?? null, 'recipient', false);
         $requester = $this->normalizeRolePayload($session, $payload['requester'] ?? null, 'requester', true);
@@ -755,6 +756,11 @@ final class SubscriptionQueueService
             $context['credentialTitle'] = $credentialTitle;
         }
 
+        $divisionId = $this->normalizeNullableString($payload['divisionId'] ?? null);
+        if (null !== $divisionId) {
+            $context['divisionId'] = $divisionId;
+        }
+
         $mandant = $this->normalizeNullableString($payload['mandant'] ?? null);
         if (null !== $mandant) {
             $context['mandant'] = $mandant;
@@ -778,6 +784,16 @@ final class SubscriptionQueueService
      */
     private function mapOrderToApiPayload(SubscriptionOrder $subscriptionOrder): array
     {
+        if ($this->access) {
+            $actor = $this->access->context();
+            $original = $subscriptionOrder->getRequestPayload()['authorization'] ?? [];
+            $sameTenant = ($original['tenant'] ?? null) === $actor->tenant;
+            $mayRead = \App\OutboxSession\SessionOutbox::managesAll($actor)
+                || ($actor->canWrite() && ($original['actor'] ?? null) === $actor->actor);
+            if (!$sameTenant || !$mayRead) {
+                throw new ApiProblemException(404, 'subscription_order_not_found', 'Subscription order not found');
+            }
+        }
         $latestOutboxEvent = $subscriptionOrder->getLatestOutboxEvent();
         $payload = [
             'orderId' => $subscriptionOrder->getId(),

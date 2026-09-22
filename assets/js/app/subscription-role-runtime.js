@@ -2300,6 +2300,25 @@ function initializeSubscriptionRolesForForm() {
     toggleRequesterSameAsRecipient();
 }
 
+// Restore domain fields into the same role editors used for a new order.
+function restoreOutboxSubscriptionRoles(payload) {
+    for (const role of ['recipient', 'requester']) {
+        const saved = payload[role];
+        if (saved.sameAsRecipient) continue;
+        const cfg = getSubscriptionRoleConfig(role);
+        setSubscriptionRoleMode(role, saved.personId ? 'existing' : 'create');
+        if (saved.personId) {
+            subscriptionRoleState[role].selectedPerson = { ...saved.person, id: saved.personId };
+            renderSubscriptionRoleSelectedPerson(role);
+        } else {
+            ensureSubscriptionRoleCreateForm(role);
+            setCustomerFormData(cfg.prefix, { ...saved.person, initials: saved.person.firstName });
+        }
+    }
+    document.getElementById('requesterSameAsRecipient').checked = !!payload.requester.sameAsRecipient;
+    toggleRequesterSameAsRecipient();
+}
+
 function installSubscriptionRoleScopeListener() {
     const globalScope = getSubscriptionRuntimeGlobalScope();
     if (
@@ -2354,6 +2373,7 @@ if (typeof window !== 'undefined') {
         getSubscriptionRoleConfig,
         hasSameSelectedExistingRecipientAndRequester,
         initializeSubscriptionRolesForForm,
+        restoreOutboxSubscriptionRoles,
         isLatestSubscriptionDuplicateRequest,
         isStrongDuplicateCandidate,
         mergeDuplicateMatchLists,

@@ -452,6 +452,21 @@ export function showArticleSale() {
     setElementDisplay('articleSaleForm', 'flex');
 }
 
+export async function restoreOutboxOrder(payload) {
+    const dependencies = resolveDependencies();
+    showArticleSale();
+    if (payload.customer) prefillArticleSaleForm(payload.customer, dependencies);
+    getGlobalScope().orderItems = structuredClone(payload.order.items);
+    setInputValue('articleDesiredDelivery', payload.order.desiredDeliveryDate || '');
+    setInputValue('articleNotes', payload.order.notes || '');
+    setCheckedValue('articlePayment', payload.order.paymentMethod);
+    if (payload.order.couponCode) {
+        setInputValue('couponCode', payload.order.couponCode);
+        await getGlobalScope().applyCoupon();
+    }
+    await renderOrderItems(dependencies);
+}
+
 export function addDeliveryRemark(remark) {
     if (!remark) {
         return;
@@ -649,9 +664,10 @@ async function submitArticleOrderViaApi(dependencies, options = {}) {
         return false;
     }
 
-    const hadCurrentCustomer = Boolean(currentCustomer);
+    const restoresNewCustomer = getGlobalScope()?.kiwiOutbox?.isCorrectingNewCustomerOrder();
+    const hadCurrentCustomer = Boolean(currentCustomer) && !restoresNewCustomer;
     const payload = buildArticleOrderPayload(orderData, formData, trackingNumber, returnDeadlineStr, contactDescription);
-    if (currentCustomer && currentCustomer.id !== undefined && currentCustomer.id !== null) {
+    if (hadCurrentCustomer && currentCustomer.id !== undefined && currentCustomer.id !== null) {
         payload.customerId = currentCustomer.id;
     } else {
         payload.customer = {
@@ -881,6 +897,7 @@ function exposeOrderSliceApi() {
     globalScope[ORDER_SLICE_NAMESPACE] = {
         displayArticles,
         showArticleSale,
+        restoreOutboxOrder,
         addDeliveryRemark,
         addDeliveryRemarkByKey,
         createArticleSale

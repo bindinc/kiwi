@@ -1497,6 +1497,24 @@ function getSelection() {
     };
 }
 
+async function restoreOutboxOffer(saved) {
+    await ensureWerfsleutelsLoaded();
+    const offer = getWerfsleutelBySalesCode(saved.salesCode);
+    if (!offer || !offer.isActive) {
+        throw new Error('De opgeslagen aanbieding is niet meer beschikbaar. Selecteer een geldige werfsleutel.');
+    }
+    werfsleutelSliceState.selectedOffers = [{
+        offer, combinationOptions: buildFallbackCombinationOptions(offer),
+        selectedCombinationKey: null, isExpanded: true, loadingCombinations: true, combinationError: null
+    }];
+    await loadSalesCodeCombinationsForOffer(offer.salesCode);
+    const entry = findSelectedOfferEntry(offer.salesCode);
+    if (!entry?.combinationOptions.some(option => option.key === saved.channel)) {
+        throw new Error('Het opgeslagen kanaal is niet meer beschikbaar. Selecteer een geldig kanaal.');
+    }
+    selectWerfsleutelChannel(offer.salesCode, saved.channel);
+}
+
 function installWerfsleutelBridge() {
     const globalScope = getGlobalScope();
     if (!globalScope) {
@@ -1510,6 +1528,7 @@ function installWerfsleutelBridge() {
         refreshCatalogIfStale: triggerWerfsleutelBackgroundRefreshIfStale,
         setCatalogMetadata,
         getSelections,
+        restoreOutboxOffer,
         getSelection,
         getOfferDetails: getWerfsleutelOfferDetails
     };

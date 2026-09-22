@@ -224,6 +224,10 @@ function shouldSkipContactHistoryToast(type, contactHistoryState) {
 }
 
 export function showToast(message, type = 'success', options = {}) {
+    if (type === 'success' && globalThis.window?.kiwiOutbox?.consumeSaveNotice?.()) {
+        message = 'Opgeslagen in outbox. Nog niet verwerkt.';
+        options = { ...options, recordContactHistory: false };
+    }
     const dependencies = resolveDependencies();
     const currentCustomer = dependencies && typeof dependencies.getCurrentCustomer === 'function'
         ? dependencies.getCurrentCustomer()
@@ -232,7 +236,9 @@ export function showToast(message, type = 'success', options = {}) {
         ? dependencies.getContactHistoryState()
         : null;
     const canLogContactHistory = dependencies && typeof dependencies.pushContactHistory === 'function';
-    const canAppendContactHistoryToast = options.recordContactHistory !== false
+    // UI notifications are technical feedback, not business contact registrations.
+    const canAppendContactHistoryToast = !globalThis.window?.kiwiOutbox
+        && options.recordContactHistory !== false
         && currentCustomer
         && !isSubscriptionApiCustomer(currentCustomer)
         && canLogContactHistory;

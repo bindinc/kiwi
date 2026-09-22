@@ -109,6 +109,7 @@ final class ApiSecurityHardeningTest extends WebTestCase
             return match ($matches[1]) {
                 'articleId', 'customerId', 'subscriptionId', 'orderId' => '1',
                 'salesCode' => 'AVRV519',
+                'action' => 'pause',
                 default => '1',
             };
         }, $path);

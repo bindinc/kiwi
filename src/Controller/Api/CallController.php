@@ -23,6 +23,7 @@ final class CallController extends AbstractApiController
         OidcConfiguration $oidcConfiguration,
         JsonRequestDecoder $jsonRequestDecoder,
         private readonly PocStateService $stateService,
+        private readonly \App\OutboxSession\DeferredCustomerWrites $deferredWrites,
     ) {
         parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
@@ -157,14 +158,14 @@ final class CallController extends AbstractApiController
             throw new ApiProblemException(400, 'invalid_payload', 'category and outcome are required');
         }
 
-        return $this->json($this->stateService->saveDisposition(
-            $request->getSession(),
-            $category,
-            $outcome,
-            (string) ($payload['notes'] ?? ''),
-            (bool) ($payload['followUpRequired'] ?? false),
-            \is_string($payload['followUpDate'] ?? null) ? $payload['followUpDate'] : null,
-            (string) ($payload['followUpNotes'] ?? ''),
-        ));
+        $lastCall = $this->stateService->getCallSessionSnapshot($request->getSession())['last_call_session'];
+        if (!is_array($lastCall)) throw new ApiProblemException(400, 'missing_call_session', 'No completed call is available');
+        if (!isset($lastCall['customerId'])) return $this->json(['status' => 'ok']);
+        $description = $category.': '.$outcome.' - '.(string) ($payload['notes'] ?? '');
+        if (!empty($payload['followUpRequired'])) {
+            $description .= ' Follow-up: '.(string) ($payload['followUpDate'] ?? '').' '.(string) ($payload['followUpNotes'] ?? '');
+        }
+        return $this->json($this->deferredWrites->stage($request, 'createContactHistoryEntry',
+            (int) $lastCall['customerId'], ['type' => 'call_disposition', 'description' => $description]));
     }
 }

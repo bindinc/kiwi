@@ -1,0 +1,122 @@
+/* Semantic fallbacks match the proposed Light & Shadow theme contract. */
+:root {
+    --outbox-surface: var(--surface, #fff);
+    --outbox-subdued: var(--page, #f0eee9);
+    --outbox-ink: var(--text, #0f172a);
+    --outbox-muted: var(--text-muted, #475569);
+    --outbox-action: var(--action, #496275);
+    --outbox-line: var(--decorative-line, rgb(117 111 107 / 28%));
+    --outbox-danger: var(--danger, #b42318);
+    --outbox-elevation: 0 8px 24px rgb(15 23 42 / 14%);
+}
+
+#subscriptionQueuePanel {
+    min-height: 0;
+    height: auto;
+    display: block;
+    flex: none;
+    width: 100%;
+    background: var(--outbox-surface);
+    color: var(--outbox-ink);
+    border-color: var(--outbox-line);
+    border-radius: 4px;
+    box-shadow: none;
+}
+#sessionOutboxTitle { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; }
+#sessionOutboxTitle svg { width: 20px; height: 20px; color: var(--outbox-action); }
+#subscriptionQueueMeta { color: var(--outbox-muted); margin-bottom: 12px; }
+#sessionOutboxStatus { font-size: .8125rem; line-height: 1.5; color: var(--outbox-muted); margin: 0 0 12px; }
+#sessionOutboxStatus:empty { display: none; }
+#sessionOutboxStatus.is-error { color: var(--outbox-danger); border-left: 2px solid; padding-left: 8px; }
+#subscriptionQueueList { display: block; gap: 0; max-height: 360px; scrollbar-gutter: stable; }
+.subscription-queue-item.session-outbox-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px;
+    background: var(--outbox-surface);
+    border: 0;
+    border-bottom: 1px solid var(--outbox-line);
+    border-radius: 0;
+}
+.session-outbox-item[data-status="paused"] { border-left: 2px solid var(--outbox-action); background: var(--outbox-subdued); padding-left: 10px; }
+.session-outbox-body { min-width: 0; }
+.session-outbox-customer {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--outbox-ink);
+    font: inherit;
+    font-weight: 650;
+    font-size: .9375rem;
+    line-height: 1.4;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+button.session-outbox-customer { cursor: pointer; }
+button.session-outbox-customer:hover { color: var(--outbox-action); text-decoration: underline; text-underline-offset: 3px; }
+.session-outbox-caption { margin: 4px 0 0; color: var(--outbox-muted); font-size: .8125rem; line-height: 1.5; }
+.session-outbox-state { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: .75rem; color: var(--outbox-action); font-weight: 600; font-variant-numeric: tabular-nums; }
+.session-outbox-state svg { width: 14px; height: 14px; }
+.session-outbox-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--outbox-action);
+    cursor: pointer;
+    font: inherit;
+}
+.session-outbox-icon-button svg { width: 18px; height: 18px; flex-shrink: 0; }
+.session-outbox-icon-button:hover { background: var(--outbox-subdued); }
+#subscriptionQueuePanel button:focus-visible, .session-outbox-menu button:focus-visible, .session-changes-disclosure :focus-visible {
+    outline: 2px solid var(--outbox-action);
+    outline-offset: 2px;
+}
+.session-outbox-menu {
+    position: fixed;
+    inset: auto;
+    width: 204px;
+    margin: 0;
+    padding: 6px;
+    background: var(--outbox-surface);
+    color: var(--outbox-ink);
+    border: 1px solid var(--outbox-line);
+    border-radius: 4px;
+    box-shadow: var(--outbox-elevation);
+}
+.session-outbox-menu .session-outbox-icon-button { justify-content: flex-start; gap: 12px; width: 100%; height: 40px; font-size: .875rem; line-height: 1.25; padding-inline: 12px; font-weight: 400; text-align: left; }
+.session-outbox-menu .session-outbox-icon-button:focus-visible { outline-offset: -2px; }
+.session-outbox-menu .is-destructive { color: var(--outbox-danger); border-top: 1px solid var(--outbox-line); border-radius: 0; margin-top: 4px; }
+.session-changes-disclosure { background: var(--outbox-surface); border: 1px solid var(--outbox-line); border-radius: 4px; box-shadow: none; }
+.session-changes-disclosure[hidden] { display: none; }
+.session-changes-disclosure > summary { cursor: pointer; color: var(--outbox-action); font-size: .875rem; font-weight: 600; }
+#sessionOutboxChanges { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--outbox-line); }
+#sessionOutboxChanges h3 { margin: 0; font-size: .875rem; font-weight: 650; }
+#sessionOutboxChanges > .session-outbox-caption { margin-bottom: 8px; }
+.session-outbox-change { display: grid; grid-template-columns: 24px minmax(0, 1fr) 36px; align-items: center; gap: 8px; min-height: 44px; font-size: .875rem; }
+.session-outbox-sequence { color: var(--outbox-muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
+@media (hover: hover) and (pointer: fine) {
+    .session-outbox-reveal { opacity: 0; }
+    .session-outbox-change:hover .session-outbox-reveal,
+    .session-outbox-change:focus-within .session-outbox-reveal { opacity: 1; }
+}
+@media (pointer: coarse) { .session-outbox-icon-button { width: 44px; height: 44px; } }
+#sessionOutboxHistorical { margin-top: 16px; font-size: .8125rem; color: var(--outbox-muted); }
+#sessionOutboxPages { display: flex; justify-content: space-between; margin-top: 8px; }
+#sessionOutboxPages:empty { display: none; }
+#sessionOutboxEditor { max-width: min(48rem, 94vw); max-height: 90vh; overflow: auto; }
+#sessionOutboxEditorFields { display: grid; gap: .75rem; }
+#sessionOutboxEditorFields label { display: flex; flex-direction: column; gap: .25rem; }
+#sessionOutboxEditorFields fieldset { min-width: 0; border: 1px solid var(--outbox-line); padding: .75rem; }
+#sessionOutboxEditorFields input { max-width: 100%; }
+
+.session-outbox-preview { margin: 8px 0; padding-left: 8px; border-left: 2px solid var(--outbox-action); color: var(--outbox-action); font-size: .8125rem; line-height: 1.5; }

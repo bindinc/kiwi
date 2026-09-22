@@ -593,6 +593,9 @@ export async function selectCustomer(customerId, options = {}) {
     setElementDisplay('searchResultsView', 'none');
     setElementDisplay('customerDetail', 'block');
 
+    const savedChanges = document.getElementById('customerSessionChanges');
+    if (savedChanges) { savedChanges.hidden = true; savedChanges.open = false; }
+    setElementDisplay('customerOutboxPreview', selectedCustomer.provisional ? 'block' : 'none');
     setElementText('customerName', buildCustomerHeader(selectedCustomer));
     setElementText('customerAddress', buildCustomerAddressLine(selectedCustomer));
     setElementText('customerEmail', selectedCustomer.email || '');

@@ -27,7 +27,9 @@ final class WorkflowController extends AbstractApiController
         JsonRequestDecoder $jsonRequestDecoder,
         private readonly CustomerAddressGate $addressGate,
         private readonly PocStateService $stateService,
+        private readonly \App\OutboxSession\DeferredCustomerWrites $deferredWrites,
         private readonly SubscriptionQueueService $subscriptionQueueService,
+        private readonly \App\OutboxSession\SessionOutbox $outbox,
     ) {
         parent::__construct($requestOidcContext, $oidcRoleAccess, $oidcConfiguration, $jsonRequestDecoder);
     }
@@ -55,7 +57,7 @@ final class WorkflowController extends AbstractApiController
     {
         $this->requireApiAccess($request);
 
-        return $this->json($this->subscriptionQueueService->getOrderStatusBySubmissionId($submissionId));
+        return $this->json($this->outbox->findSubmission($submissionId) ?? $this->subscriptionQueueService->getOrderStatusBySubmissionId($submissionId));
     }
 
     #[Route('/subscription', name: 'api_workflow_subscription_queue', methods: ['POST'])]
@@ -76,10 +78,10 @@ final class WorkflowController extends AbstractApiController
         }
 
         return $this->json(
-            $this->subscriptionQueueService->queueSubscription(
-                $request->getSession(),
+            $this->deferredWrites->subscription(
+                $request,
                 $payload,
-                $this->getCurrentUserContext($request),
+                $this->subscriptionQueueService,
             ),
             202,
         );
@@ -103,7 +105,7 @@ final class WorkflowController extends AbstractApiController
         $contactEntry = \is_array($payload['contactEntry'] ?? null) ? $payload['contactEntry'] : null;
 
         return $this->json(
-            $this->stateService->createArticleOrder($request->getSession(), $customerId, $customer, $order, $contactEntry),
+            $this->deferredWrites->stage($request, 'createArticleOrder', $customerId, $customer, $order, $contactEntry),
             201,
         );
     }
