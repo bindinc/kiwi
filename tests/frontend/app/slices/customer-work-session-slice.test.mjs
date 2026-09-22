@@ -83,7 +83,7 @@ async function testRendersAndResetsAnExplicitCustomerWorkSession() {
         assert.equal(elements.customerWorkSessionBar.hidden, false);
         assert.equal(elements.customerWorkSessionName.textContent, 'Jane van Dijk');
         assert.equal(elements.customerWorkSessionPersonId.textContent, '11860448');
-        assert.equal(elements.customerWorkSessionSource.textContent, 'HMC');
+        assert.equal(elements.customerWorkSessionSource.textContent, 'TROS');
 
         beginCustomerMutation('submission-1');
         assert.equal(elements.endCustomerWorkSessionButton.disabled, true);

@@ -133,7 +133,7 @@ function testDisplaySummaryKeepsNameAndSourceDistinct() {
     }), {
         name: 'Jane van Dijk',
         personId: '11860448',
-        sourceLabel: 'HMC'
+        sourceLabel: 'TROS'
     });
 }
 

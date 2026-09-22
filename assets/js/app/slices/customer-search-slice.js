@@ -34,7 +34,7 @@ const MANDANT_BADGE_CONFIG_BY_KEY = {
 const CUSTOMER_SEARCH_MANDANT_OPTIONS = [
     { value: 'KRONCRV', label: 'KRO-NCRV' },
     { value: 'AVROTROS', label: 'AVROTROS' },
-    { value: 'HMC', label: 'HMC' },
+    { value: 'HMC', label: 'TROS' },
     { value: 'BINDINC TITELS', label: 'BINDINC TITELS' }
 ];
 

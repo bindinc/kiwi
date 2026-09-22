@@ -495,7 +495,7 @@ function testBuildSearchQueryLabelIncludesEmailAndPhone() {
         assert.equal(label.includes('E-mail: klant@example.org'), true);
         assert.equal(label.includes('IBAN: NL00BANK0123456789'), true);
         assert.equal(label.includes('Geboortedatum: 1980-07-22'), true);
-        assert.equal(label.includes('Mandant: KRO-NCRV, HMC'), true);
+        assert.equal(label.includes('Mandant: KRO-NCRV, TROS'), true);
     } finally {
         if (previousDocument === undefined) {
             delete globalThis.document;

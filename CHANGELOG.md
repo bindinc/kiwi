@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Display TROS for the HMC mandant in customer search filters and the customer session summary, while preserving HMC in API requests. [sc-203138]
+
 - Show all assigned Kiwi application roles beneath the profile name in the profile menu, excluding tenant roles. [sc-202842]
 
 - Preserve lightbox drafts when dismissed by the close button, backdrop or Escape; keep session reset available without a selected customer and discard drafts on reset or successful submission. Document Docker Compose as the local validation workflow, with local Kubernetes checks only on explicit user request. [sc-202840]
