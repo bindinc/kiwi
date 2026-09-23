@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [unreleased]
 
+- Show editable details for existing recipients and payers in new subscriptions, preserving independently validated details in the subscription outbox. [sc-203201]
+
 - Run the customer session outbox migration before starting the web server on every container start, including version upgrades; stop startup if migration fails so customer detail requests cannot reach an incomplete schema. [sc-203213]
 
 - Prevent touch gestures and pinch-zoomed trackpad scrolling on the top header from panning the page, while preserving gestures in the page content.

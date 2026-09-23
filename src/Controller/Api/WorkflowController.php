@@ -71,6 +71,11 @@ final class WorkflowController extends AbstractApiController
             if (isset($payload[$role]['personId'])) {
                 $credentialKey = (string) ($payload[$role]['credentialKey'] ?? $payload[$role]['person']['credentialKey'] ?? '');
                 $payload[$role]['person'] = $this->addressGate->requireCustomer($request, (string) $payload[$role]['personId'], $credentialKey);
+                if (array_key_exists('personEdits', $payload[$role])) {
+                    $person = \App\Service\SubscriptionPersonEdits::apply($payload[$role]['person'], $payload[$role]['personEdits']);
+                    $payload[$role]['person'] = $validator->validatePerson($request->getSession(), $person);
+                    unset($payload[$role]['personEdits']);
+                }
             }
             if (is_array($payload[$role]['person'] ?? null) && !isset($payload[$role]['personId'])) {
                 $payload[$role]['person'] = $validator->validatePerson($request->getSession(), $payload[$role]['person']);
