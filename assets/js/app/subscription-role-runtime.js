@@ -363,6 +363,18 @@ function renderCustomerForm(containerId, prefix, config = {}) {
     const container = document.getElementById(containerId);
     container.classList.add('customer-create-form');
     container.innerHTML = html;
+    if (cfg.showFieldLabels) {
+        for (const input of container.querySelectorAll('input[placeholder]')) {
+            if (input.labels.length) continue;
+            const field = document.createElement('div');
+            field.className = 'customer-form-field';
+            const label = document.createElement('label');
+            label.htmlFor = input.id;
+            label.textContent = input.placeholder;
+            input.before(field);
+            field.append(label, input);
+        }
+    }
     populateBirthdayFields(prefix);
 }
 
@@ -723,7 +735,7 @@ function subscriptionRoleSelectionIsCurrent(role, selectedPerson) {
     const currentCredential = String(currentSelection.credentialKey || '').trim();
     const selectedCredential = String(selectedPerson.credentialKey || '').trim();
 
-    return currentId === selectedId && currentCredential === selectedCredential;
+    return currentSelection === selectedPerson && currentId === selectedId && currentCredential === selectedCredential;
 }
 
 function mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload) {
@@ -749,6 +761,8 @@ async function hydrateSubscriptionRoleSelectedPerson(role) {
         return;
     }
 
+    const cfg = getSubscriptionRoleConfig(role);
+    const originalForm = JSON.stringify(getCustomerFormData(cfg.prefix));
     try {
         const detailPayload = await window.kiwiApi.get(detailUrl, {
             headers: buildSubscriptionRoleRequestHeaders(selectedPerson)
@@ -759,6 +773,10 @@ async function hydrateSubscriptionRoleSelectedPerson(role) {
         const hydratedPerson = mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload);
         subscriptionRoleState[role].selectedPerson = hydratedPerson;
         upsertCustomerInCache(hydratedPerson);
+        // Late detail responses must not erase work already entered in the editor.
+        if (originalForm === JSON.stringify(getCustomerFormData(cfg.prefix))) {
+            populateSubscriptionRoleEditor(role);
+        }
         renderSubscriptionRoleSelectedPerson(role);
 
         if (role === 'recipient') {
@@ -952,7 +970,9 @@ function updateSubscriptionRoleSearchAvailability() {
 
         for (const control of collectSubscriptionRoleControls(role)) {
             if ('disabled' in control) {
-                control.disabled = shouldDisableControls;
+                const hiddenRequesterField = role === 'requester' && subscriptionRoleState.requesterSameAsRecipient
+                    && control !== document.getElementById('requesterSameAsRecipient');
+                control.disabled = shouldDisableControls || hiddenRequesterField;
             }
         }
 
@@ -995,13 +1015,38 @@ function ensureSubscriptionRoleCreateForm(role) {
         renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
             includePhone: true,
             separatePhoneTypes: true,
+            showFieldLabels: true,
             includeEmail: true,
             phoneRequired: false,
             emailRequired: true
         });
     }
 
-    bindSubscriptionDuplicateListeners(role);
+    if (subscriptionRoleState[role].mode === 'create') bindSubscriptionDuplicateListeners(role);
+}
+
+function populateSubscriptionRoleEditor(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    const person = subscriptionRoleState[role].selectedPerson;
+    if (!person) return;
+
+    clearSubscriptionRoleCreateForm(role);
+    ensureSubscriptionRoleCreateForm(role);
+    document.getElementById(cfg.createSectionId).style.display = 'block';
+    const suffix = [person.houseNumber, person.houseNumberAddition].filter(Boolean).join(' ');
+    const address = String(person.address || '').trim();
+    const street = person.street || (suffix && address.endsWith(` ${suffix}`)
+        ? address.slice(0, -suffix.length - 1) : address);
+    const middleName = String(person.middleName || '').trim();
+    const lastName = String(person.lastName || '').trim();
+    setCustomerFormData(cfg.prefix, {
+        ...person,
+        initials: person.firstName,
+        lastName: middleName && lastName.startsWith(`${middleName} `)
+            ? lastName.slice(middleName.length + 1) : lastName,
+        address: street
+    });
+    updateSubscriptionRoleSearchAvailability();
 }
 
 function setSubscriptionRoleMode(role, mode) {
@@ -1021,12 +1066,14 @@ function setSubscriptionRoleMode(role, mode) {
     if (createSection) createSection.style.display = subscriptionRoleState[role].mode === 'create' ? 'block' : 'none';
 
     if (subscriptionRoleState[role].mode === 'create') {
+        clearSubscriptionRoleCreateForm(role);
         ensureSubscriptionRoleCreateForm(role);
         subscriptionRoleState[role].selectedPerson = null;
         renderSubscriptionRoleSelectedPerson(role);
     } else {
         resetSubscriptionDuplicateRoleState(role);
         clearSubscriptionRoleCreateForm(role);
+        populateSubscriptionRoleEditor(role);
     }
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
@@ -1054,7 +1101,6 @@ function toggleRequesterSameAsRecipient() {
 
     if (sameCheckbox.checked) {
         resetSubscriptionDuplicateRoleState('requester');
-        clearSubscriptionRoleCreateForm('requester');
         renderRequesterSameSummary();
     } else if (subscriptionRoleState.requester.mode === 'create') {
         ensureSubscriptionRoleCreateForm('requester');
@@ -1568,8 +1614,8 @@ function selectSubscriptionDuplicatePerson(role, personId) {
     renderSubscriptionRoleSelectedPerson(role);
     if (role === 'recipient') {
         syncSubscriptionRecipientIban(selectedPerson);
-        void hydrateSubscriptionRoleSelectedPerson(role);
     }
+    void hydrateSubscriptionRoleSelectedPerson(role);
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
@@ -2063,6 +2109,7 @@ function selectSubscriptionRolePerson(role, personId) {
     }
 
     subscriptionRoleState[role].selectedPerson = selected;
+    populateSubscriptionRoleEditor(role);
     renderSubscriptionRoleSelectedPerson(role);
     if (role === 'recipient') {
         syncSubscriptionRecipientIban(selected);
@@ -2233,7 +2280,13 @@ function buildSubscriptionRolePayload(role, options = {}) {
             return null;
         }
 
+        const personEdits = createPersonPayloadFromForm(cfg.prefix);
+        if (!personEdits) return null;
+        personEdits.street = getCustomerFormData(cfg.prefix).address.trim();
+        personEdits.addressExtension = getCustomerFormData(cfg.prefix).addressExtension.trim();
+
         const payload = {
+            personEdits,
             personId: Number(roleState.selectedPerson.id),
             ...buildExistingPersonCredentialContext(roleState.selectedPerson)
         };
@@ -2287,6 +2340,7 @@ function initializeSubscriptionRolesForForm() {
 
     if (currentCustomer) {
         subscriptionRoleState.recipient.selectedPerson = currentCustomer;
+        populateSubscriptionRoleEditor('recipient');
         renderSubscriptionRoleSelectedPerson('recipient');
         syncSubscriptionRecipientIban(currentCustomer);
     } else {
@@ -2309,6 +2363,7 @@ function restoreOutboxSubscriptionRoles(payload) {
         setSubscriptionRoleMode(role, saved.personId ? 'existing' : 'create');
         if (saved.personId) {
             subscriptionRoleState[role].selectedPerson = { ...saved.person, id: saved.personId };
+            populateSubscriptionRoleEditor(role);
             renderSubscriptionRoleSelectedPerson(role);
         } else {
             ensureSubscriptionRoleCreateForm(role);
@@ -2361,6 +2416,8 @@ if (typeof window !== 'undefined') {
         createPersonPayloadFromForm,
         ensureBirthdayValue,
         ensureSubscriptionRoleCreateForm,
+        populateSubscriptionRoleEditor,
+        hydrateSubscriptionRoleSelectedPerson,
         escapeHtml,
         evaluateSubscriptionDuplicateRole,
         findStrongDuplicateMatches,

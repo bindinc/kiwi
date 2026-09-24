@@ -133,6 +133,9 @@ function createRuntimeContext(options = {}) {
         subRecipientMobilePhone: createElementStub(),
         subRecipientEmail: createElementStub()
     };
+    for (const suffix of ['Initials', 'Address', 'City', 'BirthdayDay', 'BirthdayMonth', 'BirthdayYear', 'LandlinePhone', 'MobilePhone']) {
+        elementById[`subRequester${suffix}`] = createElementStub();
+    }
     const recipientSelectedPerson = options.recipientSelectedPerson || null;
     const requesterSelectedPerson = options.requesterSelectedPerson || null;
 
@@ -352,7 +355,11 @@ function testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext() 
         ]
     });
 
+    runtime.populateSubscriptionRoleEditor('recipient');
     const payload = JSON.parse(JSON.stringify(runtime.buildSubscriptionRolePayload('recipient')));
+    assert.equal(payload.personEdits.address, 'Voorbeeldstraat 7');
+    assert.equal(payload.personEdits.street, 'Voorbeeldstraat');
+    delete payload.personEdits;
 
     assert.deepEqual(payload, {
         personId: 73,
@@ -977,7 +984,57 @@ function testToggleCustomerFormAddressKeepsAddressExtensionOptional() {
     assert.equal(elements.subRequesterAddressExtension.required, false);
 }
 
+function testExistingRoleEditsStayIndependentAndRestore() {
+    const person = { id: 73, salutation: 'Dhr.', firstName: 'P.', middleName: 'van', lastName: 'van Dijk',
+        postalCode: '1234AB', houseNumber: '10A', houseNumberAddition: '2', address: 'Teststraat 10A 2',
+        city: 'Hilversum', email: 'demo@example.org', sourceSystem: 'kiwi' };
+    const { context, elements, runtime } = createRuntimeContext({ recipientSelectedPerson: person,
+        requesterSelectedPerson: { ...person, id: 74 }, werfsleutelSelections: [{ selectedKey: { divisionId: 'HMC' } }] });
+    runtime.populateSubscriptionRoleEditor('recipient');
+    runtime.populateSubscriptionRoleEditor('requester');
+    assert.equal(elements.recipientCreateSection.style.display, 'block');
+    assert.equal(elements.subRecipientAddress.value, 'Teststraat');
+    assert.equal(elements.subRecipientLastName.value, 'Dijk');
+    elements.subRecipientAddress.value = 'Nieuwe straat';
+    elements.subRecipientHouseNumber.value = '20';
+    elements.subRecipientHouseExt.value = '';
+    const recipient = runtime.buildSubscriptionRolePayload('recipient');
+    const requester = runtime.buildSubscriptionRolePayload('requester');
+    assert.equal(recipient.personId, 73);
+    assert.equal(recipient.personEdits.address, 'Nieuwe straat 20');
+    assert.equal(recipient.personEdits.lastName, 'van Dijk');
+    assert.equal(requester.personEdits.address, 'Teststraat 10A 2');
+    assert.equal(person.address, 'Teststraat 10A 2');
+    elements.requesterSameAsRecipient.checked = true;
+    runtime.toggleRequesterSameAsRecipient();
+    assert.equal(runtime.buildSubscriptionRolePayload('requester').sameAsRecipient, true);
+    elements.requesterSameAsRecipient.checked = false;
+    runtime.toggleRequesterSameAsRecipient();
+    assert.equal(runtime.buildSubscriptionRolePayload('requester').personEdits.address, 'Teststraat 10A 2');
+    runtime.restoreOutboxSubscriptionRoles({ recipient: { personId: 73, person: recipient.personEdits },
+        requester: { personId: 74, person: requester.personEdits } });
+    assert.equal(runtime.buildSubscriptionRolePayload('recipient').personEdits.address, 'Nieuwe straat 20');
+    elements.subRecipientLastName.value = '';
+    assert.equal(runtime.buildSubscriptionRolePayload('recipient'), null);
+}
+
+async function testLateHydrationKeepsEnteredDetails() {
+    const person = { id: 73, firstName: 'P.', lastName: 'Tester', postalCode: '1234AB', houseNumber: '10',
+        address: 'Teststraat 10', city: 'Hilversum', email: 'demo@example.org', credentialKey: 'demo', sourceSystem: 'subscription-api' };
+    const { context, elements, runtime } = createRuntimeContext({ recipientSelectedPerson: person });
+    runtime.populateSubscriptionRoleEditor('recipient');
+    let respond;
+    context.kiwiApi = { get: () => new Promise(resolve => { respond = resolve; }) };
+    const pending = runtime.hydrateSubscriptionRoleSelectedPerson('recipient');
+    elements.subRecipientAddress.value = 'Entered while loading';
+    respond({ ...person, address: 'Late address 10' });
+    await pending;
+    assert.equal(elements.subRecipientAddress.value, 'Entered while loading');
+}
+
 async function run() {
+    testExistingRoleEditsStayIndependentAndRestore();
+    await testLateHydrationKeepsEnteredDetails();
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
     testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext();
