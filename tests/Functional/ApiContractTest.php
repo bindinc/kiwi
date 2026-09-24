@@ -198,6 +198,45 @@ final class ApiContractTest extends WebTestCase
         self::assertSame('Test opmerking', json_decode($client->getResponse()->getContent(), true)['deliveryRemarks']['default']);
     }
 
+    public function testExistingSubscriptionDetailsAreValidatedAndPersistedPerRole(): void
+    {
+        $this->disableSubscriptionApiCustomerSearch();
+        $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
+        $client->request('GET', '/api/v1/persons');
+        $customers = array_slice(json_decode($client->getResponse()->getContent(), true)['items'], 0, 2);
+        $this->rememberCustomerAddresses($client, $customers);
+        $address = ['postalCode' => '1234AB', 'houseNumber' => '10', 'houseNumberAddition' => '',
+            'street' => 'Teststraat', 'city' => 'Teststad', 'addressExtension' => '310'];
+        $address['formSessionId'] = $this->rememberAddress($client, $address);
+        $payload = [
+            'recipient' => ['personId' => $customers[0]['id'], 'personEdits' => $address + ['firstName' => 'Edited', 'email' => 'edited@example.invalid']],
+            'requester' => ['personId' => $customers[1]['id']],
+            'subscription' => ['magazine' => 'Test magazine', 'startDate' => '2026-10-01', 'paymentMethod' => 'AC'],
+            'offer' => ['salesCode' => 'SC203201', 'title' => 'Test offer'],
+        ];
+        $this->prepareOutboxWrite($client, 'invalid-address');
+        $invalid = $payload;
+        $invalid['recipient']['personEdits']['street'] = 'Unconfirmed street';
+        $client->jsonRequest('POST', '/api/v1/workflows/subscription', $invalid);
+        self::assertResponseStatusCodeSame(422);
+
+        $this->prepareOutboxWrite($client, 'edited-existing-recipient');
+        $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+        self::assertResponseStatusCodeSame(202);
+        $saved = json_decode($client->getResponse()->getContent(), true);
+        $client->request('GET', '/api/v1/outbox-sessions/'.$saved['outbox']['id']);
+        $stored = json_decode($client->getResponse()->getContent(), true)['changes'][0]['arguments'][0];
+        self::assertSame($customers[0]['id'], $stored['recipient']['personId']);
+        self::assertSame('Edited', $stored['recipient']['person']['firstName']);
+        self::assertSame('Teststraat 10', $stored['recipient']['person']['address']);
+        self::assertSame('310', $stored['recipient']['person']['addressExtension']);
+        self::assertSame($customers[1]['address'], $stored['requester']['person']['address']);
+        self::assertSame($customers[1]['id'], $stored['requester']['personId']);
+        $client->request('GET', '/api/v1/persons/'.$customers[0]['id']);
+        self::assertSame($customers[0]['address'], json_decode($client->getResponse()->getContent(), true)['address']);
+    }
+
     private function rememberCustomerAddresses(\Symfony\Bundle\FrameworkBundle\KernelBrowser $client, array $customers): void
     {
         $session = $this->newSession();

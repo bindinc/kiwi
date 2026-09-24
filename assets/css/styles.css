@@ -4680,3 +4680,18 @@ dialog.form-lightbox::backdrop {
     background-color: var(--bg-secondary);
 }
 .customer-editor form > div { grid-column: 1 / -1; }
+
+/* Subscription role fields keep their labels visible after customer selection. */
+.customer-create-form .customer-form-field {
+    flex: 1;
+    min-width: 0;
+}
+.customer-create-form .customer-form-field label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.95rem;
+}
+.customer-create-form .customer-form-field input {
+    width: 100%;
+    min-width: 0;
+}

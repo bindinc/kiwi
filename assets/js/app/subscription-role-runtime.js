@@ -363,6 +363,18 @@ function renderCustomerForm(containerId, prefix, config = {}) {
     const container = document.getElementById(containerId);
     container.classList.add('customer-create-form');
     container.innerHTML = html;
+    if (cfg.showFieldLabels) {
+        for (const input of container.querySelectorAll('input[placeholder]')) {
+            if (input.labels.length) continue;
+            const field = document.createElement('div');
+            field.className = 'customer-form-field';
+            const label = document.createElement('label');
+            label.htmlFor = input.id;
+            label.textContent = input.placeholder;
+            input.before(field);
+            field.append(label, input);
+        }
+    }
     populateBirthdayFields(prefix);
 }
 
@@ -1003,6 +1015,7 @@ function ensureSubscriptionRoleCreateForm(role) {
         renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
             includePhone: true,
             separatePhoneTypes: true,
+            showFieldLabels: true,
             includeEmail: true,
             phoneRequired: false,
             emailRequired: true
