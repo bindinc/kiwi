@@ -323,7 +323,10 @@ export async function refreshOutbox() {
         for (const item of response.items) {
             item.clockOffset = Date.parse(item.serverTime) - Date.now();
             // Do not silently refresh the revision of an editor with unsaved input.
-            if (!dirty && !editing) sessions.set(key(item.customerReference), item);
+            const customerKey = key(item.customerReference);
+            const knownSession = sessions.get(customerKey);
+            const isLatestSession = !knownSession || item.id >= knownSession.id;
+            if (!dirty && !editing && isLatestSession) sessions.set(customerKey, item);
             const actions = [];
             if (item.capabilities.edit) actions.push({label: 'Bewerken', icon: 'edit', run: () => reopen(item)});
             if (item.capabilities.pause && item.status === 'pending') actions.push({label: 'Pauzeren', icon: 'pause', run: async () => { await action(item, 'pause'); await refreshOutbox(); }});

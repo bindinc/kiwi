@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { isBusinessWrite, prepareWrite, acceptWrite, rejectWrite, changeRequest } from '../../../assets/js/app/session-outbox.js';
+import { isBusinessWrite, prepareWrite, acceptWrite, rejectWrite, changeRequest, refreshOutbox } from '../../../assets/js/app/session-outbox.js';
 
 const reference = { personId: '42', credentialKey: '', sourceSystem: 'kiwi', divisionId: '', mandant: '' };
 const context = { customerReference: reference };
@@ -35,4 +35,17 @@ const [, , signup] = changeRequest(command);
 assert.deepEqual(signup.requester, {sameAsRecipient: true});
 assert.equal(signup.subscription.status, 'active');
 assert.equal(command.arguments[0].requester.personId, 42);
+// A previous ready session must not replace the current subscription revision.
+const element = () => ({ dataset: {}, append() {}, replaceChildren() {}, querySelector: () => null });
+const list = element();
+globalThis.document = { getElementById: id => id === 'subscriptionQueueList' ? list : null,
+    createElement: element, createTextNode: text => text };
+const latest = { ...outbox, id: 9, revision: 4, status: 'pending', availableAt: new Date(Date.now() + 60000).toISOString(),
+    capabilities: {}, summary: {customer: 'Test customer', changeCount: 1}, contributors: [] };
+window.kiwiApi = { get: async () => ({ total: 2, items: [latest, { ...latest, id: 7, status: 'ready' }] }) };
+await refreshOutbox();
+const subscriptionHeaders = prepareWrite('POST', '/api/v1/workflows/subscription', {recipient: {personId: 42}}, context);
+assert.equal(subscriptionHeaders['X-Kiwi-Outbox-Id'], '9');
+assert.equal(subscriptionHeaders['X-Kiwi-Outbox-Revision'], '4');
+delete globalThis.document;
 delete globalThis.window;
