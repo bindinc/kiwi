@@ -8,6 +8,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep the home welcome message centered after starting a new customer session, including repeated resets. [sc-203422]
+
 ### Changed
 
 - Reconcile releases v1.0.22 through v1.0.33 with their Git tags and organize the changelog with change categories, release dates and comparison links.
