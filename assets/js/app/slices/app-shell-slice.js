@@ -488,7 +488,7 @@ export function resetCustomerWorkspace() {
     callDependency(dependencies, 'setSelectedOffer', [null]);
 
     setElementDisplay('customerDetail', 'none');
-    setElementDisplay('welcomeMessage', 'block');
+    setElementDisplay('welcomeMessage', 'flex');
 
     const searchFieldIds = [
         'searchName',
