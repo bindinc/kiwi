@@ -1,107 +1,201 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [unreleased]
+Release dates use GitHub publication dates when available, otherwise annotated tag dates or the tagged commit date for lightweight tags.
+
+## [Unreleased]
+
+### Changed
+
+- Reconcile releases v1.0.22 through v1.0.33 with their Git tags and organize the changelog with change categories, release dates and comparison links.
+
+## [v1.0.33] - 2026-09-25
+
+### Added
 
 - Show editable details for existing recipients and payers in new subscriptions, preserving independently validated details in the subscription outbox and retaining the latest session revision when earlier orders exist. [sc-203201]
 
+## [v1.0.32] - 2026-09-22
+
+### Fixed
+
 - Run the customer session outbox migration before starting the web server on every container start, including version upgrades; stop startup if migration fails so customer detail requests cannot reach an incomplete schema. [sc-203213]
 
-- Prevent touch gestures and pinch-zoomed trackpad scrolling on the top header from panning the page, while preserving gestures in the page content.
+## [v1.0.31] - 2026-09-22
+
+### Added
 
 - Group customer changes into a shared, revision-protected session outbox with a 60-second correction window, pause/resume, supervisor cancellation and an immutable worker contract. [sc-202851]
 
-- Display TROS for the HMC mandant in customer search filters and the customer session summary, while preserving HMC in API requests. [sc-203138]
+### Fixed
+
+- Prevent touch gestures and pinch-zoomed trackpad scrolling on the top header from panning the page, while preserving gestures in the page content.
+
+## [v1.0.30] - 2026-09-22
+
+### Added
 
 - Show all assigned Kiwi application roles beneath the profile name in the profile menu, excluding tenant roles. [sc-202842]
 
+### Changed
+
+- Display TROS for the HMC mandant in customer search filters and the customer session summary, while preserving HMC in API requests. [sc-203138]
+- Unify customer and subscription lightboxes and reuse one responsive address component and autocomplete across all eight address-entry flows; preserve separate provider/internal additions, validate transfer recipients and retain guarded closing and keyboard navigation. [sc-202883] [sc-200162]
+
+### Fixed
+
 - Preserve lightbox drafts when dismissed by the close button, backdrop or Escape; keep session reset available without a selected customer and discard drafts on reset or successful submission. Document Docker Compose as the local validation workflow, with local Kubernetes checks only on explicit user request. [sc-202840]
 
-- Unify customer and subscription lightboxes and reuse one responsive address component and autocomplete across all eight address-entry flows; preserve separate provider/internal additions, validate transfer recipients and retain guarded closing and keyboard navigation. [sc-202883] [sc-200162]
+## [v1.0.29] - 2026-09-18
+
+### Added
+
+- Add protected, section-based customer and bank editing, strict field and bank validation, source resource checks, masked account views and durable shared mutation intent tracking; keep source writes disabled pending verified atomic upstream concurrency and bank-link guarantees [sc-202883].
+
+### Changed
 
 - Allow selecting confirmed house number additions for the exact postcode and house number including its letter from buffered address results, without extra lookup calls; keep internal additions editable and include the required CSRF header on address requests. [sc-200162]
 
-- Add protected, section-based customer and bank editing, strict field and bank validation, source resource checks, masked account views and durable shared mutation intent tracking; keep source writes disabled pending verified atomic upstream concurrency and bank-link guarantees (SC-202883).
+### Security
 
-- Enforce validated Entra roles and session expiry for every API route, protect mutations with CSRF, and reject business writes from view/dev roles without requiring mandant roles (SC-202883).
+- Enforce validated Entra roles and session expiry for every API route, protect mutations with CSRF, and reject business writes from view/dev roles without requiring mandant roles [sc-202883].
+- Reject local OIDC issuers in production and validate the authorized party of ID tokens. [sc-202883]
+
+### Fixed
+
+- Preserve HTTPS OIDC callback URLs when local requests pass through IPv6 proxies. [sc-202883]
+
+## [v1.0.28] - 2026-09-17
+
+### Changed
+
 - Make house number additions read-only in every address form and populate them from address selection; keep internal additions editable and retain server-side address validation. [sc-200162]
+
+## [v1.0.27] - 2026-09-17
+
+### Changed
 
 - Float address choices below street and city and hide them after selection; retain server-validated candidates, block unconfirmed addresses and preserve separate house letters/additions with canonical Dutch address formatting. Check existing-person addresses on session entry, require confirmation before mutations, and allow primary-address correction for subscription-API persons. [sc-200162]
 
+## [v1.0.26] - 2026-09-17
+
+### Added
+
 - Show selectable address results from any two postcode, house number, street or city fields, including alternatives for conflicting postcodes; fill additions only from selection, never use them as search filters. [sc-200162]
 
-- Omit empty house number additions from PostNL address searches so addresses without an addition can be completed. [sc-200162]
+## [v1.0.25] - 2026-09-17
 
+### Fixed
+
+- Omit empty house number additions from PostNL address searches so addresses without an addition can be completed. [sc-200162]
 - Accept Webabo street and city completion without an echoed house number, while rejecting mismatched postcodes and ambiguous results. [sc-200162]
 
-- Fix Dutch address completion across customer forms with PostNL, form-scoped UUID reuse and Webabo fallback; preserve manual entry during outages and provide safe interactive SOPS key entry. [sc-200162]
+## [v1.0.24] - 2026-09-17
+
+### Changed
 
 - Rename the new-subscription payment option to Factuur in Dutch and Invoice in English, preserving payment code AC and existing IBAN behavior.
 
+### Fixed
+
+- Fix Dutch address completion across customer forms with PostNL, form-scoped UUID reuse and Webabo fallback; preserve manual entry during outages and provide safe interactive SOPS key entry. [sc-200162]
+
+### Security
+
 - Limit feedback reports and both screenshot variants to 14 days, enforce expiry for existing links without browser caching, and automatically delete expired reports hourly in Docker Compose.
+
+## [v1.0.23] - 2026-09-08
+
+### Changed
 
 - Display the release tag embedded in the deployed image instead of maintaining version numbers in translations; local builds show `dev`.
 
-- Automatically open a new customer work session when switching after read-only browsing, while preserving drafts and completed or uncertain customer actions and retaining the previous customer if loading or reset auditing fails.
+## [v1.0.22] - 2026-09-08
 
+### Fixed
+
+- Automatically open a new customer work session when switching after read-only browsing, while preserving drafts and completed or uncertain customer actions and retaining the previous customer if loading or reset auditing fails.
 - Keep new-customer address fields inside the subscription form with a responsive two-column layout and visible labels for the separate house number and internal additions.
 
-## [v1.0.21]
+## [v1.0.21] - 2026-09-01
+
+### Added
 
 - Add a separate `(interne) Toevoeging 1` field for new subscription persons and map it to the PPA address `extension` without changing the house number addition.
 - Add explicit client-owned customer work sessions with persistent customer identity, guarded async responses, deliberate post-queue continuation/reset choices, and durable backend audit records for customer searches, profile views, and session resets.
-- Document how agents search for, select, view, and manage existing customers, including current Subscription API read-only and contact-history limitations.
 - Separate landline and mobile phone inputs for new subscription persons and preserve their PPA `contacts.phones` and `contacts.mobiles` mapping in the queued request contract.
 - Add project-local Codex lifecycle hooks that block sensitive prompts, risky secret-file operations, and repository publication when redacted secret scanning finds a problem, and run GitHub Actions jobs on GitHub-hosted Ubuntu runners.
+
+### Changed
+
+- Document how agents search for, select, view, and manage existing customers, including current Subscription API read-only and contact-history limitations.
 - Stop showing the redundant sensitive-media-masked notice in the contextual feedback privacy control while retaining media masking.
 - Replace the contextual feedback privacy bubbles with a clear control bar that separates the selected screenshot variant from its Teams destination.
 
 ### Fixed
+
 - Keep Doctrine-backed database unit tests executable on DBAL 4.4 by using a public connectivity query and PHP 8.4 native lazy objects instead of the now-protected `Connection::connect()` API.
 - Add payment instruction as a new-subscription payment method, preserve the selected Webabo payment code in the subscription queue, run CI and release builds on GitHub-hosted runners, and use Symfony 8-compatible routing configuration.
 - Keep customer-search subscription statuses consistent with the customer detail overview by loading current Subscription API order summaries for visible results and never presenting unavailable data as no active subscription.
 - Preserve contextual-feedback screenshot geometry and public media by rendering original and pseudonymized variants from detached clones, while masking explicitly private media and failing closed when pseudonymization cannot be verified.
 
-## [v1.0.20]
+## [v1.0.20] - 2026-07-30
+
+### Added
 
 - Add Dutch and English form-first contextual feedback with optional screenshots, hide the feedback dialog during element or 10 × 10 pixel minimum area capture, and send text-only reports to Teams without screenshot details.
 
-## [v1.0.19]
+## [v1.0.19] - 2026-07-30
+
+### Changed
 
 - Keep the contextual feedback action always available as a compact viewport-edge capsule that expands on hover and keyboard focus.
 
-## [v1.0.18]
+## [v1.0.18] - 2026-07-29
 
 ### Fixed
+
 - Route each contextual feedback report only to the Teams workflow selected by the pseudonymization toggle, while continuing to retain both annotated screenshot variants.
 - Document that the Teams webhook workflow must post its Adaptive Card as the signed-in connector user when downstream channel-message automation must process it.
 
-## [v1.0.17]
+## [v1.0.17] - 2026-07-28
 
-- Stop requesting the redundant Microsoft Graph `Presence.Read` OIDC scope because `Presence.ReadWrite` already provides the required presence access.
+### Added
+
 - Add the KIWI customer search field order requested by KCC, including customer number, IBAN, birth date, phone, and a multi-select mandant filter, and reuse the same search field set for recipient/requester lookup in new subscription creation.
 - Add a contextual feedback screenshot pseudonymization toggle, store both pseudo-data and original-data annotated screenshots, and route original-data screenshots through a separate Teams workflow webhook.
 - Add GPL v3 licensing with a repository LICENSE file and README license documentation.
-- fixed docker-compose
+
+### Changed
+
+- Stop requesting the redundant Microsoft Graph `Presence.Read` OIDC scope because `Presence.ReadWrite` already provides the required presence access.
 - Refine contextual feedback with KIWI-aligned controls, movable/editable text callouts, reliable screenshot pan/zoom behavior, detailed hidden-media hints, and the Bug/Chore/Feature Request/Regression category set.
 - Crop contextual feedback screenshots to the selected element, sanitize feedback modal metadata/backgrounds, keep customer pseudo data coherent, and add a local feedback privacy smoke command.
 - Replace blanket contextual feedback screenshot text hiding with DOM-marked pseudonymization so sensitive customer data becomes realistic pseudo data while screenshots stay readable.
 - Reorganize `docs/` into lower-kebab-case Diataxis-style folders with a central documentation index.
 
-## [v1.0.16]
+### Fixed
+
+- fixed docker-compose
+
+## [v1.0.16] - 2026-06-17
 
 ### Added
+
 - Add first-party contextual feedback with an element picker, required marked PNG screenshots, PostgreSQL-backed report/screenshot storage, signed public screenshot URLs, Teams Workflows Adaptive Card delivery, and admin/supervisor-only settings for the global feedback toggle and Microsoft Teams connector.
 
 ### Changed
+
 - Sanitize contextual feedback screenshots before capture by hiding visible page text, form values, media, embedded frames, canvases, SVGs, and CSS background images so Teams screenshots cannot include sensitive customer or account data.
 - Rename the local Docker Compose PostgreSQL service from `postgres` to `kiwi-postgres` so Kiwi matches the app-specific database naming used in GitOps.
 
-## [v1.0.15]
+## [v1.0.15] - 2026-04-01
 
 ### Added
+
 - Add a reusable Subscription API personsearch client on top of `ppa_base_url` that reuses the existing HUP/WebAbo bearer-token flow, including retry-on-`401` behavior, so the later KIWI customer-search migration can switch to the upstream backend in phases.
 - Add a multi-credential Subscription API personsearch service that fans out searches only over HUP credentials with `client_search: "yes"` and merges those credential-scoped result sets for KIWI customer search.
 - Add a personsearch result normalizer that maps subscription API search hits onto the KIWI person model, including credential context, badge-ready mandant resolution, and empty KIWI collections for fields that will be hydrated in later phases.
@@ -112,6 +206,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add security-hardening regression coverage that asserts every `/api/v1/*` route rejects unauthenticated calls, keeps `/api/v1/status` behind authorization, and checks that Swagger advertises the full API namespace as protected.
 
 ### Changed
+
 - Split the OIDC client into focused configuration, token, identity, profile-photo, logout, and request-context helpers, centralize API JSON parsing and auth/session context handling for controllers, move Teams presence sync onto a smaller Graph orchestration layer with dedicated HTTP helpers, default Teams presence sync on for Microsoft Entra logins while keeping fallback Keycloak off, keep a Graph presence session alive before applying explicit Kiwi ready/busy/away/dnd statuses as preferred presence so other Microsoft 365 apps can follow along more reliably, and surface clearer local diagnostics when Teams sync is disabled or Microsoft Graph rejects a presence update.
 - Make the delivery-date picker, werfsleutel cache refresh, subscription duplicate guard, and call-agent runtime read their time/random behavior through small test hooks so calendar boundaries, TTL/cooldown logic, ACW timing, and out-of-order duplicate responses can be covered deterministically in the frontend suite.
 - Parse mandant and person-lookup metadata from named HUP credentials, expose that context on Webabo offer responses, and carry the same credential context through subscription queue payloads so upcoming API-backed person retrieval can switch over without another contract change.
@@ -125,6 +220,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Gate `Nieuw Abonnement Aanmaken` person search and duplicate-checks behind the selected werfsleutel scope, disable the recipient/requester inputs until a werfsleutel is chosen, and forward both configured `divisionId` and `mandant` context from HUP credentials into offer-driven person lookup requests.
 
 ### Fixed
+
 - Keep local Compose gateway slash redirects relative so browser sessions stay on the configured HTTPS port.
 - Keep `Klant Zoeken` working when the upstream `personsearch` endpoint returns `HTTP 500` for `divisionid`-filtered requests by searching each enabled credential without that broken filter and still returning partial results when one credential fails.
 - Preserve badge and workflow mandant context from the configured HUP credential even when upstream search results expose numeric `divisionId` codes instead of the expected brand keys.
@@ -140,68 +236,81 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Keep the legacy API workflow contract test on the PoC customer dataset even when a local `client_secrets.json` is present, so functional tests stay stable across CI and external-mode developer machines.
 - Move the public health response to `/status` so container checks stay available without leaving any `/api/v1/*` endpoint publicly callable.
 
-## [v1.0.14]
+## [v1.0.14] - 2026-03-26
 
 ### Changed
+
 - Let the HUP/Webabo integration read named credential sets from `hup.credentials`, keep legacy single-credential config as a fallback, sync werfsleutel offers by looping over every configured credential, and persist each offer's `credentialKey` so queued subscription requests can reuse the matching credential downstream.
 - Drive subscription channel combinations from Webabo `GET /offers/salescodecombinations` per cached offer credential/product and let agents add multiple subscriptions or memberships in one signup flow.
 - Refine the werfsleutel selection cards so completed items no longer show a redundant `Compleet` badge and title, remove the extra success toast on offer selection, and align price, sales code, and channel badges more consistently across multiple selections.
 
 ### Fixed
+
 - Prefer HUP password credentials over cached refresh tokens when acquiring access tokens, so named credential sets recover more reliably after token expiry.
 
-## [v1.0.13]
+## [v1.0.13] - 2026-03-25
 
 ### Fixed
+
 - Make `/app-logout` explicitly reject `GET` requests with `405 Method Not Allowed` and `Allow: POST`, while keeping the CSRF-protected `POST` logout flow intact.
 
-## [v1.0.12]
+## [v1.0.12] - 2026-03-25
 
 ### Added
+
 - Add the `sc-187755` queue-first subscription ordering flow with PostgreSQL-backed `subscription_orders` and `outbox_events`, idempotency on `submissionId`, order status lookup endpoints, and a frontend queue infobox.
 - Add a dedicated subscription queue display formatter plus PHPUnit and frontend coverage so queued order summaries render consistently across the workflow UI.
 
 ### Changed
+
 - Normalize subscription signup payloads into explicit recipient, requester, offer, subscription, and contact-entry snapshots before queueing, so downstream processing and status views can rely on a stable queued contract.
 - Refine the queue infobox layout and queued-order summary rendering so agent, requester, recipient, and offer details stay readable during the subscription workflow.
 
-## [v1.0.11]
+## [v1.0.11] - 2026-03-20
 
 ### Added
+
 - Add a Webabo-backed offer cache flow with a dedicated HUP token provider, Doctrine cache entity/repository, and the `app:webabo:sync-offers` console command so Kiwi can import available offers into PostgreSQL instead of querying the external API during each user interaction.
 
 ### Changed
+
 - Route `/api/v1/webabo/offers` is now the single backend offer endpoint for both subscription signup and winback contexts, backed by the same Webabo PostgreSQL offer cache and warmed automatically during local Compose startup when external credentials are available.
 - Keep the werfsleutel suggestions picker querying the internal catalog API for typed searches beyond the locally seeded list, and fall back to all configured channels when upstream offer metadata does not yet expose channel restrictions.
 - Align the HUP token flow with the live Webabo integration by using confidential-client authentication on the token request, including the legacy `PPA:` Basic credential fallback and corrected `PARADISE` realm example URLs.
 
 ### Fixed
+
 - Repair the JSON formatting in `client_secrets.example.json` so local tooling can safely parse the HUP/Webabo example structure.
 
-## [v1.0.10]
+## [v1.0.10] - 2026-03-19
 
 ### Fixed
+
 - Accept Microsoft Entra issuer metadata that uses the documented `{tenantid}` placeholder so valid tenant-specific ID tokens are no longer rejected during callback validation.
 - Keep OIDC ID token validation compatible with providers that publish JWKS keys without an `alg`, while only allowing safe signing algorithms from provider metadata, Microsoft Entra `RS256`, or a narrow asymmetric fallback allowlist.
 
-## [v1.0.9]
+## [v1.0.9] - 2026-03-19
 
 ### Removed
+
 - Remove the obsolete werfsleutel barcode reference docs from `assets/` and `docs/` now that barcode generation and management no longer live in the active Symfony runtime.
 
 ### Fixed
+
 - Validate OIDC ID tokens against provider JWKS before trusting nonce, issuer, audience, expiry, or roles, and harden login redirect targets to safe relative paths only.
 - Default Teams presence sync off unless explicitly enabled, keep presence scopes out of the default authorization request, drop refresh-token storage from the persisted session token, and reject expired session tokens in the auth and API readers.
 - Harden logout to require a POST request with CSRF validation and serve Swagger UI from local vendored `public/vendor/swagger-ui-dist` assets instead of an unpinned remote CDN.
 
-## [v1.0.8]
+## [v1.0.8] - 2026-03-17
 
 ### Added
+
 - Add a Symfony migration contract matrix and PHPUnit coverage for public/protected route behavior, OIDC helper logic, forwarded-prefix handling, and core API workflows.
 - Add PostgreSQL-backed Symfony sessions for `sc-187732` by wiring Doctrine DBAL/ORM, a PDO session handler, bootstrap/cleanup console commands, local Compose PostgreSQL, and callback regression coverage while documenting the remaining cluster follow-up for a future 3-replica rollout.
 - Add a pull-request workflow that validates the production build, PHPUnit, Node tests, and `script/check` for the Symfony-first runtime.
 
 ### Changed
+
 - Replace the Flask runtime with a Symfony 7.4 LTS application on FrankenPHP while keeping the existing GHCR image contract, port `8000`, `/kiwi` and `/kiwi-preview` reverse-proxy prefixes, `/auth/callback` callback path, and the local fallback OIDC flow intact.
 - Upgrade the KIWI runtime baseline to PHP 8.4 and Symfony 7.4 LTS across Composer constraints, Docker runtime, CI validation, and developer documentation.
 - Port the existing page/API contract to Symfony controllers and services, including session-backed POC state, catalog and workflow endpoints, Teams presence sync, prefix-aware asset/login/logout URL generation, and provider logout fallback to `/logged-out`.
@@ -212,17 +321,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Record the `app/static/assets/js` slice-classification audit and no-move decision for non-slice JS modules in `plan/app-js-to-slices-checklist.md`.
 
 ### Removed
+
 - Remove the legacy customer-subscription action bridge module by deleting `getLegacyFunction`, `callLegacy`, and `registerCustomerSubscriptionActions`, so `app/static/assets/js/app/index.js` now relies on slice-owned handlers.
 - Remove `app/static/assets/js/app/legacy-loader.js` by inlining `ensureRuntimeScriptsLoaded` into the app entrypoint that owns bootstrap orchestration.
 - Archive the last Flask-only runtime on `archive/kiwi-flask-runtime`, remove the legacy Flask source tree plus Python tests from the active repo, and replace the fallback OIDC smoke check's Python dependency with Node.
 
 ### Fixed
+
 - Keep the Symfony OIDC browser flow compatible with fallback Keycloak by sending space-delimited scopes in the authorization redirect and registering a dedicated `OidcUser` provider so authenticated sessions survive the post-callback page load.
 - Load the main and static-page ES module entrypoints through Symfony importmaps and expose hashed legacy runtime script URLs from Twig so nested frontend assets keep resolving behind `/kiwi` and `/kiwi-preview`.
 
-## [v1.0.7]
+## [v1.0.7] - 2026-02-12
 
 ### Added
+
 - Add `/api/v1/status` endpoint with API status and rate limit snapshot.
 - Add a local Docker Compose preflight check that validates `client_secrets.json` before the app starts.
 - Add a local fallback Keycloak realm for Docker Compose with seeded Kiwi roles and test users.
@@ -236,6 +348,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add dynamically generated Swagger/OpenAPI endpoints at `/api/v1/swagger.json` and `/api/v1/swagger` to reflect all registered Kiwi v1 API routes.
 
 ### Changed
+
 - Replaced the remaining monolithic frontend flow with module-first architecture: `app/static/assets/js/app/index.js` now owns bootstrap/runtime orchestration and legacy state is centralized in `app/static/assets/js/app/legacy-app-state.js`.
 - Completed the slice migration across core domains: app shell, localization, bootstrap/state, customer search/detail/contact history, subscription role/workflow flows, winback, article search/order, delivery remarks/date picker, werfsleutel, and call/queue/agent/disposition/debug.
 - Removed migration-era compatibility layers after slice ownership stabilized: deleted `legacy-loader.js`, deleted `legacy-actions-customer-subscription.js`, removed proxy/facade wrappers, and replaced `window` fallback lookups with explicit dependency wiring.
@@ -249,6 +362,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Consolidated offer/workflow behavior: unified offer retrieval under `/api/v1/webabo/offers`, improved werfsleutel search/picker UX, and redesigned subscription signup around explicit `recipient`/`requester` roles with duplicate-detection safeguards.
 
 ### Fixed
+
 - Correct the README local setup command to copy `client_secrets.example.json` to `client_secrets.json`.
 - Make menu logout terminate local session and attempt OIDC provider logout before landing on a logged-out page.
 - Prefix frontend API requests with the active script root (`/kiwi` or `/kiwi-preview`) so API calls resolve correctly behind the local gateway path.
@@ -257,14 +371,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Make `POST /api/v1/workflows/subscription-signup` atomic by validating both roles before creating new persons, preventing partial state writes on error responses.
 - Remove hidden requester create-form controls when `sameAsRecipient` is enabled so browser required-field validation no longer blocks valid submit paths.
 
-## [v1.0.6]
+## [v1.0.6] - 2026-02-02
 
 ### Changed
+
 - Build the OIDC redirect URI from the request host and prefix to avoid per-environment overrides.
 
-## [v1.0.5]
+## [v1.0.5] - 2026-02-02
 
 ### Added
+
 - Add Docker Compose local HTTPS gateway flow for OIDC development.
 - Add Docker Compose wiring for local OIDC client_secrets.json usage.
 - Add GitHub Actions workflow to build and push GHCR images on version tag pushes.
@@ -273,6 +389,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add unit tests for OIDC auth helpers.
 
 ### Changed
+
 - Document local-only overlay usage and route production deployments to the cluster config repo.
 - Generate local Docker Compose TLS certs automatically via a dedicated service.
 - Document GHCR image publishing and local `kiwi:dev` builds in the README.
@@ -282,36 +399,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Convert auth helpers into a dedicated `app/auth` package.
 
 ### Removed
+
 - Remove the production Kustomize overlay under `infra/k8s/overlays/prod`.
 - Remove Kubernetes/Helm manifests, scripts, and GitOps docs to focus on Docker Compose.
 
 ### Fixed
+
 - Install Alpine build dependencies needed for cryptography/cffi during image builds.
 - Mount OIDC client secrets under `/run/secrets` to avoid bind-mount conflicts in Docker Desktop.
 
-## [v1.0.4]
+## [v1.0.4] - 2026-01-29
 
 ### Changed
+
 - Changed version number again in html for testing auto tagging
 
-## [v1.0.3]
+## [v1.0.3] - 2026-01-28
 
 ### Changed
+
 - Changed version number in html for testing auto tagging
 
-## [v1.0.2]
+## [v1.0.2] - 2026-01-28
 
 ### Added
+
 - Added version number to html
 
-## [v1.0.1]
+## [v1.0.1] - 2026-01-28
 
 ### Changed
+
 - changed background color
 
-## [v1.0.0]
+## [v1.0.0] - 2026-01-28
 
 ### Added
+
 - Added UV support
 - Added Flux v2 GitOps cluster definitions under `clusters/`
 - Added blue/green deployment resources with active and preview services
@@ -322,6 +446,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Moved cluster GitOps configuration to the bink8s-cluster-management repo
 
 ### Changed
+
 - centralized deploy config in `infra/k8s/base/deploy.env` for scripts and kustomize
 - fail fast when both local and prod targets are provided to Make
 - pin add-on Helm chart versions via `infra/k8s/base/deploy.env`
@@ -331,4 +456,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Configure cert-manager values for CRDs, add Gateway API ACME issuers, and install the issuer chart during addons
 - Update deploy-app to wait for all kiwi deployments after applying kustomize overlays
 
-### Fixed
+[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.33...HEAD
+[v1.0.33]: https://github.com/bindinc/kiwi/compare/v1.0.32...v1.0.33
+[v1.0.32]: https://github.com/bindinc/kiwi/compare/v1.0.31...v1.0.32
+[v1.0.31]: https://github.com/bindinc/kiwi/compare/v1.0.30...v1.0.31
+[v1.0.30]: https://github.com/bindinc/kiwi/compare/v1.0.29...v1.0.30
+[v1.0.29]: https://github.com/bindinc/kiwi/compare/v1.0.28...v1.0.29
+[v1.0.28]: https://github.com/bindinc/kiwi/compare/v1.0.27...v1.0.28
+[v1.0.27]: https://github.com/bindinc/kiwi/compare/v1.0.26...v1.0.27
+[v1.0.26]: https://github.com/bindinc/kiwi/compare/v1.0.25...v1.0.26
+[v1.0.25]: https://github.com/bindinc/kiwi/compare/v1.0.24...v1.0.25
+[v1.0.24]: https://github.com/bindinc/kiwi/compare/v1.0.23...v1.0.24
+[v1.0.23]: https://github.com/bindinc/kiwi/compare/v1.0.22...v1.0.23
+[v1.0.22]: https://github.com/bindinc/kiwi/compare/v1.0.21...v1.0.22
+[v1.0.21]: https://github.com/bindinc/kiwi/compare/v1.0.20...v1.0.21
+[v1.0.20]: https://github.com/bindinc/kiwi/compare/v1.0.19...v1.0.20
+[v1.0.19]: https://github.com/bindinc/kiwi/compare/v1.0.18...v1.0.19
+[v1.0.18]: https://github.com/bindinc/kiwi/compare/v1.0.17...v1.0.18
+[v1.0.17]: https://github.com/bindinc/kiwi/compare/v1.0.16...v1.0.17
+[v1.0.16]: https://github.com/bindinc/kiwi/compare/v1.0.15...v1.0.16
+[v1.0.15]: https://github.com/bindinc/kiwi/compare/v1.0.14...v1.0.15
+[v1.0.14]: https://github.com/bindinc/kiwi/compare/v1.0.13...v1.0.14
+[v1.0.13]: https://github.com/bindinc/kiwi/compare/v1.0.12...v1.0.13
+[v1.0.12]: https://github.com/bindinc/kiwi/compare/v1.0.11...v1.0.12
+[v1.0.11]: https://github.com/bindinc/kiwi/compare/v1.0.10...v1.0.11
+[v1.0.10]: https://github.com/bindinc/kiwi/compare/v1.0.9...v1.0.10
+[v1.0.9]: https://github.com/bindinc/kiwi/compare/v1.0.8...v1.0.9
+[v1.0.8]: https://github.com/bindinc/kiwi/compare/v1.0.7...v1.0.8
+[v1.0.7]: https://github.com/bindinc/kiwi/compare/v1.0.6...v1.0.7
+[v1.0.6]: https://github.com/bindinc/kiwi/compare/v1.0.5...v1.0.6
+[v1.0.5]: https://github.com/bindinc/kiwi/compare/v1.0.4...v1.0.5
+[v1.0.4]: https://github.com/bindinc/kiwi/compare/v1.0.3...v1.0.4
+[v1.0.3]: https://github.com/bindinc/kiwi/compare/v1.0.2...v1.0.3
+[v1.0.2]: https://github.com/bindinc/kiwi/compare/v1.0.1...v1.0.2
+[v1.0.1]: https://github.com/bindinc/kiwi/compare/v1.0.0...v1.0.1
+[v1.0.0]: https://github.com/bindinc/kiwi/releases/tag/v1.0.0
