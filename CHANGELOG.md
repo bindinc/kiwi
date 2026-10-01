@@ -8,6 +8,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+### Added
+
+- Add design plan, showcase artifact, and WCAG 2.2 token contract for the Pantone Light & Shadow default theme.
+
 ### Fixed
 
 - Keep the home welcome message centered after starting a new customer session, including repeated resets. [sc-203422]
