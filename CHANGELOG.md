@@ -8,6 +8,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+### Added
+
+- Add design plan, showcase artifact, and WCAG 2.2 token contract for the Pantone Light & Shadow default theme.
+
 ### Fixed
 
 - Distinguish proven JavaScript runtime credential references from literal secrets in the Codex guard, retaining strict checks for unknown source contexts. [sc-199729]
