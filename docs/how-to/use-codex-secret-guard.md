@@ -36,6 +36,16 @@ Rules include:
 
 Finding messages contain only a rule identifier and a sanitized repository-relative source. They never contain the matched value.
 
+## Runtime references in JavaScript
+
+SG007 distinguishes unquoted environment member references from literal credentials when the complete `.js`, `.mjs` or `.cjs` source is available. Supported roots are `process.env`, `source` and `env`, followed by an uppercase environment variable name. Quoted values remain subject to the normal credential check.
+
+The guard uses Node's syntax-only check with an empty environment; it never executes the source or loads its imports. Replacing the candidate with an invalid syntax token must invalidate otherwise valid JavaScript. Text in strings, templates, comments and regex literals does not receive an exception merely because it resembles code. All other secret detectors still run.
+
+Full source is available for new files in `apply_patch` and for the complete Git diffs scanned before publication, after tools and at stop. Existing-file patches provide incomplete context and deliberately remain strict, as do shell commands, prompts, JSON/YAML and generic tool inputs. A false positive in these contexts still needs review; this exception does not authorize disabling the hook.
+
+At most 12 syntax checks run per hook invocation, each limited to 300 milliseconds. Exhausted limits, unsupported syntax and parser failures retain the finding. Git diff collection is still bounded by the existing 8 MiB limit; oversized input fails closed.
+
 ## Respond to a block
 
 1. Do not paste the rejected value into chat, an issue, a commit message, or a command argument.

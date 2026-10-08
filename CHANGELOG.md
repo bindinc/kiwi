@@ -10,6 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Fixed
 
+- Distinguish proven JavaScript runtime credential references from literal secrets in the Codex guard, retaining strict checks for unknown source contexts. [sc-199729]
 - Keep the home welcome message centered after starting a new customer session, including repeated resets. [sc-203422]
 
 ### Changed
