@@ -15,6 +15,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
+- Upgrade the shared development and production runtime to PHP 8.5 with a minimum patch version of 8.5.12, include the required `intl` extension for country validation, and run CI on PHP 8.5.12. [sc-205460]
 - Reconcile releases v1.0.22 through v1.0.33 with their Git tags and organize the changelog with change categories, release dates and comparison links.
 
 ## [v1.0.33] - 2026-09-25

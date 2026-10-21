@@ -29,7 +29,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: '8.5.12'
+          extensions: intl, pdo_pgsql
           tools: composer:v2
 
       - name: Setup Node
@@ -57,4 +58,5 @@ jobs:
 
       - name: Verify embedded release version
         run: |
+          docker run --rm --entrypoint php kiwi:ci -r 'exit(version_compare(PHP_VERSION, "8.5.12", ">=") ? 0 : 1);'
           docker run --rm --entrypoint php kiwi:ci -r 'exit(getenv("APP_VERSION") === "v0.0.0-ci" ? 0 : 1);'
