@@ -24,7 +24,7 @@ RUN composer install \
     --no-scripts \
     --optimize-autoloader
 
-FROM dunglas/frankenphp:1-php8.5-alpine AS runtime-base
+FROM dunglas/frankenphp:1.13.2-php8.5.12-alpine AS runtime-base
 
 # Reject stale upstream images that predate the PHP security fixes.
 RUN php -r 'exit(version_compare(PHP_VERSION, "8.5.12", ">=") ? 0 : 1);'

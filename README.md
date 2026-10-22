@@ -63,7 +63,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Installation & Usage
 
-- Runs as a Symfony 7.4 LTS application on FrankenPHP with PHP 8.5.12 or newer PHP 8.5 security updates.
+- Runs as a Symfony 7.4 LTS application on FrankenPHP 1.13.2 with PHP 8.5.12.
 - Twig templates live under `templates/`.
 - Frontend source assets live under `assets/`.
 - The migration contract is documented in `docs/reference/symfony-migration-contract-matrix.md`.
@@ -391,10 +391,10 @@ make image-build
 
 The local image build uses the Dockerfile `prod` target so it matches the release runtime shape.
 
-The shared development and production stage requires PHP 8.5.12 or newer. Builds
-fail if the upstream `dunglas/frankenphp:1-php8.5-alpine` image still contains an
-older patch version. Pull an updated base image before retrying; CI also checks
-the PHP version in the final production image.
+The shared development and production stage uses
+`dunglas/frankenphp:1.13.2-php8.5.12-alpine` and requires PHP 8.5.12 or newer.
+Builds reject base images below that security baseline; CI also checks the PHP
+version in the final production image.
 
 ## Data Storage
 

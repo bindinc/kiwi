@@ -56,7 +56,7 @@ jobs:
       - name: Build production image
         run: docker build -f infra/docker/app/Dockerfile --target prod --build-arg APP_VERSION=v0.0.0-ci -t kiwi:ci .
 
-      - name: Verify embedded release version
+      - name: Verify PHP runtime and embedded release versions
         run: |
           docker run --rm --entrypoint php kiwi:ci -r 'exit(version_compare(PHP_VERSION, "8.5.12", ">=") ? 0 : 1);'
           docker run --rm --entrypoint php kiwi:ci -r 'exit(getenv("APP_VERSION") === "v0.0.0-ci" ? 0 : 1);'

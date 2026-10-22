@@ -8,6 +8,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+## [v1.0.34] - 2026-10-22
+
 ### Fixed
 
 - Distinguish proven JavaScript runtime credential references from literal secrets in the Codex guard, retaining strict checks for unknown source contexts. [sc-199729]
@@ -15,7 +17,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
-- Upgrade the shared development and production runtime to PHP 8.5 with a minimum patch version of 8.5.12, include the required `intl` extension for country validation, and run CI on PHP 8.5.12. [sc-205460]
+- Upgrade the shared development and production runtime to FrankenPHP 1.13.2 and PHP 8.5.12, enforce the PHP security baseline, include the required `intl` extension for country validation, and run CI on PHP 8.5.12. [sc-205460]
 - Reconcile releases v1.0.22 through v1.0.33 with their Git tags and organize the changelog with change categories, release dates and comparison links.
 
 ## [v1.0.33] - 2026-09-25
@@ -462,7 +464,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 - Configure cert-manager values for CRDs, add Gateway API ACME issuers, and install the issuer chart during addons
 - Update deploy-app to wait for all kiwi deployments after applying kustomize overlays
 
-[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.33...HEAD
+[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.34...HEAD
+[v1.0.34]: https://github.com/bindinc/kiwi/compare/v1.0.33...v1.0.34
 [v1.0.33]: https://github.com/bindinc/kiwi/compare/v1.0.32...v1.0.33
 [v1.0.32]: https://github.com/bindinc/kiwi/compare/v1.0.31...v1.0.32
 [v1.0.31]: https://github.com/bindinc/kiwi/compare/v1.0.30...v1.0.31
