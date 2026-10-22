@@ -24,10 +24,13 @@ RUN composer install \
     --no-scripts \
     --optimize-autoloader
 
-FROM dunglas/frankenphp:1-php8.4-alpine AS runtime-base
+FROM dunglas/frankenphp:1.13.2-php8.5.12-alpine AS runtime-base
+
+# Reject stale upstream images that predate the PHP security fixes.
+RUN php -r 'exit(version_compare(PHP_VERSION, "8.5.12", ">=") ? 0 : 1);'
 
 RUN apk add --no-cache bash curl git unzip \
-    && install-php-extensions pdo_pgsql \
+    && install-php-extensions intl pdo_pgsql \
     && mkdir -p /app/var/cache /app/var/log
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
