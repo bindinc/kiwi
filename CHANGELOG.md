@@ -8,6 +8,12 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+## [v1.0.35] - 2026-10-22
+
+### Fixed
+
+- Use the Debian Trixie runtime for FrankenPHP 1.13.2 and PHP 8.5.12 after the Alpine variant repeatedly exited with code 137 on BINK8S, retaining the security baseline and required extensions. [sc-205460]
+
 ## [v1.0.34] - 2026-10-22
 
 ### Fixed
@@ -464,7 +470,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 - Configure cert-manager values for CRDs, add Gateway API ACME issuers, and install the issuer chart during addons
 - Update deploy-app to wait for all kiwi deployments after applying kustomize overlays
 
-[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.34...HEAD
+[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.35...HEAD
+[v1.0.35]: https://github.com/bindinc/kiwi/compare/v1.0.34...v1.0.35
 [v1.0.34]: https://github.com/bindinc/kiwi/compare/v1.0.33...v1.0.34
 [v1.0.33]: https://github.com/bindinc/kiwi/compare/v1.0.32...v1.0.33
 [v1.0.32]: https://github.com/bindinc/kiwi/compare/v1.0.31...v1.0.32
