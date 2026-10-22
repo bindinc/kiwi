@@ -392,9 +392,14 @@ make image-build
 The local image build uses the Dockerfile `prod` target so it matches the release runtime shape.
 
 The shared development and production stage uses
-`dunglas/frankenphp:1.13.2-php8.5.12-alpine` and requires PHP 8.5.12 or newer.
+`dunglas/frankenphp:1.13.2-php8.5.12-trixie` and requires PHP 8.5.12 or newer.
 Builds reject base images below that security baseline; CI also checks the PHP
 version in the final production image.
+
+The Debian runtime replaces the Alpine variant after the latter repeatedly
+exited with code 137 on BINK8S. A standalone Debian runtime remained healthy
+under the same CPU and memory limits. The PHP and FrankenPHP versions are
+unchanged.
 
 ## Data Storage
 
