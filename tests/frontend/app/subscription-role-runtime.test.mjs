@@ -1099,11 +1099,14 @@ function testExistingInitialsPopulateIndependentRoleEditorsAndPayloads() {
 async function testRoleSelectionHydratesInitialsAndIgnoresPreviousPerson() {
     for (const role of ['recipient', 'requester']) {
         const responses = [];
-        const { context, elements, runtime } = createRuntimeContext({ kiwiApi: {
-            get(url, options) {
-                return new Promise(resolve => responses.push({ url, options, resolve }));
+        const { context, elements, runtime } = createRuntimeContext({
+            werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }],
+            kiwiApi: {
+                get(url, options) {
+                    return new Promise(resolve => responses.push({ url, options, resolve }));
+                }
             }
-        } });
+        });
         const prefix = runtime.getSubscriptionRoleConfig(role).prefix;
         const person = { id: 73, firstName: 'Alex', credentialKey: 'demo', mandant: 'HMC', sourceSystem: 'subscription-api' };
         context.subscriptionRoleState[role].searchResults = [person];
@@ -1148,6 +1151,7 @@ async function testPayerHydrationCannotReplaceActiveCustomerFromAnotherSource() 
     let respond;
     const { context, elements, runtime } = createRuntimeContext({
         recipientSelectedPerson: recipient,
+        werfsleutelSelections: [{ selectedKey: { mandant: 'A' } }, { selectedKey: { mandant: 'B' } }],
         kiwiApi: { get: () => new Promise(resolve => { respond = resolve; }) }
     });
     context.currentCustomer = activeCustomer;
