@@ -1,64 +1,76 @@
 # Guide subscription start dates (SC-203456)
 
-## Confirmed provider contract
+## Product and edition rules
 
-The supplied Abel Webabo OpenAPI file
-`security2026/Docs/Abel/API/Webabo/webabo-api-docs.json` defines operation
-`getStartDates`: `GET /subscriptions/start-dates`, relative to the configured
-`hup.webabo_base_url`. Both `productCode` and `variantCode` are required query
-parameters. Use the cached offer's originating credential for authentication;
-never fall back to the first configured credential.
+Confirmed for PR #140 on 2026-11-05:
 
-HTTP 200 returns a `StartDate` object with `startDate` of type `string`, format
-`date` (`YYYY-MM-DD`). It is a calendar date: no time or timezone conversion is
-appropriate. HTTP 400 and 404 are documented. Missing, invalid and unavailable
-dates must never become today's date. `Offer.variantCodeList` supplies available
-editions. No default edition or recurring schedule is specified.
+- Exact product codes `ATV`, `ATL` and `ATM` are AVROTROS memberships;
+  `STKN` is a KRO-NCRV membership. They retain the existing independent date
+  field and never call or depend on the delivery-date API.
+- All other product codes are guides. Missing product/credential context cannot
+  be replaced with a guessed classification or a primary credential.
+- A single available edition is selected automatically. With multiple entries
+  in `variantCodeList`, the employee explicitly chooses an edition. There is no
+  first-entry or `NORMAAL` fallback. Missing editions block guide signup.
 
-The endpoint returns only the next possible start date. It does not establish
-which later dates are valid; accepting arbitrary dates after a minimum or
-inventing a weekly schedule would exceed this contract.
+The cached active offer, selected by sales code, supplies authoritative product,
+credential, mandant and allowed editions. Browser-supplied classifications,
+credentials and source-date snapshots cannot override it.
 
-## Outstanding configuration evidence
+## Provider contract
 
-The supplied `Offer` and `BaseData` schemas do not classify products as guide
-subscriptions versus broadcaster memberships. A confirmed product classification
-per credential and product code is required. Display names, sales-code prefixes,
-and delivery frequency are not a reliable substitute. Broadcaster memberships
-must retain their existing date rules and must never call this delivery-date API.
+The supplied Abel Webabo OpenAPI contract defines `getStartDates`:
+`GET /subscriptions/start-dates`, relative to `hup.webabo_base_url`, with
+required `productCode` and `variantCode` query parameters. The response is a
+`StartDate` object containing `startDate`, a calendar date in `YYYY-MM-DD` format.
+HTTP 400 and 404 are documented. No timezone conversion is appropriate.
 
-Live provider behavior and credentials have not been verified by this contract
-inspection. Local synthetic tests are not evidence of live acceptance.
+`WebaboStartDateClient` uses HTTPS, disables redirects, applies a shared deadline
+to authentication and lookup, and retries authentication at most once. Source
+bodies and authentication errors are not returned to the browser. Missing,
+invalid, past or unavailable source dates never become today's date.
 
-## Delivery status and remaining work
+Only the next possible start date is documented. Later dates or a recurring
+weekly schedule are not inferred.
 
-Draft PR: https://github.com/bindinc/kiwi/pull/140
+## Form and persistence
+
+`GET /api/v1/webabo/offers/{salesCode}/start-date?variantCode=...` is an
+authenticated read route with `Cache-Control: no-store`. Offer suggestions expose
+`subscriptionKind` and `variantCodes`. The form displays a read-only source date
+for each selected guide, explicit edition choices where needed, loading/error
+messages and a retry action. A mixed order keeps a separate editable membership
+date. Each product retains its own date when source dates differ.
+
+Changing an offer, edition or customer work-session invalidates pending results.
+Request generations prevent an older edition response from replacing a later
+choice. Saving is blocked while a guide date is missing, loading or unavailable.
+A restored outbox order retains its edition and fetches a fresh source date.
+
+`SubscriptionQueueService::normalizeQueuePayload` rechecks the provider date
+before either queue persistence or `DeferredCustomerWrites::subscription`
+stages an outbox intent. A changed or forged date returns `start_date_changed`
+and creates no intent. Valid guide intents retain their edition and a
+server-generated `startDateSource` with credential key, mandant, product code,
+edition, calendar date and check timestamp. These are source identifiers, not
+credentials or tokens.
+
+A delayed upstream sender must recheck the source date before execution; there
+is no production subscription sender in this repository. Staging an intent is
+not proof of an upstream customer or subscription write.
+
+## Validation and delivery
+
+PR: https://github.com/bindinc/kiwi/pull/140
 
 Story: https://app.shortcut.com/bindincit/story/203456
 
-The provider client is implemented and tested. It is deliberately not connected
-to signup yet: without a verified product-kind rule, calling it for every offer
-would violate the explicit requirement to leave memberships independent. The
-existing signup behavior, including its incorrect date default for guides,
-therefore remains unresolved in this draft.
+Regression coverage includes exact membership exclusions, explicit and invalid
+editions, independent product dates, changed/past/invalid source dates, rejected
+browser overrides, immutable outbox source context, retry and stale-response
+handling. Provider transport/authentication is tested separately with synthetic
+HTTP responses. No live customer/provider acceptance or production deployment
+is implied by these tests.
 
-Before completing the integration, confirm:
-
-1. The authoritative guide/membership classification, keyed by source credential,
-   mandant and exact `productCode`, or an authoritative model field that supplies it.
-2. How the order's edition is selected when `variantCodeList` contains multiple
-   values. No first-item or `NORMAAL` fallback is established by this contract.
-
-Then connect offer/edition selection to the source lookup and server-side signup
-validation. Reject dates outside the returned source value, missing/past/invalid
-dates, and unavailable responses. Preserve calendar dates without UTC conversion.
-Invalidate reads when the offer, edition or customer work-session changes; ignore
-out-of-order responses. Multiple selected products need dates per product when
-their source dates differ, while memberships keep their independent rules.
-Revalidate before creating the deferred outbox intent, and retain source context
-in its immutable payload. Delayed upstream execution needs a separate source-date
-recheck by its sender; no production sender is implemented in this repository.
-
-Complete the form/error-state tests and a cropped synthetic-data screenshot,
-confirm its Shortcut attachment, and verify a controlled provider interaction
-before claiming end-to-end acceptance.
+Shortcut updates and screenshot attachment are deferred under the explicit
+one-time exception for this PR because Shortcut access is unavailable.

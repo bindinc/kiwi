@@ -1,3 +1,4 @@
+import { createSubscriptionStartDates, localCalendarDate } from '../subscription-start-dates.js';
 import { initializeSessionOutbox, refreshOutbox } from '../session-outbox.js';
 import { resumeFormDraft, clearFormDraft } from '../lightbox-drafts.js';
 import { getAddressSubmission } from '../address-completion.js';
@@ -30,6 +31,29 @@ const STATUS_NAME_BY_KEY = {
     paused: 'Gepauzeerd',
     cancelled: 'Opgezegd'
 };
+
+const startDatesByDocument = new WeakMap();
+
+function getSubscriptionStartDates() {
+    const documentRef = getDocumentRef();
+    if (!documentRef) return null;
+    let dates = startDatesByDocument.get(documentRef);
+    if (dates) return dates;
+    dates = createSubscriptionStartDates({
+        document: documentRef,
+        getContext: () => getCustomerWorkSessionApi()?.getRequestContext?.() || null,
+        fetchDate: (salesCode, variantCode) => getApiClient().get(
+            `/api/v1/webabo/offers/${encodeURIComponent(salesCode)}/start-date?variantCode=${encodeURIComponent(variantCode)}`
+        ),
+        translate: (key) => translateKey(key)
+    });
+    startDatesByDocument.set(documentRef, dates);
+    const refresh = () => void dates.sync(getSelectedWerfsleutelSelections());
+    const globalScope = getGlobalScope();
+    globalScope?.addEventListener?.('kiwi:werfsleutel-selections-updated', refresh);
+    globalScope?.addEventListener?.('kiwi:customer-context-updated', refresh);
+    return dates;
+}
 
 let compatibilityExportsInstalled = false;
 const subscriptionQueueState = {
@@ -750,12 +774,12 @@ export function showNewSubscription() {
         form.reset();
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    setInputValue('subStartDate', today);
+    setInputValue('subStartDate', localCalendarDate());
     ensureSubscriptionSubmissionId(true);
     syncSubscriptionIbanRequirement(getElementById('subIBAN'), DIRECT_DEBIT_PAYMENT_METHOD);
 
     resetWerfsleutelPickerState();
+    void getSubscriptionStartDates()?.sync([], true);
     refreshWerfsleutelCatalogIfStale();
 
     initializeSubscriptionRolesForForm();
@@ -786,13 +810,20 @@ export async function createSubscription(event) {
         showToast(translateKey('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'error');
         return;
     }
+    const startDates = getSubscriptionStartDates();
+    void startDates?.sync(werfsleutelSelections);
+    try {
+        for (const selection of werfsleutelSelections) startDates.read(selection.selectedKey);
+    } catch (error) {
+        showToast(error.message, 'error');
+        return;
+    }
     const submissionId = ensureSubscriptionSubmissionId();
     const paymentDetails = buildSubscriptionPaymentDetails(
         getCheckedValue('subPayment'),
         getInputValue('subIBAN')
     );
     const sharedFormData = {
-        startDate: getInputValue('subStartDate'),
         optinEmail: getCheckedValue('subOptinEmail'),
         optinPhone: getCheckedValue('subOptinPhone'),
         optinPost: getCheckedValue('subOptinPost')
@@ -863,12 +894,19 @@ export async function createSubscription(event) {
             continue;
         }
 
+        let delivery;
+        try {
+            delivery = startDates.read(selectedWerfsleutelKey);
+        } catch (error) {
+            failedSelections.push({ salesCode: selectedWerfsleutelKey.salesCode, message: error.message, ambiguous: false });
+            break;
+        }
         const offerDetails = getWerfsleutelOfferDetails(selectedWerfsleutelKey);
         const formData = {
             magazine: offerDetails.magazine,
             duration: offerDetails.durationKey || '',
             durationLabel: offerDetails.durationLabel,
-            startDate: sharedFormData.startDate,
+            startDate: delivery.startDate,
             werfsleutel: selectedWerfsleutelKey.salesCode,
             werfsleutelTitle: selectedWerfsleutelKey.title,
             werfsleutelPrice: selectedWerfsleutelKey.price,
@@ -902,6 +940,7 @@ export async function createSubscription(event) {
                 duration: formData.duration,
                 durationLabel: formData.durationLabel,
                 startDate: formData.startDate,
+                variantCode: delivery.variantCode,
                 paymentMethod: paymentDetails.paymentMethod,
                 iban: paymentDetails.iban,
                 status: 'active',
@@ -1495,6 +1534,7 @@ function installLegacyCompatibilityExports() {
         return;
     }
 
+    globalScope.kiwiSubscriptionStartDates = { restore: (offer) => getSubscriptionStartDates()?.restore(offer) };
     globalScope.showNewSubscription = showNewSubscription;
     globalScope.createSubscription = createSubscription;
     globalScope.getSubscriptionRequesterMetaLine = getSubscriptionRequesterMetaLine;

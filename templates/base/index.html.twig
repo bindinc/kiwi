@@ -694,12 +694,14 @@
                             </div>
 
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.abonnementsgegevens_dc22841d">Abonnementsgegevens</h3>
-                                <label class="datepicker-label" data-i18n="indexHtml.text.subStartDate_ce0234ea">Start:</label>
-                                <div class="form-row">
-                                    <input type="date" id="subStartDate" data-feedback-sensitive="date" required>
+                                <div id="subscriptionStartDates"></div>
+                                <div id="membershipStartDate" hidden>
+                                    <label for="subStartDate" class="datepicker-label" data-i18n="subscriptionStartDates.membershipDate">Startdatum lidmaatschap</label>
+                                    <div class="form-row">
+                                        <input type="date" id="subStartDate" data-feedback-sensitive="date">
+                                    </div>
                                 </div>
-                            
-                           
+
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.marketing_voorkeuren_e341a1e3">Marketing voorkeuren</h3>
                             <div class="optin-row">
                                 <label class="optin-label" data-i18n="indexHtml.text.e_mail_contact_760c3822">E-mail contact:</label>
