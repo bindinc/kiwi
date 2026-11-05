@@ -107,6 +107,7 @@ final class ApiContractTest extends WebTestCase
         $client = $this->createAuthenticatedClient();
         $this->resetOutboxStorage();
         $this->resetSubscriptionQueueStorage();
+        $this->seedMembershipOffer('AVRV519');
 
         $client->request('GET', '/api/v1/persons');
         self::assertResponseIsSuccessful();
@@ -206,6 +207,7 @@ final class ApiContractTest extends WebTestCase
         $client->request('GET', '/api/v1/persons');
         $customers = array_slice(json_decode($client->getResponse()->getContent(), true)['items'], 0, 2);
         $this->rememberCustomerAddresses($client, $customers);
+        $this->seedMembershipOffer('SC203201');
         $address = ['postalCode' => '1234AB', 'houseNumber' => '10', 'houseNumberAddition' => '',
             'street' => 'Teststraat', 'city' => 'Teststad', 'addressExtension' => '310'];
         $address['formSessionId'] = $this->rememberAddress($client, $address);
@@ -266,6 +268,7 @@ final class ApiContractTest extends WebTestCase
             'subscription' => ['magazine'=>'Test magazine', 'startDate'=>'2026-10-01', 'paymentMethod'=>'AC'],
             'offer' => ['salesCode'=>'TEST-OUTBOX', 'title'=>'Test offer'],
         ];
+        $this->seedMembershipOffer('TEST-OUTBOX');
         $client->setServerParameter('HTTP_X_KIWI_NEW_CUSTOMER_ID', 'new-reader');
         $this->prepareOutboxWrite($client, 'signup-a');
         $client->request('POST', '/api/v1/workflows/subscription', server:['CONTENT_TYPE'=>'application/json'], content:json_encode($payload, JSON_THROW_ON_ERROR));
@@ -432,6 +435,83 @@ final class ApiContractTest extends WebTestCase
         self::assertArrayHasKey('entry', json_decode($client->getResponse()->getContent(), true));
     }
 
+    public function testGuideDateIsRecheckedBeforeOutboxStagingAndBrowserContextCannotOverrideIt(): void
+    {
+        $this->disableSubscriptionApiCustomerSearch();
+        $client = $this->createAuthenticatedClient();
+        $client->disableReboot();
+        $this->resetOutboxStorage();
+        $this->resetSubscriptionQueueStorage();
+        $this->seedWebaboOfferCache();
+        $provider = $this->createMock(\App\Webabo\WebaboStartDateProviderInterface::class);
+        $provider->expects(self::exactly(3))->method('fetchStartDate')->with('avrotros', 'AVR', 'SOUTH')
+            ->willReturnOnConsecutiveCalls('2035-03-26', '2035-03-27', '2035-03-27');
+        static::getContainer()->set(\App\Webabo\WebaboStartDateProviderInterface::class, $provider);
+
+        $client->request('GET', '/api/v1/webabo/offers/AVRV519/start-date');
+        self::assertResponseStatusCodeSame(422);
+        $client->request('GET', '/api/v1/webabo/offers/AVRV519/start-date?variantCode=SOUTH');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('no-store', $client->getResponse()->headers->get('Cache-Control'));
+        self::assertSame('2035-03-26', json_decode($client->getResponse()->getContent(), true)['startDate']);
+
+        $client->request('GET', '/api/v1/persons');
+        $customers = json_decode($client->getResponse()->getContent(), true)['items'];
+        $this->rememberCustomerAddresses($client, array_slice($customers, 0, 1));
+        $payload = [
+            'submissionId' => 'guide-source-recheck',
+            'recipient' => ['personId' => $customers[0]['id']], 'requester' => ['sameAsRecipient' => true],
+            'subscription' => ['magazine' => 'Avrobode', 'startDate' => '2035-03-26', 'variantCode' => 'SOUTH',
+                'paymentMethod' => 'AC', 'startDateSource' => ['credentialKey' => 'forged', 'startDate' => '2035-03-26']],
+            'offer' => ['salesCode' => 'AVRV519', 'title' => 'Synthetic guide', 'productCode' => 'ATV', 'credentialKey' => 'forged'],
+        ];
+        $this->prepareOutboxWrite($client, 'guide-source-recheck');
+        $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('start_date_changed', json_decode($client->getResponse()->getContent(), true)['error']['code']);
+        $connection = static::getContainer()->get(EntityManagerInterface::class)->getConnection();
+        self::assertSame(0, (int) $connection->fetchOne("SELECT COUNT(*) FROM customer_outbox_sessions WHERE tenant = 'test-tenant'"));
+
+        $payload['subscription']['startDate'] = '2035-03-27';
+        $this->prepareOutboxWrite($client, 'guide-source-recheck');
+        $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+        self::assertResponseStatusCodeSame(202);
+        $result = json_decode($client->getResponse()->getContent(), true);
+        $saved = $result['outbox']['changes'][0]['arguments'][0]['subscription'];
+        self::assertSame('2035-03-27', $saved['startDate']);
+        self::assertSame('SOUTH', $saved['variantCode']);
+        self::assertSame('avrotros', $saved['startDateSource']['credentialKey']);
+        self::assertSame('AVR', $saved['startDateSource']['productCode']);
+        self::assertSame(0, (int) $connection->fetchOne("SELECT COUNT(*) FROM subscription_orders WHERE submission_id = 'guide-source-recheck'"));
+    }
+
+    public function testMembershipDateEndpointDoesNotDependOnDeliveryProvider(): void
+    {
+        $client = $this->createAuthenticatedClient();
+        $client->disableReboot();
+        $this->seedMembershipOffer('MEMBERSHIP');
+        $provider = $this->createMock(\App\Webabo\WebaboStartDateProviderInterface::class);
+        $provider->expects(self::never())->method('fetchStartDate');
+        static::getContainer()->set(\App\Webabo\WebaboStartDateProviderInterface::class, $provider);
+        $client->request('GET', '/api/v1/webabo/offers/MEMBERSHIP/start-date');
+        self::assertResponseIsSuccessful();
+        $result = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame('membership', $result['subscriptionKind']);
+        self::assertNull($result['startDate']);
+    }
+
+    private function seedMembershipOffer(string $salesCode): void
+    {
+        static::getContainer()->get(WebaboOfferCacheSchemaManager::class)->ensureSchema();
+        $manager = static::getContainer()->get(EntityManagerInterface::class);
+        $manager->getConnection()->executeStatement('DELETE FROM webabo_offers_cache WHERE sales_code = ?', [$salesCode]);
+        $offer = new WebaboOffer($salesCode);
+        $offer->refreshFromWebaboPayload(['salesCode' => $salesCode, 'title' => 'Test membership',
+            'productCode' => 'ATV', 'credentialKey' => 'avrotros'], new \DateTimeImmutable());
+        $manager->persist($offer);
+        $manager->flush();
+    }
+
     private function seedWebaboOfferCache(): void
     {
         /** @var WebaboOfferCacheSchemaManager $schemaManager */
@@ -450,6 +530,7 @@ final class ApiContractTest extends WebTestCase
             'title' => '1 jaar Avrobode voor maar EUR52',
             'credentialKey' => 'avrotros',
             'productCode' => 'AVR',
+            'variantCodeList' => ['NORTH', 'SOUTH'],
             'allowedChannels' => ['EM/OU', 'TM/IB'],
             'offerPrice' => [
                 'price' => 52.0,

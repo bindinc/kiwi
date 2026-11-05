@@ -8,7 +8,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
-- Add the verified Abel Webabo client for product and edition specific subscription start dates, rejecting unavailable or invalid source dates; form integration awaits confirmed guide/membership classification. [sc-203456]
+- Use Abel’s next delivery date per guide and selected edition during subscription signup, revalidate before staging an order, and keep ATV/ATL/ATM/STKN memberships independent of delivery dates. [sc-203456]
 
 ### Fixed
 

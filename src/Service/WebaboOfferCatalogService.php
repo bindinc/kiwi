@@ -76,6 +76,7 @@ final class WebaboOfferCatalogService
         }
 
         return [
+            ...SubscriptionStartDates::describe($offer),
             'offerId' => $rawPayload['offerId'] ?? null,
             'orderChoiceKey' => $rawPayload['orderChoiceKey'] ?? null,
             'salesCode' => $offer->getSalesCode(),

@@ -68,6 +68,7 @@ final class SubscriptionQueueServiceTest extends TestCase
             'sourceSystem' => 'webabo-api',
             'subscriptionCode' => 'SUB-AVRO-1',
             'productCode' => 'PROD-AVRO-1',
+            'variantCodeList' => ['STANDARD'],
             'offerPrice' => [
                 'price' => 52.0,
                 'priceCode' => 'std',
@@ -118,7 +119,7 @@ final class SubscriptionQueueServiceTest extends TestCase
                 'magazine' => 'Avrobode',
                 'duration' => '1-jaar',
                 'durationLabel' => '1 jaar (52 nummers)',
-                'startDate' => '2026-01-10',
+                'startDate' => '2035-01-10',
                 'paymentMethod' => 'b',
                 'iban' => 'NL80 INGB 0001 3401 87',
                 'status' => 'active',
@@ -213,6 +214,7 @@ final class SubscriptionQueueServiceTest extends TestCase
     public function testQueueSubscriptionStoresPaymentInstructionWithoutIban(): void
     {
         [$service, $entityManager] = $this->createQueueServiceWithDependencies();
+        $this->seedMembershipOffer($entityManager, 'AVRV519');
         $session = new Session(new MockArraySessionStorage());
         $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
             'actor' => 'test-user', 'tenant' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.user'], 'expiresAt' => time() + 3600,
@@ -246,6 +248,7 @@ final class SubscriptionQueueServiceTest extends TestCase
         $offer = new WebaboOffer('TVZ100');
         $offer->refreshFromWebaboPayload([
             'salesCode' => 'TVZ100',
+            'productCode' => 'ATV',
             'title' => 'Televizier 1 jaar',
             'credentialKey' => 'tvz',
             'mandant' => 'AVROTROS',
@@ -332,6 +335,7 @@ final class SubscriptionQueueServiceTest extends TestCase
     public function testQueueSubscriptionAcceptsExistingSubscriptionApiPersonSnapshotWithoutSessionState(): void
     {
         [$service, $entityManager] = $this->createQueueServiceWithDependencies();
+        $this->seedMembershipOffer($entityManager, 'MKGV100');
 
         $session = new Session(new MockArraySessionStorage());
         $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
@@ -412,9 +416,17 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('tvk', $requestPayload['requester']['person']['credentialKey']);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    private function seedMembershipOffer(EntityManager $manager, string $salesCode): void
+    {
+        (new WebaboOfferCacheSchemaManager($manager->getConnection(), $manager))->ensureSchema();
+        $offer = new WebaboOffer($salesCode);
+        $offer->refreshFromWebaboPayload(['salesCode' => $salesCode, 'title' => 'Test membership',
+            'productCode' => 'ATV', 'credentialKey' => 'avrotros'], new \DateTimeImmutable());
+        $manager->persist($offer);
+        $manager->flush();
+    }
+
+    /** @return array<string, mixed> */
     private function createPaymentPayload(string $submissionId, string $paymentMethod, ?string $iban): array
     {
         return [
@@ -494,6 +506,13 @@ final class SubscriptionQueueServiceTest extends TestCase
                 new PpaPhoneContactMapper(),
                 $webaboOfferSchemaManager,
                 $webaboOfferRepository,
+                new \App\Service\SubscriptionStartDates($webaboOfferRepository, $webaboOfferSchemaManager,
+                    new class implements \App\Webabo\WebaboStartDateProviderInterface {
+                        public function fetchStartDate(string $credentialKey, string $productCode, string $variantCode): string
+                        {
+                            return '2035-01-10';
+                        }
+                    }),
             ),
             $entityManager,
             $schemaManager,
