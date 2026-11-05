@@ -1,5 +1,6 @@
 import { createEditorDocument } from '../../support/editor-dom.mjs';
 import assert from 'node:assert/strict';
+import { clearFormDraft } from '../../../../assets/js/app/lightbox-drafts.js';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
 import {
     createSubscription,
@@ -571,7 +572,32 @@ async function testSubmissionPreservesIndependentPayerIdentity() {
     }
 }
 
+async function testMissingOfferMandantStopsTheEntireSubmission() {
+    const previous = { document: globalThis.document, kiwiWerfsleutelSlice: globalThis.kiwiWerfsleutelSlice,
+        kiwiApi: globalThis.kiwiApi, showToast: globalThis.showToast };
+    let posts = 0;
+    let focused = false;
+    const toasts = [];
+    globalThis.document = { getElementById: () => ({ focus() { focused = true; } }) };
+    globalThis.kiwiWerfsleutelSlice = { getSelections: () => [
+        { selectedKey: { salesCode: 'VALID', mandant: 'AVROTROS' }, selectedChannel: 'TM/IB' },
+        { selectedKey: { salesCode: 'UNMAPPED' }, selectedChannel: 'TM/IB' }
+    ] };
+    globalThis.kiwiApi = { post() { posts += 1; } };
+    globalThis.showToast = (message, type) => toasts.push({ message, type });
+    try {
+        await createSubscription({ preventDefault() {} });
+        assert.equal(posts, 0);
+        assert.equal(focused, true);
+        assert.equal(toasts[0].type, 'error');
+        assert.match(toasts[0].message, /mandant/);
+    } finally {
+        Object.assign(globalThis, previous);
+    }
+}
+
 async function run() {
+    testEditCustomerKeepsMissingPreferencesUnselected();
     testRegistersItemSevenActions();
     testInstallsLegacyCompatibilityExports();
     testSubscriptionHelperFunctions();
@@ -582,7 +608,41 @@ async function run() {
     testShowNewSubscriptionPrefillsPrimaryIbanFromCurrentCustomer();
     await testEditCustomerOpensSubscriptionApiViewer();
     await testSubmissionPreservesIndependentPayerIdentity();
+    await testMissingOfferMandantStopsTheEntireSubmission();
     console.log('subscription workflow slice tests passed');
+}
+
+function testEditCustomerKeepsMissingPreferencesUnselected() {
+    const previousDocument = globalThis.document;
+    const previousBridge = globalThis.kiwiLegacyCustomerSearchBridge;
+    const form = createDomElement();
+    const radios = Object.fromEntries(['editSalutation', 'editOptinEmail', 'editOptinPhone', 'editOptinPost']
+        .map(name => [name, ['yes', 'no'].map(value => ({ value, checked: false }))]));
+    let customer = { id: 73, optinEmail: 'yes', optinPhone: 'no', optinPost: null };
+    const values = () => ['Email', 'Phone', 'Post'].map(channel =>
+        radios[`editOptin${channel}`].find(input => input.checked)?.value ?? null);
+    try {
+        globalThis.document = {
+            getElementById: id => id === 'editCustomerForm' ? form : null,
+            querySelectorAll: selector => radios[selector.match(/name="([^"]+)"/)?.[1]] || []
+        };
+        globalThis.kiwiLegacyCustomerSearchBridge = { getCurrentCustomer: () => customer };
+        registerSubscriptionWorkflowSlice(createRouter());
+        globalThis.editCustomer();
+        assert.deepEqual(values(), ['yes', 'no', null]);
+        customer = { id: 74, optinEmail: null, optinPhone: '', optinPost: undefined };
+        globalThis.editCustomer();
+        assert.deepEqual(values(), [null, null, null]);
+        radios.editOptinEmail[1].checked = true;
+        globalThis.editCustomer();
+        assert.deepEqual(values(), ['no', null, null], 'reopening the same draft preserves a deliberate choice');
+        clearFormDraft(form);
+        globalThis.editCustomer();
+        assert.deepEqual(values(), [null, null, null], 'a fresh editor clears the previous draft');
+    } finally {
+        globalThis.document = previousDocument;
+        globalThis.kiwiLegacyCustomerSearchBridge = previousBridge;
+    }
 }
 
 await run();

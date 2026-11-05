@@ -1081,6 +1081,21 @@ function ensureSubscriptionRoleCreateForm(role) {
     if (subscriptionRoleState[role].mode === 'create') bindSubscriptionDuplicateListeners(role);
 }
 
+function syncSubscriptionMarketingPreferences(savedNewPerson = null) {
+    const recipient = subscriptionRoleState.recipient;
+    const isExisting = recipient.mode === 'existing';
+    const person = isExisting ? recipient.selectedPerson : savedNewPerson;
+
+    // These fields belong to the recipient; existing preferences are not edited by an order.
+    for (const channel of ['Email', 'Phone', 'Post']) {
+        const value = person?.[`optin${channel}`];
+        for (const input of document.querySelectorAll(`input[name="subOptin${channel}"]`)) {
+            input.checked = input.value === value;
+            input.disabled = isExisting;
+        }
+    }
+}
+
 function populateSubscriptionRoleEditor(role) {
     const cfg = getSubscriptionRoleConfig(role);
     const person = subscriptionRoleState[role].selectedPerson;
@@ -1102,6 +1117,7 @@ function populateSubscriptionRoleEditor(role) {
             ? lastName.slice(middleName.length + 1) : lastName,
         address: street
     });
+    if (role === 'recipient') syncSubscriptionMarketingPreferences();
     updateSubscriptionRoleSearchAvailability();
 }
 
@@ -1137,6 +1153,8 @@ function setSubscriptionRoleMode(role, mode) {
     renderSubscriptionRoleSelectedPerson(role);
     const search = document.getElementById(`${role}PersonSearch`);
     if (search) search.open = !subscriptionRoleState[role].selectedPerson;
+
+    if (role === 'recipient') syncSubscriptionMarketingPreferences();
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
@@ -2465,6 +2483,7 @@ function restoreOutboxSubscriptionRoles(payload) {
     }
     document.getElementById('requesterSameAsRecipient').checked = !!payload.requester.sameAsRecipient;
     toggleRequesterSameAsRecipient();
+    syncSubscriptionMarketingPreferences(payload.recipient.person);
 }
 
 function installSubscriptionRoleScopeListener() {

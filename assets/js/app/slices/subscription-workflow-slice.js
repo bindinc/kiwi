@@ -275,16 +275,13 @@ function getCheckedValue(inputName, fallback = '') {
 
 function setCheckedValue(inputName, value) {
     const documentRef = getDocumentRef();
-    if (!documentRef || typeof documentRef.querySelector !== 'function') {
+    if (!documentRef || typeof documentRef.querySelectorAll !== 'function') {
         return;
     }
 
-    const targetInput = documentRef.querySelector(`input[name="${inputName}"][value="${value}"]`);
-    if (!targetInput) {
-        return;
+    for (const input of documentRef.querySelectorAll(`input[name="${inputName}"]`)) {
+        input.checked = input.value === value;
     }
-
-    targetInput.checked = true;
 }
 
 function closeForm(formId) {
@@ -779,6 +776,12 @@ export async function createSubscription(event) {
         showToast(translateKey('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'error');
         return;
     }
+    const missingMandant = werfsleutelSelections.some((selection) => !String(selection.selectedKey?.mandant || '').trim());
+    if (missingMandant) {
+        showToast(translateKey('werfsleutel.mandantRequired', {}, 'Een werfsleutel heeft geen mandant. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.'), 'error');
+        getElementById('werfsleutelInput')?.focus();
+        return;
+    }
     const submissionId = ensureSubscriptionSubmissionId();
     const paymentDetails = buildSubscriptionPaymentDetails(
         getCheckedValue('subPayment'),
@@ -786,9 +789,9 @@ export async function createSubscription(event) {
     );
     const sharedFormData = {
         startDate: getInputValue('subStartDate'),
-        optinEmail: getCheckedValue('subOptinEmail'),
-        optinPhone: getCheckedValue('subOptinPhone'),
-        optinPost: getCheckedValue('subOptinPost')
+        optinEmail: getCheckedValue('subOptinEmail', null),
+        optinPhone: getCheckedValue('subOptinPhone', null),
+        optinPost: getCheckedValue('subOptinPost', null)
     };
 
     const optinData = {
@@ -1073,9 +1076,9 @@ export function editCustomer() {
     setInputValue('editEmail', currentCustomer.email || '');
     setInputValue('editPhone', currentCustomer.phone || '');
 
-    setCheckedValue('editOptinEmail', currentCustomer.optinEmail || 'yes');
-    setCheckedValue('editOptinPhone', currentCustomer.optinPhone || 'yes');
-    setCheckedValue('editOptinPost', currentCustomer.optinPost || 'yes');
+    setCheckedValue('editOptinEmail', currentCustomer.optinEmail);
+    setCheckedValue('editOptinPhone', currentCustomer.optinPhone);
+    setCheckedValue('editOptinPost', currentCustomer.optinPost);
 
     showElement('editCustomerForm', 'flex');
 }
@@ -1111,9 +1114,9 @@ export async function saveCustomerEdit(event) {
         city: getInputValue('editCity'),
         email: getInputValue('editEmail'),
         phone: getInputValue('editPhone'),
-        optinEmail: getCheckedValue('editOptinEmail'),
-        optinPhone: getCheckedValue('editOptinPhone'),
-        optinPost: getCheckedValue('editOptinPost')
+        optinEmail: getCheckedValue('editOptinEmail', null),
+        optinPhone: getCheckedValue('editOptinPhone', null),
+        optinPost: getCheckedValue('editOptinPost', null)
     };
 
     Object.assign(updates, getAddressSubmission('edit'));

@@ -107,6 +107,7 @@ final class ApiContractTest extends WebTestCase
         $client = $this->createAuthenticatedClient();
         $this->resetOutboxStorage();
         $this->resetSubscriptionQueueStorage();
+        $this->seedWebaboOfferCache();
 
         $client->request('GET', '/api/v1/persons');
         self::assertResponseIsSuccessful();
@@ -203,6 +204,7 @@ final class ApiContractTest extends WebTestCase
         $this->disableSubscriptionApiCustomerSearch();
         $client = $this->createAuthenticatedClient();
         $this->resetOutboxStorage();
+        $this->seedWebaboOfferCache('SC203201');
         $client->request('GET', '/api/v1/persons');
         $customers = array_slice(json_decode($client->getResponse()->getContent(), true)['items'], 0, 2);
         $this->rememberCustomerAddresses($client, $customers);
@@ -235,6 +237,26 @@ final class ApiContractTest extends WebTestCase
         self::assertSame($customers[1]['id'], $stored['requester']['personId']);
         $client->request('GET', '/api/v1/persons/'.$customers[0]['id']);
         self::assertSame($customers[0]['address'], json_decode($client->getResponse()->getContent(), true)['address']);
+
+        $this->seedWebaboOfferCache('OTHER-MANDANT', 'HMC', false);
+        $payload['offer'] = ['salesCode' => 'OTHER-MANDANT', 'title' => 'Other mandant offer'];
+        $client->setServerParameter('HTTP_X_KIWI_NEW_CUSTOMER_ID', 'existing-people-other-mandant');
+        $this->prepareOutboxWrite($client, 'copy-existing-people');
+        $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+        self::assertResponseStatusCodeSame(202);
+        $copy = json_decode($client->getResponse()->getContent(), true)['outbox'];
+        self::assertNotSame($saved['outbox']['id'], $copy['id']);
+        self::assertCount(2, $copy['customers']);
+        $order = $copy['changes'][0]['arguments'][0];
+        foreach (['recipient', 'requester'] as $role) {
+            self::assertNull($order[$role]['personId']);
+            self::assertSame('HMC', $order[$role]['customerReference']['mandant']);
+            self::assertSame('', $order[$role]['customerReference']['credentialKey']);
+            self::assertArrayNotHasKey('personNumber', $order[$role]['person']);
+        }
+        self::assertNotSame($order['recipient']['customerReference'], $order['requester']['customerReference']);
+        self::assertSame('Edited', $copy['customers'][0]['firstName']);
+        self::assertSame($customers[1]['firstName'], $copy['customers'][1]['firstName']);
     }
 
     private function rememberCustomerAddresses(\Symfony\Bundle\FrameworkBundle\KernelBrowser $client, array $customers): void
@@ -244,10 +266,16 @@ final class ApiContractTest extends WebTestCase
         $request = \Symfony\Component\HttpFoundation\Request::create('/');
         $request->setSession($session);
         $gate = static::getContainer()->get(\App\Address\CustomerAddressGate::class);
+        $state = $session->get('kiwi_poc_state');
         foreach ($customers as $customer) {
+            foreach ($state['customers'] as &$stored) {
+                if ($stored['id'] === $customer['id']) $stored['mandant'] = $customer['mandant'] ?? 'AVROTROS';
+            }
+            unset($stored);
             $customer['street'] = preg_replace('/ \d+.*$/', '', $customer['address']);
             $gate->rememberCorrection($request, $customer);
         }
+        $session->set('kiwi_poc_state', $state);
         $session->save();
     }
 
@@ -256,6 +284,7 @@ final class ApiContractTest extends WebTestCase
     {
         $client = $this->createAuthenticatedClient();
         $this->resetOutboxStorage();
+        $this->seedWebaboOfferCache('TEST-OUTBOX');
         $client->request('GET', '/api/v1/persons');
         $formId = $this->rememberAddress($client, ['postalCode'=>'1234AB', 'houseNumber'=>'10', 'street'=>'Teststraat', 'city'=>'Teststad']);
         $payload = [
@@ -287,6 +316,174 @@ final class ApiContractTest extends WebTestCase
         self::assertCount(2, $corrected['changes']);
         self::assertSame('Corrected', $corrected['customers'][0]['firstName']);
         self::assertCount(2, $corrected['customers'][0]['subscriptions']);
+    }
+
+    public function testSubscriptionOffersGroupPeopleWithinOneMandantAndSeparateThemAcrossMandants(): void
+    {
+        $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
+        $this->seedWebaboOfferCache('AVRO-A');
+        $this->seedWebaboOfferCache('AVRO-B', 'AVROTROS', false);
+        $this->seedWebaboOfferCache('TROS-C', 'HMC', false);
+        $client->request('GET', '/api/v1/persons');
+        $formId = $this->rememberAddress($client, ['postalCode' => '1234AB', 'houseNumber' => '10', 'street' => 'Teststraat', 'city' => 'Teststad']);
+        $person = ['salutation' => 'Dhr.', 'firstName' => 'Reader', 'lastName' => 'Tester',
+            'postalCode' => '1234AB', 'houseNumber' => '10', 'street' => 'Teststraat', 'city' => 'Teststad',
+            'email' => 'reader@example.invalid', 'formSessionId' => $formId];
+        $payload = ['recipient' => ['person' => $person],
+            'requester' => ['person' => array_replace($person, ['firstName' => 'Payer'])],
+            'subscription' => ['magazine' => 'Test magazine', 'startDate' => '2026-11-01', 'paymentMethod' => 'AC']];
+        $client->setServerParameter('HTTP_X_KIWI_NEW_CUSTOMER_ID', 'same-form-for-all-mandants');
+        $saved = [];
+        foreach (['AVRO-A', 'AVRO-B', 'TROS-C'] as $salesCode) {
+            $payload['offer'] = ['salesCode' => $salesCode, 'title' => 'Test offer'];
+            $this->prepareOutboxWrite($client, $salesCode);
+            $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+            self::assertResponseStatusCodeSame(202);
+            $saved[$salesCode] = json_decode($client->getResponse()->getContent(), true)['outbox'];
+        }
+        self::assertSame($saved['AVRO-A']['id'], $saved['AVRO-B']['id']);
+        self::assertNotSame($saved['AVRO-A']['id'], $saved['TROS-C']['id']);
+        self::assertNotSame($saved['AVRO-A']['customerReference']['personId'], $saved['TROS-C']['customerReference']['personId']);
+        self::assertSame('HMC', $saved['TROS-C']['customerReference']['mandant']);
+        self::assertCount(2, $saved['AVRO-B']['customers']);
+        self::assertCount(2, $saved['AVRO-B']['customers'][0]['subscriptions']);
+        self::assertCount(0, $saved['AVRO-B']['customers'][1]['subscriptions']);
+        $avro = $saved['AVRO-B']['changes'][0]['arguments'][0];
+        $second = $saved['AVRO-B']['changes'][1]['arguments'][0];
+        $tros = $saved['TROS-C']['changes'][0]['arguments'][0];
+        self::assertSame($avro['recipient']['customerReference'], $second['recipient']['customerReference']);
+        self::assertSame($avro['requester']['customerReference'], $second['requester']['customerReference']);
+        self::assertNotSame($avro['recipient']['customerReference'], $avro['requester']['customerReference']);
+        self::assertNotSame($avro['requester']['customerReference']['personId'], $tros['requester']['customerReference']['personId']);
+        self::assertSame('Payer', $saved['TROS-C']['customers'][1]['firstName']);
+        self::assertSame('HMC', $saved['TROS-C']['customers'][1]['mandant']);
+
+        $client->setServerParameter('HTTP_X_KIWI_OUTBOX_ID', (string) $saved['AVRO-B']['id']);
+        $client->setServerParameter('HTTP_X_KIWI_OUTBOX_REVISION', (string) $saved['AVRO-B']['revision']);
+        $client->setServerParameter('HTTP_IDEMPOTENCY_KEY', 'cross-mandant-correction');
+        $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+        self::assertResponseStatusCodeSame(409);
+    }
+
+    /** @dataProvider copiedRecipientSessionStatuses */
+    public function testCopiedRecipientsRemainSeparateWithinOneWorkSession(string $status): void
+    {
+        $this->disableSubscriptionApiCustomerSearch();
+        $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
+        $this->seedWebaboOfferCache('COPY-AVRO');
+        $this->seedWebaboOfferCache('COPY-AVRO-SECOND', 'AVROTROS', false);
+        $this->seedWebaboOfferCache('SOURCE-HMC', 'HMC', false);
+        $client->request('GET', '/api/v1/persons');
+        $customers = array_slice(json_decode($client->getResponse()->getContent(), true)['items'], 0, 2);
+        foreach ($customers as &$customer) $customer['mandant'] = 'HMC';
+        unset($customer);
+        $this->rememberCustomerAddresses($client, $customers);
+        $payloadA = ['recipient' => ['personId' => $customers[0]['id']],
+            'requester' => ['personId' => $customers[1]['id']],
+            'subscription' => ['magazine' => 'Test magazine', 'startDate' => '2026-11-01', 'paymentMethod' => 'AC'],
+            'offer' => ['salesCode' => 'COPY-AVRO', 'title' => 'Test offer']];
+        $payloadB = array_replace($payloadA, ['recipient' => ['personId' => $customers[1]['id']]]);
+        $send = function (string $key, array $payload, ?array $item = null, ?string $changeId = null) use ($client): array {
+            // Deliberately reuse the creation header to verify isolation independently of the UI.
+            $headers = ['HTTP_X_CSRF_TOKEN' => 'test-api-csrf', 'HTTP_IDEMPOTENCY_KEY' => $key,
+                'HTTP_X_KIWI_NEW_CUSTOMER_ID' => null === $changeId ? 'one-active-work-session' : 'restored-new-person-form'];
+            if (null !== $item) {
+                $headers['HTTP_X_KIWI_OUTBOX_ID'] = (string) $item['id'];
+                $headers['HTTP_X_KIWI_OUTBOX_REVISION'] = (string) $item['revision'];
+            }
+            if (null !== $changeId) $headers['HTTP_X_KIWI_CHANGE_ID'] = $changeId;
+            $client->setServerParameters($headers);
+            $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+            return json_decode($client->getResponse()->getContent(), true);
+        };
+        $response = $send('copy-A', $payloadA);
+        self::assertResponseStatusCodeSame(202);
+        $first = $response['outbox'];
+        if ('paused' === $status) {
+            $client->setServerParameter('HTTP_IDEMPOTENCY_KEY', 'pause-A');
+            $client->setServerParameter('HTTP_X_KIWI_OUTBOX_REVISION', (string) $first['revision']);
+            $client->jsonRequest('POST', '/api/v1/outbox-sessions/'.$first['id'].'/pause');
+            self::assertResponseIsSuccessful();
+            $first = json_decode($client->getResponse()->getContent(), true);
+        }
+        $anotherOffer = $payloadA;
+        $anotherOffer['offer']['salesCode'] = 'COPY-AVRO-SECOND';
+        $response = $send('copy-A-second-offer', $anotherOffer, $first);
+        self::assertResponseStatusCodeSame(202);
+        $grouped = $response['outbox'];
+        self::assertSame($first['customerReference'], $grouped['customerReference']);
+        self::assertSame($status, $grouped['status']);
+        self::assertCount(2, $grouped['customers'][0]['subscriptions']);
+
+        foreach ([null, 'copy-A'] as $changeId) {
+            $rejected = $send('wrong-recipient-'.($changeId ?? 'append'), $payloadB, $grouped, $changeId);
+            self::assertResponseStatusCodeSame(409);
+            self::assertSame('outbox_customer_mismatch', $rejected['error']['code']);
+        }
+        $response = $send('copy-B', $payloadB);
+        self::assertResponseStatusCodeSame(202);
+        $second = $response['outbox'];
+        self::assertNotSame($grouped['id'], $second['id']);
+        self::assertNotSame($grouped['customerReference']['personId'], $second['customerReference']['personId']);
+        self::assertSame($customers[1]['firstName'], $second['customers'][0]['firstName']);
+        self::assertCount(1, $second['customers'][0]['subscriptions']);
+        self::assertEquals($second, $send('copy-B', $payloadB)['outbox']);
+        self::assertResponseStatusCodeSame(202);
+
+        // The existing editor restores a copied recipient as a new-person form.
+        $copiedPerson = $grouped['changes'][0]['arguments'][0]['recipient']['person'];
+        $formId = $this->rememberAddress($client, $copiedPerson);
+        $correction = $payloadA;
+        $correction['recipient'] = ['person' => array_replace($copiedPerson,
+            ['firstName' => 'Corrected recipient A', 'formSessionId' => $formId])];
+        $response = $send('correct-A', $correction, $grouped, 'copy-A');
+        self::assertResponseStatusCodeSame(202);
+        $corrected = $response['outbox'];
+        self::assertSame($grouped['customerReference'], $corrected['customerReference']);
+        self::assertSame($grouped['changes'][0]['arguments'][0]['requester']['customerReference'],
+            $corrected['changes'][0]['arguments'][0]['requester']['customerReference']);
+        self::assertCount(2, $corrected['customers']);
+        self::assertSame('Corrected recipient A', $corrected['customers'][0]['firstName']);
+        self::assertCount(2, $corrected['customers'][0]['subscriptions']);
+        self::assertSame((string) $customers[0]['id'], $corrected['changes'][0]['arguments'][0]['recipient']['copiedFromCustomerReference']['personId']);
+        self::assertEquals($corrected, $send('correct-A', $correction, $grouped, 'copy-A')['outbox']);
+        self::assertResponseStatusCodeSame(202);
+        $client->request('GET', '/api/v1/outbox-sessions/'.$second['id']);
+        $unchangedB = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame($customers[1]['firstName'], $unchangedB['customers'][0]['firstName']);
+        self::assertCount(1, $unchangedB['customers'][0]['subscriptions']);
+    }
+
+    public static function copiedRecipientSessionStatuses(): iterable
+    {
+        yield 'open outbox' => ['pending'];
+        yield 'paused outbox' => ['paused'];
+    }
+
+    public function testSubscriptionMandantValidationRejectsClientOverridesWithoutSaving(): void
+    {
+        $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
+        $this->seedWebaboOfferCache('UNMAPPED', null);
+        $this->seedWebaboOfferCache('KNOWN', 'AVROTROS', false);
+        $client->request('GET', '/api/v1/persons');
+        $formId = $this->rememberAddress($client, ['postalCode' => '1234AB', 'houseNumber' => '10', 'street' => 'Teststraat', 'city' => 'Teststad']);
+        $payload = ['recipient' => ['person' => ['salutation' => 'Dhr.', 'firstName' => 'Reader', 'lastName' => 'Tester',
+            'postalCode' => '1234AB', 'houseNumber' => '10', 'street' => 'Teststraat', 'city' => 'Teststad',
+            'email' => 'reader@example.invalid', 'formSessionId' => $formId]],
+            'requester' => ['sameAsRecipient' => true],
+            'subscription' => ['magazine' => 'Test magazine', 'startDate' => '2026-11-01', 'paymentMethod' => 'AC']];
+        foreach (['UNKNOWN' => 'offer_mandant_required', 'UNMAPPED' => 'offer_mandant_required', 'KNOWN' => 'offer_mandant_mismatch'] as $code => $error) {
+            $payload['offer'] = ['salesCode' => $code, 'title' => 'Test offer', 'mandant' => 'HMC'];
+            $this->prepareOutboxWrite($client, $code);
+            $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+            self::assertResponseStatusCodeSame(422);
+            self::assertSame($error, json_decode($client->getResponse()->getContent(), true)['error']['code']);
+        }
+        $db = static::getContainer()->get(\Doctrine\DBAL\Connection::class);
+        self::assertSame(0, (int) $db->fetchOne("SELECT COUNT(*) FROM customer_outbox_sessions WHERE tenant = 'test-tenant'"));
     }
 
     private function rememberAddress(\Symfony\Bundle\FrameworkBundle\KernelBrowser $client, array $payload): string
@@ -432,7 +629,7 @@ final class ApiContractTest extends WebTestCase
         self::assertArrayHasKey('entry', json_decode($client->getResponse()->getContent(), true));
     }
 
-    private function seedWebaboOfferCache(): void
+    private function seedWebaboOfferCache(string $salesCode = 'AVRV519', ?string $mandant = 'AVROTROS', bool $clear = true): void
     {
         /** @var WebaboOfferCacheSchemaManager $schemaManager */
         $schemaManager = static::getContainer()->get(WebaboOfferCacheSchemaManager::class);
@@ -440,15 +637,16 @@ final class ApiContractTest extends WebTestCase
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $entityManager->getConnection()->executeStatement('DELETE FROM webabo_offers_cache');
+        if ($clear) $entityManager->getConnection()->executeStatement('DELETE FROM webabo_offers_cache');
 
-        $offer = new WebaboOffer('AVRV519');
+        $offer = new WebaboOffer($salesCode);
         $offer->refreshFromWebaboPayload([
             'offerId' => 12,
             'orderChoiceKey' => 34,
-            'salesCode' => 'AVRV519',
+            'salesCode' => $salesCode,
             'title' => '1 jaar Avrobode voor maar EUR52',
             'credentialKey' => 'avrotros',
+            'mandant' => $mandant,
             'productCode' => 'AVR',
             'allowedChannels' => ['EM/OU', 'TM/IB'],
             'offerPrice' => [
