@@ -210,6 +210,34 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('pending', $statusResponse['event']['status']);
     }
 
+    public function testQueuedMarketingPreferencesKeepNoDecisionDistinctFromExplicitChoices(): void
+    {
+        [$service, $entityManager, , $offerSchemaManager] = $this->createQueueServiceWithDependencies();
+        $this->seedOffer($entityManager, $offerSchemaManager, 'AVRV519', 'AVROTROS');
+        $session = new Session(new MockArraySessionStorage());
+        $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
+            'actor' => 'test-user', 'tenant' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.user'], 'expiresAt' => time() + 3600,
+        ]);
+
+        foreach ([null, '', false, 'yes', 'no'] as $index => $value) {
+            $submissionId = 'marketing-preferences-'.$index;
+            $payload = $this->createPaymentPayload($submissionId, 'AC', null);
+            $payload['recipient']['person']['optinEmail'] = $value;
+            $payload['recipient']['person']['optinPhone'] = 'no';
+            // Post is deliberately absent, as with a new payer without marketing fields.
+            $service->queueSubscription($session, $payload, ['identity' => ['full_name' => 'Test User']]);
+            $saved = json_decode((string) $entityManager->getConnection()->fetchOne(
+                'SELECT request_payload FROM subscription_orders WHERE submission_id = ?',
+                [$submissionId],
+            ), true, 512, JSON_THROW_ON_ERROR);
+            $expected = in_array($value, ['yes', 'no'], true) ? $value : null;
+            self::assertSame($expected, $saved['recipient']['person']['optinEmail']);
+            self::assertSame('no', $saved['recipient']['person']['optinPhone']);
+            self::assertNull($saved['recipient']['person']['optinPost']);
+            self::assertSame($expected, $saved['requester']['person']['optinEmail']);
+        }
+    }
+
     public function testQueueSubscriptionStoresPaymentInstructionWithoutIban(): void
     {
         [$service, $entityManager, , $offerSchemaManager] = $this->createQueueServiceWithDependencies();

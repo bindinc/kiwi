@@ -63,3 +63,26 @@ fixture override on port 9443. Run
 uses synthetic customers 1 and 2, cancels their earlier test sessions, checks both
 route prefixes, and verifies separate edited addresses in the stored outbox order.
 Screenshots are written to `/tmp/sc-203201-evidence` and are not committed.
+
+## Marketing preferences
+
+New recipients start without a marketing decision. The subscription payload uses
+`yes` for explicit consent, `no` for an explicit refusal, and `null` for no decision.
+The existing queue normalizer also treats absent fields, empty strings and boolean
+`false` as unset; `false` is not an alias for `no`. An independent new payer does
+not inherit the recipient's choices. A payer marked as the same person shares
+the recipient snapshot.
+
+For existing recipients, the order displays stored preferences read-only and
+does not include marketing changes in `personEdits`. Choosing a new recipient
+clears the previous choices. Reopening the same draft or stored order preserves
+its choices; starting a fresh customer session clears them.
+
+Run `scripts/compose-smoke-marketing-preferences.mjs` against an isolated Compose
+project using the public address/OIDC fixtures described above. Set
+up the synthetic offer `SC203457` with mandant `HMC` in that project's offer cache;
+the subscription save path requires the catalog mapping, even for smoke tests. Set
+`KIWI_SMOKE_ORIGIN`, `PLAYWRIGHT_MODULE_PATH`, and optionally
+`PLAYWRIGHT_EXECUTABLE_PATH` and `KIWI_MARKETING_EVIDENCE_DIR`. This checks both
+route prefixes, form defaults, explicit choices, reset/reopen, recipient and payer
+isolation, and the saved outbox payload. It writes cropped screenshots locally.
