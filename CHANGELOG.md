@@ -8,6 +8,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+- Use Abel's product and edition specific next delivery date for guide subscription starts, with explicit unavailable states and server validation while keeping broadcaster membership dates independent. [sc-203456]
+
 ### Fixed
 
 - Use the earliest subscription end date consistently for status and displayed dates in customer details and search summaries, and preserve publication titles in feedback screenshots while keeping customer identities anonymized. [sc-203454]
