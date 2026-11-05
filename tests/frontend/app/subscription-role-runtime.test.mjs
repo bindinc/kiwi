@@ -309,6 +309,16 @@ function testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester()
     assert.equal(context.__toasts[0].type, 'info');
 }
 
+function testEqualPersonNumbersAcrossMandantsDoNotMergeRecipientAndPayer() {
+    const { context, checkbox, runtime } = createRuntimeContext({ checkboxChecked: false,
+        recipientSelectedPerson: { id: 51, mandant: 'AVROTROS', credentialKey: 'avro' },
+        requesterSelectedPerson: { id: 51, mandant: 'HMC', credentialKey: 'tvk' } });
+    assert.equal(runtime.hasSameSelectedExistingRecipientAndRequester(), false);
+    runtime.normalizeRequesterSameAsRecipientSelection();
+    assert.equal(checkbox.checked, false);
+    assert.equal(context.subscriptionRoleState.requesterSameAsRecipient, false);
+}
+
 function testNormalizeDuplicateLastNameUsesSharedHelpers() {
     const { runtime } = createRuntimeContext({
         sharedNormalizeNameFragment(value = '') {
@@ -1036,6 +1046,7 @@ async function run() {
     testExistingRoleEditsStayIndependentAndRestore();
     await testLateHydrationKeepsEnteredDetails();
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
+    testEqualPersonNumbersAcrossMandantsDoNotMergeRecipientAndPayer();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
     testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext();
     testNewSubscriptionPersonKeepsPpaPhoneTypesSeparate();

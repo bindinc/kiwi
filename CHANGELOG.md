@@ -8,6 +8,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+### Fixed
+
+- Derive and display the required subscription mandant from the offer catalog, reject missing or inconsistent mappings, and keep recipient and payer identities separate across mandants while grouping offers within one mandant. [sc-203528]
+
 ## [v1.0.35] - 2026-10-22
 
 ### Fixed

@@ -786,6 +786,12 @@ export async function createSubscription(event) {
         showToast(translateKey('werfsleutel.selectChannel', {}, 'Kies een kanaal voor deze werfsleutel.'), 'error');
         return;
     }
+    const missingMandant = werfsleutelSelections.some((selection) => !String(selection.selectedKey?.mandant || '').trim());
+    if (missingMandant) {
+        showToast(translateKey('werfsleutel.mandantRequired', {}, 'Een werfsleutel heeft geen mandant. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.'), 'error');
+        getElementById('werfsleutelInput')?.focus();
+        return;
+    }
     const submissionId = ensureSubscriptionSubmissionId();
     const paymentDetails = buildSubscriptionPaymentDetails(
         getCheckedValue('subPayment'),
@@ -823,6 +829,8 @@ export async function createSubscription(event) {
         recipientPersonId !== null
         && requesterPersonId !== null
         && recipientPersonId === requesterPersonId
+        && String(recipientPayload.credentialKey || '') === String(requesterPayload.credentialKey || '')
+        && String(recipientPayload.mandant || '') === String(requesterPayload.mandant || '')
         && requesterSameAsRecipientCheckbox
         && requesterSameAsRecipientCheckbox.checked === false
     );

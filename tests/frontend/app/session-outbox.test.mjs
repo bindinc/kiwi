@@ -48,4 +48,20 @@ const subscriptionHeaders = prepareWrite('POST', '/api/v1/workflows/subscription
 assert.equal(subscriptionHeaders['X-Kiwi-Outbox-Id'], '9');
 assert.equal(subscriptionHeaders['X-Kiwi-Outbox-Revision'], '4');
 delete globalThis.document;
+const signupContext = { workflowSessionId: 'mandant-signup' };
+const signupPayload = { recipient: { person: { firstName: 'Reader' } }, offer: { mandant: 'AVROTROS' } };
+const signupHeaders = prepareWrite('POST', '/api/v1/workflows/subscription', signupPayload, signupContext);
+acceptWrite('POST', '/api/v1/workflows/subscription', signupPayload,
+    { outbox: { ...outbox, id: 101, customerReference: { ...reference, personId: '101', mandant: 'AVROTROS' } } }, signupContext);
+const sameMandant = prepareWrite('POST', '/api/v1/workflows/subscription', { ...signupPayload, offer: { mandant: 'AVROTROS', salesCode: 'SECOND' } }, signupContext);
+assert.equal(sameMandant['X-Kiwi-Outbox-Id'], '101');
+const otherMandant = prepareWrite('POST', '/api/v1/workflows/subscription', { ...signupPayload, offer: { mandant: 'HMC' } }, signupContext);
+assert.notEqual(otherMandant['X-Kiwi-New-Customer-Id'], signupHeaders['X-Kiwi-New-Customer-Id']);
+assert.equal(otherMandant['X-Kiwi-Outbox-Id'], undefined);
+const copiedCustomer = prepareWrite('POST', '/api/v1/workflows/subscription',
+    { recipient: { personId: 42, mandant: 'HMC' }, offer: { mandant: 'AVROTROS' } }, signupContext);
+assert.equal(copiedCustomer['X-Kiwi-Outbox-Id'], '101');
+const retainedCustomer = prepareWrite('POST', '/api/v1/workflows/subscription',
+    { recipient: { personId: 42, mandant: 'AVROTROS' }, offer: { mandant: 'AVROTROS' } }, signupContext);
+assert.equal(retainedCustomer['X-Kiwi-New-Customer-Id'], undefined);
 delete globalThis.window;

@@ -64,8 +64,15 @@ export function prepareWrite(method, url, payload, context) {
 }
 
 function newCustomerIdentity(url, payload, context) {
+    if (url === '/api/v1/workflows/subscription') {
+        const role = payload?.recipient;
+        const mandant = String(payload?.offer?.mandant || '').trim();
+        const personMandant = String(role?.mandant || role?.person?.mandant || context?.customerReference?.mandant || '').trim();
+        if (role?.personId && personMandant.toUpperCase() === mandant.toUpperCase()) return null;
+        const group = role?.person?.formSessionId || context?.workflowSessionId || payload?.customerContext?.workflowSessionId;
+        return group ? JSON.stringify([group, mandant]) : null;
+    }
     const person = url === '/api/v1/persons' ? payload
-        : url === '/api/v1/workflows/subscription' && !payload?.recipient?.personId ? payload?.recipient?.person
         : url === '/api/v1/workflows/article-order' && !payload?.customerId ? payload?.customer : null;
     if (!person) return null;
     return person.formSessionId || context?.workflowSessionId || null;

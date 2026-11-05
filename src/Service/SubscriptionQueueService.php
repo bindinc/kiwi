@@ -210,22 +210,24 @@ final class SubscriptionQueueService
      */
     public function normalizeQueuePayload(SessionInterface $session, array $payload): array
     {
+        $offer = $this->normalizeOfferPayload($payload['offer'] ?? null);
         $recipient = $this->normalizeRolePayload($session, $payload['recipient'] ?? null, 'recipient', false);
         $requester = $this->normalizeRolePayload($session, $payload['requester'] ?? null, 'requester', true);
+        $recipient = $this->bindRoleToMandant($recipient, $offer['mandant']);
         if (true === ($requester['sameAsRecipient'] ?? false)) {
-            $requester = [
+            $requester = array_replace($recipient, [
                 'mode' => 'same_as_recipient',
                 'sameAsRecipient' => true,
-                'personId' => $recipient['personId'] ?? null,
-                'person' => $recipient['person'] ?? [],
-            ];
+            ]);
+        } else {
+            $requester = $this->bindRoleToMandant($requester, $offer['mandant']);
         }
 
         $normalizedPayload = [
             'recipient' => $recipient,
             'requester' => $requester,
             'subscription' => $this->normalizeSubscriptionPayload($payload['subscription'] ?? null),
-            'offer' => $this->normalizeOfferPayload($payload['offer'] ?? null),
+            'offer' => $offer,
             'contactEntry' => $this->normalizeContactEntry($payload['contactEntry'] ?? null),
         ];
         $customerContext = $this->normalizeCustomerContext($payload['customerContext'] ?? null);
@@ -234,6 +236,28 @@ final class SubscriptionQueueService
         }
 
         return $normalizedPayload;
+    }
+
+    /** Existing person identifiers are valid only inside their original mandant. */
+    private function bindRoleToMandant(array $role, string $mandant): array
+    {
+        $personMandant = $this->normalizeNullableString($role['person']['mandant'] ?? null);
+        if ('existing' === $role['mode']) {
+            if (null === $personMandant) {
+                throw new ApiProblemException(422, 'customer_mandant_required',
+                    'De mandant van de geselecteerde klant ontbreekt. Selecteer een klant met een bekende mandant of kies Nieuwe klant.');
+            }
+            if (0 === strcasecmp($personMandant, $mandant)) {
+                return $role;
+            }
+
+            // Copy validated contact details, never an identifier from another customer silo.
+            $role = ['mode' => 'new', 'personId' => null,
+                'person' => $this->normalizeNewPersonPayload($role['person'])];
+        }
+
+        $role['person']['mandant'] = $mandant;
+        return $role;
     }
 
     /**
@@ -317,14 +341,13 @@ final class SubscriptionQueueService
                 throw new ApiProblemException(400, 'invalid_payload', sprintf('%s.personId must be >= 1', $roleName));
             }
 
-            $roleContext = $this->extractCredentialContext($rolePayload);
             if ($hasExistingPersonSnapshot) {
                 $personContext = $this->extractCredentialContext($personPayload);
 
                 return [
                     'mode' => 'existing',
                     'personId' => $personId,
-                    'person' => $this->buildPersonSnapshot($personPayload, $roleContext + $personContext),
+                    'person' => $this->buildPersonSnapshot($personPayload, $personContext),
                 ];
             }
 
@@ -334,7 +357,7 @@ final class SubscriptionQueueService
             return [
                 'mode' => 'existing',
                 'personId' => $personId,
-                'person' => $this->buildPersonSnapshot($person, $roleContext + $personContext),
+                'person' => $this->buildPersonSnapshot($person, $personContext),
             ];
         }
 
@@ -488,17 +511,30 @@ final class SubscriptionQueueService
 
         $cachedOffer = $this->findCachedOffer($salesCode);
         if (null === $cachedOffer) {
-            return $normalizedOffer;
+            throw new ApiProblemException(422, 'offer_mandant_required',
+                'De mandant van deze werfsleutel kan niet worden vastgesteld. Vernieuw de aanbiedingen en selecteer de werfsleutel opnieuw.');
         }
 
         $rawPayload = $cachedOffer->getRawPayload();
+        $mandant = $this->normalizeNullableString($rawPayload['mandant'] ?? null);
+        if (null === $mandant) {
+            throw new ApiProblemException(422, 'offer_mandant_required',
+                'Deze werfsleutel heeft geen mandant. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.');
+        }
+        foreach (['mandant' => $mandant, 'credentialKey' => $cachedOffer->getCredentialKey()] as $field => $expected) {
+            $supplied = $normalizedOffer[$field];
+            if (null !== $supplied && $supplied !== $expected) {
+                throw new ApiProblemException(422, 'offer_mandant_mismatch',
+                    'De mandantkoppeling van de werfsleutel is gewijzigd. Vernieuw de aanbiedingen en selecteer de werfsleutel opnieuw.');
+            }
+        }
         $normalizedOffer['offerId'] = $this->normalizeNullableInt($rawPayload['offerId'] ?? null) ?? $normalizedOffer['offerId'];
         $normalizedOffer['orderChoiceKey'] = $this->normalizeNullableInt($rawPayload['orderChoiceKey'] ?? null) ?? $normalizedOffer['orderChoiceKey'];
         $normalizedOffer['subscriptionCode'] = $cachedOffer->getSubscriptionCode() ?? $normalizedOffer['subscriptionCode'];
         $normalizedOffer['productCode'] = $cachedOffer->getProductCode() ?? $normalizedOffer['productCode'];
-        $normalizedOffer['credentialKey'] = $cachedOffer->getCredentialKey() ?? $normalizedOffer['credentialKey'];
+        $normalizedOffer['credentialKey'] = $cachedOffer->getCredentialKey();
         $normalizedOffer['credentialTitle'] = $this->normalizeNullableString($rawPayload['credentialTitle'] ?? null) ?? $normalizedOffer['credentialTitle'];
-        $normalizedOffer['mandant'] = $this->normalizeNullableString($rawPayload['mandant'] ?? null) ?? $normalizedOffer['mandant'];
+        $normalizedOffer['mandant'] = $mandant;
         $normalizedOffer['supportsPersonLookup'] = $this->normalizeNullableBoolean($rawPayload['supportsPersonLookup'] ?? null) ?? $normalizedOffer['supportsPersonLookup'];
         $normalizedOffer['sourceSystem'] = $this->normalizeNullableString($rawPayload['sourceSystem'] ?? null) ?? $normalizedOffer['sourceSystem'] ?? 'webabo-api';
 

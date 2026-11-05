@@ -910,6 +910,11 @@ function renderSelectedOfferList() {
             ? `<div class="subscription-offer-warning">${escapeHtml(entry.combinationError)}</div>`
             : '';
         const offerMetaBadges = [];
+        const mandant = String(offer.mandant || '').trim();
+        const mandantLabel = mandant.toUpperCase() === 'HMC' ? 'TROS' : mandant;
+        const mandantMarkup = mandant
+            ? `<div class="helper-text">${escapeHtml(translate('werfsleutel.mandantLabel', 'Mandant'))}: <strong>${escapeHtml(mandantLabel)}</strong></div>`
+            : `<div class="subscription-offer-warning" role="alert">${escapeHtml(translate('werfsleutel.mandantMissing', 'Mandant ontbreekt. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.'))}</div>`;
 
         if (offer.salesCode) {
             offerMetaBadges.push(`<span class="subscription-offer-code">${escapeHtml(offer.salesCode)}</span>`);
@@ -962,6 +967,7 @@ function renderSelectedOfferList() {
                         ${escapeHtml(translate('werfsleutel.removeOffer', 'Verwijderen'))}
                     </button>
                 </div>
+                ${mandantMarkup}
                 ${isExpanded ? `<div class="channel-options">${optionMarkup}</div>` : ''}
                 ${warningMarkup}
             </article>

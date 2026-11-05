@@ -395,6 +395,10 @@ const en = {
         "printOwnTitles": "Print your own titles"
     },
     "werfsleutel": {
+        "mandantLabel": "Mandant",
+        "mandantRequired": "An offer has no mandant. Choose another offer or have its mandant mapping corrected.",
+        "mandantMissing": "Mandant missing. Choose another offer or have its mandant mapping corrected.",
+        "mandantHint": "The offer determines the mandant. Customer details are handled separately per mandant. For another mandant, we create a separate customer using the entered details, including a separate payer.",
         "unknown": "Unknown site key.",
         "unknownTitle": "Unknown site key",
         "notActive": "This site key is no longer active.",

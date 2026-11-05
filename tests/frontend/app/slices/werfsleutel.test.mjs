@@ -417,6 +417,10 @@ function testWerfsleutelMandantBadgesUseLogoBranding() {
 
     assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('avrotros-logo.svg'), true);
     assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('kroncrv-logo.svg'), true);
+    assert.match(elements.subscriptionOfferSelections.innerHTML, /Mandant: <strong>TROS<\/strong>/);
+    assert.match(elements.subscriptionOfferSelections.innerHTML, /Mandant: <strong>KRONCRV<\/strong>/);
+    dispatchClick('select-werfsleutel', { salesCode: 'UNK1' });
+    assert.match(elements.subscriptionOfferSelections.innerHTML, /role="alert">Mandant ontbreekt/);
 }
 
 function testDebouncedQueryUsesInjectedTimer() {

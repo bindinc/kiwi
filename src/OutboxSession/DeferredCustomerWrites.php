@@ -46,16 +46,66 @@ final class DeferredCustomerWrites
         $normalized = $queue->normalizeQueuePayload($request->getSession(), $payload);
         unset($normalized['customerContext']);
         $this->rejectTechnicalData($normalized);
-        $person = $normalized['recipient']['person'];
-        $person['id'] = $normalized['recipient']['personId'] ?? $this->temporaryId($request);
-        $person['credentialKey'] = $normalized['recipient']['credentialKey'] ?? $person['credentialKey'] ?? '';
-        $reference = CustomerReference::fromArray($person)->toArray();
-        if ('' === $reference['credentialKey'] && null !== ($normalized['recipient']['personId'] ?? null)) {
-            $person = $this->state->getCustomer($request->getSession(), (int) $reference['personId']);
+        $base = [];
+        foreach (['recipient', 'requester'] as $roleName) {
+            if ($normalized[$roleName]['sameAsRecipient'] ?? false) {
+                $normalized[$roleName]['customerReference'] = $normalized['recipient']['customerReference'];
+                continue;
+            }
+            $role = $normalized[$roleName];
+            $reference = $this->subscriptionPersonReference($request, $role, $roleName, $normalized['offer']['mandant']);
+            $normalized[$roleName]['customerReference'] = $reference;
+            if ('requester' === $roleName) {
+                continue;
+            }
+            $person = $role['person'];
+            if ('' === $reference['credentialKey'] && null !== $role['personId']) {
+                $person = $this->state->getCustomer($request->getSession(), (int) $reference['personId']);
+            }
+            $person['id'] = (int) $reference['personId'];
+            $person['mandant'] = $reference['mandant'];
+            $base[] = $this->cleanPreview($person);
         }
-        $base = [$this->cleanPreview($person)];
+        $reference = $normalized['recipient']['customerReference'];
         return $this->outbox->save($request, $reference, 'subscription.create', [$normalized], $base,
             fn (array $changes, array $base, string $selected) => $this->project($request, $changes, $base, $selected, (int) $reference['personId']));
+    }
+
+    private function subscriptionPersonReference(Request $request, array $role, string $roleName, string $mandant): array
+    {
+        if (null !== $role['personId']) {
+            return CustomerReference::fromArray(['personId' => $role['personId']] + $role['person'])->toArray();
+        }
+        if ('recipient' === $roleName && $request->headers->has('X-Kiwi-Outbox-Id')) {
+            $item = $this->outbox->get((int) $request->headers->get('X-Kiwi-Outbox-Id'));
+            $reference = $item['customerReference'];
+            $hasNewRecipient = false;
+            foreach ($item['changes'] as $change) {
+                $isSubscription = 'subscription.create' === $change['operation'];
+                if ($isSubscription && 'new' === ($change['arguments'][0]['recipient']['mode'] ?? null)) {
+                    $hasNewRecipient = true;
+                    break;
+                }
+            }
+            if ($reference['mandant'] !== $mandant || !$hasNewRecipient) {
+                throw new ApiProblemException(409, 'outbox_customer_mismatch',
+                    'Deze bestelling hoort bij een andere klant of mandant. Voeg deze toe in een aparte klantsessie.');
+            }
+            return $reference;
+        }
+
+        $actor = BusinessAccess::requireSessionWrite($request->getSession());
+        $group = $request->headers->get('X-Kiwi-New-Customer-Id',
+            $request->headers->get('X-Kiwi-Workflow-Session-Id', $request->headers->get('Idempotency-Key', '')));
+        $identity = [$actor->tenant, $actor->actor, $group, $mandant, $roleName];
+        if ('requester' === $roleName) {
+            // Different payers in one recipient session must retain independent identities.
+            foreach (['firstName', 'lastName', 'postalCode', 'houseNumber'] as $field) {
+                $identity[] = strtoupper(trim((string) ($role['person'][$field] ?? '')));
+            }
+        }
+        return CustomerReference::fromArray(['id' => $this->numericId(SessionOutbox::json($identity)),
+            'sourceSystem' => 'kiwi', 'mandant' => $mandant])->toArray();
     }
 
     private function project(Request $request, array $changes, array $base, string $selected, int $customerId): array
@@ -91,14 +141,32 @@ final class DeferredCustomerWrites
     {
         $payload = $change['arguments'][0];
         $state = $scratch->get('kiwi_poc_state');
+        $appliedPeople = $scratch->get('kiwi_outbox_subscription_people', []);
+        foreach (['recipient', 'requester'] as $roleName) {
+            $role = $payload[$roleName];
+            if (null !== $role['personId'] || ($role['sameAsRecipient'] ?? false)) continue;
+            $reference = $role['customerReference'];
+            $identity = SessionOutbox::json($reference);
+            if (isset($appliedPeople[$identity])) continue;
+            $person = $role['person'] + ['id' => (int) $reference['personId'], 'subscriptions' => []];
+            $found = false;
+            foreach ($state['customers'] as &$customer) {
+                if ((string) $customer['id'] !== $reference['personId']) continue;
+                $customer = array_replace($customer, $person);
+                $found = true;
+                break;
+            }
+            unset($customer);
+            if (!$found) $state['customers'][] = $person;
+            $appliedPeople[$identity] = true;
+        }
+        $scratch->set('kiwi_outbox_subscription_people', $appliedPeople);
         foreach ($state['customers'] as &$customer) {
             if ((string) $customer['id'] !== (string) $customerId) continue;
-            if (null === $payload['recipient']['personId'] && !$scratch->get('kiwi_outbox_new_customer_applied', false)) {
-                $customer = array_replace($customer, $payload['recipient']['person']);
-                $scratch->set('kiwi_outbox_new_customer_applied', true);
-            }
             $customer['subscriptions'] ??= [];
-            $customer['subscriptions'][] = $payload['subscription'] + ['id' => $this->numericId($change['id']), 'provisional' => true];
+            $customer['subscriptions'][] = $payload['subscription'] + ['id' => $this->numericId($change['id']), 'provisional' => true,
+                'requesterPersonId' => $payload['requester']['customerReference']['personId'],
+                'requesterReference' => $payload['requester']['customerReference']];
         }
         unset($customer);
         $scratch->set('kiwi_poc_state', $state);
