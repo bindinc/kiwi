@@ -414,7 +414,7 @@ function setCustomerFormData(prefix, data) {
         const salutationRadio = document.querySelector(`input[name="${prefix}Salutation"][value="${data.salutation}"]`);
         if (salutationRadio) salutationRadio.checked = true;
     }
-    if (data.initials) document.getElementById(`${prefix}Initials`).value = data.initials;
+    if (data.initials !== undefined) document.getElementById(`${prefix}Initials`).value = data.initials;
     if (data.middleName) document.getElementById(`${prefix}MiddleName`).value = data.middleName;
     if (data.lastName) document.getElementById(`${prefix}LastName`).value = data.lastName;
     if (data.birthday) setBirthdayFields(prefix, data.birthday);
@@ -1112,7 +1112,7 @@ function populateSubscriptionRoleEditor(role) {
     const lastName = String(person.lastName || '').trim();
     setCustomerFormData(cfg.prefix, {
         ...person,
-        initials: person.firstName,
+        initials: person.initials || person.firstName || '',
         lastName: middleName && lastName.startsWith(`${middleName} `)
             ? lastName.slice(middleName.length + 1) : lastName,
         address: street
