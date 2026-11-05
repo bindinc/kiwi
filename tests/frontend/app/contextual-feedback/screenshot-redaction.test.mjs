@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import {
+    __customerDetailTestUtils,
+    configureCustomerDetailSliceDependencies,
+    displaySubscriptions
+} from '../../../../assets/js/app/slices/customer-detail-slice.js';
+import {
     auditPseudonymizedClone,
     createPseudonymContext,
     pseudonymizeSelectedElement,
@@ -122,6 +127,59 @@ function testSensitiveTextIsPseudonymizedAndRestored() {
     restore();
 
     assert.equal(customerName.nodeValue, 'Jane Sensitive');
+}
+
+function testRenderedPublicationTitlesStayPublicWhileCustomerIdentityIsRedacted() {
+    const previousDocument = globalThis.document;
+    const subscriptionsList = { innerHTML: '' };
+    const customer = {
+        firstName: 'Maria', lastName: 'Jansen', personId: '90000123',
+        subscriptions: ['active', 'ended', 'cancelled', 'restituted', 'transferred'].map((status, index) => ({
+            id: index + 1, status, magazine: `Publication ${index + 1}`,
+            startDate: '2020-01-01', endDate: '2021-01-01', lastEdition: '2021-01-01'
+        }))
+    };
+    globalThis.document = { getElementById: () => subscriptionsList };
+    configureCustomerDetailSliceDependencies(() => ({ getCurrentCustomer: () => customer }));
+
+    try {
+        displaySubscriptions();
+        const labels = [...subscriptionsList.innerHTML.matchAll(/<div class="subscription-name"([^>]*)>([^<]*)<\/div>/g)];
+        assert.equal(labels.length, customer.subscriptions.length);
+
+        const titleElements = labels.map(([, attributes, text]) => {
+            assert.match(attributes, /\bdata-feedback-public\b/);
+            return new FakeElement('div', { class: 'subscription-name', 'data-feedback-public': '' }, {
+                children: [new FakeText(text)]
+            });
+        });
+        const customerHeader = new FakeText(__customerDetailTestUtils.buildCustomerHeader(customer));
+        const address = new FakeText('Privatestraat 99');
+        const root = new FakeElement('main', { 'data-feedback-sensitive-scope': '' }, {
+            children: [
+                new FakeElement('h2', { id: 'customerName' }, { children: [customerHeader] }),
+                new FakeElement('p', { 'data-feedback-sensitive': 'address' }, { children: [address] }),
+                ...titleElements
+            ]
+        });
+        const restore = redactScreenshotDom({ body: root });
+
+        assert.ok(!customerHeader.nodeValue.includes('Maria'));
+        assert.ok(!customerHeader.nodeValue.includes(customer.personId));
+        assert.ok(!address.nodeValue.includes('Privatestraat'));
+        assert.deepEqual(titleElements.map((element) => element.textContent), labels.map(([, , text]) => text));
+
+        restore();
+        assert.equal(customerHeader.nodeValue, 'Maria Jansen (90000123)');
+        assert.equal(address.nodeValue, 'Privatestraat 99');
+    } finally {
+        configureCustomerDetailSliceDependencies(null);
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+    }
 }
 
 function testTypedPseudoValuesAndFormRestore() {
@@ -473,6 +531,7 @@ function testRedactionInstallsAndRemovesTemporaryStylesheet() {
 }
 
 testSensitiveTextIsPseudonymizedAndRestored();
+testRenderedPublicationTitlesStayPublicWhileCustomerIdentityIsRedacted();
 testTypedPseudoValuesAndFormRestore();
 testSensitiveScopeKeepsPublicCopy();
 testRepeatedValuesUseStableReplacement();

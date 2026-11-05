@@ -226,7 +226,7 @@ function renderActiveSubscriptions(subscriptions, dependencies) {
         return `
             <div class="subscription-item">
                 <div class="subscription-info">
-                    <div class="subscription-name">📰 ${subscription.magazine}</div>
+                    <div class="subscription-name" data-feedback-public>📰 ${subscription.magazine}</div>
                     <div class="subscription-details">
                         ${translateLabel(dependencies, 'subscription.startLabel', 'Start')}: ${formatDate(subscription.startDate)} •
                         ${translateLabel(dependencies, 'subscription.lastEditionLabel', 'Laatste editie')}: ${formatDate(subscription.lastEdition)}<br>
@@ -274,7 +274,7 @@ function renderEndedSubscriptions(subscriptions, dependencies) {
         return `
             <div class="subscription-item subscription-ended">
                 <div class="subscription-info">
-                    <div class="subscription-name">📰 ${subscription.magazine}</div>
+                    <div class="subscription-name" data-feedback-public>📰 ${subscription.magazine}</div>
                     <div class="subscription-details">
                         ${translateLabel(dependencies, 'subscription.startLabel', 'Start')}: ${formatDate(subscription.startDate)} •
                         ${endDateLabel}
@@ -322,7 +322,7 @@ function renderRestitutedSubscriptions(subscriptions, dependencies) {
         return `
             <div class="subscription-item subscription-restituted">
                 <div class="subscription-info">
-                    <div class="subscription-name">📰 ${subscription.magazine}</div>
+                    <div class="subscription-name" data-feedback-public>📰 ${subscription.magazine}</div>
                     <div class="subscription-details">
                         ${translateLabel(dependencies, 'subscription.startLabel', 'Start')}: ${formatDate(subscription.startDate)} •
                         ${endDateLabel}
@@ -369,7 +369,7 @@ function renderTransferredSubscriptions(subscriptions, dependencies) {
         return `
             <div class="subscription-item subscription-transferred">
                 <div class="subscription-info">
-                    <div class="subscription-name">📰 ${subscription.magazine}</div>
+                    <div class="subscription-name" data-feedback-public>📰 ${subscription.magazine}</div>
                     <div class="subscription-details">
                         Start: ${formatDate(subscription.startDate)} •
                         Laatste editie: ${formatDate(subscription.lastEdition)}<br>
