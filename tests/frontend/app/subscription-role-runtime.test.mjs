@@ -138,6 +138,9 @@ function createRuntimeContext(options = {}) {
     }
     const recipientSelectedPerson = options.recipientSelectedPerson || null;
     const requesterSelectedPerson = options.requesterSelectedPerson || null;
+    const marketingInputs = Object.fromEntries(['Email', 'Phone', 'Post'].map(channel => [
+        `subOptin${channel}`, ['yes', 'no'].map(value => ({ value, checked: false, disabled: false }))
+    ]));
 
     const contextObject = {
         renderAddressFields,
@@ -153,6 +156,10 @@ function createRuntimeContext(options = {}) {
             },
             getElementById(id) {
                 return elementById[id] || null;
+            },
+            querySelectorAll(selector) {
+                const name = selector.match(/^input\[name="(subOptin\w+)"\]$/)?.[1];
+                return marketingInputs[name] || [];
             },
             querySelector(selector) {
                 if (selector === 'input[name="requesterMode"][value="existing"]') {
@@ -264,7 +271,8 @@ function createRuntimeContext(options = {}) {
         context,
         elements: elementById,
         checkbox,
-        runtime: context.window.kiwiSubscriptionRoleRuntime
+        runtime: context.window.kiwiSubscriptionRoleRuntime,
+        marketingInputs
     };
 }
 
@@ -1033,6 +1041,7 @@ async function testLateHydrationKeepsEnteredDetails() {
 }
 
 async function run() {
+    testMarketingPreferencesFollowOnlyTheRecipient();
     testExistingRoleEditsStayIndependentAndRestore();
     await testLateHydrationKeepsEnteredDetails();
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
@@ -1060,6 +1069,46 @@ async function run() {
     testDuplicateApiIdentifiesStaleResponsesByRequestVersion();
     testToggleCustomerFormAddressKeepsAddressExtensionOptional();
     console.log('subscription role runtime tests passed');
+}
+
+function testMarketingPreferencesFollowOnlyTheRecipient() {
+    const person = { id: 73, firstName: 'P.', lastName: 'Tester', postalCode: '1234AB', houseNumber: '10',
+        address: 'Teststraat 10', city: 'Hilversum', email: 'fixture@example.invalid',
+        optinEmail: 'yes', optinPhone: 'no', optinPost: null };
+    const { context, runtime, marketingInputs } = createRuntimeContext({ recipientSelectedPerson: person });
+    const selection = name => marketingInputs[`subOptin${name}`].find(input => input.checked)?.value ?? null;
+    runtime.populateSubscriptionRoleEditor('recipient');
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), ['yes', 'no', null]);
+    assert.equal(marketingInputs.subOptinEmail.every(input => input.disabled), true);
+
+    runtime.setSubscriptionRoleMode('recipient', 'create');
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), [null, null, null]);
+    assert.equal(marketingInputs.subOptinEmail.every(input => !input.disabled), true);
+    marketingInputs.subOptinEmail[1].checked = true;
+    runtime.setSubscriptionRoleMode('requester', 'create');
+    assert.equal(selection('Email'), 'no');
+
+    runtime.setSubscriptionRoleMode('recipient', 'existing');
+    assert.equal(selection('Email'), null);
+    context.subscriptionRoleState.recipient.searchResults = [{ ...person, id: 74, optinEmail: null, optinPhone: '', optinPost: undefined }];
+    runtime.selectSubscriptionRolePerson('recipient', 74);
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), [null, null, null]);
+    runtime.setSubscriptionRoleMode('recipient', 'create');
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), [null, null, null]);
+    assert.equal(person.optinEmail, 'yes');
+    assert.equal(person.optinPhone, 'no');
+    runtime.restoreOutboxSubscriptionRoles({ recipient: { person }, requester: { sameAsRecipient: true } });
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), ['yes', 'no', null], 'saved new-person choices survive role restoration');
+    const newRecipient = runtime.buildSubscriptionRolePayload('recipient', { optinData: {
+        optinEmail: 'yes', optinPhone: 'no', optinPost: null
+    } });
+    assert.equal(newRecipient.person.optinEmail, 'yes');
+    assert.equal(newRecipient.person.optinPhone, 'no');
+    assert.equal(newRecipient.person.optinPost, null);
+    context.subscriptionRoleState.recipient.mode = 'existing';
+    context.subscriptionRoleState.recipient.selectedPerson = person;
+    const existingRecipient = runtime.buildSubscriptionRolePayload('recipient', { optinData: { optinEmail: 'no' } });
+    assert.equal(Object.hasOwn(existingRecipient.personEdits, 'optinEmail'), false, 'an order does not overwrite stored preferences');
 }
 
 run().catch((error) => {

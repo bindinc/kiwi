@@ -1,5 +1,6 @@
 import { createEditorDocument } from '../../support/editor-dom.mjs';
 import assert from 'node:assert/strict';
+import { clearFormDraft } from '../../../../assets/js/app/lightbox-drafts.js';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
 import {
     registerSubscriptionWorkflowSlice,
@@ -508,6 +509,7 @@ async function testEditCustomerOpensSubscriptionApiViewer() {
 }
 
 async function run() {
+    testEditCustomerKeepsMissingPreferencesUnselected();
     testRegistersItemSevenActions();
     testInstallsLegacyCompatibilityExports();
     testSubscriptionHelperFunctions();
@@ -518,6 +520,39 @@ async function run() {
     testShowNewSubscriptionPrefillsPrimaryIbanFromCurrentCustomer();
     await testEditCustomerOpensSubscriptionApiViewer();
     console.log('subscription workflow slice tests passed');
+}
+
+function testEditCustomerKeepsMissingPreferencesUnselected() {
+    const previousDocument = globalThis.document;
+    const previousBridge = globalThis.kiwiLegacyCustomerSearchBridge;
+    const form = createDomElement();
+    const radios = Object.fromEntries(['editSalutation', 'editOptinEmail', 'editOptinPhone', 'editOptinPost']
+        .map(name => [name, ['yes', 'no'].map(value => ({ value, checked: false }))]));
+    let customer = { id: 73, optinEmail: 'yes', optinPhone: 'no', optinPost: null };
+    const values = () => ['Email', 'Phone', 'Post'].map(channel =>
+        radios[`editOptin${channel}`].find(input => input.checked)?.value ?? null);
+    try {
+        globalThis.document = {
+            getElementById: id => id === 'editCustomerForm' ? form : null,
+            querySelectorAll: selector => radios[selector.match(/name="([^"]+)"/)?.[1]] || []
+        };
+        globalThis.kiwiLegacyCustomerSearchBridge = { getCurrentCustomer: () => customer };
+        registerSubscriptionWorkflowSlice(createRouter());
+        globalThis.editCustomer();
+        assert.deepEqual(values(), ['yes', 'no', null]);
+        customer = { id: 74, optinEmail: null, optinPhone: '', optinPost: undefined };
+        globalThis.editCustomer();
+        assert.deepEqual(values(), [null, null, null]);
+        radios.editOptinEmail[1].checked = true;
+        globalThis.editCustomer();
+        assert.deepEqual(values(), ['no', null, null], 'reopening the same draft preserves a deliberate choice');
+        clearFormDraft(form);
+        globalThis.editCustomer();
+        assert.deepEqual(values(), [null, null, null], 'a fresh editor clears the previous draft');
+    } finally {
+        globalThis.document = previousDocument;
+        globalThis.kiwiLegacyCustomerSearchBridge = previousBridge;
+    }
 }
 
 await run();
