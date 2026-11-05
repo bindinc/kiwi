@@ -10,6 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Fixed
 
+- Reuse the active customer as subscription recipient without another lookup, while keeping independent recipient and payer selection and rejecting stale or incompatible customer selections. [sc-203540]
 - Use the earliest subscription end date consistently for status and displayed dates in customer details and search summaries, and preserve publication titles in feedback screenshots while keeping customer identities anonymized. [sc-203454]
 
 ## [v1.0.35] - 2026-10-22
