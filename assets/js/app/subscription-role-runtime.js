@@ -8,6 +8,7 @@
 
 const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
 const WERFSLEUTEL_SELECTIONS_UPDATED_EVENT = 'kiwi:werfsleutel-selections-updated';
+const subscriptionRoleSearchVersions = { recipient: 0, requester: 0 };
 const MANDANT_BADGE_CONFIG_BY_KEY = {
     AVROTROS: {
         brandLabel: 'AVROTROS',
@@ -738,6 +739,50 @@ function subscriptionRoleSelectionIsCurrent(role, selectedPerson) {
     return currentSelection === selectedPerson && currentId === selectedId && currentCredential === selectedCredential;
 }
 
+function sameSubscriptionPerson(left, right) {
+    if (!left || !right) return false;
+    const sameId = String(left.personId || left.id) === String(right.personId || right.id);
+    const sameSource = ['credentialKey', 'sourceSystem', 'divisionId', 'mandant']
+        .every((field) => String(left[field] || '').trim() === String(right[field] || '').trim());
+    return sameId && sameSource;
+}
+
+function captureSubscriptionRoleContext(role) {
+    const session = window.kiwiCustomerWorkSession;
+    const context = session?.getRequestContext?.();
+    const version = subscriptionRoleSearchVersions[role];
+    const scope = buildSubscriptionRoleSearchScopeFingerprint();
+    return () => subscriptionRoleSearchVersions[role] === version
+        && buildSubscriptionRoleSearchScopeFingerprint() === scope
+        && (!context || session.isCurrent(context));
+}
+
+function reusableCustomerMatchesSubscriptionScope(person) {
+    if (!personMatchesSubscriptionRoleSearchScope(person)) return false;
+    const scope = getSubscriptionRoleSearchScope();
+    const mandant = normalizeSubscriptionRoleScopeValue(person.mandant);
+    // A shared division never authorizes reuse across explicitly different mandants.
+    return !mandant || scope.mandants.length === 0 || scope.mandants.includes(mandant);
+}
+
+function renderSubscriptionRoleReuse(role) {
+    const button = document.getElementById(`${role}ReuseCustomer`);
+    if (!button) return;
+    const selected = subscriptionRoleState[role].selectedPerson;
+    const canReuse = currentCustomer && getSubscriptionRoleSearchScope().hasSelection
+        && reusableCustomerMatchesSubscriptionScope(currentCustomer);
+    button.hidden = !canReuse || sameSubscriptionPerson(selected, currentCustomer);
+    button.style.display = button.hidden ? 'none' : '';
+}
+
+function useActiveCustomerForSubscriptionRole(role) {
+    if (!getSubscriptionRoleConfig(role) || !currentCustomer
+        || !getSubscriptionRoleSearchScope().hasSelection
+        || !reusableCustomerMatchesSubscriptionScope(currentCustomer)) return;
+    setSubscriptionRoleMode(role, 'existing');
+    selectSubscriptionRoleCustomer(role, { ...currentCustomer });
+}
+
 function mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload) {
     if (!selectedPerson || typeof selectedPerson !== 'object') {
         return detailPayload;
@@ -747,6 +792,16 @@ function mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload) {
         ...selectedPerson,
         ...(detailPayload && typeof detailPayload === 'object' ? detailPayload : {})
     };
+}
+
+function subscriptionRoleDetailMatchesSelection(selectedPerson, detailPayload) {
+    if (!detailPayload || typeof detailPayload !== 'object') return false;
+    const identityFields = ['id', 'credentialKey', 'sourceSystem', 'divisionId', 'mandant'];
+    return identityFields.every((field) => {
+        const selectedValue = String(selectedPerson[field] || '').trim();
+        const detailValue = String(detailPayload[field] || '').trim();
+        return !selectedValue || !detailValue || selectedValue === detailValue;
+    });
 }
 
 async function hydrateSubscriptionRoleSelectedPerson(role) {
@@ -761,18 +816,20 @@ async function hydrateSubscriptionRoleSelectedPerson(role) {
         return;
     }
 
+    const isCurrent = captureSubscriptionRoleContext(role);
     const cfg = getSubscriptionRoleConfig(role);
     const originalForm = JSON.stringify(getCustomerFormData(cfg.prefix));
     try {
         const detailPayload = await window.kiwiApi.get(detailUrl, {
             headers: buildSubscriptionRoleRequestHeaders(selectedPerson)
         });
-        if (!subscriptionRoleSelectionIsCurrent(role, selectedPerson)) {
+        if (!isCurrent() || !subscriptionRoleSelectionIsCurrent(role, selectedPerson)) {
             return;
         }
+        if (!subscriptionRoleDetailMatchesSelection(selectedPerson, detailPayload)) return;
         const hydratedPerson = mergeSubscriptionRoleSelectedPerson(selectedPerson, detailPayload);
         subscriptionRoleState[role].selectedPerson = hydratedPerson;
-        upsertCustomerInCache(hydratedPerson);
+        // Role enrichment stays separate from the active customer's source cache.
         // Late detail responses must not erase work already entered in the editor.
         if (originalForm === JSON.stringify(getCustomerFormData(cfg.prefix))) {
             populateSubscriptionRoleEditor(role);
@@ -828,6 +885,7 @@ function renderSubscriptionRoleSelectedPerson(role) {
     if (!selectedNode) return;
 
     const selectedPerson = subscriptionRoleState[role].selectedPerson;
+    renderSubscriptionRoleReuse(role);
     if (!selectedPerson || selectedPerson.id === undefined || selectedPerson.id === null) {
         selectedNode.classList.add('empty');
         selectedNode.textContent = role === 'recipient'
@@ -975,6 +1033,7 @@ function updateSubscriptionRoleSearchAvailability() {
                 control.disabled = shouldDisableControls || hiddenRequesterField;
             }
         }
+        renderSubscriptionRoleReuse(role);
 
         if (shouldDisableControls) {
             subscriptionRoleState[role].searchResults = [];
@@ -1053,6 +1112,9 @@ function setSubscriptionRoleMode(role, mode) {
     const cfg = getSubscriptionRoleConfig(role);
     if (!cfg) return;
 
+    subscriptionRoleSearchVersions[role] += 1;
+    subscriptionRoleState[role].searchResults = [];
+    renderSubscriptionRoleSearchResults(role);
     subscriptionRoleState[role].mode = mode === 'create' ? 'create' : 'existing';
 
     const modeRadio = document.querySelector(`input[name="${cfg.modeName}"][value="${subscriptionRoleState[role].mode}"]`);
@@ -1075,6 +1137,9 @@ function setSubscriptionRoleMode(role, mode) {
         clearSubscriptionRoleCreateForm(role);
         populateSubscriptionRoleEditor(role);
     }
+    renderSubscriptionRoleSelectedPerson(role);
+    const search = document.getElementById(`${role}PersonSearch`);
+    if (search) search.open = !subscriptionRoleState[role].selectedPerson;
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
@@ -1100,6 +1165,9 @@ function toggleRequesterSameAsRecipient() {
     }
 
     if (sameCheckbox.checked) {
+        subscriptionRoleSearchVersions.requester += 1;
+        subscriptionRoleState.requester.searchResults = [];
+        renderSubscriptionRoleSearchResults('requester');
         resetSubscriptionDuplicateRoleState('requester');
         renderRequesterSameSummary();
     } else if (subscriptionRoleState.requester.mode === 'create') {
@@ -1132,7 +1200,7 @@ function hasSameSelectedExistingRecipientAndRequester() {
         return false;
     }
 
-    return recipientId === requesterId;
+    return sameSubscriptionPerson(subscriptionRoleState.recipient.selectedPerson, subscriptionRoleState.requester.selectedPerson);
 }
 
 function normalizeRequesterSameAsRecipientSelection(options = {}) {
@@ -1939,7 +2007,7 @@ function renderSubscriptionRoleSearchResults(role) {
         return;
     }
 
-    resultsNode.innerHTML = results.map((person) => {
+    resultsNode.innerHTML = results.map((person, resultIndex) => {
         const safeName = escapeHtml(buildPersonDisplayName(person) || formatPersonReference(person));
         const safeAddress = escapeHtml(buildPersonDisplayAddress(person));
         const safeId = escapeHtml(formatPersonReference(person));
@@ -1957,7 +2025,7 @@ function renderSubscriptionRoleSearchResults(role) {
                         <span data-feedback-sensitive="id">${safeId}</span><span data-feedback-sensitive="address">${safeAddressLine}</span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-small" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}">${selectLabel}</button>
+                <button type="button" class="btn btn-small" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}" data-arg-result-index="${resultIndex}">${selectLabel}</button>
             </div>
         `;
     }).join('');
@@ -2072,6 +2140,13 @@ async function searchSubscriptionRolePerson(role) {
         return;
     }
 
+    subscriptionRoleSearchVersions[role] += 1;
+    const contextIsCurrent = captureSubscriptionRoleContext(role);
+    const filterFingerprint = JSON.stringify(filters);
+    const isCurrent = () => contextIsCurrent()
+        && JSON.stringify(readSubscriptionRoleSearchFilters(cfg)) === filterFingerprint;
+    subscriptionRoleState[role].searchResults = [];
+    renderSubscriptionRoleSearchResults(role);
     let results = [];
     if (window.kiwiApi) {
         const params = new URLSearchParams({
@@ -2087,40 +2162,55 @@ async function searchSubscriptionRolePerson(role) {
             const payload = await window.kiwiApi.get(`${personsApiUrl}?${params.toString()}`);
             results = Array.isArray(payload && payload.items) ? payload.items : [];
         } catch (error) {
+            if (!isCurrent()) return;
             showToast(error.message || translate('subscription.search.failed', {}, 'Zoeken van personen mislukt'), 'error');
             return;
         }
     } else {
-        results = readCustomersFromCache()
+        results = customers
             .filter((person) => personMatchesSubscriptionRoleFilters(person, filters))
             .slice(0, 10);
     }
 
-    subscriptionRoleState[role].searchResults = results;
+    if (!isCurrent()) return;
+    subscriptionRoleState[role].searchResults = results.filter((person) => reusableCustomerMatchesSubscriptionScope(person));
     renderSubscriptionRoleSearchResults(role);
+    if (subscriptionRoleState[role].searchResults.length === 0) {
+        const node = document.getElementById(cfg.searchResultsId);
+        if (node) node.textContent = translate('subscription.search.noResults', {}, 'Geen personen gevonden. Pas de zoekvelden aan.');
+    }
 }
 
-function selectSubscriptionRolePerson(role, personId) {
-    const selected = (subscriptionRoleState[role].searchResults || [])
-        .find((entry) => Number(entry.id) === Number(personId));
+function selectSubscriptionRolePerson(role, personId, resultIndex) {
+    const results = subscriptionRoleState[role].searchResults || [];
+    const matches = results.filter((entry) => Number(entry.id) === Number(personId));
+    const selected = Number.isInteger(resultIndex) ? results[resultIndex] : (matches.length === 1 ? matches[0] : null);
     if (!selected) {
         showToast(translate('subscription.search.personNotFound', {}, 'Geselecteerde persoon niet gevonden in zoekresultaat'), 'error');
         return;
     }
+    if (Number(selected.id) !== Number(personId) || !reusableCustomerMatchesSubscriptionScope(selected)) return;
+    selectSubscriptionRoleCustomer(role, selected);
+}
 
+function selectSubscriptionRoleCustomer(role, selected) {
+    subscriptionRoleSearchVersions[role] += 1;
+    subscriptionRoleState[role].searchResults = [];
     subscriptionRoleState[role].selectedPerson = selected;
     populateSubscriptionRoleEditor(role);
     renderSubscriptionRoleSelectedPerson(role);
     if (role === 'recipient') {
         syncSubscriptionRecipientIban(selected);
-        void hydrateSubscriptionRoleSelectedPerson(role);
     }
+    void hydrateSubscriptionRoleSelectedPerson(role);
 
     const cfg = getSubscriptionRoleConfig(role);
     const resultsNode = document.getElementById(cfg.searchResultsId);
     if (resultsNode) {
         resultsNode.innerHTML = '';
     }
+    const search = document.getElementById(`${role}PersonSearch`);
+    if (search) search.open = false;
 
     if (role === 'recipient' && subscriptionRoleState.requesterSameAsRecipient) {
         renderRequesterSameSummary();
@@ -2132,6 +2222,8 @@ function selectSubscriptionRolePerson(role, personId) {
 }
 
 function resetSubscriptionRoleState() {
+    subscriptionRoleSearchVersions.recipient += 1;
+    subscriptionRoleSearchVersions.requester += 1;
     subscriptionRoleState.recipient.mode = 'existing';
     subscriptionRoleState.recipient.selectedPerson = null;
     subscriptionRoleState.recipient.searchResults = [];
@@ -2268,7 +2360,7 @@ function buildSubscriptionRolePayload(role, options = {}) {
             return null;
         }
 
-        if (!personMatchesSubscriptionRoleSearchScope(roleState.selectedPerson)) {
+        if (!reusableCustomerMatchesSubscriptionScope(roleState.selectedPerson)) {
             showToast(
                 translate(
                     'subscription.search.personOutsideWerfsleutelScope',
@@ -2339,13 +2431,17 @@ function initializeSubscriptionRolesForForm() {
     setSubscriptionRoleMode('requester', 'existing');
 
     if (currentCustomer) {
-        subscriptionRoleState.recipient.selectedPerson = currentCustomer;
+        subscriptionRoleState.recipient.selectedPerson = { ...currentCustomer };
         populateSubscriptionRoleEditor('recipient');
         renderSubscriptionRoleSelectedPerson('recipient');
         syncSubscriptionRecipientIban(currentCustomer);
+        const search = document.getElementById('recipientPersonSearch');
+        if (search) search.open = false;
     } else {
         setSubscriptionRoleMode('recipient', 'create');
     }
+
+    renderSubscriptionRoleSelectedPerson('requester');
 
     const sameCheckbox = document.getElementById('requesterSameAsRecipient');
     if (sameCheckbox) {
@@ -2386,6 +2482,11 @@ function installSubscriptionRoleScopeListener() {
 
     globalScope.__kiwiSubscriptionRoleScopeListenerInstalled = true;
     globalScope.addEventListener(WERFSLEUTEL_SELECTIONS_UPDATED_EVENT, () => {
+        for (const role of ['recipient', 'requester']) {
+            subscriptionRoleSearchVersions[role] += 1;
+            subscriptionRoleState[role].searchResults = [];
+            renderSubscriptionRoleSearchResults(role);
+        }
         updateSubscriptionRoleSearchAvailability();
     });
 }
@@ -2460,6 +2561,7 @@ if (typeof window !== 'undefined') {
         searchSubscriptionRolePerson,
         selectSubscriptionDuplicatePerson,
         selectSubscriptionRolePerson,
+        useActiveCustomerForSubscriptionRole,
         setBirthdayFields,
         setCustomerFormData,
         setSubscriptionRoleMode,

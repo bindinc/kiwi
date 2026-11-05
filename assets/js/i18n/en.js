@@ -540,6 +540,7 @@ const en = {
         "updateFailed": "Updating customer details via backend failed"
     },
     "subscription": {
+        "useActiveCustomer": "Use active customer",
         "extraAdded": "Extra subscription successfully added!",
         "created": "New subscription successfully created!",
         "selectOne": "Select a subscription",
@@ -608,6 +609,8 @@ const en = {
             "personNotFoundControlList": "Selected person was not found in the check list"
         },
         "search": {
+            "chooseAnotherPerson": "Find another person",
+            "noResults": "No people found. Adjust the search fields.",
             "selectButton": "Select",
             "enterQuery": "Enter a search term first",
             "failed": "Searching people failed",

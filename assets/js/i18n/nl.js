@@ -540,6 +540,7 @@ const nl = {
         "updateFailed": "Klantgegevens bijwerken via backend mislukt"
     },
     "subscription": {
+        "useActiveCustomer": "Gebruik actieve klant",
         "extraAdded": "Extra abonnement succesvol toegevoegd!",
         "created": "Nieuw abonnement succesvol aangemaakt!",
         "selectOne": "Selecteer een abonnement",
@@ -608,6 +609,8 @@ const nl = {
             "personNotFoundControlList": "Geselecteerde persoon niet gevonden in controlelijst"
         },
         "search": {
+            "chooseAnotherPerson": "Andere persoon zoeken",
+            "noResults": "Geen personen gevonden. Pas de zoekvelden aan.",
             "selectButton": "Selecteer",
             "enterQuery": "Voer eerst een zoekterm in",
             "failed": "Zoeken van personen mislukt",
