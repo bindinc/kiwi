@@ -473,3 +473,54 @@ test('confirmation of a hidden recipient form cannot modify its address or statu
     assert.equal(await retry, true);
     assert.equal(f.requests[0].payload.formSessionId, f.requests[1].payload.formSessionId);
 });
+
+test('inactive forms never start full address confirmation', async () => {
+    const f = fixture({ isActive: () => false });
+    assert.equal(await f.form.validate(), false);
+    assert.equal(f.requests.length, 0);
+});
+
+test('a non-confirming server response leaves an explicit recoverable status', async () => {
+    const f = fixture();
+    enteredAddress(f);
+    const checking = f.form.validate();
+    f.pending[0].resolve({ status: 'unavailable' });
+    assert.equal(await checking, false);
+    assert.equal(f.reports.at(-1), 'unconfirmed');
+});
+
+test('selecting a verified candidate still requires server confirmation and failure retains the session', async () => {
+    const f = fixture();
+    f.form.input(); f.flush();
+    f.pending[0].resolve({ ...matched(), complete: true, candidates: [{ ...matched().candidates[0], verified: true }] });
+    await tick(); f.form.select(0);
+    const checking = f.form.validate();
+    assert.equal(f.requests.at(-1).path, '/validate');
+    f.pending[1].reject(new Error('address_unconfirmed'));
+    assert.equal(await checking, false);
+    assert.equal(f.reports.at(-1), 'unconfirmed');
+    const retry = f.form.validate();
+    f.pending[2].resolve(confirmed());
+    assert.equal(await retry, true);
+    assert.equal(f.requests[0].payload.formSessionId, f.requests.at(-1).payload.formSessionId);
+});
+
+test('an unselected address is not reported invalid and its choices remain available', async () => {
+    const states = [];
+    let validity = '';
+    const f = fixture({ report: (status, choices = []) => states.push({ status, choices }) });
+    f.fields.addition.setCustomValidity = value => { validity = value; };
+    f.form.input(); f.flush();
+    const candidates = [{ ...matched().candidates[0], verified: true }];
+    f.pending[0].resolve({ status: 'matched', candidates, complete: true });
+    await tick();
+    assert.equal(validity, '');
+    assert.equal(await f.form.validate(), false);
+    assert.deepEqual(states.at(-1), { status: 'results', choices: candidates });
+    assert.equal(f.requests.length, 1);
+    f.form.select(0);
+    const checking = f.form.validate();
+    f.pending[1].resolve(confirmed());
+    assert.equal(await checking, true);
+    assert.equal(f.requests[1].payload.formSessionId, f.requests[0].payload.formSessionId);
+});
