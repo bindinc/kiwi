@@ -10,6 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Fixed
 
+- Leave marketing preferences unselected for new customers until explicitly chosen, retain existing customers' preferences, and prevent choices carrying over between recipients or form resets. [sc-203457]
 - Use the earliest subscription end date consistently for status and displayed dates in customer details and search summaries, and preserve publication titles in feedback screenshots while keeping customer identities anonymized. [sc-203454]
 
 ## [v1.0.35] - 2026-10-22
