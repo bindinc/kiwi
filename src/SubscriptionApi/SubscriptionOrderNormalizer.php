@@ -49,9 +49,11 @@ final class SubscriptionOrderNormalizer
         $activeTo = $this->normalizeDateString($rawOrder['activeTo'] ?? null);
         $orderEndDate = $this->normalizeDateString($rawOrder['orderEndDate'] ?? null);
         $terminationDate = $this->normalizeDateString($rawOrder['termination']['terminationDate'] ?? null);
-        $endDate = $terminationDate ?? $activeTo ?? $orderEndDate ?? '';
-        $lastEdition = $activeTo ?? $orderEndDate ?? $startDate;
-        $status = $this->resolveSubscriptionStatus($activeTo, $orderEndDate, $terminationDate);
+        // An open-ended activity period must not hide an earlier order end or termination.
+        $endDates = array_filter([$activeTo, $orderEndDate, $terminationDate]);
+        $endDate = [] !== $endDates ? min($endDates) : null;
+        $lastEdition = $endDate ?? $startDate;
+        $status = $this->resolveSubscriptionStatus($endDate, null !== $terminationDate);
 
         return [
             'id' => $this->normalizeId($orderId),
@@ -61,7 +63,7 @@ final class SubscriptionOrderNormalizer
                 ?? $this->normalizeNullableString($rawOrder['orderItem']['product']['description'] ?? null)
                 ?? 'Onbekend magazine',
             'startDate' => $startDate,
-            'endDate' => $endDate,
+            'endDate' => $endDate ?? '',
             'lastEdition' => $lastEdition,
             'status' => $status,
             'credentialKey' => $credential->name,
@@ -72,19 +74,18 @@ final class SubscriptionOrderNormalizer
         ];
     }
 
-    private function resolveSubscriptionStatus(?string $activeTo, ?string $orderEndDate, ?string $terminationDate): string
+    private function resolveSubscriptionStatus(?string $endDate, bool $hasTermination): string
     {
-        $effectiveEndDate = $activeTo ?? $orderEndDate ?? $terminationDate;
-        if (null === $effectiveEndDate || '' === $effectiveEndDate) {
+        if (null === $endDate) {
             return 'active';
         }
 
         $today = (new \DateTimeImmutable('today'))->format('Y-m-d');
-        if ($effectiveEndDate >= $today) {
+        if ($endDate >= $today) {
             return 'active';
         }
 
-        return null !== $terminationDate ? 'cancelled' : 'ended';
+        return $hasTermination ? 'cancelled' : 'ended';
     }
 
     private function normalizeNullableString(mixed $value): ?string

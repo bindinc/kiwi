@@ -299,9 +299,10 @@ final class CustomerControllerTest extends WebTestCase
                         'rId' => '9001',
                         'orderNumber' => 'SO-9001',
                         'orderStartDate' => '2024-01-01',
-                        'orderEndDate' => '2027-01-01',
+                        'orderEndDate' => '2999-12-31',
                         'activeFrom' => '2024-01-01',
-                        'activeTo' => '2027-01-01',
+                        'activeTo' => '2999-12-31',
+                        'termination' => ['terminationDate' => '2024-06-30'],
                         'division' => ['rId' => '14'],
                         'orderItem' => [
                             'product' => [
@@ -364,6 +365,9 @@ final class CustomerControllerTest extends WebTestCase
         self::assertCount(1, $payload['subscriptions']);
         self::assertSame('SO-9001', $payload['subscriptions'][0]['orderNumber']);
         self::assertSame('Mikrogids', $payload['subscriptions'][0]['magazine']);
+        self::assertSame('cancelled', $payload['subscriptions'][0]['status']);
+        self::assertSame('2024-06-30', $payload['subscriptions'][0]['endDate']);
+        self::assertSame('2024-06-30', $payload['subscriptions'][0]['lastEdition']);
 
         self::assertCount(4, $requests);
         self::assertSame(

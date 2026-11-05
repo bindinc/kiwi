@@ -50,7 +50,8 @@ final class SubscriptionSummaryServiceTest extends TestCase
                     ],
                     [
                         'rId' => 'order-ended',
-                        'activeTo' => '2020-01-01',
+                        'activeTo' => '2999-12-31',
+                        'orderEndDate' => '2020-01-01',
                         'orderItem' => ['product' => ['name' => 'NCRV-gids']],
                     ],
                 ],
