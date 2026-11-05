@@ -211,10 +211,38 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('pending', $statusResponse['event']['status']);
     }
 
+    public function testQueuedMarketingPreferencesKeepNoDecisionDistinctFromExplicitChoices(): void
+    {
+        [$service, $entityManager, , $offerSchemaManager] = $this->createQueueServiceWithDependencies();
+        $this->seedOffer($entityManager, $offerSchemaManager, 'AVRV519', 'AVROTROS');
+        $session = new Session(new MockArraySessionStorage());
+        $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
+            'actor' => 'test-user', 'tenant' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.user'], 'expiresAt' => time() + 3600,
+        ]);
+
+        foreach ([null, '', false, 'yes', 'no'] as $index => $value) {
+            $submissionId = 'marketing-preferences-'.$index;
+            $payload = $this->createPaymentPayload($submissionId, 'AC', null);
+            $payload['recipient']['person']['optinEmail'] = $value;
+            $payload['recipient']['person']['optinPhone'] = 'no';
+            // Post is deliberately absent, as with a new payer without marketing fields.
+            $service->queueSubscription($session, $payload, ['identity' => ['full_name' => 'Test User']]);
+            $saved = json_decode((string) $entityManager->getConnection()->fetchOne(
+                'SELECT request_payload FROM subscription_orders WHERE submission_id = ?',
+                [$submissionId],
+            ), true, 512, JSON_THROW_ON_ERROR);
+            $expected = in_array($value, ['yes', 'no'], true) ? $value : null;
+            self::assertSame($expected, $saved['recipient']['person']['optinEmail']);
+            self::assertSame('no', $saved['recipient']['person']['optinPhone']);
+            self::assertNull($saved['recipient']['person']['optinPost']);
+            self::assertSame($expected, $saved['requester']['person']['optinEmail']);
+        }
+    }
+
     public function testQueueSubscriptionStoresPaymentInstructionWithoutIban(): void
     {
-        [$service, $entityManager] = $this->createQueueServiceWithDependencies();
-        $this->seedMembershipOffer($entityManager, 'AVRV519');
+        [$service, $entityManager, , $offerSchemaManager] = $this->createQueueServiceWithDependencies();
+        $this->seedOffer($entityManager, $offerSchemaManager, 'AVRV519', 'AVROTROS');
         $session = new Session(new MockArraySessionStorage());
         $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
             'actor' => 'test-user', 'tenant' => 'test-tenant', 'roles' => ['bink8s.app.kiwi.user'], 'expiresAt' => time() + 3600,
@@ -240,7 +268,7 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertNull($requestPayload['subscription']['iban']);
     }
 
-    public function testQueueSubscriptionPreservesExistingPersonCredentialContext(): void
+    public function testQueueSubscriptionCopiesDetailsWithoutReusingIdentityAcrossMandants(): void
     {
         [$service, $entityManager, , $offerSchemaManager] = $this->createQueueServiceWithDependencies();
         $offerSchemaManager->ensureSchema();
@@ -324,18 +352,23 @@ final class SubscriptionQueueServiceTest extends TestCase
             ['unit-test-existing-person-context'],
         ), true, 512, JSON_THROW_ON_ERROR);
 
-        self::assertSame('tvk', $requestPayload['recipient']['person']['credentialKey']);
-        self::assertSame('TV Krant', $requestPayload['recipient']['person']['credentialTitle']);
-        self::assertSame('HMC', $requestPayload['recipient']['person']['mandant']);
-        self::assertTrue($requestPayload['recipient']['person']['supportsPersonLookup']);
-        self::assertSame('subscription-api', $requestPayload['recipient']['person']['sourceSystem']);
-        self::assertSame('tvk', $requestPayload['requester']['person']['credentialKey']);
+        self::assertSame('new', $requestPayload['recipient']['mode']);
+        self::assertNull($requestPayload['recipient']['personId']);
+        self::assertSame('AVROTROS', $requestPayload['recipient']['person']['mandant']);
+        self::assertSame('Anne', $requestPayload['recipient']['person']['firstName']);
+        self::assertSame('27', $requestPayload['recipient']['copiedFromCustomerReference']['personId']);
+        self::assertSame('HMC', $requestPayload['recipient']['copiedFromCustomerReference']['mandant']);
+        self::assertArrayNotHasKey('credentialKey', $requestPayload['recipient']['person']);
+        self::assertArrayNotHasKey('sourceSystem', $requestPayload['recipient']['person']);
+        self::assertArrayNotHasKey('personNumber', $requestPayload['recipient']['person']);
+        self::assertNull($requestPayload['requester']['personId']);
+        self::assertSame($requestPayload['recipient']['person'], $requestPayload['requester']['person']);
     }
 
     public function testQueueSubscriptionAcceptsExistingSubscriptionApiPersonSnapshotWithoutSessionState(): void
     {
-        [$service, $entityManager] = $this->createQueueServiceWithDependencies();
-        $this->seedMembershipOffer($entityManager, 'MKGV100');
+        [$service, $entityManager, , $offerSchemaManager] = $this->createQueueServiceWithDependencies();
+        $this->seedOffer($entityManager, $offerSchemaManager, 'TVK100', 'HMC');
 
         $session = new Session(new MockArraySessionStorage());
         $session->set(\App\Security\AuthorizationContext::SESSION_KEY, [
@@ -357,6 +390,7 @@ final class SubscriptionQueueServiceTest extends TestCase
                     'middleName' => '',
                     'lastName' => 'Meeringa',
                     'personNumber' => '41929371',
+                    'divisionId' => 'administration-2',
                     'postalCode' => '1217AB',
                     'houseNumber' => '14',
                     'address' => 'Teststraat 14',
@@ -384,7 +418,7 @@ final class SubscriptionQueueServiceTest extends TestCase
                 'status' => 'active',
             ],
             'offer' => [
-                'salesCode' => 'MKGV100',
+                'salesCode' => 'TVK100',
                 'title' => 'Mikrogids 1 jaar',
                 'price' => 59.0,
                 'channel' => 'online',
@@ -416,17 +450,84 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertSame('tvk', $requestPayload['requester']['person']['credentialKey']);
     }
 
-    private function seedMembershipOffer(EntityManager $manager, string $salesCode): void
+    public function testClientCannotSupplyMandantForAnUnknownOrUnmappedOffer(): void
     {
-        (new WebaboOfferCacheSchemaManager($manager->getConnection(), $manager))->ensureSchema();
-        $offer = new WebaboOffer($salesCode);
-        $offer->refreshFromWebaboPayload(['salesCode' => $salesCode, 'title' => 'Test membership',
-            'productCode' => 'ATV', 'credentialKey' => 'avrotros'], new \DateTimeImmutable());
-        $manager->persist($offer);
-        $manager->flush();
+        [$service, $entityManager, , $schema] = $this->createQueueServiceWithDependencies();
+        $session = new Session(new MockArraySessionStorage());
+        $payload = $this->createPaymentPayload('missing-mandant', 'AC', null);
+        $payload['offer']['mandant'] = 'AVROTROS';
+        foreach ([false, true] as $cached) {
+            if ($cached) $this->seedOffer($entityManager, $schema, 'AVRV519', null);
+            try {
+                $service->normalizeQueuePayload($session, $payload);
+                self::fail('An authoritative mandant is required');
+            } catch (\App\Http\ApiProblemException $error) {
+                self::assertSame('offer_mandant_required', $error->getErrorCode());
+            }
+        }
     }
 
-    /** @return array<string, mixed> */
+    public function testClientCannotOverrideOfferMandantOrCredential(): void
+    {
+        [$service, $entityManager, , $schema] = $this->createQueueServiceWithDependencies();
+        $this->seedOffer($entityManager, $schema, 'AVRV519', 'AVROTROS');
+        foreach (['mandant' => 'HMC', 'credentialKey' => 'other'] as $field => $value) {
+            $payload = $this->createPaymentPayload('mismatch', 'AC', null);
+            $payload['offer'][$field] = $value;
+            try {
+                $service->normalizeQueuePayload(new Session(new MockArraySessionStorage()), $payload);
+                self::fail('A client override must be rejected');
+            } catch (\App\Http\ApiProblemException $error) {
+                self::assertSame('offer_mandant_mismatch', $error->getErrorCode());
+            }
+        }
+    }
+
+    public function testRecipientAndPayerAreBoundIndependentlyToOfferMandant(): void
+    {
+        [$service, $entityManager, , $schema] = $this->createQueueServiceWithDependencies();
+        $this->seedOffer($entityManager, $schema, 'AVRV519', 'AVROTROS');
+        $payload = $this->createPaymentPayload('separate-payer', 'AC', null);
+        $person = $payload['recipient']['person'];
+        $payload['recipient'] = ['personId' => 42, 'mandant' => 'HMC',
+            'person' => $person + ['mandant' => 'AVROTROS', 'credentialKey' => 'avro']];
+        $payload['requester'] = ['personId' => 42,
+            'person' => array_replace($person, ['firstName' => 'Payer', 'mandant' => 'HMC', 'personNumber' => 'old-number', 'credentialKey' => 'tvk'])];
+        $normalized = $service->normalizeQueuePayload(new Session(new MockArraySessionStorage()), $payload);
+        self::assertSame('existing', $normalized['recipient']['mode']);
+        self::assertSame(42, $normalized['recipient']['personId']);
+        self::assertSame('AVROTROS', $normalized['recipient']['person']['mandant']);
+        self::assertSame('new', $normalized['requester']['mode']);
+        self::assertNull($normalized['requester']['personId']);
+        self::assertSame('Payer', $normalized['requester']['person']['firstName']);
+        self::assertArrayNotHasKey('personNumber', $normalized['requester']['person']);
+    }
+
+    public function testExistingCustomerRequiresAuthoritativeMandant(): void
+    {
+        [$service, $entityManager, , $schema] = $this->createQueueServiceWithDependencies();
+        $this->seedOffer($entityManager, $schema, 'AVRV519', 'AVROTROS');
+        $payload = $this->createPaymentPayload('missing-customer-mandant', 'AC', null);
+        $payload['recipient']['personId'] = 42;
+        $payload['recipient']['mandant'] = 'AVROTROS';
+        $this->expectException(\App\Http\ApiProblemException::class);
+        $this->expectExceptionMessage('De mandant van de geselecteerde klant ontbreekt');
+        $service->normalizeQueuePayload(new Session(new MockArraySessionStorage()), $payload);
+    }
+
+    private function seedOffer(EntityManager $entityManager, WebaboOfferCacheSchemaManager $schema, string $salesCode, ?string $mandant): void
+    {
+        $schema->ensureSchema();
+        $offer = new WebaboOffer($salesCode);
+        $offer->refreshFromWebaboPayload(['salesCode' => $salesCode, 'mandant' => $mandant,
+            'credentialKey' => 'catalog-credential', 'productCode' => 'ATV'], new \DateTimeImmutable());
+        $entityManager->persist($offer);
+        $entityManager->flush();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function createPaymentPayload(string $submissionId, string $paymentMethod, ?string $iban): array
     {
         return [

@@ -86,7 +86,8 @@ export function createAddressCompletion({ fields, request, report, reportAdditio
         const matched = validationBuffer?.candidates?.some((candidate) => candidate.verified && sameAddress(candidate, current));
         const sameScope = validationBuffer?.postalCode === current.postalCode
             && validationBuffer?.houseNumber === current.houseNumber.replace(/[A-Z]$/, '');
-        const rejected = !matched && sameScope && validationBuffer?.complete;
+        const hasStreetAndCity = Boolean(current.street && current.city);
+        const rejected = hasStreetAndCity && !matched && sameScope && validationBuffer?.complete;
         const message = rejected ? invalidMessage : '';
         (fields.addition || fields.houseNumber).setCustomValidity?.(message);
         return { matched, rejected };
@@ -245,17 +246,28 @@ export function createAddressCompletion({ fields, request, report, reportAdditio
             input();
         },
         async validate() {
-            if (destroyed) return false;
+            if (destroyed || !isActive()) return false;
+            // Full confirmation supersedes autocomplete, including an already running search.
+            const version = ++revision;
+            cancel(timer);
             ensureSession();
             const current = addressValues(fields);
             const expected = JSON.stringify(current);
-            const version = revision;
+            const isCurrent = () => !destroyed && isActive() && version === revision
+                && expected === JSON.stringify(addressValues(fields));
+            const availableChoices = fingerprint() === choicesFingerprint ? choices : [];
+            const hasCompleteAddress = ['postalCode', 'houseNumber', 'street', 'city'].every(key => current[key] !== '');
+            if (!hasCompleteAddress && availableChoices.length) {
+                report(validationBuffer?.postcodeRelaxed ? 'alternatives' : validationBuffer?.limited ? 'limited' : 'results', availableChoices);
+                return false;
+            }
             const validity = validateBuffer();
-            if (validity.rejected) { report('invalid'); return false; }
+            if (validity.rejected) { report('invalid', availableChoices); return false; }
             report('validating');
             try {
                 const response = await request('/validate', { method: 'POST', body: JSON.stringify({ formSessionId: sessionId, ...current }) });
-                if (destroyed || expected !== JSON.stringify(addressValues(fields)) || version !== revision || response.status !== 'confirmed') return false;
+                if (!isCurrent()) return false;
+                if (response.status !== 'confirmed') { report('unconfirmed'); return false; }
                 const address = response.address;
                 fields.postalCode.value = address.postalCode;
                 fields.houseNumber.value = address.houseNumber;
@@ -268,7 +280,7 @@ export function createAddressCompletion({ fields, request, report, reportAdditio
                 report('matched');
                 return true;
             } catch {
-                if (!destroyed && expected === JSON.stringify(addressValues(fields))) report('unconfirmed');
+                if (isCurrent()) report('unconfirmed');
                 return false;
             }
         },

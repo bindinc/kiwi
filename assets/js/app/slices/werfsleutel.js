@@ -910,6 +910,11 @@ function renderSelectedOfferList() {
             ? `<div class="subscription-offer-warning">${escapeHtml(entry.combinationError)}</div>`
             : '';
         const offerMetaBadges = [];
+        const mandant = String(offer.mandant || '').trim();
+        const mandantLabel = mandant.toUpperCase() === 'HMC' ? 'TROS' : mandant;
+        const mandantMarkup = mandant
+            ? `<div class="helper-text">${escapeHtml(translate('werfsleutel.mandantLabel', 'Mandant'))}: <strong>${escapeHtml(mandantLabel)}</strong></div>`
+            : `<div class="subscription-offer-warning" role="alert">${escapeHtml(translate('werfsleutel.mandantMissing', 'Mandant ontbreekt. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.'))}</div>`;
 
         if (offer.salesCode) {
             offerMetaBadges.push(`<span class="subscription-offer-code">${escapeHtml(offer.salesCode)}</span>`);
@@ -962,6 +967,7 @@ function renderSelectedOfferList() {
                         ${escapeHtml(translate('werfsleutel.removeOffer', 'Verwijderen'))}
                     </button>
                 </div>
+                ${mandantMarkup}
                 ${isExpanded ? `<div class="channel-options">${optionMarkup}</div>` : ''}
                 ${warningMarkup}
             </article>
@@ -985,10 +991,15 @@ function updateWerfsleutelSummary() {
 
     const selectedCombinationCount = getSelectedCombinationCount();
     const openCount = Math.max(offerCount - selectedCombinationCount, 0);
-    const isComplete = openCount === 0;
-    const statusLabel = getSummaryStatusLabel(offerCount, openCount);
-    const leadText = getSummaryLeadText(openCount);
-    const hintText = getSummaryHintText(openCount);
+    const hasMissingMandant = werfsleutelSliceState.selectedOffers.some((entry) => !String(entry.offer?.mandant || '').trim());
+    const isComplete = openCount === 0 && !hasMissingMandant;
+    const statusLabel = hasMissingMandant
+        ? translate('werfsleutel.mandantMissingLabel', 'Mandant ontbreekt')
+        : getSummaryStatusLabel(offerCount, openCount);
+    const leadText = hasMissingMandant ? '' : getSummaryLeadText(openCount);
+    const hintText = hasMissingMandant
+        ? translate('werfsleutel.mandantRequired', 'Een werfsleutel heeft geen mandant. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.')
+        : getSummaryHintText(openCount);
 
     summary.innerHTML = `
         <div class="werfsleutel-summary-row">

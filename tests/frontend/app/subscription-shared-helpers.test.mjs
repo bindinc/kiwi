@@ -6,11 +6,25 @@ import {
     getSubscriptionDurationDisplay,
     getLegacySubscriptionHelpers,
     installLegacySubscriptionHelpers,
-    normalizeNameFragment
+    normalizeNameFragment,
+    sameSubscriptionPerson
 } from '../../../assets/js/app/subscription-shared-helpers.js';
 
 function testNormalizeNameFragment() {
     assert.equal(normalizeNameFragment(' Van. Der Berg '), 'vanderberg');
+}
+
+function testSubscriptionPersonIdentityRequiresSourceContext() {
+    const person = { id: 51, credentialKey: 'source-a', sourceSystem: 'subscription-api', divisionId: '14', mandant: 'HMC' };
+    assert.equal(sameSubscriptionPerson(person, { ...person, id: undefined, personId: ' 51 ' }), true);
+    assert.equal(sameSubscriptionPerson(person, { ...person, lastName: 'Edited name' }), true);
+    assert.equal(sameSubscriptionPerson({ id: 51 }, { personId: '51' }), true);
+    assert.equal(sameSubscriptionPerson({}, {}), false);
+    assert.equal(sameSubscriptionPerson(person, null), false);
+    assert.equal(sameSubscriptionPerson(person, { personId: 51 }), false);
+    for (const field of ['credentialKey', 'sourceSystem', 'divisionId', 'mandant']) {
+        assert.equal(sameSubscriptionPerson(person, { ...person, [field]: 'other' }), false, field);
+    }
 }
 
 function testGenerateSubscriptionNumber() {
@@ -50,6 +64,7 @@ function testLegacyNamespaceInstallation() {
             typeof globalThis[LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE].generateSubscriptionNumber,
             'function'
         );
+        assert.equal(globalThis[LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE].sameSubscriptionPerson, sameSubscriptionPerson);
         assert.equal(
             getLegacySubscriptionHelpers(globalThis),
             globalThis[LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE]
@@ -65,6 +80,7 @@ function testLegacyNamespaceInstallation() {
 
 function run() {
     testNormalizeNameFragment();
+    testSubscriptionPersonIdentityRequiresSourceContext();
     testGenerateSubscriptionNumber();
     testPricingDisplayHelpers();
     testLegacyNamespaceInstallation();
