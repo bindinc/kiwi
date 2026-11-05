@@ -1,5 +1,6 @@
 import { renderAddressFields } from '../../../assets/js/app/address-fields.js';
 import { sameSubscriptionPerson } from '../../../assets/js/app/subscription-shared-helpers.js';
+import { createBootstrapSlice } from '../../../assets/js/app/slices/bootstrap-slice.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -1052,9 +1053,136 @@ async function testLateHydrationKeepsEnteredDetails() {
     context.kiwiApi = { get: () => new Promise(resolve => { respond = resolve; }) };
     const pending = runtime.hydrateSubscriptionRoleSelectedPerson('recipient');
     elements.subRecipientAddress.value = 'Entered while loading';
-    respond({ ...person, address: 'Late address 10' });
+    elements.subRecipientInitials.value = 'E.D.';
+    respond({ ...person, initials: 'P.T.', address: 'Late address 10' });
     await pending;
     assert.equal(elements.subRecipientAddress.value, 'Entered while loading');
+    assert.equal(elements.subRecipientInitials.value, 'E.D.');
+}
+
+function testExistingInitialsPopulateIndependentRoleEditorsAndPayloads() {
+    const recipient = { id: 73, salutation: 'Dhr.', firstName: 'Alex', initials: 'A.B.', lastName: 'Tester',
+        postalCode: '1234AB', houseNumber: '10', address: 'Teststraat 10', city: 'Hilversum',
+        email: 'recipient@example.invalid', credentialKey: 'demo', mandant: 'HMC', sourceSystem: 'subscription-api' };
+    const requester = { ...recipient, id: 74, firstName: 'Robin', initials: 'R.S.', email: 'payer@example.invalid' };
+    const { context, elements, runtime } = createRuntimeContext({
+        requesterSelectedPerson: requester,
+        werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }]
+    });
+    context.currentCustomer = recipient;
+    runtime.initializeSubscriptionRolesForForm();
+    elements.requesterSameAsRecipient.checked = false;
+    runtime.toggleRequesterSameAsRecipient();
+    context.subscriptionRoleState.requester.searchResults = [requester];
+    runtime.selectSubscriptionRolePerson('requester', requester.id);
+
+    assert.equal(elements.subRecipientInitials.value, 'A.B.');
+    assert.equal(elements.subRequesterInitials.value, 'R.S.');
+    assert.equal(runtime.buildSubscriptionRolePayload('recipient').personEdits.firstName, 'A.B.');
+    assert.equal(runtime.buildSubscriptionRolePayload('requester').personEdits.firstName, 'R.S.');
+    assert.equal(recipient.firstName, 'Alex');
+    assert.equal(requester.firstName, 'Robin');
+
+    elements.subRecipientInitials.value = 'A.C.';
+    const recipientPayload = runtime.buildSubscriptionRolePayload('recipient');
+    const requesterPayload = runtime.buildSubscriptionRolePayload('requester');
+    assert.equal(recipientPayload.personEdits.firstName, 'A.C.');
+    assert.equal(requesterPayload.personEdits.firstName, 'R.S.');
+    runtime.restoreOutboxSubscriptionRoles({
+        recipient: { personId: 73, person: recipientPayload.personEdits },
+        requester: { personId: 74, person: requesterPayload.personEdits }
+    });
+    assert.equal(elements.subRecipientInitials.value, 'A.C.');
+    assert.equal(elements.subRequesterInitials.value, 'R.S.');
+}
+
+async function testRoleSelectionHydratesInitialsAndIgnoresPreviousPerson() {
+    for (const role of ['recipient', 'requester']) {
+        const responses = [];
+        const { context, elements, runtime } = createRuntimeContext({
+            werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }],
+            kiwiApi: {
+                get(url, options) {
+                    return new Promise(resolve => responses.push({ url, options, resolve }));
+                }
+            }
+        });
+        const prefix = runtime.getSubscriptionRoleConfig(role).prefix;
+        const person = { id: 73, firstName: 'Alex', credentialKey: 'demo', mandant: 'HMC', sourceSystem: 'subscription-api' };
+        context.subscriptionRoleState[role].searchResults = [person];
+        runtime.selectSubscriptionRolePerson(role, 73);
+        assert.equal(responses.length, 1);
+        assert.match(responses[0].url, /credentialKey=demo&sourceSystem=subscription-api&mandant=HMC/);
+        assert.equal(responses[0].options.headers['X-Kiwi-Customer-Person-Id'], '73');
+        responses[0].resolve({ ...person, firstName: '', initials: 'A.B.' });
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(elements[`${prefix}Initials`].value, 'A.B.');
+
+        // The same numeric ID in another source must not accept the previous selection's details.
+        context.subscriptionRoleState[role].searchResults = [person];
+        runtime.selectSubscriptionRolePerson(role, 73);
+        const nextPerson = { ...person, firstName: '', initials: 'R.S.', credentialKey: 'other' };
+        context.subscriptionRoleState[role].searchResults = [nextPerson];
+        runtime.selectSubscriptionRolePerson(role, 73);
+        responses[2].resolve({ ...nextPerson, initials: 'R.T.' });
+        await new Promise(resolve => setImmediate(resolve));
+        responses[1].resolve({ ...person, initials: 'A.L.' });
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(elements[`${prefix}Initials`].value, 'R.T.');
+        assert.equal(context.subscriptionRoleState[role].selectedPerson.credentialKey, 'other');
+
+        context.kiwiApi = null;
+        context.subscriptionRoleState[role].searchResults = [{ id: 75, firstName: 'L.' }];
+        runtime.selectSubscriptionRolePerson(role, 75);
+        assert.equal(elements[`${prefix}Initials`].value, 'L.');
+        context.subscriptionRoleState[role].searchResults = [{ id: 76, firstName: '', initials: '' }];
+        runtime.selectSubscriptionRolePerson(role, 76);
+        assert.equal(elements[`${prefix}Initials`].value, '');
+    }
+}
+
+async function testPayerHydrationCannotReplaceActiveCustomerFromAnotherSource() {
+    const activeCustomer = { id: 51, personId: '51', credentialKey: 'source-a', mandant: 'A',
+        sourceSystem: 'subscription-api', firstName: 'Reader', initials: 'R.' };
+    const recipient = { id: 73, credentialKey: 'source-a', mandant: 'A',
+        sourceSystem: 'subscription-api', firstName: 'Recipient', initials: 'E.' };
+    const payer = { id: 51, personId: '51', credentialKey: 'source-b', mandant: 'B',
+        sourceSystem: 'subscription-api', firstName: 'Other-source-payer' };
+    let respond;
+    const { context, elements, runtime } = createRuntimeContext({
+        recipientSelectedPerson: recipient,
+        werfsleutelSelections: [{ selectedKey: { mandant: 'A' } }, { selectedKey: { mandant: 'B' } }],
+        kiwiApi: { get: () => new Promise(resolve => { respond = resolve; }) }
+    });
+    context.currentCustomer = activeCustomer;
+    context.customers = [activeCustomer, recipient];
+    const initialCustomers = [...context.customers];
+    const cache = createBootstrapSlice();
+    const activeCustomerChanges = [];
+    // Use the application's cache writer: a stub that only records calls hides this regression.
+    context.upsertCustomerInCache = person => cache.upsertCustomerInCache(person, {
+        customers: context.customers,
+        currentCustomer: context.currentCustomer,
+        setCustomers(customers) { context.customers = customers; },
+        setCurrentCustomer(customer) {
+            activeCustomerChanges.push(customer);
+            context.currentCustomer = customer;
+        }
+    });
+    context.subscriptionRoleState.requester.searchResults = [payer];
+    runtime.selectSubscriptionRolePerson('requester', payer.id);
+    assert.equal(context.currentCustomer, activeCustomer);
+
+    respond({ ...payer, initials: 'P.B.' });
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.equal(elements.subRequesterInitials.value, 'P.B.');
+    assert.equal(context.subscriptionRoleState.requester.selectedPerson.credentialKey, 'source-b');
+    assert.equal(context.subscriptionRoleState.requester.selectedPerson.initials, 'P.B.');
+    assert.equal(context.subscriptionRoleState.recipient.selectedPerson, recipient);
+    assert.equal(context.currentCustomer, activeCustomer);
+    assert.deepEqual(context.customers, initialCustomers);
+    assert.deepEqual(activeCustomerChanges, []);
 }
 
 async function run() {
@@ -1067,6 +1195,9 @@ async function run() {
     await testRoleSearchFailureKeepsSelectionAndEdits();
     await testHydrationDiscardsObsoleteCustomerContext();
     testMarketingPreferencesFollowOnlyTheRecipient();
+    await testPayerHydrationCannotReplaceActiveCustomerFromAnotherSource();
+    testExistingInitialsPopulateIndependentRoleEditorsAndPayloads();
+    await testRoleSelectionHydratesInitialsAndIgnoresPreviousPerson();
     testExistingRoleEditsStayIndependentAndRestore();
     await testLateHydrationKeepsEnteredDetails();
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
