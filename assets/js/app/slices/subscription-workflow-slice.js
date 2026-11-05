@@ -4,6 +4,7 @@ import { getAddressSubmission } from '../address-completion.js';
 import { selectCustomer as reloadSourceCustomer } from './customer-detail-slice.js';
 import { openCustomerEditor } from '../customer-editor.js';
 import { getGlobalScope } from '../services.js';
+import { sameSubscriptionPerson } from '../subscription-shared-helpers.js';
 import {
     buildSubscriptionPaymentDetails,
     DIRECT_DEBIT_PAYMENT_METHOD,
@@ -520,14 +521,6 @@ async function loadSubscriptionQueueItems(options = {}) {
 
 }
 
-function parsePersonIdFromPayload(payload) {
-    if (!payload || payload.personId === undefined || payload.personId === null) {
-        return null;
-    }
-
-    return parseNumericValue(payload.personId);
-}
-
 function getWerfsleutelSliceApi() {
     const globalScope = getGlobalScope();
     if (!globalScope || !globalScope.kiwiWerfsleutelSlice || typeof globalScope.kiwiWerfsleutelSlice !== 'object') {
@@ -816,13 +809,9 @@ export async function createSubscription(event) {
         return;
     }
 
-    const recipientPersonId = parsePersonIdFromPayload(recipientPayload);
-    const requesterPersonId = parsePersonIdFromPayload(requesterPayload);
     const requesterSameAsRecipientCheckbox = getElementById('requesterSameAsRecipient');
     const requesterShouldFollowRecipient = (
-        recipientPersonId !== null
-        && requesterPersonId !== null
-        && recipientPersonId === requesterPersonId
+        sameSubscriptionPerson(recipientPayload, requesterPayload)
         && requesterSameAsRecipientCheckbox
         && requesterSameAsRecipientCheckbox.checked === false
     );

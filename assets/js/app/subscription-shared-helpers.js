@@ -62,6 +62,15 @@ export function normalizeNameFragment(value) {
     return String(value || '').replace(/[\s.]/g, '').toLowerCase();
 }
 
+export function sameSubscriptionPerson(left, right) {
+    const leftId = String(left?.personId ?? left?.id ?? '').trim();
+    const rightId = String(right?.personId ?? right?.id ?? '').trim();
+    if (!leftId || !rightId || leftId !== rightId) return false;
+
+    return ['credentialKey', 'sourceSystem', 'divisionId', 'mandant'].every((field) =>
+        String(left[field] || '').trim() === String(right[field] || '').trim());
+}
+
 export function generateSubscriptionNumber(customerId, subscriptionId) {
     const numericCustomerId = Number(customerId);
     const numericSubscriptionId = Number(subscriptionId);
@@ -115,6 +124,7 @@ const legacySubscriptionHelpers = Object.freeze({
     NAME_INSERTION_PREFIXES,
     subscriptionPricing,
     normalizeNameFragment,
+    sameSubscriptionPerson,
     generateSubscriptionNumber,
     formatEuro,
     getPricingDisplay,

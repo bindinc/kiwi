@@ -740,11 +740,8 @@ function subscriptionRoleSelectionIsCurrent(role, selectedPerson) {
 }
 
 function sameSubscriptionPerson(left, right) {
-    if (!left || !right) return false;
-    const sameId = String(left.personId || left.id) === String(right.personId || right.id);
-    const sameSource = ['credentialKey', 'sourceSystem', 'divisionId', 'mandant']
-        .every((field) => String(left[field] || '').trim() === String(right[field] || '').trim());
-    return sameId && sameSource;
+    const helpers = getSubscriptionRuntimeGlobalScope()?.[LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE];
+    return helpers?.sameSubscriptionPerson?.(left, right) === true;
 }
 
 function captureSubscriptionRoleContext(role) {

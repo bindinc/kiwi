@@ -1,4 +1,5 @@
 import { renderAddressFields } from '../../../assets/js/app/address-fields.js';
+import { sameSubscriptionPerson } from '../../../assets/js/app/subscription-shared-helpers.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -211,6 +212,7 @@ function createRuntimeContext(options = {}) {
             kroncrvLogo: '/assets/img/kroncrv-logo.svg'
         },
         kiwiSubscriptionIdentityPricingHelpers: {
+            sameSubscriptionPerson,
             normalizeNameFragment: sharedNormalizeNameFragment
         },
         DUPLICATE_CHECK_DEBOUNCE_MS: 750,
