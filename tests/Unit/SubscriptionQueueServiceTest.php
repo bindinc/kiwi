@@ -326,6 +326,8 @@ final class SubscriptionQueueServiceTest extends TestCase
         self::assertNull($requestPayload['recipient']['personId']);
         self::assertSame('AVROTROS', $requestPayload['recipient']['person']['mandant']);
         self::assertSame('Anne', $requestPayload['recipient']['person']['firstName']);
+        self::assertSame('27', $requestPayload['recipient']['copiedFromCustomerReference']['personId']);
+        self::assertSame('HMC', $requestPayload['recipient']['copiedFromCustomerReference']['mandant']);
         self::assertArrayNotHasKey('credentialKey', $requestPayload['recipient']['person']);
         self::assertArrayNotHasKey('sourceSystem', $requestPayload['recipient']['person']);
         self::assertArrayNotHasKey('personNumber', $requestPayload['recipient']['person']);

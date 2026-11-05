@@ -60,8 +60,35 @@ assert.notEqual(otherMandant['X-Kiwi-New-Customer-Id'], signupHeaders['X-Kiwi-Ne
 assert.equal(otherMandant['X-Kiwi-Outbox-Id'], undefined);
 const copiedCustomer = prepareWrite('POST', '/api/v1/workflows/subscription',
     { recipient: { personId: 42, mandant: 'HMC' }, offer: { mandant: 'AVROTROS' } }, signupContext);
-assert.equal(copiedCustomer['X-Kiwi-Outbox-Id'], '101');
+assert.equal(copiedCustomer['X-Kiwi-Outbox-Id'], undefined);
 const retainedCustomer = prepareWrite('POST', '/api/v1/workflows/subscription',
     { recipient: { personId: 42, mandant: 'AVROTROS' }, offer: { mandant: 'AVROTROS' } }, signupContext);
 assert.equal(retainedCustomer['X-Kiwi-New-Customer-Id'], undefined);
+// One active work session may select different existing recipients from the same source mandant.
+for (const status of ['pending', 'paused']) {
+    const workContext = { workflowSessionId: `one-active-work-session-${status}` };
+    const sourceA = { recipient: { personId: 101, mandant: 'HMC', credentialKey: 'tvk', sourceSystem: 'subscription-api' },
+        offer: { mandant: 'AVROTROS' } };
+    const sourceB = { ...sourceA, recipient: { ...sourceA.recipient, personId: 202 } };
+    const firstHeaders = prepareWrite('POST', '/api/v1/workflows/subscription', sourceA, workContext);
+    const savedCopy = { ...outbox, id: status === 'pending' ? 555 : 556, revision: 1, status,
+        availableAt: new Date(Date.now() + 60000).toISOString(),
+        customerReference: { ...reference, personId: `copy-a-${status}`, mandant: 'AVROTROS' } };
+    acceptWrite('POST', '/api/v1/workflows/subscription', sourceA, { outbox: savedCopy }, workContext);
+    const secondHeaders = prepareWrite('POST', '/api/v1/workflows/subscription', sourceB, workContext);
+    assert.notEqual(secondHeaders['X-Kiwi-New-Customer-Id'], firstHeaders['X-Kiwi-New-Customer-Id']);
+    assert.equal(secondHeaders['X-Kiwi-Outbox-Id'], undefined);
+    const anotherOffer = { ...sourceA, offer: { ...sourceA.offer, salesCode: 'SECOND' } };
+    const sameRecipient = prepareWrite('POST', '/api/v1/workflows/subscription', anotherOffer, workContext);
+    assert.equal(sameRecipient['X-Kiwi-New-Customer-Id'], firstHeaders['X-Kiwi-New-Customer-Id']);
+    assert.equal(sameRecipient['X-Kiwi-Outbox-Id'], String(savedCopy.id));
+    assert.equal(prepareWrite('POST', '/api/v1/workflows/subscription', sourceB, workContext)['Idempotency-Key'], secondHeaders['Idempotency-Key']);
+    const otherSourceSilo = { ...sourceA, recipient: { ...sourceA.recipient, credentialKey: 'tkp' } };
+    assert.notEqual(prepareWrite('POST', '/api/v1/workflows/subscription', otherSourceSilo, workContext)['X-Kiwi-New-Customer-Id'], firstHeaders['X-Kiwi-New-Customer-Id']);
+
+    // Corrections restored as a new-person form still refresh the source customer's cached revision.
+    acceptWrite('POST', '/api/v1/workflows/subscription', signupPayload,
+        { outbox: { ...savedCopy, revision: 2 } }, workContext);
+    assert.equal(prepareWrite('POST', '/api/v1/workflows/subscription', anotherOffer, workContext)['X-Kiwi-Outbox-Revision'], '2');
+}
 delete globalThis.window;

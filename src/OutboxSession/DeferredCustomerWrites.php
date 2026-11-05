@@ -46,6 +46,10 @@ final class DeferredCustomerWrites
         $normalized = $queue->normalizeQueuePayload($request->getSession(), $payload);
         unset($normalized['customerContext']);
         $this->rejectTechnicalData($normalized);
+        $item = $request->headers->has('X-Kiwi-Outbox-Id')
+            ? $this->outbox->get((int) $request->headers->get('X-Kiwi-Outbox-Id'))
+            : null;
+        $normalized = $this->restoreSubscriptionCopyOrigins($normalized, $item, $request->headers->get('X-Kiwi-Change-Id'));
         $base = [];
         foreach (['recipient', 'requester'] as $roleName) {
             if ($normalized[$roleName]['sameAsRecipient'] ?? false) {
@@ -53,7 +57,7 @@ final class DeferredCustomerWrites
                 continue;
             }
             $role = $normalized[$roleName];
-            $reference = $this->subscriptionPersonReference($request, $role, $roleName, $normalized['offer']['mandant']);
+            $reference = $this->subscriptionPersonReference($request, $role, $roleName, $normalized['offer']['mandant'], $item);
             $normalized[$roleName]['customerReference'] = $reference;
             if ('requester' === $roleName) {
                 continue;
@@ -71,34 +75,58 @@ final class DeferredCustomerWrites
             fn (array $changes, array $base, string $selected) => $this->project($request, $changes, $base, $selected, (int) $reference['personId']));
     }
 
-    private function subscriptionPersonReference(Request $request, array $role, string $roleName, string $mandant): array
+    /** A correction may edit copied details without selecting the source customer again. */
+    private function restoreSubscriptionCopyOrigins(array $payload, ?array $item, ?string $changeId): array
+    {
+        if (null === $item || null === $changeId) return $payload;
+        foreach ($item['changes'] as $change) {
+            if ($change['id'] !== $changeId || 'subscription.create' !== $change['operation']) continue;
+            foreach (['recipient', 'requester'] as $roleName) {
+                $role = $payload[$roleName];
+                $source = $change['arguments'][0][$roleName]['copiedFromCustomerReference'] ?? null;
+                if ('new' === $role['mode'] && !isset($role['copiedFromCustomerReference']) && null !== $source) {
+                    $payload[$roleName]['copiedFromCustomerReference'] = CustomerReference::fromArray($source)->toArray();
+                }
+            }
+            break;
+        }
+        return $payload;
+    }
+
+    private function subscriptionPersonReference(Request $request, array $role, string $roleName, string $mandant, ?array $item): array
     {
         if (null !== $role['personId']) {
             return CustomerReference::fromArray(['personId' => $role['personId']] + $role['person'])->toArray();
         }
-        if ('recipient' === $roleName && $request->headers->has('X-Kiwi-Outbox-Id')) {
-            $item = $this->outbox->get((int) $request->headers->get('X-Kiwi-Outbox-Id'));
+        if (null !== $item) {
             $reference = $item['customerReference'];
-            $hasNewRecipient = false;
+            $source = $role['copiedFromCustomerReference'] ?? null;
             foreach ($item['changes'] as $change) {
                 $isSubscription = 'subscription.create' === $change['operation'];
-                if ($isSubscription && 'new' === ($change['arguments'][0]['recipient']['mode'] ?? null)) {
-                    $hasNewRecipient = true;
-                    break;
+                $storedRole = $isSubscription ? $change['arguments'][0][$roleName] : [];
+                $storedSource = CustomerReference::fromArray($storedRole['copiedFromCustomerReference'] ?? null);
+                $sameSource = $storedSource?->toArray() === $source;
+                $sameMandant = $reference['mandant'] === $mandant;
+                if ('new' !== ($storedRole['mode'] ?? null) || !$sameSource || !$sameMandant) continue;
+                if ('recipient' === $roleName) return $reference;
+                if (null !== $source) {
+                    return CustomerReference::fromArray($storedRole['customerReference'])->toArray();
                 }
             }
-            if ($reference['mandant'] !== $mandant || !$hasNewRecipient) {
+            if ('recipient' === $roleName) {
                 throw new ApiProblemException(409, 'outbox_customer_mismatch',
                     'Deze bestelling hoort bij een andere klant of mandant. Voeg deze toe in een aparte klantsessie.');
             }
-            return $reference;
         }
 
         $actor = BusinessAccess::requireSessionWrite($request->getSession());
         $group = $request->headers->get('X-Kiwi-New-Customer-Id',
             $request->headers->get('X-Kiwi-Workflow-Session-Id', $request->headers->get('Idempotency-Key', '')));
         $identity = [$actor->tenant, $actor->actor, $group, $mandant, $roleName];
-        if ('requester' === $roleName) {
+        $source = $role['copiedFromCustomerReference'] ?? null;
+        if (null !== $source) {
+            $identity[] = $source;
+        } elseif ('requester' === $roleName) {
             // Different payers in one recipient session must retain independent identities.
             foreach (['firstName', 'lastName', 'postalCode', 'houseNumber'] as $field) {
                 $identity[] = strtoupper(trim((string) ($role['person'][$field] ?? '')));

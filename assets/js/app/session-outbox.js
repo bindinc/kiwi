@@ -42,8 +42,9 @@ export function prepareWrite(method, url, payload, context) {
     if (newCustomerKey) headers['X-Kiwi-New-Customer-Id'] = newCustomerKey;
     const targetId = payload?.recipient?.personId ?? payload?.customerId ?? context?.customerReference?.personId;
     const reference = context?.customerReference;
-    const session = newCustomerKey ? newCustomerSessions.get(newCustomerKey)
+    const candidate = newCustomerKey ? newCustomerSessions.get(newCustomerKey)
         : String(targetId) === String(reference?.personId) ? sessions.get(key(reference)) : null;
+    const session = candidate ? sessions.get(key(candidate.customerReference)) || candidate : null;
     // A closed session starts a successor; a paused session stays paused until explicit Resume.
     const open = session && ['pending', 'paused'].includes(session.status)
         && (session.status === 'paused' || Date.parse(session.availableAt) > Date.now() + (session.clockOffset || 0));
@@ -70,7 +71,14 @@ function newCustomerIdentity(url, payload, context) {
         const personMandant = String(role?.mandant || role?.person?.mandant || context?.customerReference?.mandant || '').trim();
         if (role?.personId && personMandant.toUpperCase() === mandant.toUpperCase()) return null;
         const group = role?.person?.formSessionId || context?.workflowSessionId || payload?.customerContext?.workflowSessionId;
-        return group ? JSON.stringify([group, mandant]) : null;
+        const source = role?.personId ? [
+            String(role.personId),
+            String(role.credentialKey || role.person?.credentialKey || ''),
+            String(role.sourceSystem || role.person?.sourceSystem || ''),
+            String(role.divisionId || role.person?.divisionId || ''),
+            personMandant
+        ] : null;
+        return group ? JSON.stringify([group, mandant, source]) : null;
     }
     const person = url === '/api/v1/persons' ? payload
         : url === '/api/v1/workflows/article-order' && !payload?.customerId ? payload?.customer : null;

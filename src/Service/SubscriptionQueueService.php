@@ -252,7 +252,9 @@ final class SubscriptionQueueService
             }
 
             // Copy validated contact details, never an identifier from another customer silo.
+            $sourceReference = CustomerReference::fromArray(['personId' => $role['personId']] + $role['person']);
             $role = ['mode' => 'new', 'personId' => null,
+                'copiedFromCustomerReference' => $sourceReference->toArray(),
                 'person' => $this->normalizeNewPersonPayload($role['person'])];
         }
 
@@ -432,8 +434,10 @@ final class SubscriptionQueueService
             'optinPost' => $this->normalizeNullableString($payload['optinPost'] ?? null),
         ];
 
-        if (null !== $addressExtension && null !== $street) {
+        if (null !== $addressExtension) {
             $normalized['addressExtension'] = $addressExtension;
+        }
+        if (null !== $street) {
             $normalized['street'] = $street;
         }
 
@@ -709,8 +713,10 @@ final class SubscriptionQueueService
             'optinPost' => $this->normalizeNullableString($person['optinPost'] ?? null),
         ];
 
-        if (null !== $addressExtension && null !== $street) {
+        if (null !== $addressExtension) {
             $snapshot['addressExtension'] = $addressExtension;
+        }
+        if (null !== $street) {
             $snapshot['street'] = $street;
         }
 

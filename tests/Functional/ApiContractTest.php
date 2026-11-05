@@ -366,6 +366,102 @@ final class ApiContractTest extends WebTestCase
         self::assertResponseStatusCodeSame(409);
     }
 
+    /** @dataProvider copiedRecipientSessionStatuses */
+    public function testCopiedRecipientsRemainSeparateWithinOneWorkSession(string $status): void
+    {
+        $this->disableSubscriptionApiCustomerSearch();
+        $client = $this->createAuthenticatedClient();
+        $this->resetOutboxStorage();
+        $this->seedWebaboOfferCache('COPY-AVRO');
+        $this->seedWebaboOfferCache('COPY-AVRO-SECOND', 'AVROTROS', false);
+        $this->seedWebaboOfferCache('SOURCE-HMC', 'HMC', false);
+        $client->request('GET', '/api/v1/persons');
+        $customers = array_slice(json_decode($client->getResponse()->getContent(), true)['items'], 0, 2);
+        foreach ($customers as &$customer) $customer['mandant'] = 'HMC';
+        unset($customer);
+        $this->rememberCustomerAddresses($client, $customers);
+        $payloadA = ['recipient' => ['personId' => $customers[0]['id']],
+            'requester' => ['personId' => $customers[1]['id']],
+            'subscription' => ['magazine' => 'Test magazine', 'startDate' => '2026-11-01', 'paymentMethod' => 'AC'],
+            'offer' => ['salesCode' => 'COPY-AVRO', 'title' => 'Test offer']];
+        $payloadB = array_replace($payloadA, ['recipient' => ['personId' => $customers[1]['id']]]);
+        $send = function (string $key, array $payload, ?array $item = null, ?string $changeId = null) use ($client): array {
+            // Deliberately reuse the creation header to verify isolation independently of the UI.
+            $headers = ['HTTP_X_CSRF_TOKEN' => 'test-api-csrf', 'HTTP_IDEMPOTENCY_KEY' => $key,
+                'HTTP_X_KIWI_NEW_CUSTOMER_ID' => null === $changeId ? 'one-active-work-session' : 'restored-new-person-form'];
+            if (null !== $item) {
+                $headers['HTTP_X_KIWI_OUTBOX_ID'] = (string) $item['id'];
+                $headers['HTTP_X_KIWI_OUTBOX_REVISION'] = (string) $item['revision'];
+            }
+            if (null !== $changeId) $headers['HTTP_X_KIWI_CHANGE_ID'] = $changeId;
+            $client->setServerParameters($headers);
+            $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+            return json_decode($client->getResponse()->getContent(), true);
+        };
+        $response = $send('copy-A', $payloadA);
+        self::assertResponseStatusCodeSame(202);
+        $first = $response['outbox'];
+        if ('paused' === $status) {
+            $client->setServerParameter('HTTP_IDEMPOTENCY_KEY', 'pause-A');
+            $client->setServerParameter('HTTP_X_KIWI_OUTBOX_REVISION', (string) $first['revision']);
+            $client->jsonRequest('POST', '/api/v1/outbox-sessions/'.$first['id'].'/pause');
+            self::assertResponseIsSuccessful();
+            $first = json_decode($client->getResponse()->getContent(), true);
+        }
+        $anotherOffer = $payloadA;
+        $anotherOffer['offer']['salesCode'] = 'COPY-AVRO-SECOND';
+        $response = $send('copy-A-second-offer', $anotherOffer, $first);
+        self::assertResponseStatusCodeSame(202);
+        $grouped = $response['outbox'];
+        self::assertSame($first['customerReference'], $grouped['customerReference']);
+        self::assertSame($status, $grouped['status']);
+        self::assertCount(2, $grouped['customers'][0]['subscriptions']);
+
+        foreach ([null, 'copy-A'] as $changeId) {
+            $rejected = $send('wrong-recipient-'.($changeId ?? 'append'), $payloadB, $grouped, $changeId);
+            self::assertResponseStatusCodeSame(409);
+            self::assertSame('outbox_customer_mismatch', $rejected['error']['code']);
+        }
+        $response = $send('copy-B', $payloadB);
+        self::assertResponseStatusCodeSame(202);
+        $second = $response['outbox'];
+        self::assertNotSame($grouped['id'], $second['id']);
+        self::assertNotSame($grouped['customerReference']['personId'], $second['customerReference']['personId']);
+        self::assertSame($customers[1]['firstName'], $second['customers'][0]['firstName']);
+        self::assertCount(1, $second['customers'][0]['subscriptions']);
+        self::assertEquals($second, $send('copy-B', $payloadB)['outbox']);
+        self::assertResponseStatusCodeSame(202);
+
+        // The existing editor restores a copied recipient as a new-person form.
+        $copiedPerson = $grouped['changes'][0]['arguments'][0]['recipient']['person'];
+        $formId = $this->rememberAddress($client, $copiedPerson);
+        $correction = $payloadA;
+        $correction['recipient'] = ['person' => array_replace($copiedPerson,
+            ['firstName' => 'Corrected recipient A', 'formSessionId' => $formId])];
+        $response = $send('correct-A', $correction, $grouped, 'copy-A');
+        self::assertResponseStatusCodeSame(202);
+        $corrected = $response['outbox'];
+        self::assertSame($grouped['customerReference'], $corrected['customerReference']);
+        self::assertSame($grouped['changes'][0]['arguments'][0]['requester']['customerReference'],
+            $corrected['changes'][0]['arguments'][0]['requester']['customerReference']);
+        self::assertCount(2, $corrected['customers']);
+        self::assertSame('Corrected recipient A', $corrected['customers'][0]['firstName']);
+        self::assertCount(2, $corrected['customers'][0]['subscriptions']);
+        self::assertSame((string) $customers[0]['id'], $corrected['changes'][0]['arguments'][0]['recipient']['copiedFromCustomerReference']['personId']);
+        self::assertEquals($corrected, $send('correct-A', $correction, $grouped, 'copy-A')['outbox']);
+        self::assertResponseStatusCodeSame(202);
+        $client->request('GET', '/api/v1/outbox-sessions/'.$second['id']);
+        $unchangedB = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame($customers[1]['firstName'], $unchangedB['customers'][0]['firstName']);
+        self::assertCount(1, $unchangedB['customers'][0]['subscriptions']);
+    }
+
+    public static function copiedRecipientSessionStatuses(): iterable
+    {
+        yield 'open outbox' => ['pending'];
+        yield 'paused outbox' => ['paused'];
+    }
+
     public function testSubscriptionMandantValidationRejectsClientOverridesWithoutSaving(): void
     {
         $client = $this->createAuthenticatedClient();
