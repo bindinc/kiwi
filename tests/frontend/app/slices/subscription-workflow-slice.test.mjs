@@ -4,6 +4,7 @@ import { clearFormDraft } from '../../../../assets/js/app/lightbox-drafts.js';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
 import {
     registerSubscriptionWorkflowSlice,
+    createSubscription,
     __subscriptionWorkflowTestUtils
 } from '../../../../assets/js/app/slices/subscription-workflow-slice.js';
 
@@ -508,6 +509,30 @@ async function testEditCustomerOpensSubscriptionApiViewer() {
     }
 }
 
+async function testMissingOfferMandantStopsTheEntireSubmission() {
+    const previous = { document: globalThis.document, kiwiWerfsleutelSlice: globalThis.kiwiWerfsleutelSlice,
+        kiwiApi: globalThis.kiwiApi, showToast: globalThis.showToast };
+    let posts = 0;
+    let focused = false;
+    const toasts = [];
+    globalThis.document = { getElementById: () => ({ focus() { focused = true; } }) };
+    globalThis.kiwiWerfsleutelSlice = { getSelections: () => [
+        { selectedKey: { salesCode: 'VALID', mandant: 'AVROTROS' }, selectedChannel: 'TM/IB' },
+        { selectedKey: { salesCode: 'UNMAPPED' }, selectedChannel: 'TM/IB' }
+    ] };
+    globalThis.kiwiApi = { post() { posts += 1; } };
+    globalThis.showToast = (message, type) => toasts.push({ message, type });
+    try {
+        await createSubscription({ preventDefault() {} });
+        assert.equal(posts, 0);
+        assert.equal(focused, true);
+        assert.equal(toasts[0].type, 'error');
+        assert.match(toasts[0].message, /mandant/);
+    } finally {
+        Object.assign(globalThis, previous);
+    }
+}
+
 async function run() {
     testEditCustomerKeepsMissingPreferencesUnselected();
     testRegistersItemSevenActions();
@@ -519,6 +544,7 @@ async function run() {
     testQueueRenderingUsesBackendDisplayFields();
     testShowNewSubscriptionPrefillsPrimaryIbanFromCurrentCustomer();
     await testEditCustomerOpensSubscriptionApiViewer();
+    await testMissingOfferMandantStopsTheEntireSubmission();
     console.log('subscription workflow slice tests passed');
 }
 

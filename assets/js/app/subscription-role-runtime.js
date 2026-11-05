@@ -1150,7 +1150,11 @@ function hasSameSelectedExistingRecipientAndRequester() {
         return false;
     }
 
-    return recipientId === requesterId;
+    const recipient = subscriptionRoleState.recipient.selectedPerson;
+    const requester = subscriptionRoleState.requester.selectedPerson;
+    return recipientId === requesterId
+        && String(recipient.credentialKey || '') === String(requester.credentialKey || '')
+        && String(recipient.mandant || '') === String(requester.mandant || '');
 }
 
 function normalizeRequesterSameAsRecipientSelection(options = {}) {

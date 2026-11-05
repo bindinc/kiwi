@@ -58,7 +58,7 @@ try {
             await page.evaluate(() => {
                 // Use a synthetic offer, retaining the actual form, role runtime and backend save path.
                 window.kiwiWerfsleutelSlice.getSelections = () => [{
-                    selectedKey: { divisionId: 'HMC', salesCode: 'SC203457', title: 'Marketing fixture' },
+                    selectedKey: { divisionId: 'HMC', mandant: 'HMC', salesCode: 'SC203457', title: 'Marketing fixture' },
                     selectedChannel: 'OL', selectedChannelMeta: { label: 'Online' }
                 }];
                 window.showNewSubscription();
@@ -129,7 +129,7 @@ try {
                 window.showNewSubscription();
                 const person = { id: 1, firstName: 'E.', lastName: 'Fixture', address: 'Rembrandtlaan 1',
                     postalCode: '1231AA', houseNumber: '1', city: 'LOOSDRECHT', email: 'existing@example.invalid',
-                    sourceSystem: 'kiwi', optinEmail: 'no', optinPhone: 'yes', optinPost: null };
+                    sourceSystem: 'kiwi', mandant: 'HMC', optinEmail: 'no', optinPhone: 'yes', optinPost: null };
                 subscriptionRoleState.recipient.searchResults = [person];
                 window.kiwiSubscriptionRoleRuntime.setSubscriptionRoleMode('recipient', 'existing');
                 window.kiwiSubscriptionRoleRuntime.selectSubscriptionRolePerson('recipient', 1);

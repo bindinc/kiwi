@@ -80,6 +80,8 @@ its choices; starting a fresh customer session clears them.
 
 Run `scripts/compose-smoke-marketing-preferences.mjs` against an isolated Compose
 project using the public address/OIDC fixtures described above. Set
+up the synthetic offer `SC203457` with mandant `HMC` in that project's offer cache;
+the subscription save path requires the catalog mapping, even for smoke tests. Set
 `KIWI_SMOKE_ORIGIN`, `PLAYWRIGHT_MODULE_PATH`, and optionally
 `PLAYWRIGHT_EXECUTABLE_PATH` and `KIWI_MARKETING_EVIDENCE_DIR`. This checks both
 route prefixes, form defaults, explicit choices, reset/reopen, recipient and payer

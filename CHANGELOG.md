@@ -11,6 +11,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 ### Fixed
 
 - Leave marketing preferences unselected for new customers until explicitly chosen, retain existing customers' preferences, and prevent choices carrying over between recipients or form resets. [sc-203457]
+- Derive and display the required subscription mandant from the offer catalog, reject missing or inconsistent mappings, and keep recipient and payer identities separate across mandants and source customers while grouping offers for the same customer and mandant. [sc-203528]
+- Prevent stale recipient address errors and premature rejection before address selection, while retaining mandatory full-address confirmation and recovery within the same session. [sc-203455]
 - Use the earliest subscription end date consistently for status and displayed dates in customer details and search summaries, and preserve publication titles in feedback screenshots while keeping customer identities anonymized. [sc-203454]
 
 ## [v1.0.35] - 2026-10-22
