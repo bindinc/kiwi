@@ -1,4 +1,16 @@
 const en = {
+    "subscriptionStartDates": {
+        "missingEdition": "No edition available. Select another offer.",
+        "edition": "Edition",
+        "chooseEdition": "Choose an edition",
+        "deliveryDate": "First delivery date",
+        "membershipDate": "Membership start date",
+        "loading": "Loading delivery date…",
+        "ready": "Next delivery date provided by Abel.",
+        "unavailable": "No delivery date available. Try again; saving requires a confirmed date.",
+        "retry": "Retry delivery date",
+        "changed": "The offer or customer session changed. Reload the delivery date."
+},
     "meta": {
         "locale": "en",
         "name": "English"

@@ -7,6 +7,7 @@ import { getGlobalScope } from '../services.js';
 const CUSTOMER_WORK_SESSION_NAMESPACE = 'kiwiCustomerWorkSession';
 const customerWorkSession = createCustomerWorkSession();
 let dependenciesResolver = null;
+let lastStartDateContext = '';
 
 export function configureCustomerWorkSessionSliceDependencies(resolver) {
     dependenciesResolver = typeof resolver === 'function' ? resolver : null;
@@ -58,6 +59,14 @@ function setHidden(elementId, hidden) {
 }
 
 function renderCustomerWorkSession() {
+    const context = JSON.stringify(customerWorkSession.getRequestContext());
+    if (context !== lastStartDateContext) {
+        lastStartDateContext = context;
+        const scope = getGlobalScope();
+        if (scope?.dispatchEvent && scope.CustomEvent) {
+            scope.dispatchEvent(new scope.CustomEvent('kiwi:customer-context-updated'));
+        }
+    }
     const snapshot = customerWorkSession.getSnapshot();
     const summary = createCustomerDisplaySummary(snapshot.activeCustomer);
     const hasActiveCustomer = Boolean(snapshot.customerReference && summary);

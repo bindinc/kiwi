@@ -68,6 +68,7 @@ final class SubscriptionQueueServiceTest extends TestCase
             'sourceSystem' => 'webabo-api',
             'subscriptionCode' => 'SUB-AVRO-1',
             'productCode' => 'PROD-AVRO-1',
+            'variantCodeList' => ['STANDARD'],
             'offerPrice' => [
                 'price' => 52.0,
                 'priceCode' => 'std',
@@ -118,7 +119,7 @@ final class SubscriptionQueueServiceTest extends TestCase
                 'magazine' => 'Avrobode',
                 'duration' => '1-jaar',
                 'durationLabel' => '1 jaar (52 nummers)',
-                'startDate' => '2026-01-10',
+                'startDate' => '2035-01-10',
                 'paymentMethod' => 'b',
                 'iban' => 'NL80 INGB 0001 3401 87',
                 'status' => 'active',
@@ -275,6 +276,7 @@ final class SubscriptionQueueServiceTest extends TestCase
         $offer = new WebaboOffer('TVZ100');
         $offer->refreshFromWebaboPayload([
             'salesCode' => 'TVZ100',
+            'productCode' => 'ATV',
             'title' => 'Televizier 1 jaar',
             'credentialKey' => 'tvz',
             'mandant' => 'AVROTROS',
@@ -518,7 +520,7 @@ final class SubscriptionQueueServiceTest extends TestCase
         $schema->ensureSchema();
         $offer = new WebaboOffer($salesCode);
         $offer->refreshFromWebaboPayload(['salesCode' => $salesCode, 'mandant' => $mandant,
-            'credentialKey' => 'catalog-credential'], new \DateTimeImmutable());
+            'credentialKey' => 'catalog-credential', 'productCode' => 'ATV'], new \DateTimeImmutable());
         $entityManager->persist($offer);
         $entityManager->flush();
     }
@@ -605,6 +607,13 @@ final class SubscriptionQueueServiceTest extends TestCase
                 new PpaPhoneContactMapper(),
                 $webaboOfferSchemaManager,
                 $webaboOfferRepository,
+                new \App\Service\SubscriptionStartDates($webaboOfferRepository, $webaboOfferSchemaManager,
+                    new class implements \App\Webabo\WebaboStartDateProviderInterface {
+                        public function fetchStartDate(string $credentialKey, string $productCode, string $variantCode): string
+                        {
+                            return '2035-01-10';
+                        }
+                    }),
             ),
             $entityManager,
             $schemaManager,

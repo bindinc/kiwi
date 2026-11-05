@@ -74,6 +74,7 @@ final class ApiRoutePolicy
         'api_swagger_ui' => 'kiwi.session',
         'api_webabo_offer_salescode_combinations' => 'kiwi.read',
         'api_webabo_offers' => 'kiwi.read',
+        'api_webabo_offer_start_date' => 'kiwi.read',
         'api_workflow_article_order' => 'kiwi.write',
         'api_workflow_subscription_list' => 'kiwi.read',
         'api_workflow_subscription_queue' => 'kiwi.write',

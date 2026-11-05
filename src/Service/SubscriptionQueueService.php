@@ -33,6 +33,7 @@ final class SubscriptionQueueService
         private readonly PpaPhoneContactMapper $ppaPhoneContactMapper,
         private readonly WebaboOfferCacheSchemaManager $webaboOfferCacheSchemaManager,
         private readonly WebaboOfferRepository $webaboOfferRepository,
+        private readonly SubscriptionStartDates $startDates,
         private readonly ?\App\Security\BusinessAccess $access = null,
     ) {
     }
@@ -230,6 +231,14 @@ final class SubscriptionQueueService
             'offer' => $offer,
             'contactEntry' => $this->normalizeContactEntry($payload['contactEntry'] ?? null),
         ];
+        $variantCode = $this->normalizeNullableString($payload['subscription']['variantCode'] ?? null);
+        $selection = $this->startDates->validate(
+            $normalizedPayload['offer']['salesCode'], $variantCode, $normalizedPayload['subscription']['startDate'],
+        );
+        $normalizedPayload['subscription']['variantCode'] = $selection['variantCode'];
+        if (isset($selection['sourceContext'])) {
+            $normalizedPayload['subscription']['startDateSource'] = $selection['sourceContext'];
+        }
         $customerContext = $this->normalizeCustomerContext($payload['customerContext'] ?? null);
         if (null !== $customerContext) {
             $normalizedPayload['customerContext'] = $customerContext;

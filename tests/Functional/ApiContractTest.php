@@ -584,7 +584,7 @@ final class ApiContractTest extends WebTestCase
     {
         $client = $this->createAuthenticatedClient();
         $this->resetOutboxStorage();
-        $this->seedWebaboOfferCache();
+        $this->seedWebaboOfferCache('AVRV519', 'AVROTROS', true, 'AVR');
 
         $client->request('GET', '/api/v1/webabo/offers?query=avro&limit=5');
         self::assertResponseIsSuccessful();
@@ -629,7 +629,76 @@ final class ApiContractTest extends WebTestCase
         self::assertArrayHasKey('entry', json_decode($client->getResponse()->getContent(), true));
     }
 
-    private function seedWebaboOfferCache(string $salesCode = 'AVRV519', ?string $mandant = 'AVROTROS', bool $clear = true): void
+    public function testGuideDateIsRecheckedBeforeOutboxStagingAndBrowserContextCannotOverrideIt(): void
+    {
+        $this->disableSubscriptionApiCustomerSearch();
+        $client = $this->createAuthenticatedClient();
+        $client->disableReboot();
+        $this->resetOutboxStorage();
+        $this->resetSubscriptionQueueStorage();
+        $this->seedWebaboOfferCache('AVRV519', 'AVROTROS', true, 'AVR');
+        $provider = $this->createMock(\App\Webabo\WebaboStartDateProviderInterface::class);
+        $provider->expects(self::exactly(3))->method('fetchStartDate')->with('avrotros', 'AVR', 'SOUTH')
+            ->willReturnOnConsecutiveCalls('2035-03-26', '2035-03-27', '2035-03-27');
+        static::getContainer()->set(\App\Webabo\WebaboStartDateProviderInterface::class, $provider);
+
+        $client->request('GET', '/api/v1/webabo/offers/AVRV519/start-date');
+        self::assertResponseStatusCodeSame(422);
+        $client->request('GET', '/api/v1/webabo/offers/AVRV519/start-date?variantCode=SOUTH');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('no-store', $client->getResponse()->headers->get('Cache-Control'));
+        self::assertSame('2035-03-26', json_decode($client->getResponse()->getContent(), true)['startDate']);
+
+        $client->request('GET', '/api/v1/persons');
+        $customers = json_decode($client->getResponse()->getContent(), true)['items'];
+        $this->rememberCustomerAddresses($client, array_slice($customers, 0, 1));
+        $payload = [
+            'submissionId' => 'guide-source-recheck',
+            'recipient' => ['personId' => $customers[0]['id']], 'requester' => ['sameAsRecipient' => true],
+            'subscription' => ['magazine' => 'Avrobode', 'startDate' => '2035-03-26', 'variantCode' => 'SOUTH',
+                'paymentMethod' => 'AC', 'startDateSource' => ['credentialKey' => 'forged', 'startDate' => '2035-03-26']],
+            'offer' => ['salesCode' => 'AVRV519', 'title' => 'Synthetic guide', 'productCode' => 'ATV', 'credentialKey' => 'forged'],
+        ];
+        $this->prepareOutboxWrite($client, 'guide-source-recheck');
+        $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('offer_mandant_mismatch', json_decode($client->getResponse()->getContent(), true)['error']['code']);
+        unset($payload['offer']['credentialKey']);
+        $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('start_date_changed', json_decode($client->getResponse()->getContent(), true)['error']['code']);
+        $connection = static::getContainer()->get(EntityManagerInterface::class)->getConnection();
+        self::assertSame(0, (int) $connection->fetchOne("SELECT COUNT(*) FROM customer_outbox_sessions WHERE tenant = 'test-tenant'"));
+
+        $payload['subscription']['startDate'] = '2035-03-27';
+        $this->prepareOutboxWrite($client, 'guide-source-recheck');
+        $client->jsonRequest('POST', '/api/v1/workflows/subscription', $payload);
+        self::assertResponseStatusCodeSame(202);
+        $result = json_decode($client->getResponse()->getContent(), true);
+        $saved = $result['outbox']['changes'][0]['arguments'][0]['subscription'];
+        self::assertSame('2035-03-27', $saved['startDate']);
+        self::assertSame('SOUTH', $saved['variantCode']);
+        self::assertSame('avrotros', $saved['startDateSource']['credentialKey']);
+        self::assertSame('AVR', $saved['startDateSource']['productCode']);
+        self::assertSame(0, (int) $connection->fetchOne("SELECT COUNT(*) FROM subscription_orders WHERE submission_id = 'guide-source-recheck'"));
+    }
+
+    public function testMembershipDateEndpointDoesNotDependOnDeliveryProvider(): void
+    {
+        $client = $this->createAuthenticatedClient();
+        $client->disableReboot();
+        $this->seedWebaboOfferCache('MEMBERSHIP');
+        $provider = $this->createMock(\App\Webabo\WebaboStartDateProviderInterface::class);
+        $provider->expects(self::never())->method('fetchStartDate');
+        static::getContainer()->set(\App\Webabo\WebaboStartDateProviderInterface::class, $provider);
+        $client->request('GET', '/api/v1/webabo/offers/MEMBERSHIP/start-date');
+        self::assertResponseIsSuccessful();
+        $result = json_decode($client->getResponse()->getContent(), true);
+        self::assertSame('membership', $result['subscriptionKind']);
+        self::assertNull($result['startDate']);
+    }
+
+    private function seedWebaboOfferCache(string $salesCode = 'AVRV519', ?string $mandant = 'AVROTROS', bool $clear = true, string $productCode = 'ATV'): void
     {
         /** @var WebaboOfferCacheSchemaManager $schemaManager */
         $schemaManager = static::getContainer()->get(WebaboOfferCacheSchemaManager::class);
@@ -647,7 +716,8 @@ final class ApiContractTest extends WebTestCase
             'title' => '1 jaar Avrobode voor maar EUR52',
             'credentialKey' => 'avrotros',
             'mandant' => $mandant,
-            'productCode' => 'AVR',
+            'productCode' => $productCode,
+            'variantCodeList' => ['NORTH', 'SOUTH'],
             'allowedChannels' => ['EM/OU', 'TM/IB'],
             'offerPrice' => [
                 'price' => 52.0,

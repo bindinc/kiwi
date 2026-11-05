@@ -40,6 +40,7 @@ services:
             $retentionDays: '%app.customer_audit.retention_days%'
 
     App\Webabo\WebaboSalesCodeCombinationProviderInterface: '@App\Webabo\WebaboSalesCodeCombinationClient'
+    App\Webabo\WebaboStartDateProviderInterface: '@App\Webabo\WebaboStartDateClient'
 
     Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler:
         factory: ['@App\Session\DoctrinePdoSessionHandlerFactory', 'create']

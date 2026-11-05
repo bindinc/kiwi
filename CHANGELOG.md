@@ -8,6 +8,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+- Use Abel’s next delivery date per guide and selected edition during subscription signup, revalidate before staging an order, and keep ATV/ATL/ATM/STKN memberships independent of delivery dates. [sc-203456]
+
 ### Fixed
 
 - Reuse the active customer as subscription recipient without another lookup, while keeping independent recipient and payer selection through submission using full source identity and rejecting stale or incompatible customer selections. [sc-203540]
