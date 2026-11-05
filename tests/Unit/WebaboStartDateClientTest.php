@@ -93,6 +93,39 @@ final class WebaboStartDateClientTest extends TestCase
         $this->client($http)->fetchStartDate('', 'GUIDE', 'EDITION');
     }
 
+    public function testUnknownCredentialNeverAuthenticatesWithThePrimaryCredential(): void
+    {
+        $http = new MockHttpClient(function () { self::fail('No HTTP call expected.'); });
+        $this->expectException(ApiProblemException::class);
+        $this->client($http)->fetchStartDate('unknown', 'GUIDE', 'EDITION');
+    }
+
+    public function testAuthenticationRetryIsBounded(): void
+    {
+        $http = new MockHttpClient([
+            new MockResponse('{"access_token":"first-synthetic-token","expires_in":3600}'),
+            new MockResponse('{}', ['http_code' => 401]),
+            new MockResponse('{"access_token":"second-synthetic-token","expires_in":3600}'),
+            new MockResponse('{}', ['http_code' => 401]),
+        ]);
+        try {
+            $this->client($http)->fetchStartDate('guide', 'GUIDE', 'EDITION');
+            self::fail('An unauthorized source cannot return a start date.');
+        } catch (ApiProblemException $error) {
+            self::assertSame('The source subscription start date is unavailable. Please try again.', $error->getMessage());
+            self::assertSame(4, $http->getRequestsCount());
+        }
+    }
+
+    public function testUnsecuredSourceIsRejectedBeforeAuthentication(): void
+    {
+        $path = $this->directory.'/client_secrets.json';
+        file_put_contents($path, str_replace('https://example.invalid/webabo-rest', 'http://example.invalid/webabo-rest', file_get_contents($path)));
+        $http = new MockHttpClient(function () { self::fail('No HTTP call expected.'); });
+        $this->expectException(ApiProblemException::class);
+        $this->client($http)->fetchStartDate('guide', 'GUIDE', 'EDITION');
+    }
+
     private function client(MockHttpClient $http): WebaboStartDateClient
     {
         $config = new HupApiConfigProvider(new ClientSecretsLoader($this->directory));

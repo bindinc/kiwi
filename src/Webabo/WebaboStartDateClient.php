@@ -65,7 +65,7 @@ final class WebaboStartDateClient implements WebaboStartDateProviderInterface
 
                 return $date;
             }
-        } catch (\Throwable) {
+        } catch (\Exception) {
             // Source bodies and authentication errors must never reach the browser.
             throw new ApiProblemException(503, 'start_date_unavailable', 'The source subscription start date is unavailable. Please try again.');
         }

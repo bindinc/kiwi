@@ -8,7 +8,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
-- Use Abel's product and edition specific next delivery date for guide subscription starts, with explicit unavailable states and server validation while keeping broadcaster membership dates independent. [sc-203456]
+- Add the verified Abel Webabo client for product and edition specific subscription start dates, rejecting unavailable or invalid source dates; form integration awaits confirmed guide/membership classification. [sc-203456]
 
 ### Fixed
 
