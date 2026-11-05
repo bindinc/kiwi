@@ -398,3 +398,78 @@ test('switching buffered additions while validating invalidates the old confirma
     assert.equal(await checking, false);
     assert.equal(f.fields.addition.value, '2');
 });
+
+function enteredAddress(f) {
+    f.fields.street.value = 'Rembrandtlaan';
+    f.fields.city.value = 'LOOSDRECHT';
+    f.form.manualInput('city');
+}
+
+const confirmed = () => ({ status: 'confirmed', address: { ...matched().candidates[0], city: 'LOOSDRECHT', verified: true } });
+
+test('full confirmation cancels a pending autocomplete debounce', async () => {
+    const f = fixture();
+    enteredAddress(f);
+    const checking = f.form.validate();
+    f.flush();
+    assert.deepEqual(f.requests.map(request => request.path), ['/validate']);
+    f.pending[0].resolve(confirmed());
+    assert.equal(await checking, true);
+    assert.equal(f.reports.at(-1), 'matched');
+});
+
+for (const outcome of ['not_found', 'unavailable', 'rejected']) {
+    test(`late autocomplete ${outcome} cannot replace a confirmed recipient address`, async () => {
+        const f = fixture();
+        enteredAddress(f); f.flush();
+        const checking = f.form.validate();
+        f.pending[1].resolve(confirmed());
+        assert.equal(await checking, true);
+        if (outcome === 'rejected') f.pending[0].reject(new Error('offline'));
+        else f.pending[0].resolve({ status: outcome, candidates: [], complete: false });
+        await tick();
+        assert.equal(f.reports.at(-1), 'matched');
+        assert.equal(f.fields.street.value, 'Rembrandtlaan');
+        assert.equal(f.fields.postalCode.value, '1231AA');
+    });
+}
+
+test('autocomplete cannot reject the address while full confirmation is pending', async () => {
+    const f = fixture();
+    enteredAddress(f); f.flush();
+    const checking = f.form.validate();
+    f.pending[0].resolve({ status: 'not_found', candidates: [], complete: true });
+    await tick();
+    assert.equal(f.reports.at(-1), 'validating');
+    f.pending[1].resolve(confirmed());
+    assert.equal(await checking, true);
+    assert.equal(f.reports.at(-1), 'matched');
+});
+
+test('an older failed confirmation cannot overwrite a newer confirmation of the same address', async () => {
+    const f = fixture();
+    enteredAddress(f);
+    const previous = f.form.validate();
+    const current = f.form.validate();
+    f.pending[1].resolve(confirmed());
+    assert.equal(await current, true);
+    f.pending[0].reject(new Error('offline'));
+    assert.equal(await previous, false);
+    assert.equal(f.reports.at(-1), 'matched');
+});
+
+test('confirmation of a hidden recipient form cannot modify its address or status', async () => {
+    let active = true;
+    const f = fixture({ isActive: () => active });
+    enteredAddress(f);
+    const checking = f.form.validate();
+    active = false;
+    f.pending[0].resolve({ ...confirmed(), address: { ...confirmed().address, street: 'Canonical street' } });
+    assert.equal(await checking, false);
+    assert.equal(f.fields.street.value, 'Rembrandtlaan');
+    active = true;
+    const retry = f.form.validate();
+    f.pending[1].resolve(confirmed());
+    assert.equal(await retry, true);
+    assert.equal(f.requests[0].payload.formSessionId, f.requests[1].payload.formSessionId);
+});
