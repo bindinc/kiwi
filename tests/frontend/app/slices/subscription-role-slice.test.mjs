@@ -51,6 +51,7 @@ function testSubscriptionRoleSliceRegistersExpectedActions() {
         'search-subscription-role-person',
         'search-subscription-role-person-keypress',
         'toggle-requester-same-as-recipient',
+        'use-active-customer-for-subscription-role',
         'select-subscription-duplicate-person',
         'toggle-subscription-duplicate-matches',
         'acknowledge-subscription-duplicate-warning',
@@ -75,7 +76,8 @@ function testSubscriptionRoleSliceDispatchesRuntimeMethods() {
         setSubscriptionRoleMode: (...args) => observedCalls.push({ method: 'setSubscriptionRoleMode', args }),
         toggleCustomerFormAddress: (...args) => observedCalls.push({ method: 'toggleCustomerFormAddress', args }),
         toggleRequesterSameAsRecipient: (...args) => observedCalls.push({ method: 'toggleRequesterSameAsRecipient', args }),
-        toggleSubscriptionDuplicateMatches: (...args) => observedCalls.push({ method: 'toggleSubscriptionDuplicateMatches', args })
+        toggleSubscriptionDuplicateMatches: (...args) => observedCalls.push({ method: 'toggleSubscriptionDuplicateMatches', args }),
+        useActiveCustomerForSubscriptionRole: (...args) => observedCalls.push({ method: 'useActiveCustomerForSubscriptionRole', args })
     };
 
     try {
@@ -181,6 +183,17 @@ function testSubscriptionRoleSliceDispatchesRuntimeMethods() {
             { method: 'toggleSubscriptionDuplicateMatches', args: ['recipient'] },
             { method: 'acknowledgeSubscriptionDuplicateWarning', args: ['recipient'] },
             { method: 'selectSubscriptionRolePerson', args: ['recipient', 51] }
+        ]);
+
+        listeners.click(createDelegatedEvent({ dataset: {
+            action: 'use-active-customer-for-subscription-role', argRole: 'requester'
+        } }, 'click'));
+        listeners.click(createDelegatedEvent({ dataset: {
+            action: 'select-subscription-role-person', argRole: 'recipient', argPersonId: '51', argResultIndex: '1'
+        } }, 'click'));
+        assert.deepEqual(observedCalls.slice(-2), [
+            { method: 'useActiveCustomerForSubscriptionRole', args: ['requester'] },
+            { method: 'selectSubscriptionRolePerson', args: ['recipient', 51, 1] }
         ]);
     } finally {
         if (previousRuntime === undefined) {

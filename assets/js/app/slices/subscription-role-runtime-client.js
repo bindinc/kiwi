@@ -67,8 +67,11 @@ export function createSubscriptionRoleRuntimeClient(options = {}) {
         selectSubscriptionDuplicatePerson(role, personId) {
             invoke('selectSubscriptionDuplicatePerson', [role, personId]);
         },
-        selectSubscriptionRolePerson(role, personId) {
-            invoke('selectSubscriptionRolePerson', [role, personId]);
+        selectSubscriptionRolePerson(role, personId, resultIndex) {
+            invoke('selectSubscriptionRolePerson', resultIndex === undefined ? [role, personId] : [role, personId, resultIndex]);
+        },
+        useActiveCustomerForSubscriptionRole(role) {
+            invoke('useActiveCustomerForSubscriptionRole', [role]);
         },
         setSubscriptionRoleMode(role, mode) {
             invoke('setSubscriptionRoleMode', [role, mode]);

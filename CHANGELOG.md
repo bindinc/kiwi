@@ -10,6 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Fixed
 
+- Reuse the active customer as subscription recipient without another lookup, while keeping independent recipient and payer selection through submission using full source identity and rejecting stale or incompatible customer selections. [sc-203540]
 - Leave marketing preferences unselected for new customers until explicitly chosen, retain existing customers' preferences, and prevent choices carrying over between recipients or form resets. [sc-203457]
 - Derive and display the required subscription mandant from the offer catalog, reject missing or inconsistent mappings, and keep recipient and payer identities separate across mandants and source customers while grouping offers for the same customer and mandant. [sc-203528]
 - Prevent stale recipient address errors and premature rejection before address selection, while retaining mandatory full-address confirmation and recovery within the same session. [sc-203455]
