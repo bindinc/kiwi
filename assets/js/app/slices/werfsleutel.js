@@ -991,10 +991,15 @@ function updateWerfsleutelSummary() {
 
     const selectedCombinationCount = getSelectedCombinationCount();
     const openCount = Math.max(offerCount - selectedCombinationCount, 0);
-    const isComplete = openCount === 0;
-    const statusLabel = getSummaryStatusLabel(offerCount, openCount);
-    const leadText = getSummaryLeadText(openCount);
-    const hintText = getSummaryHintText(openCount);
+    const hasMissingMandant = werfsleutelSliceState.selectedOffers.some((entry) => !String(entry.offer?.mandant || '').trim());
+    const isComplete = openCount === 0 && !hasMissingMandant;
+    const statusLabel = hasMissingMandant
+        ? translate('werfsleutel.mandantMissingLabel', 'Mandant ontbreekt')
+        : getSummaryStatusLabel(offerCount, openCount);
+    const leadText = hasMissingMandant ? '' : getSummaryLeadText(openCount);
+    const hintText = hasMissingMandant
+        ? translate('werfsleutel.mandantRequired', 'Een werfsleutel heeft geen mandant. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.')
+        : getSummaryHintText(openCount);
 
     summary.innerHTML = `
         <div class="werfsleutel-summary-row">

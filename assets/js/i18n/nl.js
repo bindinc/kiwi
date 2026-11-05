@@ -396,6 +396,7 @@ const nl = {
     },
     "werfsleutel": {
         "mandantLabel": "Mandant",
+        "mandantMissingLabel": "Mandant ontbreekt",
         "mandantRequired": "Een werfsleutel heeft geen mandant. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.",
         "mandantMissing": "Mandant ontbreekt. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.",
         "mandantHint": "De werfsleutel bepaalt de mandant. Klantgegevens worden per mandant apart verwerkt. Voor een andere mandant maken we een aparte klant aan met de ingevulde gegevens, ook voor een aparte betaler.",
