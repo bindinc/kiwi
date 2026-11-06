@@ -822,7 +822,7 @@ export async function renderOrderItems() {
                         </div>
                         <div class="discount-item-amount">
                             -${asCurrency(discount.amount)}
-                            ${isCoupon ? '<button data-action="remove-coupon" type="button" style="margin-left: 0.5rem; background: none; border: none; cursor: pointer; color: #dc2626; font-size: 1rem;" title="Verwijder kortingscode">✕</button>' : ''}
+                            ${isCoupon ? '<button data-action="remove-coupon" type="button" class="coupon-remove" title="Verwijder kortingscode">✕</button>' : ''}
                         </div>
                     </div>
                 `;

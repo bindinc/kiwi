@@ -11,28 +11,28 @@ export function configureContactHistorySliceDependencies(dependenciesResolver) {
 }
 
 const contactTypeLabelConfig = {
-    call_started_anonymous: { key: 'contactHistory.type.callStartedAnonymous', fallback: 'Anonieme call gestart', icon: '📞', color: '#fbbf24' },
-    call_started_identified: { key: 'contactHistory.type.callStartedIdentified', fallback: 'Call gestart', icon: '📞', color: '#3b82f6' },
-    call_identified: { key: 'contactHistory.type.callIdentified', fallback: 'Beller geïdentificeerd', icon: '👤', color: '#10b981' },
-    call_ended_by_agent: { key: 'contactHistory.type.callEndedByAgent', fallback: 'Call beëindigd (agent)', icon: '📞', color: '#6b7280' },
-    call_ended_by_customer: { key: 'contactHistory.type.callEndedByCustomer', fallback: 'Call beëindigd (klant)', icon: '📞', color: '#ef4444' },
-    call_disposition: { key: 'contactHistory.type.callDisposition', fallback: 'Gesprek afgerond', icon: '📋', color: '#3b82f6' },
-    call_hold: { key: 'contactHistory.type.callHold', fallback: 'Gesprek in wacht', icon: '⏸️', color: '#f59e0b' },
-    call_resumed: { key: 'contactHistory.type.callResumed', fallback: 'Gesprek hervat', icon: '▶️', color: '#10b981' },
-    recording_started: { key: 'contactHistory.type.recordingStarted', fallback: 'Opname gestart', icon: '🔴', color: '#dc2626' },
-    acw_completed: { key: 'contactHistory.type.acwCompleted', fallback: 'Nabewerking voltooid', icon: '✅', color: '#10b981' },
-    follow_up_scheduled: { key: 'contactHistory.type.followUpScheduled', fallback: 'Follow-up gepland', icon: '📅', color: '#8b5cf6' },
-    agent_status_change: { key: 'contactHistory.type.agentStatusChange', fallback: 'Agent status gewijzigd', icon: '🔄', color: '#6b7280' },
-    subscription_created: { key: 'contactHistory.type.subscriptionCreated', fallback: 'Abonnement aangemaakt', icon: '➕', color: '#10b981' },
-    subscription_changed: { key: 'contactHistory.type.subscriptionChanged', fallback: 'Abonnement gewijzigd', icon: '✏️', color: '#3b82f6' },
-    subscription_cancelled: { key: 'contactHistory.type.subscriptionCancelled', fallback: 'Abonnement opgezegd', icon: '❌', color: '#ef4444' },
-    article_sold: { key: 'contactHistory.type.articleSold', fallback: 'Artikel verkocht', icon: '🛒', color: '#10b981' },
-    magazine_resent: { key: 'contactHistory.type.magazineResent', fallback: 'Editie opnieuw verzonden', icon: '📬', color: '#3b82f6' },
-    notification_success: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '✅', color: '#10b981' },
-    notification_info: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: 'ℹ️', color: '#3b82f6' },
-    notification_warning: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '⚠️', color: '#f59e0b' },
-    notification_error: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '❗', color: '#ef4444' },
-    default: { key: 'contactHistory.type.default', fallback: 'Contact', icon: '📝', color: '#6b7280' }
+    call_started_anonymous: { key: 'contactHistory.type.callStartedAnonymous', fallback: 'Anonieme call gestart', icon: '📞', tone: 'warning' },
+    call_started_identified: { key: 'contactHistory.type.callStartedIdentified', fallback: 'Call gestart', icon: '📞', tone: 'info' },
+    call_identified: { key: 'contactHistory.type.callIdentified', fallback: 'Beller geïdentificeerd', icon: '👤', tone: 'success' },
+    call_ended_by_agent: { key: 'contactHistory.type.callEndedByAgent', fallback: 'Call beëindigd (agent)', icon: '📞', tone: 'muted' },
+    call_ended_by_customer: { key: 'contactHistory.type.callEndedByCustomer', fallback: 'Call beëindigd (klant)', icon: '📞', tone: 'danger' },
+    call_disposition: { key: 'contactHistory.type.callDisposition', fallback: 'Gesprek afgerond', icon: '📋', tone: 'info' },
+    call_hold: { key: 'contactHistory.type.callHold', fallback: 'Gesprek in wacht', icon: '⏸️', tone: 'warning' },
+    call_resumed: { key: 'contactHistory.type.callResumed', fallback: 'Gesprek hervat', icon: '▶️', tone: 'success' },
+    recording_started: { key: 'contactHistory.type.recordingStarted', fallback: 'Opname gestart', icon: '🔴', tone: 'danger' },
+    acw_completed: { key: 'contactHistory.type.acwCompleted', fallback: 'Nabewerking voltooid', icon: '✅', tone: 'success' },
+    follow_up_scheduled: { key: 'contactHistory.type.followUpScheduled', fallback: 'Follow-up gepland', icon: '📅', tone: 'group' },
+    agent_status_change: { key: 'contactHistory.type.agentStatusChange', fallback: 'Agent status gewijzigd', icon: '🔄', tone: 'muted' },
+    subscription_created: { key: 'contactHistory.type.subscriptionCreated', fallback: 'Abonnement aangemaakt', icon: '➕', tone: 'success' },
+    subscription_changed: { key: 'contactHistory.type.subscriptionChanged', fallback: 'Abonnement gewijzigd', icon: '✏️', tone: 'info' },
+    subscription_cancelled: { key: 'contactHistory.type.subscriptionCancelled', fallback: 'Abonnement opgezegd', icon: '❌', tone: 'danger' },
+    article_sold: { key: 'contactHistory.type.articleSold', fallback: 'Artikel verkocht', icon: '🛒', tone: 'success' },
+    magazine_resent: { key: 'contactHistory.type.magazineResent', fallback: 'Editie opnieuw verzonden', icon: '📬', tone: 'info' },
+    notification_success: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '✅', tone: 'success' },
+    notification_info: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: 'ℹ️', tone: 'info' },
+    notification_warning: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '⚠️', tone: 'warning' },
+    notification_error: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '❗', tone: 'danger' },
+    default: { key: 'contactHistory.type.default', fallback: 'Contact', icon: '📝', tone: 'muted' }
 };
 
 let contactHistoryHighlightTimer = null;
@@ -168,7 +168,7 @@ export function getContactTypeInfo(type) {
     return {
         label: translateLabel(dependencies, config.key, config.fallback),
         icon: config.icon,
-        color: config.color
+        tone: config.tone
     };
 }
 
@@ -385,10 +385,10 @@ export function displayContactHistory() {
         const descriptionHtml = String(item.description || '').replace(/\n/g, '<br>');
 
         return `
-        <div class="timeline-item${highlightClass}" data-contact-id="${rawItemId}">
-            <div class="timeline-dot" style="background-color: ${typeInfo.color}"></div>
+        <div class="timeline-item timeline-item--${typeInfo.tone}${highlightClass}" data-contact-id="${rawItemId}">
+            <div class="timeline-dot"></div>
             <div class="timeline-header" data-action="toggle-timeline-item" data-arg-entry-dom-id="${entryDomId}">
-                <span class="timeline-type" style="color: ${typeInfo.color}">
+                <span class="timeline-type">
                     ${typeInfo.icon} ${typeInfo.label}
                 </span>
                 <span class="timeline-expand expanded" id="expand-${entryDomId}">▼</span>

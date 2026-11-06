@@ -6,29 +6,127 @@
 }
 
 :root {
-    --primary-color: #2563eb;
-    --primary-hover: #1d4ed8;
-    --secondary-color: #64748b;
-    --success-color: #10b981;
-    --danger-color: #ef4444;
-    --warning-color: #f59e0b;
-    --bg-primary: #faf8fc;
-    --bg-secondary: #ffffff;
-    --text-primary: #0f172a;
-    --text-secondary: #64748b;
-    --border-color: #e2e8f0;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    /* Canonical sRGB palette: components consume semantic roles below. */
+    --palette-cloud-dancer: #F0EEE9;
+    --palette-veiled-vista: #C7E2C8;
+    --palette-baltic-sea: #7AB6D9;
+    --palette-golden-mist: #D5CD94;
+    --palette-quiet-violet: #A693AC;
+    --palette-cloud-cover: #999393;
+    --palette-hematite: #756F6B;
+    --palette-blue-fusion: #496275;
+
+    --page: var(--palette-cloud-dancer);
+    --surface: #ffffff;
+    --surface-subdued: var(--palette-cloud-dancer);
+    --surface-calm: var(--palette-veiled-vista);
+    --surface-selected: var(--palette-veiled-vista);
+    --surface-info: var(--palette-baltic-sea);
+    --surface-attention: var(--palette-golden-mist);
+    --surface-group: var(--palette-quiet-violet);
+    --surface-disabled: var(--palette-cloud-cover);
+    /* White and dark ink support accessible text on the eight source colors. */
+    --text: #0f172a;
+    --text-muted: #475569;
+    --text-inverse: #ffffff;
+    --text-palette: var(--palette-blue-fusion);
+    --border-subtle: rgba(117, 111, 107, 0.28);
+    --border-control: #768894;
+    --action: var(--palette-blue-fusion);
+    --action-hover: #354C5E;
+    --action-active: #2B3E4D;
+    --action-secondary: var(--palette-hematite);
+    --action-secondary-hover: #5D5855;
+    --focus: var(--palette-blue-fusion);
+    --focus-inverse: #ffffff;
+    --surface-inverse: var(--action-hover);
+    --surface-inverse-hover: var(--action-active);
+    --border-inverse: #ffffff;
+    --overlay-backdrop: rgba(15, 23, 42, 0.5);
+    --shadow-sm: 0 1px 2px 0 rgba(117, 111, 107, 0.08);
+    --shadow-md: 0 4px 6px -1px rgba(117, 111, 107, 0.12);
+    --shadow-lg: 0 10px 15px -3px rgba(117, 111, 107, 0.16);
+    --elevation-overlay: 0 8px 24px rgba(15, 23, 42, 0.14);
+
+    /* Operational states retain their meaning; these foregrounds also work on white. */
+    --success: #15803d;
+    --success-hover: #166534;
+    --danger: #b91c1c;
+    --danger-hover: #991b1b;
+    --warning: #92400e;
+    --warning-hover: #78350f;
+    --surface-success: #dcfce7;
+    --surface-danger: #fee2e2;
+    --surface-warning: #fef3c7;
+    --event-group: #6d28d9;
+    --text-warning-inverse: var(--surface-warning);
+    /* Availability surfaces stay recognizable; each badge foreground is contrast-tested. */
+    --status-ready: #4ade80;
+    --status-ready-text: #052e16;
+    --status-busy: #ef4444;
+    --status-busy-text: var(--text);
+    --status-dnd: #dc2626;
+    --status-dnd-text: var(--text-inverse);
+    --status-brb: #f59e0b;
+    --status-brb-text: var(--text);
+    --status-away: #fbbf24;
+    --status-away-text: #713f12;
+    --status-offline: #9ca3af;
+    --status-offline-text: #111827;
+    --status-acw: #facc15;
+    --status-acw-text: #422006;
+
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
 }
 
+/* Links are identifiable without relying on color; controls share a visible focus ring. */
+:where(a[href], .btn-link) {
+    color: var(--action);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+:where(a[href]:hover, .btn-link:hover) {
+    color: var(--action-hover);
+}
+
+input,
+select,
+textarea {
+    accent-color: var(--action);
+    border-color: var(--border-control);
+    color: var(--text);
+    background-color: var(--surface);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    outline: 1px solid var(--border-control);
+    outline-offset: 0;
+}
+
+input[type="radio"] {
+    border-radius: 50%;
+}
+
+:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+}
+
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
+    background-color: var(--page);
+    color: var(--text);
     line-height: 1.6;
 }
 
@@ -42,8 +140,8 @@ body {
 .header {
     /* Keep gestures starting on the toolbar from moving the zoomed page. */
     touch-action: none;
-    background: #000 url(../img/Bindinc-Logo-RGB-WIT-2023.svg) no-repeat center left;
-    color: white;
+    background: var(--action) url(../img/Bindinc-Logo-RGB-WIT-2023.svg) no-repeat center left;
+    color: var(--text-inverse);
     box-shadow: var(--shadow-md);
     position: sticky;
     top: 0;
@@ -125,7 +223,7 @@ body {
     display: flex;
     align-items: center;
     padding-right: 1.25rem;
-    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    border-right: 1px solid var(--border-inverse);
 }
 
 .customer-work-session-bar {
@@ -133,9 +231,9 @@ body {
     justify-self: center;
     min-width: 0;
     width: min(100%, 820px);
-    color: #f8fafc;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: var(--text-inverse);
+    background: var(--surface-inverse);
+    border: 1px solid var(--border-inverse);
     border-radius: 999px;
 }
 
@@ -189,32 +287,32 @@ body {
 
 .customer-work-session-label {
     padding: 0.15rem 0.45rem;
-    color: #bfdbfe;
+    color: var(--text-inverse);
     font-size: 0.675rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    background: rgba(59, 130, 246, 0.22);
+    background: var(--surface-inverse);
     border-radius: 999px;
     white-space: nowrap;
 }
 
 .customer-work-session-reference,
 .customer-work-session-source {
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-inverse);
     font-size: 0.75rem;
     white-space: nowrap;
 }
 
 .customer-work-session-reference span:last-child,
 .customer-work-session-source span:last-child {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-inverse);
     font-weight: 600;
 }
 
 .customer-work-session-warning {
     max-width: 13rem;
-    color: #fde68a;
+    color: var(--text-warning-inverse);
     font-size: 0.7rem;
     font-weight: 600;
     line-height: 1.25;
@@ -225,24 +323,24 @@ body {
     align-items: center;
     gap: 0.3rem;
     padding: 0.3rem 0.55rem;
-    color: rgba(255, 255, 255, 0.82);
+    color: var(--text-inverse);
     font: inherit;
     font-size: 0.725rem;
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--surface-inverse);
+    border: 1px solid var(--border-inverse);
     border-radius: 999px;
     cursor: pointer;
     white-space: nowrap;
 }
 
 .customer-work-session-end:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.16);
+    color: var(--text-inverse);
+    background: var(--surface-inverse);
 }
 
 .customer-work-session-end:focus-visible {
-    outline: 2px solid #fff;
+    outline: 2px solid var(--focus-inverse);
     outline-offset: 2px;
 }
 
@@ -265,8 +363,8 @@ body {
     max-width: 1770px;
     margin: 1rem auto 0;
     padding: 1rem 1.25rem;
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
+    background: var(--surface-success);
+    border: 1px solid var(--surface-success);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
 }
@@ -283,15 +381,15 @@ body {
     width: 2.25rem;
     height: 2.25rem;
     place-items: center;
-    color: #fff;
+    color: var(--text-inverse);
     font-weight: 800;
-    background: #059669;
+    background: var(--success);
     border-radius: 999px;
 }
 
 .queued-customer-choice h2 {
     margin: 0 0 0.25rem;
-    color: #065f46;
+    color: var(--success);
     font-size: 1.05rem;
 }
 
@@ -309,20 +407,20 @@ body {
 }
 
 .queued-customer-choice-roles dt {
-    color: #475569;
+    color: var(--text-muted);
     font-size: 0.825rem;
     font-weight: 600;
 }
 
 .queued-customer-choice-roles dd {
-    color: #064e3b;
+    color: var(--success);
     font-size: 0.875rem;
     font-weight: 700;
 }
 
 .queued-customer-choice-note {
     margin-top: 0.5rem;
-    color: #475569;
+    color: var(--text-muted);
     font-size: 0.825rem;
 }
 
@@ -375,24 +473,24 @@ body {
     background: transparent;
     border: none;
     border-radius: var(--radius-sm);
-    color: rgba(255, 255, 255, 0.88);
+    color: var(--text-inverse);
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .workbox-toggle-button:hover {
-    background: rgba(255, 255, 255, 0.16);
-    color: #ffffff;
+    background: var(--surface-inverse);
+    color: var(--text-inverse);
 }
 
 .workbox-toggle-button:focus-visible {
-    outline: 2px solid #ffffff;
+    outline: 2px solid var(--focus-inverse);
     outline-offset: 2px;
 }
 
 .workbox-toggle-button.is-active {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
+    background: var(--surface-inverse-hover);
+    color: var(--text-inverse);
 }
 
 .workbox-toggle-icon {
@@ -402,7 +500,7 @@ body {
 
 .workbox-toggle-count {
     margin-left: 0.25rem;
-    color: #fef08a;
+    color: var(--text-warning-inverse);
     font-size: 0.72rem;
     font-weight: 700;
 }
@@ -415,21 +513,21 @@ body {
     width: 54px;
     height: 54px;
     padding: 0;
-    background: rgba(13, 33, 71, 0.55);
+    background: var(--surface-inverse);
     border-radius: 50%;
     cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.45);
-    box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-inverse);
+    box-shadow: var(--shadow-sm);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .agent-profile-trigger:hover {
     transform: translateY(-1px);
-    box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.2), 0 6px 18px rgba(11, 31, 72, 0.35);
+    box-shadow: var(--shadow-sm);
 }
 
 .agent-profile-trigger:focus-visible {
-    outline: 2px solid #ffffff;
+    outline: 2px solid var(--focus-inverse);
     outline-offset: 2px;
 }
 
@@ -441,11 +539,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #ffffff;
-    border: 2px solid rgba(255, 255, 255, 0.85);
+    background: var(--surface);
+    border: 2px solid var(--border-inverse);
     font-size: 0.75rem;
     font-weight: 700;
-    color: #1d4ed8;
+    color: var(--action);
     text-transform: uppercase;
 }
 
@@ -462,14 +560,14 @@ body {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    border: 2px solid #0b2a57;
+    border: 2px solid var(--action);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 0.68rem;
     font-weight: 700;
-    color: #052e16;
-    background: #4ade80;
+    color: var(--status-ready-text);
+    background: var(--status-ready);
     line-height: 1;
 }
 
@@ -478,13 +576,13 @@ body {
     top: 100%;
     right: 0;
     margin-top: 0.5rem;
-    background: white;
+    background: var(--surface);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     min-width: 280px;
     overflow: hidden;
     z-index: 1000;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid var(--border-subtle);
 }
 
 .agent-profile-menu[hidden] {
@@ -496,33 +594,33 @@ body {
 }
 
 .profile-menu-section + .profile-menu-section {
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-subtle);
 }
 
 .profile-menu-header {
     padding: 0.45rem 1rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    background: #f8fafc;
+    background: var(--surface-subdued);
 }
 
 .profile-menu-user-name {
     padding: 0.7rem 1rem 0.2rem;
     font-size: 0.92rem;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--text);
 }
 
 .profile-menu-roles {
     padding: 0 1rem 0.55rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 0.85rem;
     line-height: 1.5;
     overflow-wrap: anywhere;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .status-menu-item {
@@ -533,7 +631,7 @@ body {
     padding: 0.75rem 1rem;
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease;
-    color: var(--text-primary);
+    color: var(--text);
     font-size: 0.9rem;
     border: none;
     background: transparent;
@@ -542,7 +640,7 @@ body {
 }
 
 .status-menu-item:hover {
-    background: #f1f5f9;
+    background: var(--surface-subdued);
 }
 
 .status-menu-item[data-status-option]::before {
@@ -554,41 +652,41 @@ body {
 }
 
 .status-menu-item[data-status-option="ready"]::before {
-    background: #10b981;
+    background: var(--status-ready);
 }
 
 .status-menu-item[data-status-option="busy"]::before {
-    background: #ef4444;
+    background: var(--status-busy);
 }
 
 .status-menu-item[data-status-option="dnd"]::before {
-    background: #dc2626;
+    background: var(--status-dnd);
 }
 
 .status-menu-item[data-status-option="brb"]::before {
-    background: #f59e0b;
+    background: var(--status-brb);
 }
 
 .status-menu-item[data-status-option="away"]::before {
-    background: #fbbf24;
+    background: var(--status-away);
 }
 
 .status-menu-item[data-status-option="offline"]::before {
-    background: #6b7280;
+    background: var(--status-offline);
 }
 
 .status-menu-item[data-status-option].is-active {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: var(--surface-selected);
+    color: var(--text-palette);
     font-weight: 600;
 }
 
 .status-menu-item-danger {
-    color: #dc2626;
+    color: var(--danger);
 }
 
 .status-menu-item-danger:hover {
-    background: #fef2f2;
+    background: var(--surface-danger);
 }
 
 .profile-menu-info {
@@ -605,17 +703,17 @@ body {
 }
 
 .agent-work-stat-label {
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .agent-work-stat-value {
     font-weight: 700;
-    color: #0f172a;
+    color: var(--text);
     font-family: 'Courier New', monospace;
 }
 
 .agent-work-stat-value--muted {
-    color: #475569;
+    color: var(--text-muted);
     font-family: inherit;
     font-weight: 600;
 }
@@ -698,8 +796,8 @@ body {
    ============================================================================ */
 
 .session-info {
-    background: rgba(0, 0, 0, 0.15);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--surface-inverse);
+    border-top: 1px solid var(--border-inverse);
     padding: 0.75rem 2rem;
     backdrop-filter: blur(10px);
 }
@@ -718,11 +816,11 @@ body {
     align-items: center;
     gap: 0.5rem;
     font-weight: 600;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.15);
+    color: var(--text-inverse);
+    background: var(--surface-inverse);
     padding: 0.4rem 1rem;
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-inverse);
 }
 
 .service-icon {
@@ -738,7 +836,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    color: #ffd700;
+    color: var(--text-warning-inverse);
     font-weight: 500;
 }
 
@@ -776,21 +874,21 @@ body {
 
 .btn-end-call {
     padding: 0.5rem 1.25rem;
-    background: #dc3545;
-    color: white;
+    background: var(--danger);
+    color: var(--text-inverse);
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
     transition: all 0.2s;
     font-weight: 600;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-end-call:hover {
-    background: #c82333;
+    background: var(--danger-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-md);
 }
 
 /* ============================================================================
@@ -798,9 +896,9 @@ body {
    ============================================================================ */
 
 .queue-info {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--action);
+    border-top: 1px solid var(--border-inverse);
+    border-bottom: 1px solid var(--border-inverse);
     padding: 0.75rem 2rem;
 }
 
@@ -811,7 +909,7 @@ body {
     align-items: center;
     gap: 2rem;
     font-size: 0.9rem;
-    color: white;
+    color: var(--text-inverse);
 }
 
 .queue-next-caller,
@@ -835,13 +933,13 @@ body {
 .queue-next-name {
     font-weight: 600;
     font-size: 1rem;
-    color: #fbbf24;
+    color: var(--text-warning-inverse);
 }
 
 .queue-count {
     font-weight: 700;
     font-size: 1.1rem;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--surface-inverse);
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
     min-width: 2rem;
@@ -853,8 +951,8 @@ body {
 }
 
 .btn-accept-call {
-    background: #10b981;
-    color: white;
+    background: var(--success);
+    color: var(--text-inverse);
     border: none;
     padding: 0.6rem 1.5rem;
     border-radius: var(--radius-sm);
@@ -862,13 +960,13 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-accept-call:hover {
-    background: #059669;
+    background: var(--success-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-md);
 }
 
 /* ============================================================================
@@ -880,8 +978,9 @@ body {
     align-items: center;
     gap: 0.5rem;
     padding: 0.4rem 0.9rem;
-    background: rgba(239, 68, 68, 0.15);
-    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: var(--surface-danger);
+    color: var(--danger);
+    border: 1px solid var(--danger);
     border-radius: 6px;
     font-size: 0.85rem;
 }
@@ -897,11 +996,11 @@ body {
 
 .rec-text {
     font-weight: bold;
-    color: #dc2626;
+    color: var(--danger);
 }
 
 .rec-notice {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--danger);
     font-size: 0.8rem;
 }
 
@@ -911,30 +1010,30 @@ body {
 
 .btn-hold-call {
     padding: 0.5rem 1.25rem;
-    background: #f59e0b;
-    color: white;
+    background: var(--warning);
+    color: var(--text-inverse);
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
     transition: all 0.2s;
     font-weight: 600;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-hold-call:hover {
-    background: #d97706;
+    background: var(--warning-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-hold-call.on-hold {
-    background: #10b981;
+    background: var(--success);
     animation: pulse-hold 1.5s ease-in-out infinite;
 }
 
 .btn-hold-call.on-hold:hover {
-    background: #059669;
+    background: var(--success-hover);
     transform: translateY(-1px);
 }
 
@@ -948,10 +1047,10 @@ body {
    ============================================================================ */
 
 .acw-bar {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border-top: 1px solid rgba(217, 119, 6, 0.3);
+    background: var(--warning);
+    border-top: 1px solid var(--warning);
     padding: 0.75rem 2rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-md);
 }
 
 .acw-bar-content {
@@ -961,7 +1060,7 @@ body {
     align-items: center;
     gap: 1.5rem;
     font-size: 0.9rem;
-    color: white;
+    color: var(--text-inverse);
 }
 
 .acw-icon {
@@ -980,7 +1079,7 @@ body {
     font-family: 'Courier New', monospace;
     font-size: 1.2rem;
     font-weight: 700;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-inverse);
     padding: 0.3rem 0.8rem;
     border-radius: 6px;
     letter-spacing: 1px;
@@ -994,21 +1093,21 @@ body {
 
 .btn-finish-acw {
     padding: 0.5rem 1.5rem;
-    background: #10b981;
-    color: white;
+    background: var(--success);
+    color: var(--text-inverse);
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 700;
     transition: all 0.2s;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-finish-acw:hover {
-    background: #059669;
+    background: var(--success-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--shadow-md);
 }
 
 /* ============================================================================
@@ -1016,8 +1115,8 @@ body {
    ============================================================================ */
 
 .disposition-info {
-    background: rgba(37, 99, 235, 0.1);
-    border: 1px solid rgba(37, 99, 235, 0.3);
+    background: var(--surface-info);
+    border: 1px solid var(--border-control);
     border-radius: 8px;
     padding: 1rem;
     margin-top: 1.5rem;
@@ -1027,7 +1126,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .info-row:last-child {
@@ -1036,11 +1135,11 @@ body {
 
 .info-row span:first-child {
     font-weight: 600;
-    color: #374151;
+    color: var(--text);
 }
 
 .info-row span:last-child {
-    color: #1f2937;
+    color: var(--text);
     font-weight: 500;
 }
 
@@ -1054,8 +1153,9 @@ body {
     align-items: center;
     gap: 0.5rem;
     padding: 0.3rem 0.8rem;
-    background: rgba(245, 158, 11, 0.2);
-    border: 1px solid rgba(245, 158, 11, 0.4);
+    background: var(--surface-warning);
+    color: var(--warning);
+    border: 1px solid var(--warning);
     border-radius: 4px;
     font-size: 0.85rem;
     animation: pulse-hold 2s ease-in-out infinite;
@@ -1075,7 +1175,7 @@ body {
     gap: 0.25rem;
     align-items: flex-end;
     padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--surface-inverse);
     border-radius: var(--radius-sm);
     backdrop-filter: blur(10px);
 }
@@ -1083,7 +1183,7 @@ body {
 .call-timer {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #fbbf24;
+    color: var(--text-warning-inverse);
     letter-spacing: 0.5px;
 }
 
@@ -1096,11 +1196,11 @@ body {
 .call-report {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #10b981;
+    color: var(--success);
     padding: 0.25rem 0.5rem;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--surface);
     border-radius: var(--radius-sm);
-    color: #059669;
+    color: var(--success);
 }
 
 /* Main Content Layout */
@@ -1117,25 +1217,25 @@ body {
 
 /* Card */
 .card {
-    background: var(--bg-secondary);
+    background: var(--surface);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
     box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
 }
 
 .card h2 {
     font-size: 1.25rem;
     font-weight: 600;
     margin-bottom: 1.25rem;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .card h3 {
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 1rem;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 /* Left Panel */
@@ -1162,14 +1262,14 @@ body {
 .form-label {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
     padding: 0.625rem 0.875rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
     transition: all 0.2s;
@@ -1184,22 +1284,23 @@ body {
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .form-text {
     display: block;
     margin-top: 0.25rem;
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .form-control {
     width: 100%;
     padding: 0.625rem 0.875rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
     transition: all 0.2s;
@@ -1207,9 +1308,10 @@ body {
 }
 
 .form-control:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 /* Form hint text */
@@ -1217,7 +1319,7 @@ body {
     display: block;
     margin-top: 0.25rem;
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-style: italic;
 }
 
@@ -1225,7 +1327,7 @@ body {
 select optgroup {
     font-weight: 600;
     font-style: normal;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 select option {
@@ -1239,7 +1341,7 @@ select option {
 }
 
 .additional-filters {
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-subtle);
     padding-top: 0.75rem;
 }
 
@@ -1248,7 +1350,7 @@ select option {
     background: none;
     border: none;
     padding: 0.25rem 0;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-weight: 500;
     display: flex;
@@ -1258,7 +1360,7 @@ select option {
 }
 
 .additional-filters-toggle:hover {
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .additional-filters-toggle .chevron {
@@ -1273,8 +1375,8 @@ select option {
     display: none;
     margin-top: 0.75rem;
     padding: 0.75rem;
-    background: var(--bg-secondary);
-    border: 1px dashed var(--border-color);
+    background: var(--surface);
+    border: 1px dashed var(--border-subtle);
     border-radius: var(--radius-md);
 }
 
@@ -1299,10 +1401,10 @@ select option {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.625rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: var(--surface-subdued);
+    color: var(--text);
     cursor: pointer;
 }
 
@@ -1329,39 +1431,43 @@ select option {
 }
 
 .btn-primary {
-    background-color: var(--primary-color);
-    color: white;
+    background-color: var(--action);
+    color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-    background-color: var(--primary-hover);
+    background-color: var(--action-hover);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
 
+.btn-primary:active {
+    background-color: var(--action-active);
+}
+
 .btn-secondary {
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background-color: var(--action-secondary);
+    color: var(--text-inverse);
+    border: 1px solid var(--action-secondary);
 }
 
 .btn-secondary:hover {
-    background-color: #e2e8f0;
+    background-color: var(--action-secondary-hover);
 }
 
 .btn-success {
-    background-color: var(--success-color);
-    color: white;
+    background-color: var(--success);
+    color: var(--text-inverse);
 }
 
 .btn-success:hover {
-    background-color: #059669;
+    background-color: var(--success-hover);
 }
 
 .btn-action {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background-color: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border-control);
     justify-content: flex-start;
     width: 100%;
     display: flex;
@@ -1370,8 +1476,8 @@ select option {
 }
 
 .btn-action:hover {
-    border-color: var(--primary-color);
-    background-color: rgba(37, 99, 235, 0.05);
+    border-color: var(--action);
+    background-color: var(--surface-selected);
 }
 
 .btn-small {
@@ -1381,9 +1487,9 @@ select option {
 
 /* End Session Button in Header */
 .btn-end-session-header {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: var(--surface-inverse);
+    color: var(--text-inverse);
+    border: 2px solid var(--border-inverse);
     padding: 0.6rem 1.5rem;
     border-radius: var(--radius-md);
     font-size: 0.9rem;
@@ -1395,10 +1501,10 @@ select option {
 }
 
 .btn-end-session-header:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.5);
+    background: var(--surface-inverse-hover);
+    border-color: var(--border-inverse);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-end-session-header:active {
@@ -1409,7 +1515,7 @@ select option {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -1422,8 +1528,8 @@ select option {
 }
 
 .btn-close:hover {
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
+    background-color: var(--surface-subdued);
+    color: var(--text);
 }
 
 /* Actions Card */
@@ -1441,9 +1547,9 @@ select option {
 .search-summary {
     margin-top: 1rem;
     padding: 1rem;
-    background: var(--bg-primary);
+    background: var(--surface-subdued);
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
 }
 
 .summary-content {
@@ -1458,7 +1564,7 @@ select option {
     gap: 0.5rem;
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--success-color);
+    color: var(--success-hover);
 }
 
 .summary-icon {
@@ -1486,7 +1592,7 @@ select option {
 }
 
 .subscription-queue-summary {
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 0.85rem;
     margin-bottom: 0.75rem;
 }
@@ -1501,8 +1607,8 @@ select option {
 }
 
 .subscription-queue-item {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
+    background: var(--surface-subdued);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
     padding: 0.6rem;
 }
@@ -1515,10 +1621,10 @@ select option {
 
 .subscription-queue-avatar {
     align-items: center;
-    background: #e2e8f0;
-    border: 1px solid #cbd5e1;
+    background: var(--surface-subdued);
+    border: 1px solid var(--border-subtle);
     border-radius: 50%;
-    color: #1e3a8a;
+    color: var(--action);
     display: inline-flex;
     flex: 0 0 22px;
     font-size: 0.58rem;
@@ -1535,7 +1641,7 @@ select option {
 }
 
 .subscription-queue-line {
-    color: var(--text-primary);
+    color: var(--text);
     display: block;
     font-size: 0.94rem;
     font-weight: 600;
@@ -1549,7 +1655,7 @@ select option {
 .btn-link {
     background: none;
     border: none;
-    color: var(--primary-color);
+    color: var(--action);
     padding: 0.5rem;
     text-align: left;
     cursor: pointer;
@@ -1558,7 +1664,7 @@ select option {
 }
 
 .btn-link:hover {
-    opacity: 0.8;
+    opacity: 1;
     text-decoration: underline;
 }
 
@@ -1580,7 +1686,7 @@ select option {
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
     flex-wrap: wrap;
     gap: 1rem;
 }
@@ -1600,7 +1706,7 @@ select option {
 
 .results-range {
     font-size: 0.9rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-weight: 400;
 }
 
@@ -1612,34 +1718,35 @@ select option {
 
 .sort-label {
     font-size: 0.9rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-weight: 500;
 }
 
 .sort-select {
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    background: white;
+    background: var(--surface);
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .sort-select:hover {
-    border-color: var(--primary-color);
+    border-color: var(--action);
 }
 
 .sort-select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .btn-close-results {
     background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
+    border: 1px solid var(--border-control);
+    color: var(--text-muted);
     padding: 0.5rem 0.75rem;
     font-size: 1.2rem;
     line-height: 1;
@@ -1650,15 +1757,15 @@ select option {
 }
 
 .btn-close-results:hover {
-    background: var(--danger-color);
-    color: white;
-    border-color: var(--danger-color);
+    background: var(--danger);
+    color: var(--text-inverse);
+    border-color: var(--danger);
 }
 
 .btn-close-customer {
     background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
+    border: 1px solid var(--border-control);
+    color: var(--text-muted);
     padding: 0.5rem 0.75rem;
     font-size: 1.2rem;
     line-height: 1;
@@ -1669,9 +1776,9 @@ select option {
 }
 
 .btn-close-customer:hover {
-    background: var(--danger-color);
-    color: white;
-    border-color: var(--danger-color);
+    background: var(--danger);
+    color: var(--text-inverse);
+    border-color: var(--danger);
 }
 
 /* Results Table */
@@ -1692,10 +1799,10 @@ select option {
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     letter-spacing: 0.05em;
     text-align: left;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .results-table thead th:nth-child(5),
@@ -1711,16 +1818,16 @@ select option {
 }
 
 .results-table tbody tr:nth-child(even) {
-    background: rgba(248, 250, 252, 0.6);
+    background: var(--surface-subdued);
 }
 
 .results-table tbody tr:hover {
-    background: rgba(37, 99, 235, 0.08);
+    background: var(--surface-selected);
 }
 
 .results-table tbody td {
     padding: 1rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
     vertical-align: top;
 }
 
@@ -1730,7 +1837,7 @@ select option {
 
 .result-row-lastname {
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .result-row-lastname .last-name {
@@ -1742,7 +1849,7 @@ select option {
     flex-direction: column;
     gap: 0.25rem;
     font-size: 0.9rem;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .initials-value {
@@ -1751,12 +1858,12 @@ select option {
 
 .name-rest {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .result-row-address {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .result-row-subscriptions {
@@ -1774,19 +1881,19 @@ select option {
 }
 
 .subscription-badge.active {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--surface-success);
+    color: var(--success);
 }
 
 .subscription-badge.inactive {
-    background: #e5e7eb;
-    color: #6b7280;
+    background: var(--surface-subdued);
+    color: var(--text-muted);
 }
 
 .result-row-subscriber-number {
     font-family: 'Courier New', Courier, monospace;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
     letter-spacing: 0.5px;
     font-size: 0.95rem;
 }
@@ -1805,15 +1912,15 @@ select option {
     align-items: center;
     gap: 0.5rem;
     padding-top: 1.5rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-subtle);
     flex-wrap: wrap;
 }
 
 .page-btn {
     padding: 0.5rem 0.75rem;
     min-width: 2.5rem;
-    border: 1px solid var(--border-color);
-    background: white;
+    border: 1px solid var(--border-subtle);
+    background: var(--surface);
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.2s;
@@ -1822,14 +1929,14 @@ select option {
 }
 
 .page-btn:hover:not(:disabled) {
-    background: var(--bg-primary);
-    border-color: var(--primary-color);
+    background: var(--surface-subdued);
+    border-color: var(--action);
 }
 
 .page-btn.active {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+    background: var(--action);
+    color: var(--text-inverse);
+    border-color: var(--action);
 }
 
 .page-btn:disabled {
@@ -1839,7 +1946,7 @@ select option {
 
 .page-ellipsis {
     padding: 0.5rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 /* Responsive Design for Results Table */
@@ -1871,7 +1978,7 @@ select option {
 
 .result-item {
     padding: 1rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     margin-bottom: 0.75rem;
     transition: all 0.2s;
@@ -1883,8 +1990,8 @@ select option {
 }
 
 .result-item:hover {
-    border-color: var(--primary-color);
-    background-color: rgba(37, 99, 235, 0.05);
+    border-color: var(--action);
+    background-color: var(--surface-selected);
 }
 
 .result-content {
@@ -1908,7 +2015,7 @@ select option {
 
 .result-details {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .btn-identify-caller {
@@ -1933,12 +2040,12 @@ select option {
 
 .empty-state {
     text-align: center;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .empty-state-small {
     text-align: center;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     padding: 2rem;
     font-size: 0.9rem;
 }
@@ -1957,7 +2064,7 @@ select option {
     align-items: flex-start;
     margin-bottom: 2rem;
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 /* Deceased Status Banner */
@@ -1967,10 +2074,10 @@ select option {
     gap: 1rem;
     padding: 1rem 1.5rem;
     margin-bottom: 1.5rem;
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
-    border: 2px solid #ef4444;
+    background: var(--surface-danger);
+    border: 2px solid var(--danger);
     border-radius: var(--radius-md);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+    box-shadow: var(--shadow-md);
 }
 
 .deceased-banner-icon {
@@ -1984,13 +2091,13 @@ select option {
 
 .deceased-banner-content strong {
     display: block;
-    color: #dc2626;
+    color: var(--danger);
     font-size: 1.1rem;
     margin-bottom: 0.25rem;
 }
 
 .deceased-banner-content p {
-    color: #991b1b;
+    color: var(--danger-hover);
     font-size: 0.9rem;
     margin: 0;
 }
@@ -2000,7 +2107,7 @@ select option {
 }
 
 .customer-meta {
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 0.9rem;
 }
 
@@ -2012,14 +2119,14 @@ select option {
 }
 
 .btn-action-inline {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    background-color: var(--surface);
+    border: 1px solid var(--border-control);
     white-space: nowrap;
 }
 
 .btn-action-inline:hover {
-    border-color: var(--primary-color);
-    background-color: rgba(37, 99, 235, 0.05);
+    border-color: var(--action);
+    background-color: var(--surface-selected);
     transform: translateY(-1px);
 }
 
@@ -2043,12 +2150,12 @@ select option {
 .subscription-group-title {
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--border-color);
+    border-bottom: 2px solid var(--border-subtle);
 }
 
 .subscription-item {
@@ -2056,14 +2163,13 @@ select option {
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    background-color: var(--bg-primary);
+    background-color: var(--surface-subdued);
 }
 
 .subscription-item.subscription-ended {
-    opacity: 0.75;
-    background-color: rgba(249, 250, 251, 0.5);
+    background-color: var(--surface-subdued);
 }
 
 .subscription-info {
@@ -2077,7 +2183,7 @@ select option {
 
 .subscription-details {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .subscription-status {
@@ -2088,40 +2194,40 @@ select option {
 }
 
 .status-active {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: var(--success-color);
+    background-color: var(--surface-success);
+    color: var(--success);
 }
 
 .status-ended {
-    background-color: rgba(156, 163, 175, 0.1);
-    color: #6b7280;
+    background-color: var(--surface-subdued);
+    color: var(--text-muted);
 }
 
 .status-cancelled {
-    background-color: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
+    background-color: var(--surface-danger);
+    color: var(--danger);
 }
 
 .status-restituted {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: #d97706;
+    background-color: var(--surface-warning);
+    color: var(--warning);
     font-weight: 500;
 }
 
 .subscription-restituted {
-    border-left: 3px solid #f59e0b;
-    background-color: rgba(245, 158, 11, 0.02);
+    border-left: 3px solid var(--warning);
+    background-color: var(--surface-warning);
 }
 
 .status-transferred {
-    background-color: rgba(139, 92, 246, 0.1);
-    color: #7c3aed;
+    background-color: var(--surface-group);
+    color: var(--text);
     font-weight: 500;
 }
 
 .subscription-transferred {
-    border-left: 3px solid #7c3aed;
-    background-color: rgba(139, 92, 246, 0.02);
+    border-left: 3px solid var(--event-group);
+    background-color: var(--surface-subdued);
 }
 
 .subscription-actions {
@@ -2132,7 +2238,7 @@ select option {
 
 .icon-btn {
     background: none;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     padding: 0.5rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -2141,23 +2247,23 @@ select option {
 }
 
 .icon-btn:hover {
-    background-color: var(--bg-primary);
-    border-color: var(--primary-color);
+    background-color: var(--surface-subdued);
+    border-color: var(--action);
 }
 
 .btn-winback {
-    background-color: rgba(139, 92, 246, 0.1);
-    color: #7c3aed;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    background-color: var(--surface-group);
+    color: var(--text);
+    border: 1px solid var(--text);
     padding: 0.375rem 0.75rem;
     font-size: 0.875rem;
     white-space: nowrap;
 }
 
 .btn-winback:hover {
-    background-color: rgba(139, 92, 246, 0.2);
-    border-color: #7c3aed;
-    color: #6d28d9;
+    background-color: var(--surface-group);
+    border-color: var(--text);
+    color: var(--text);
 }
 
 /* Articles */
@@ -2182,9 +2288,9 @@ select option {
     justify-content: space-between;
     align-items: flex-start;
     padding: 1rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    background-color: var(--bg-primary);
+    background-color: var(--surface-subdued);
 }
 
 .article-info {
@@ -2194,12 +2300,12 @@ select option {
 .article-name {
     font-weight: 600;
     margin-bottom: 0.25rem;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .article-details {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     line-height: 1.6;
 }
 
@@ -2220,38 +2326,38 @@ select option {
 }
 
 .status-ordered {
-    background-color: rgba(59, 130, 246, 0.1);
-    color: #2563eb;
+    background-color: var(--surface-selected);
+    color: var(--action);
 }
 
 .status-transit {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: #d97706;
+    background-color: var(--surface-warning);
+    color: var(--warning);
 }
 
 .status-delivered {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: var(--success-color);
+    background-color: var(--surface-success);
+    color: var(--success);
 }
 
 .status-returned {
-    background-color: rgba(156, 163, 175, 0.1);
-    color: #6b7280;
+    background-color: var(--surface-subdued);
+    color: var(--text-muted);
 }
 
 .status-pending {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: #d97706;
+    background-color: var(--surface-warning);
+    color: var(--warning);
 }
 
 .status-paid {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: var(--success-color);
+    background-color: var(--surface-success);
+    color: var(--success);
 }
 
 .status-refunded {
-    background-color: rgba(156, 163, 175, 0.1);
-    color: #6b7280;
+    background-color: var(--surface-subdued);
+    color: var(--text-muted);
 }
 
 /* Form Container */
@@ -2262,7 +2368,7 @@ select option {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--overlay-backdrop);
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -2306,7 +2412,7 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .form-header h2 {
@@ -2319,22 +2425,22 @@ dialog.form-lightbox::backdrop {
     justify-content: flex-end;
     margin-top: 1.5rem;
     padding-top: 1.5rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-subtle);
 }
 
 /* Info box for forms */
 .info-box {
-    background-color: #e0f2fe;
-    border-left: 4px solid var(--primary-color);
+    background-color: var(--surface-info);
+    border-left: 4px solid var(--action);
     padding: 1rem;
     margin-bottom: 1.5rem;
     border-radius: var(--radius-sm);
     font-size: 0.9rem;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .info-box strong {
-    color: var(--primary-color);
+    color: var(--action);
 }
 
 /* Right Panel - Contact History */
@@ -2371,7 +2477,7 @@ dialog.form-lightbox::backdrop {
     top: 2rem;
     bottom: 0;
     width: 2px;
-    background-color: var(--border-color);
+    background-color: var(--border-subtle);
 }
 
 .timeline-item:last-child::before {
@@ -2385,8 +2491,8 @@ dialog.form-lightbox::backdrop {
     width: 1.25rem;
     height: 1.25rem;
     border-radius: 50%;
-    background-color: var(--primary-color);
-    border: 3px solid var(--bg-secondary);
+    background-color: var(--action);
+    border: 3px solid var(--surface);
 }
 
 .timeline-header {
@@ -2401,7 +2507,7 @@ dialog.form-lightbox::backdrop {
 }
 
 .timeline-header:hover {
-    background-color: var(--bg-primary);
+    background-color: var(--surface-subdued);
 }
 
 .timeline-type {
@@ -2411,7 +2517,7 @@ dialog.form-lightbox::backdrop {
 
 .timeline-date {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin-left: auto;
 }
 
@@ -2419,10 +2525,10 @@ dialog.form-lightbox::backdrop {
     display: none;
     margin-top: 0.5rem;
     padding: 0.75rem;
-    background-color: var(--bg-primary);
+    background-color: var(--surface-subdued);
     border-radius: var(--radius-sm);
     font-size: 0.9rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .timeline-content.expanded {
@@ -2451,7 +2557,7 @@ dialog.form-lightbox::backdrop {
     gap: 0.75rem;
     margin-bottom: 0.75rem;
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .timeline-pagination:last-child {
@@ -2465,9 +2571,9 @@ dialog.form-lightbox::backdrop {
 }
 
 .timeline-nav-btn {
-    border: 1px solid var(--border-color);
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
+    border: 1px solid var(--border-control);
+    background-color: var(--surface);
+    color: var(--text);
     padding: 0.4rem 0.75rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -2476,8 +2582,8 @@ dialog.form-lightbox::backdrop {
 }
 
 .timeline-nav-btn:hover:not(:disabled) {
-    background-color: var(--bg-primary);
-    border-color: var(--primary-color);
+    background-color: var(--surface-subdued);
+    border-color: var(--action);
 }
 
 .timeline-nav-btn:disabled {
@@ -2487,20 +2593,20 @@ dialog.form-lightbox::backdrop {
 
 .timeline-item--highlight .timeline-header,
 .timeline-item--highlight .timeline-content {
-    background-color: rgba(16, 185, 129, 0.12);
-    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25);
+    background-color: var(--surface-success);
+    box-shadow: var(--shadow-md);
     animation: timeline-highlight-pulse 0.75s ease-in-out 2;
 }
 
 @keyframes timeline-highlight-pulse {
     0% {
-        background-color: rgba(16, 185, 129, 0.3);
+        background-color: var(--surface-calm);
     }
     50% {
-        background-color: rgba(16, 185, 129, 0.12);
+        background-color: var(--surface-success);
     }
     100% {
-        background-color: rgba(16, 185, 129, 0.3);
+        background-color: var(--surface-calm);
     }
 }
 
@@ -2523,7 +2629,7 @@ dialog.form-lightbox::backdrop {
     left: 0;
     right: 0;
     height: 2px;
-    background-color: var(--border-color);
+    background-color: var(--border-subtle);
     z-index: 0;
 }
 
@@ -2540,34 +2646,34 @@ dialog.form-lightbox::backdrop {
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 50%;
-    background-color: var(--bg-primary);
-    border: 2px solid var(--border-color);
+    background-color: var(--surface-subdued);
+    border: 2px solid var(--border-control);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .step.active .step-number {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    color: white;
+    background-color: var(--action);
+    border-color: var(--action);
+    color: var(--text-inverse);
 }
 
 .step-label {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .step.active .step-label {
-    color: var(--primary-color);
+    color: var(--action);
     font-weight: 600;
 }
 
 .script-box {
-    background-color: #fef3c7;
-    border-left: 4px solid var(--warning-color);
+    background-color: var(--surface-warning);
+    border-left: 4px solid var(--warning);
     padding: 1rem;
     border-radius: var(--radius-sm);
     margin-bottom: 1.5rem;
@@ -2589,15 +2695,15 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     gap: 0.75rem;
     padding: 1rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .radio-option:hover {
-    border-color: var(--primary-color);
-    background-color: rgba(37, 99, 235, 0.05);
+    border-color: var(--action);
+    background-color: var(--surface-selected);
 }
 
 .radio-option input[type="radio"] {
@@ -2619,7 +2725,7 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     cursor: pointer;
     font-size: 0.95rem;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .offers-container {
@@ -2631,42 +2737,42 @@ dialog.form-lightbox::backdrop {
 
 .offer-card {
     padding: 1rem;
-    border: 2px solid var(--border-color);
+    border: 2px solid var(--border-control);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .offer-card:hover {
-    border-color: var(--primary-color);
-    background-color: rgba(37, 99, 235, 0.05);
+    border-color: var(--action);
+    background-color: var(--surface-selected);
 }
 
 .offer-card.selected {
-    border-color: var(--primary-color);
-    background-color: rgba(37, 99, 235, 0.1);
+    border-color: var(--action);
+    background-color: var(--surface-selected);
 }
 
 .offer-title {
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--primary-color);
+    color: var(--action);
 }
 
 .offer-description {
     font-size: 0.9rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin-bottom: 0.5rem;
 }
 
 .offer-discount {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--success-color);
+    color: var(--success);
 }
 
 .info-text {
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 0.9rem;
     margin-bottom: 1rem;
 }
@@ -2681,9 +2787,9 @@ dialog.form-lightbox::backdrop {
 
 .deceased-subscription-card {
     padding: 1.25rem;
-    border: 2px solid var(--border-color);
+    border: 2px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    background-color: var(--bg-primary);
+    background-color: var(--surface-subdued);
 }
 
 .deceased-sub-header {
@@ -2692,24 +2798,24 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .deceased-sub-header h4 {
     margin: 0;
-    color: var(--text-primary);
+    color: var(--text);
     font-size: 1.1rem;
 }
 
 .sub-start-date {
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .info-box {
     padding: 1rem;
-    background-color: var(--bg-primary);
-    border-left: 4px solid var(--primary-color);
+    background-color: var(--surface-info);
+    border-left: 4px solid var(--action);
     border-radius: var(--radius-sm);
     margin-bottom: 1.5rem;
 }
@@ -2717,12 +2823,12 @@ dialog.form-lightbox::backdrop {
 .info-box p {
     margin: 0 0 0.5rem 0;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .info-box ul {
     margin: 0.5rem 0 0 1.5rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .info-box li {
@@ -2734,8 +2840,8 @@ dialog.form-lightbox::backdrop {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
-    background-color: var(--text-primary);
-    color: white;
+    background-color: var(--text);
+    color: var(--text-inverse);
     padding: 1rem 1.5rem;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
@@ -2750,11 +2856,11 @@ dialog.form-lightbox::backdrop {
 }
 
 .toast.success {
-    background-color: var(--success-color);
+    background-color: var(--success);
 }
 
 .toast.error {
-    background-color: var(--danger-color);
+    background-color: var(--danger);
 }
 
 /* Responsive Design */
@@ -2785,16 +2891,16 @@ dialog.form-lightbox::backdrop {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--bg-primary);
+    background: var(--surface-subdued);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--border-color);
+    background: var(--border-subtle);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
+    background: var(--text-muted);
 }
 
 /* Onepager Form Styles */
@@ -2946,7 +3052,7 @@ dialog.form-lightbox::backdrop {
     display: block;
     width: 100%;
     height: 1px;
-    background-color: var(--border-color);
+    background-color: var(--border-subtle);
     margin-top: 0.5rem;
 }
 
@@ -2984,22 +3090,23 @@ dialog.form-lightbox::backdrop {
 .onepager-container .form-row select {
     flex: 1;
     padding: 10px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     box-sizing: border-box;
     font-size: 0.95rem;
-    background-color: var(--bg-secondary);
+    background-color: var(--surface);
 }
 
 .onepager-container .form-row input::placeholder {
-    color: #666;
+    color: var(--text-muted);
 }
 
 .onepager-container .form-row input:focus,
 .onepager-container .form-row select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 /* Special input sizing for name fields */
@@ -3036,7 +3143,7 @@ dialog.form-lightbox::backdrop {
     display: block;
     margin-bottom: 0.375rem;
     font-size: 0.95rem;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .address-fields .customer-address-field input,
@@ -3045,10 +3152,10 @@ dialog.form-lightbox::backdrop {
 }
 
 .onepager-container .party-role-panel {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     padding: 0.85rem;
-    background-color: var(--bg-primary);
+    background-color: var(--surface-subdued);
     margin-bottom: 1rem;
 }
 
@@ -3093,15 +3200,15 @@ dialog.form-lightbox::backdrop {
 }
 
 .onepager-container .subscription-person-search-more {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
-    background-color: var(--bg-secondary);
+    background-color: var(--surface);
 }
 
 .onepager-container .subscription-person-search-more summary {
     cursor: pointer;
     padding: 0.5rem 0.65rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 0.88rem;
     font-weight: 500;
 }
@@ -3126,9 +3233,9 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     gap: 0.75rem;
     padding: 0.55rem 0.65rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
-    background-color: #fff;
+    background-color: var(--surface);
 }
 
 .onepager-container .party-person-main {
@@ -3140,13 +3247,13 @@ dialog.form-lightbox::backdrop {
 
 .onepager-container .party-search-result-meta {
     font-size: 0.82rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .onepager-container .party-selected-person {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    background-color: #fff;
+    background-color: var(--surface);
     padding: 0.55rem 0.65rem;
     font-size: 0.9rem;
     display: grid;
@@ -3154,7 +3261,7 @@ dialog.form-lightbox::backdrop {
 }
 
 .onepager-container .party-selected-person.empty {
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-style: italic;
 }
 
@@ -3164,7 +3271,7 @@ dialog.form-lightbox::backdrop {
 
 .onepager-container .party-selected-person-meta {
     font-size: 0.82rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .onepager-container .subscription-duplicate-check {
@@ -3176,9 +3283,9 @@ dialog.form-lightbox::backdrop {
 }
 
 .onepager-container .subscription-duplicate-banner {
-    border: 1px solid #f3e3b0;
+    border: 1px solid var(--surface-warning);
     border-radius: var(--radius-sm);
-    background-color: #fffaf0;
+    background-color: var(--surface-warning);
     padding: 0.55rem 0.65rem;
 }
 
@@ -3191,18 +3298,18 @@ dialog.form-lightbox::backdrop {
 
 .onepager-container .subscription-duplicate-title {
     font-size: 0.88rem;
-    color: #8a5a00;
+    color: var(--warning);
     font-weight: 600;
 }
 
 .onepager-container .subscription-duplicate-inline-status {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin-top: 0.35rem;
 }
 
 .onepager-container .subscription-duplicate-inline-status.muted {
-    color: #6b7280;
+    color: var(--text-muted);
 }
 
 .onepager-container .subscription-duplicate-actions {
@@ -3212,22 +3319,22 @@ dialog.form-lightbox::backdrop {
 }
 
 .onepager-container .subscription-duplicate-action {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     padding: 0.2rem 0.5rem;
     font-size: 0.78rem;
-    background-color: #fff;
-    color: var(--text-primary);
+    background-color: var(--surface);
+    color: var(--text);
     cursor: pointer;
 }
 
 .onepager-container .subscription-duplicate-action.warning {
-    border-color: #d8c27a;
-    color: #7a4b00;
+    border-color: var(--warning);
+    color: var(--warning);
 }
 
 .onepager-container .subscription-duplicate-action:hover {
-    background-color: var(--bg-secondary);
+    background-color: var(--surface);
 }
 
 .onepager-container .subscription-duplicate-list {
@@ -3238,14 +3345,14 @@ dialog.form-lightbox::backdrop {
 }
 
 .onepager-container .subscription-duplicate-item {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
     padding: 0.45rem 0.55rem;
     display: flex;
     justify-content: space-between;
     gap: 0.65rem;
     align-items: center;
-    background: #fff;
+    background: var(--surface);
 }
 
 .onepager-container .party-search-result > div,
@@ -3255,13 +3362,13 @@ dialog.form-lightbox::backdrop {
 
 .onepager-container .subscription-duplicate-item-meta {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .onepager-container .subscription-duplicate-more {
     margin-top: 0.4rem;
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 /* Payment Methods Styling */
@@ -3272,7 +3379,7 @@ dialog.form-lightbox::backdrop {
 .onepager-container .payment-option {
     margin-bottom: 0.5rem;
     transition: all 0.3s ease-in-out;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     overflow: hidden;
 }
@@ -3286,14 +3393,14 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     padding: 10px;
     cursor: pointer;
-    background: white;
+    background: var(--surface);
     transition: all 0.3s ease;
     border-bottom: 1px solid transparent;
 }
 
 .onepager-container .payment-option input[type="radio"]:checked + label {
-    border-bottom-color: var(--border-color);
-    background-color: var(--bg-primary);
+    border-bottom-color: var(--border-control);
+    background-color: var(--surface-subdued);
     font-weight: 500;
 }
 
@@ -3304,8 +3411,8 @@ dialog.form-lightbox::backdrop {
 .onepager-container .additional-input {
     display: none;
     padding: 10px;
-    background-color: white;
-    border-top: 1px solid var(--border-color);
+    background-color: var(--surface);
+    border-top: 1px solid var(--border-control);
 }
 
 .onepager-container .additional-input.visible {
@@ -3315,15 +3422,16 @@ dialog.form-lightbox::backdrop {
 .onepager-container .additional-input input {
     width: 100%;
     padding: 10px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    background-color: white;
+    background-color: var(--surface);
 }
 
 .onepager-container .additional-input input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .onepager-container .payment-icon {
@@ -3346,7 +3454,7 @@ dialog.form-lightbox::backdrop {
     gap: 1rem;
     margin-bottom: 0.75rem;
     padding: 0.625rem 0.75rem;
-    background-color: var(--bg-primary);
+    background-color: var(--surface-subdued);
     border-radius: var(--radius-sm);
 }
 
@@ -3379,7 +3487,7 @@ dialog.form-lightbox::backdrop {
     gap: 1rem;
     margin-top: 1.5rem;
     padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-subtle);
 }
 
 /* ============================================================================
@@ -3420,21 +3528,22 @@ dialog.form-lightbox::backdrop {
 .winback-step .form-row select {
     flex: 1;
     padding: 10px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     box-sizing: border-box;
     font-size: 0.95rem;
 }
 
 .winback-step .form-row input::placeholder {
-    color: #666;
+    color: var(--text-muted);
 }
 
 .winback-step .form-row input:focus,
 .winback-step .form-row select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 /* Special input sizing for name fields */
@@ -3556,7 +3665,7 @@ dialog.form-lightbox::backdrop {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--overlay-backdrop);
     animation: fadeIn 0.2s ease;
 }
 
@@ -3567,7 +3676,7 @@ dialog.form-lightbox::backdrop {
 }
 
 .modal-content {
-    background-color: var(--bg-secondary);
+    background-color: var(--surface);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     max-width: 500px;
@@ -3593,19 +3702,19 @@ dialog.form-lightbox::backdrop {
 }
 
 .disposition-info {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.12) 100%);
-    border: 2px solid rgba(37, 99, 235, 0.25);
+    background: var(--surface-info);
+    border: 2px solid var(--border-control);
     border-radius: 8px;
     padding: 1.25rem;
     margin-top: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-md);
 }
 
 .disposition-info .info-row {
     display: flex;
     justify-content: space-between;
     padding: 0.75rem 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .disposition-info .info-row:last-child {
@@ -3613,14 +3722,14 @@ dialog.form-lightbox::backdrop {
 }
 
 .disposition-info .info-row span:first-child {
-    color: #4b5563;
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-weight: 600;
 }
 
 .disposition-info .info-row span:last-child {
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text);
     font-size: 1rem;
 }
 
@@ -3642,7 +3751,7 @@ dialog.form-lightbox::backdrop {
     display: block;
     margin-top: 0.25rem;
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .modal-actions {
@@ -3650,12 +3759,12 @@ dialog.form-lightbox::backdrop {
     gap: 1rem;
     justify-content: flex-end;
     padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border-color);
-    background: var(--bg-primary);
+    border-top: 1px solid var(--border-subtle);
+    background: var(--surface-subdued);
 }
 
 .debug-modal-content {
-    border: 3px solid var(--warning-color);
+    border: 3px solid var(--warning);
 }
 
 .modal-header {
@@ -3663,9 +3772,9 @@ dialog.form-lightbox::backdrop {
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    color: white;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--action);
+    color: var(--text-inverse);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
@@ -3677,7 +3786,7 @@ dialog.form-lightbox::backdrop {
 .modal-close {
     background: none;
     border: none;
-    color: white;
+    color: var(--text-inverse);
     font-size: 2rem;
     cursor: pointer;
     padding: 0;
@@ -3691,7 +3800,7 @@ dialog.form-lightbox::backdrop {
 }
 
 .modal-close:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: var(--surface-inverse);
 }
 
 .modal-body {
@@ -3702,13 +3811,13 @@ dialog.form-lightbox::backdrop {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .modal-body textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 0.95rem;
@@ -3718,9 +3827,10 @@ dialog.form-lightbox::backdrop {
 }
 
 .modal-body textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .modal-actions {
@@ -3729,7 +3839,7 @@ dialog.form-lightbox::backdrop {
     gap: 0.75rem;
     margin-top: 1.5rem;
     padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-subtle);
 }
 
 .debug-section {
@@ -3743,8 +3853,8 @@ dialog.form-lightbox::backdrop {
 .debug-section h3 {
     margin-bottom: 1rem;
     font-size: 1.1rem;
-    color: var(--text-primary);
-    border-bottom: 2px solid var(--border-color);
+    color: var(--text);
+    border-bottom: 2px solid var(--border-subtle);
     padding-bottom: 0.5rem;
 }
 
@@ -3758,22 +3868,23 @@ dialog.form-lightbox::backdrop {
 .debug-row label {
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .debug-row select {
     padding: 0.5rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
-    background: white;
+    background: var(--surface);
     cursor: pointer;
 }
 
 .debug-row select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .debug-actions {
@@ -3820,8 +3931,8 @@ dialog.form-lightbox::backdrop {
 
 .remark-shortcut {
     padding: 0.4rem 0.8rem;
-    border: 1px solid var(--border-color);
-    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    background: var(--surface);
     border-radius: var(--radius-sm);
     font-size: 0.85rem;
     cursor: pointer;
@@ -3830,9 +3941,9 @@ dialog.form-lightbox::backdrop {
 }
 
 .remark-shortcut:hover {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+    background: var(--action);
+    color: var(--text-inverse);
+    border-color: var(--action);
     transform: translateY(-1px);
     box-shadow: var(--shadow-sm);
 }
@@ -3841,15 +3952,15 @@ dialog.form-lightbox::backdrop {
 .debug-queue-preview {
     margin-top: 1rem;
     padding: 1rem;
-    background: var(--bg-primary);
+    background: var(--surface-subdued);
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
 }
 
 .debug-queue-preview h4 {
     margin-bottom: 0.75rem;
     font-size: 0.95rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-weight: 600;
 }
 
@@ -3866,9 +3977,9 @@ dialog.form-lightbox::backdrop {
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem;
-    background: white;
+    background: var(--surface);
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
     font-size: 0.85rem;
     transition: all 0.2s;
 }
@@ -3878,8 +3989,8 @@ dialog.form-lightbox::backdrop {
 }
 
 .debug-queue-item.current {
-    border: 2px solid var(--primary-color);
-    background: #eff6ff;
+    border: 2px solid var(--action);
+    background: var(--surface-selected);
     font-weight: 600;
 }
 
@@ -3891,32 +4002,33 @@ dialog.form-lightbox::backdrop {
 
 .debug-queue-item-name {
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .debug-queue-item-details {
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 0.8rem;
 }
 
 .debug-queue-item-wait {
-    color: var(--warning-color);
+    color: var(--warning);
     font-weight: 600;
     font-family: 'Courier New', monospace;
 }
 
 .debug-row input[type="number"] {
     padding: 0.5rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
-    background: white;
+    background: var(--surface);
 }
 
 .debug-row input[type="number"]:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .remark-shortcut:active {
@@ -3941,24 +4053,24 @@ dialog.form-lightbox::backdrop {
 }
 
 .status-deceased {
-    background-color: #fee;
-    color: #c00;
-    border: 2px solid #c00;
+    background-color: var(--surface-danger);
+    color: var(--danger);
+    border: 2px solid var(--danger);
 }
 
 /* Customer Delivery Info */
 .customer-delivery-info {
-    background: var(--bg-secondary);
+    background: var(--surface);
     padding: 1rem;
     border-radius: var(--radius-md);
     margin-top: 1rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-subtle);
 }
 
 .customer-delivery-info h3 {
     font-size: 1rem;
     margin-bottom: 0.75rem;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .delivery-remarks-display {
@@ -3970,9 +4082,9 @@ dialog.form-lightbox::backdrop {
 .remark-text {
     flex: 1;
     padding: 0.75rem;
-    background: var(--bg-primary);
+    background: var(--surface-subdued);
     border-radius: var(--radius-sm);
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 0.9rem;
     line-height: 1.5;
     white-space: pre-wrap;
@@ -4001,11 +4113,11 @@ dialog.form-lightbox::backdrop {
 
 /* Werfsleutel selectie */
 .werfsleutel-fieldset {
-    border: 1px solid #dfe6ef;
+    border: 1px solid var(--border-control);
     border-radius: 12px;
     padding: 14px;
     margin-bottom: 20px;
-    background: #f8fafc;
+    background: var(--surface-subdued);
 }
 
 .fieldset-heading {
@@ -4026,7 +4138,7 @@ dialog.form-lightbox::backdrop {
 }
 
 .helper-text {
-    color: #6b7280;
+    color: var(--text-muted);
     font-size: 0.85rem;
     margin: 0;
 }
@@ -4043,13 +4155,13 @@ dialog.form-lightbox::backdrop {
 
 .btn.ghost {
     background: transparent;
-    border: 1px dashed #d1d5db;
-    color: #4b5563;
+    border: 1px dashed var(--border-control);
+    color: var(--text-muted);
 }
 
 .btn.ghost:hover {
-    border-color: #9ca3af;
-    color: #111827;
+    border-color: var(--border-control);
+    color: var(--text);
 }
 
 .werfsleutel-suggestions {
@@ -4065,10 +4177,10 @@ dialog.form-lightbox::backdrop {
 }
 
 .werfsleutel-suggestion {
-    border: 1px solid #d8e1eb;
+    border: 1px solid var(--border-control);
     border-radius: 10px;
     padding: 9px 11px;
-    background: #fff;
+    background: var(--surface);
     display: grid;
     grid-template-columns: auto 1fr auto auto;
     gap: 8px;
@@ -4078,13 +4190,13 @@ dialog.form-lightbox::backdrop {
 }
 
 .werfsleutel-suggestion:hover {
-    border-color: #3b82f6;
-    box-shadow: 0 3px 10px rgba(59, 130, 246, 0.1);
+    border-color: var(--action);
+    box-shadow: var(--shadow-md);
 }
 
 .werfsleutel-suggestion.active {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .werfsleutel-suggestion.inactive {
@@ -4094,7 +4206,7 @@ dialog.form-lightbox::backdrop {
 
 .werfsleutel-suggestion .code {
     font-weight: 600;
-    color: #111827;
+    color: var(--text);
 }
 
 .mandant-logo-badge {
@@ -4104,9 +4216,9 @@ dialog.form-lightbox::backdrop {
     padding: 4px 10px;
     min-height: 28px;
     border-radius: 999px;
-    border: 1px solid #d8e1eb;
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    border: 1px solid var(--border-subtle);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
     vertical-align: middle;
 }
 
@@ -4146,13 +4258,13 @@ dialog.form-lightbox::backdrop {
 }
 
 .werfsleutel-suggestion .title {
-    color: #374151;
+    color: var(--text);
     font-size: 0.95rem;
 }
 
 .werfsleutel-suggestion .price {
     font-weight: 600;
-    color: #111827;
+    color: var(--text);
 }
 
 .werfsleutel-status {
@@ -4163,9 +4275,9 @@ dialog.form-lightbox::backdrop {
     margin-top: 12px;
     padding: 12px 14px;
     border-radius: 12px;
-    background: #f8fafc;
-    border: 1px solid #dbe4ef;
-    color: #1f2937;
+    background: var(--surface-subdued);
+    border: 1px solid var(--border-subtle);
+    color: var(--text);
     display: none;
 }
 
@@ -4174,13 +4286,13 @@ dialog.form-lightbox::backdrop {
 }
 
 .werfsleutel-summary.is-pending {
-    background: #fbfdff;
-    border-color: #dbe4ef;
+    background: var(--surface-subdued);
+    border-color: var(--border-subtle);
 }
 
 .werfsleutel-summary.is-complete {
-    background: #f8fafc;
-    border-color: #d6dee8;
+    background: var(--surface-subdued);
+    border-color: var(--border-subtle);
 }
 
 .werfsleutel-summary-row {
@@ -4191,7 +4303,7 @@ dialog.form-lightbox::backdrop {
 }
 
 .werfsleutel-summary-count {
-    color: #111827;
+    color: var(--text);
     font-size: 0.95rem;
     line-height: 1.4;
 }
@@ -4201,9 +4313,9 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     padding: 2px 8px;
     border-radius: 999px;
-    border: 1px solid #d1d5db;
-    background: #ffffff;
-    color: #334155;
+    border: 1px solid var(--border-subtle);
+    background: var(--surface);
+    color: var(--text);
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1.4;
@@ -4211,31 +4323,31 @@ dialog.form-lightbox::backdrop {
 }
 
 .werfsleutel-summary-badge.is-open {
-    border-color: #fcd34d;
-    background: #fffbeb;
-    color: #92400e;
+    border-color: var(--surface-warning);
+    background: var(--surface-warning);
+    color: var(--warning);
 }
 
 .werfsleutel-summary-badge.is-complete {
-    border-color: #cbd5e1;
-    background: #ffffff;
-    color: #334155;
+    border-color: var(--border-subtle);
+    background: var(--surface);
+    color: var(--text);
 }
 
 .werfsleutel-summary-copy {
     margin: 6px 0 0;
     font-size: 0.88rem;
     line-height: 1.5;
-    color: #475569;
+    color: var(--text-muted);
 }
 
 .werfsleutel-summary-lead {
-    color: #334155;
+    color: var(--text);
     font-weight: 600;
 }
 
 .werfsleutel-summary-hint {
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 .werfsleutel-summary-copy span + span {
@@ -4249,7 +4361,7 @@ dialog.form-lightbox::backdrop {
     gap: 8px;
     margin-top: 6px;
     font-size: 0.85rem;
-    color: #475569;
+    color: var(--text-muted);
 }
 
 .subscription-offer-list {
@@ -4262,10 +4374,10 @@ dialog.form-lightbox::backdrop {
     display: grid;
     gap: 12px;
     padding: 14px;
-    border: 1px solid #dfe6ef;
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
 }
 
 .subscription-offer-header {
@@ -4304,12 +4416,12 @@ dialog.form-lightbox::backdrop {
 }
 
 .subscription-offer-card.is-expanded {
-    border-color: #bfdbfe;
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+    border-color: var(--surface-selected);
+    box-shadow: var(--shadow-md);
 }
 
 .subscription-offer-card.is-collapsed {
-    background: #fbfdff;
+    background: var(--surface-subdued);
 }
 
 .subscription-offer-title-row {
@@ -4320,14 +4432,14 @@ dialog.form-lightbox::backdrop {
 }
 
 .subscription-offer-title {
-    color: #111827;
+    color: var(--text);
     font-size: 0.98rem;
     line-height: 1.35;
     min-width: 0;
 }
 
 .subscription-offer-price {
-    color: #0f172a;
+    color: var(--text);
     font-size: 0.98rem;
     font-weight: 700;
     white-space: nowrap;
@@ -4339,9 +4451,9 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     padding: 3px 8px;
     border-radius: 999px;
-    border: 1px solid #bfdbfe;
-    background: #eff6ff;
-    color: #1d4ed8;
+    border: 1px solid var(--surface-selected);
+    background: var(--surface-selected);
+    color: var(--action);
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.03em;
@@ -4352,9 +4464,9 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     padding: 3px 8px;
     border-radius: 999px;
-    border: 1px solid #bbf7d0;
-    background: #f0fdf4;
-    color: #166534;
+    border: 1px solid var(--surface-success);
+    background: var(--surface-success);
+    color: var(--success);
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.03em;
@@ -4371,18 +4483,18 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     padding: 4px 8px;
     border-radius: 999px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #475569;
+    border: 1px solid var(--surface-subdued);
+    background: var(--surface-subdued);
+    color: var(--text-muted);
     font-size: 0.85rem;
 }
 
 .subscription-offer-warning {
     padding: 10px 12px;
     border-radius: 10px;
-    border: 1px solid #fed7aa;
-    background: #fff7ed;
-    color: #9a3412;
+    border: 1px solid var(--surface-warning);
+    background: var(--surface-warning);
+    color: var(--warning);
     font-size: 0.88rem;
 }
 
@@ -4393,8 +4505,8 @@ dialog.form-lightbox::backdrop {
     width: 1.75rem;
     height: 1.75rem;
     border-radius: 999px;
-    background: #eff6ff;
-    color: #1d4ed8;
+    background: var(--surface-selected);
+    color: var(--action);
     font-size: 0.9rem;
     line-height: 1;
 }
@@ -4404,28 +4516,28 @@ dialog.form-lightbox::backdrop {
     font-weight: 600;
     padding: 4px 10px;
     border-radius: 999px;
-    background: #e5e7eb;
-    color: #374151;
+    background: var(--surface-subdued);
+    color: var(--text);
 }
 
 .status-pill--success {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--surface-success);
+    color: var(--success);
 }
 
 .status-pill--warning {
-    background: #fef9c3;
-    color: #78350f;
+    background: var(--surface-warning);
+    color: var(--warning);
 }
 
 .status-pill--error {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: var(--surface-danger);
+    color: var(--danger);
 }
 
 .status-pill--idle {
-    background: #e0e7ff;
-    color: #4338ca;
+    background: var(--surface-group);
+    color: var(--text);
 }
 
 .channel-picker {
@@ -4439,10 +4551,10 @@ dialog.form-lightbox::backdrop {
 }
 
 .channel-chip {
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-control);
     border-radius: 12px;
     padding: 10px 12px;
-    background: #fff;
+    background: var(--surface);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -4452,13 +4564,13 @@ dialog.form-lightbox::backdrop {
 }
 
 .channel-chip:hover {
-    border-color: #3b82f6;
-    color: #1d4ed8;
+    border-color: var(--action);
+    color: var(--action);
 }
 
 .channel-chip.selected {
-    border-color: #2563eb;
-    background: #eef2ff;
+    border-color: var(--action);
+    background: var(--surface-selected);
 }
 
 .channel-chip .channel-icon {
@@ -4472,27 +4584,27 @@ dialog.form-lightbox::backdrop {
 
 .channel-chip .channel-label {
     font-size: 0.8rem;
-    color: #4b5563;
+    color: var(--text-muted);
 }
 
 .channel-chip .channel-detail {
     font-size: 0.72rem;
-    color: #64748b;
+    color: var(--text-muted);
     line-height: 1.4;
 }
 
 .channel-chip.selected .channel-label {
-    color: #1d4ed8;
+    color: var(--action);
 }
 
 .channel-chip.selected .channel-detail {
-    color: #4338ca;
+    color: var(--event-group);
 }
 
 .channel-options .empty-state-small {
     margin: 0;
     padding: 8px 10px;
-    border: 1px dashed #cbd5e1;
+    border: 1px dashed var(--border-control);
     border-radius: 8px;
 }
 
@@ -4558,13 +4670,13 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
-    color: var(--text-primary);
+    background: var(--page);
+    color: var(--text);
 }
 
 .access-denied-card {
     width: min(720px, 100%);
-    background: white;
+    background: var(--surface);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     padding: 2.5rem;
@@ -4587,7 +4699,7 @@ dialog.form-lightbox::backdrop {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1.5rem;
     text-align: left;
-    background: var(--bg-secondary);
+    background: var(--surface);
     border-radius: var(--radius-md);
     padding: 1.5rem;
 }
@@ -4604,15 +4716,15 @@ dialog.form-lightbox::backdrop {
 
 .address-completion-status {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     position: absolute;
     inset: calc(100% + 4px) 0 auto;
     z-index: 30;
     padding: .65rem;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
+    background: var(--surface-subdued);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    box-shadow: 0 6px 18px rgb(0 0 0 / 15%);
+    box-shadow: var(--shadow-md);
     box-sizing: border-box;
 }
 
@@ -4646,12 +4758,12 @@ dialog.form-lightbox::backdrop {
 .address-completion-status label[hidden] { display: none; }
 
 /* Customer-specific content; the lightbox shell uses the shared form styles. */
-.customer-editor section { border-top: 1px solid var(--border-color); padding: 1rem 0; }
+.customer-editor section { border-top: 1px solid var(--border-subtle); padding: 1rem 0; }
 .customer-editor form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
 .customer-editor label { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
-.customer-editor input:read-only { background: var(--bg-primary); color: var(--text-secondary); }
+.customer-editor input:read-only { background: var(--surface-subdued); color: var(--text-muted); }
 .customer-editor button:disabled { opacity: .65; cursor: not-allowed; }
-.customer-editor :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.customer-editor :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 .customer-editor form > p { grid-column: 1 / -1; }
 @media (max-width: 600px) { .customer-editor form { grid-template-columns: 1fr; } }
 .address-completion-anchor { position: relative; }
@@ -4660,8 +4772,8 @@ dialog.form-lightbox::backdrop {
 .customer-address-gate {
     margin-block: 1rem;
     padding: 1rem;
-    border-inline-start: 4px solid var(--warning-color);
-    background: var(--bg-secondary);
+    border-inline-start: 4px solid var(--warning);
+    background: var(--surface);
 }
 .customer-address-gate[hidden] { display: none; }
 .customer-address-gate p { margin: 0 0 .75rem; }
@@ -4677,7 +4789,7 @@ dialog.form-lightbox::backdrop {
 .address-fields .form-control {
     min-width: 0;
     padding: 10px;
-    background-color: var(--bg-secondary);
+    background-color: var(--surface);
 }
 .customer-editor form > div { grid-column: 1 / -1; }
 
@@ -4695,3 +4807,70 @@ dialog.form-lightbox::backdrop {
     width: 100%;
     min-width: 0;
 }
+
+
+/* Inset white focus stays visible on filled controls; the outer ring covers light surroundings. */
+:is(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+}
+
+.header :is(button, a, [tabindex]):focus-visible,
+.queue-info :is(button, a, [tabindex]):focus-visible,
+.session-info :is(button, a, [tabindex]):focus-visible,
+.acw-bar :is(button, a, [tabindex]):focus-visible,
+.modal-header :is(button, a, [tabindex]):focus-visible {
+    outline-color: var(--focus-inverse);
+}
+
+.agent-profile-menu :is(button, a, [tabindex]):focus-visible {
+    outline-color: var(--focus);
+    outline-offset: -3px;
+}
+
+:is(.btn-primary, .btn-secondary, .btn-success, .btn-end-call, .btn-accept-call, .btn-hold-call, .btn-finish-acw):focus-visible {
+    box-shadow: inset 0 0 0 3px var(--focus-inverse);
+}
+
+
+.u-text-success { color: var(--success-hover); }
+.u-text-danger { color: var(--danger); }
+
+.info-box--danger {
+    background-color: var(--surface-danger);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.timeline-item--success { --timeline-color: var(--success-hover); }
+.timeline-item--danger { --timeline-color: var(--danger); }
+.timeline-item--warning { --timeline-color: var(--warning); }
+.timeline-item--info { --timeline-color: var(--action); }
+.timeline-item--muted { --timeline-color: var(--text-muted); }
+.timeline-item--group { --timeline-color: var(--event-group); }
+.timeline-dot { background-color: var(--timeline-color, var(--text-muted)); }
+.timeline-type { color: var(--timeline-color, var(--text-muted)); }
+
+/* Informational accents use ink because palette blue is not readable on Baltic Sea. */
+.info-box h3,
+.info-box h4,
+.info-box p,
+.info-box strong,
+.info-box ul,
+.info-box li,
+.info-box a[href],
+.disposition-info .info-row span {
+    color: var(--text);
+}
+
+.info-box--danger h3,
+.info-box--danger h4,
+.info-box--danger p,
+.info-box--danger strong,
+.info-box--danger ul,
+.info-box--danger li,
+.info-box--danger a[href] {
+    color: var(--danger);
+}
+
+.customer-search-secondary { color: var(--text-muted); font-size: .875rem; }

@@ -78,6 +78,7 @@ async function runSmokeScenario(page) {
     await assertFeedbackSettingsLocale(page);
 
     const target = page.locator('.customer-header');
+    await alignElementCaptureToPixels(target);
     const targetBox = await target.boundingBox();
     if (!targetBox) {
         throw new Error('Could not locate the Jansen customer header for feedback capture.');
@@ -113,13 +114,35 @@ async function runSmokeScenario(page) {
         throw new Error(`Live Kiwi DOM changed during clone capture: before=${JSON.stringify(liveDomBeforeCapture)} after=${JSON.stringify(liveDomAfterCapture)}`);
     }
 
-    await page.click('[data-feedback-close]');
-    await page.waitForSelector('.contextual-feedback-modal', { state: 'detached', timeout: 10000 });
+    await clearScreenshotAndClose(page);
     await setKiwiLocale(page, 'en', 'Contextual feedback');
-    await captureCustomArea(page, targetBox);
-    await page.click('[data-feedback-close]');
-    await page.waitForSelector('.contextual-feedback-modal', { state: 'detached', timeout: 10000 });
+    // A retained draft keeps its creation-time labels; start the English scenario in a fresh document.
+    await page.reload();
+    await page.waitForFunction(() => window.kiwiCustomerWorkSession && window.kiwiCustomerDetailSlice);
+    await searchAndSelectJansen(page);
+    await alignElementCaptureToPixels(page.locator('.customer-header'));
+    await captureCustomArea(page, await page.locator('.customer-header').boundingBox());
+    await clearScreenshotAndClose(page);
     await captureDeterministicFidelityFixture(page);
+}
+
+async function alignElementCaptureToPixels(target) {
+    // Native screenshots enclose fractional bounds; the clone normalizes its root to integer pixels.
+    // Align only this test target before both captures and the unchanged-live-DOM baseline.
+    await target.evaluate(element => {
+        const bounds = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        element.style.marginTop = `${(parseFloat(style.marginTop) || 0) + Math.round(bounds.y) - bounds.y}px`;
+        element.style.height = `${Math.round(bounds.height)}px`;
+    });
+}
+
+async function clearScreenshotAndClose(page) {
+    // Closing now retains the draft. Reset the screenshot explicitly for the next independent capture.
+    await page.locator('[data-feedback-remove-screenshot]').click();
+    await page.locator('[data-feedback-workspace]').waitFor({ state: 'hidden' });
+    await page.locator('[data-feedback-close]').click();
+    await page.locator('.contextual-feedback-modal').waitFor({ state: 'hidden' });
 }
 
 async function assertFormFirstState(page, expected) {
@@ -173,7 +196,7 @@ async function assertFeedbackSettingsLocale(page) {
     }
 
     await page.locator('[data-feedback-settings-close]').first().click();
-    await page.waitForSelector('.contextual-feedback-settings-modal', { state: 'detached', timeout: 10000 });
+    await page.waitForSelector('.contextual-feedback-settings-modal', { state: 'hidden', timeout: 10000 });
 }
 
 async function assertDialogIsSuspendedDuringCapture(page) {
@@ -256,7 +279,9 @@ async function assertFeedbackBadgeLayout(page) {
 
     await page.mouse.move(10, 10);
     await waitForFeedbackButtonWidth(page, 46);
+    // Enter keyboard modality before targeting the control; settings can leave focus elsewhere.
     await page.keyboard.press('Tab');
+    await feedbackButton.focus();
     await waitForFeedbackButtonWidth(page, 124);
     const focusState = await readFeedbackButtonState(feedbackButton);
     if (!focusState.focusVisible || focusState.labelOpacity < 0.99 || focusState.outlineWidth !== '3px') {

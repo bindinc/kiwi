@@ -2,7 +2,7 @@ SHELL := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev-certs compose-preflight compose-up compose-down compose-logs compose-build shell console composer phpunit js-test guardrail compose-smoke-oidc compose-smoke-feedback-privacy compose-smoke-customer-sessions image-build
+.PHONY: help dev-certs compose-preflight compose-up compose-down compose-logs compose-build shell console composer phpunit js-test guardrail compose-smoke-oidc compose-smoke-feedback-privacy compose-smoke-customer-sessions compose-smoke-theme image-build
 
 help:
 	@echo "Usage: make compose-up"
@@ -17,6 +17,7 @@ help:
 	@echo "       make guardrail"
 	@echo "       make compose-smoke-oidc"
 	@echo "       make compose-smoke-feedback-privacy"
+	@echo "       make compose-smoke-theme"
 	@echo "       make image-build"
 	@echo "       make dev-certs"
 
@@ -64,6 +65,9 @@ compose-smoke-customer-sessions:
 
 compose-smoke-feedback-privacy:
 	node scripts/compose-smoke-feedback-privacy.mjs
+
+compose-smoke-theme:
+	node scripts/compose-smoke-theme.mjs
 
 image-build:
 	docker build --target prod -t kiwi:dev -f infra/docker/app/Dockerfile .

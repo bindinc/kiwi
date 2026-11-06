@@ -318,7 +318,7 @@ function buildOrderItemsDisplay(order, dependencies) {
         `${item.name} (${item.quantity}x à €${Number(item.unitPrice || 0).toFixed(2)})`
     )).join('<br>');
     const discountMarkup = Number(order.totalDiscount || 0) > 0
-        ? `<strong>${translateLabel(dependencies, 'articleOrders.discountLabel', {}, 'Korting')}:</strong> <span style="color: #059669;">-€${Number(order.totalDiscount || 0).toFixed(2)}</span> (${(order.discounts || []).map((discount) => discount.type).join(', ')})<br>`
+        ? `<strong>${translateLabel(dependencies, 'articleOrders.discountLabel', {}, 'Korting')}:</strong> <span class="u-text-success">-€${Number(order.totalDiscount || 0).toFixed(2)}</span> (${(order.discounts || []).map((discount) => discount.type).join(', ')})<br>`
         : '';
     const pricingHtml = `
         <strong>${translateLabel(dependencies, 'articleOrders.subtotalLabel', {}, 'Subtotaal')}:</strong> €${Number(order.subtotal || 0).toFixed(2)}<br>

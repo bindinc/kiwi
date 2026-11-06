@@ -85,14 +85,14 @@ const agentStatusLabelConfig = {
 };
 
 const agentStatuses = {
-    ready: { label: '', color: '#4ade80', badge: '✓', textColor: '#052e16' },
-    in_call: { label: '', color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
-    busy: { label: '', color: '#ef4444', badge: '●', textColor: '#7f1d1d' },
-    dnd: { label: '', color: '#dc2626', badge: '⛔', textColor: '#7f1d1d' },
-    brb: { label: '', color: '#f59e0b', badge: '↺', textColor: '#78350f' },
-    away: { label: '', color: '#fbbf24', badge: '◔', textColor: '#713f12' },
-    offline: { label: '', color: '#9ca3af', badge: '−', textColor: '#111827' },
-    acw: { label: '', color: '#facc15', badge: '~', textColor: '#422006' }
+    ready: { label: '', color: 'var(--status-ready)', badge: '✓', textColor: 'var(--status-ready-text)' },
+    in_call: { label: '', color: 'var(--status-busy)', badge: '●', textColor: 'var(--status-busy-text)' },
+    busy: { label: '', color: 'var(--status-busy)', badge: '●', textColor: 'var(--status-busy-text)' },
+    dnd: { label: '', color: 'var(--status-dnd)', badge: '⛔', textColor: 'var(--status-dnd-text)' },
+    brb: { label: '', color: 'var(--status-brb)', badge: '↺', textColor: 'var(--status-brb-text)' },
+    away: { label: '', color: 'var(--status-away)', badge: '◔', textColor: 'var(--status-away-text)' },
+    offline: { label: '', color: 'var(--status-offline)', badge: '−', textColor: 'var(--status-offline-text)' },
+    acw: { label: '', color: 'var(--status-acw)', badge: '~', textColor: 'var(--status-acw-text)' }
 };
 
 const agentStatusAliases = { break: 'away' };
