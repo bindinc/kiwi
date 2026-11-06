@@ -4,7 +4,13 @@
 
 Implementation is tracked in [SC-206629](https://app.shortcut.com/bindincit/story/206629) and [PR #130](https://github.com/bindinc/kiwi/pull/130). This document records the design contract; the PR contains the application changes and validation results.
 
-### Implementation validation
+### Approved delivery date picker refinement
+
+The delivery date picker uses plain numerals on a white surface, a compact Blue Fusion selection, an outline for today, and struck-through unavailable dates. Weekday names appear once; the footer names the server-provided earliest date. Seven columns fit at 320px, and the floating feedback button stays clear while the picker is open. Native buttons support arrow keys, Home/End, PageUp/PageDown, Escape and deliberate focus restoration. Delayed month responses cannot replace or refocus a newer interaction. Existing delivery availability remains server-owned.
+
+Run `KIWI_THEME_DATEPICKER_ONLY=1 make compose-smoke-theme` for the focused checks at 1440px, 390px, 320px and a short 390×320 viewport. Use `KIWI_SMOKE_BROWSER=chromium` or `firefox`. Both browsers passed these checks; evidence is retained in `/tmp/kiwi-datepicker-review`. The JavaScript suite, guardrails and 438 PHP tests also passed after this refinement.
+
+### Initial palette implementation validation
 
 The implementation passed the JavaScript suite, palette/contrast tests, guardrails, 438 PHP tests (2,537 assertions), and fallback OIDC smoke. The theme browser smoke passed 62 assertions and captured 22 images per browser in Chromium and Firefox at 1440px and 390px. Call, ACW and outbox presentation states use a clearly labeled diagnostic fixture without creating business records.
 

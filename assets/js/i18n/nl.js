@@ -711,6 +711,15 @@ const nl = {
         "returnPossibleUntilLabel": "Retour mogelijk tot"
     },
     "delivery": {
+        "calendarLoadFailed": "Kan kalender niet laden",
+        "pastDate": "verlopen datum",
+        "unavailableDate": "niet beschikbaar",
+        "selectedDate": "geselecteerd",
+        "availableDate": "beschikbaar",
+        "previousMonth": "Vorige maand",
+        "nextMonth": "Volgende maand",
+        "firstAvailable": "Eerst beschikbaar",
+        "unavailableHint": "Doorgestreepte dagen zijn niet beschikbaar.",
         "remarksSaved": "Bezorgvoorkeuren opgeslagen!",
         "saveFailed": "Bezorgvoorkeuren opslaan via backend mislukt",
         "remarkPresets": {

@@ -22,8 +22,8 @@ const browser = await playwright[browserName].launch(browserName === 'firefox' ?
 });
 const report = { browser: browserName, mode, screenshots: [], assertions: [] };
 
-async function newPage(width) {
-    const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
+async function newPage(width, height = 1000) {
+    const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width, height }, reducedMotion: 'reduce' });
     if (baselineDir) {
         await context.route('**/*.css*', async route => {
             const pathname = new URL(route.request().url()).pathname;
@@ -48,7 +48,9 @@ async function login(page, username = 'kiwi-admin') {
 }
 
 async function capture(page, name, selector) {
-    const filename = `${browserName}-${mode}-${page.viewportSize().width}-${name}.png`;
+    const viewport = page.viewportSize();
+    const size = viewport.height === 1000 ? String(viewport.width) : `${viewport.width}x${viewport.height}`;
+    const filename = `${browserName}-${mode}-${size}-${name}.png`;
     const target = selector ? page.locator(selector).first() : page;
     await target.screenshot({ path: path.join(evidenceDir, filename), animations: 'disabled' });
     report.screenshots.push(filename);
@@ -160,6 +162,162 @@ async function waitForBackground(page, selector, color) {
     report.assertions.push(`${selector} interaction background: ${color}`);
 }
 
+function shiftDate(isoDate, days) {
+    const date = new Date(`${isoDate}T12:00:00`);
+    date.setDate(date.getDate() + days);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+async function expectFocusedDate(page, isoDate) {
+    await page.waitForFunction(expected => document.activeElement?.dataset.argDate === expected, isoDate);
+    assert.equal(await page.locator('#deliveryCalendar .delivery-day-cell[tabindex="0"]').count(), 1);
+}
+
+async function inspectDatePicker(page) {
+    const trigger = page.locator('#deliveryDateDisplay');
+    if (baselineDir) {
+        await trigger.click();
+        await capture(page, 'date-picker', '#deliveryCalendar');
+        await trigger.click();
+        return;
+    }
+
+    assert.equal(await trigger.evaluate(element => element.tagName), 'BUTTON');
+    await page.waitForFunction(() => Boolean(document.getElementById('articleDesiredDelivery')?.value));
+    await trigger.focus();
+    await trigger.press('Enter');
+    await page.locator('#deliveryCalendar.is-open').waitFor();
+    assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+    await page.mouse.move(0, 0);
+    const geometry = await page.locator('#deliveryCalendar').evaluate(calendar => {
+        const grid = calendar.querySelector('.delivery-calendar-grid');
+        const bounds = calendar.getBoundingClientRect();
+        const headers = [...grid.querySelectorAll('.delivery-day-header')].map(header => {
+            const rect = header.getBoundingClientRect();
+            return { left: rect.left, right: rect.right };
+        });
+        const days = [...grid.querySelectorAll('.delivery-day-cell:not(.empty)')];
+        const available = days.filter(day => day.getAttribute('aria-disabled') !== 'true' && !day.classList.contains('selected'));
+        const selectedNumber = grid.querySelector('.selected .day-number');
+        return {
+            left: bounds.left, right: bounds.right, width: bounds.width,
+            clientWidth: calendar.clientWidth, scrollWidth: calendar.scrollWidth,
+            tracks: getComputedStyle(grid).gridTemplateColumns.split(' ').length, headers,
+            headingDecoration: getComputedStyle(calendar.querySelector('.calendar-month'), '::after').content,
+            nativeButtons: days.every(day => day.tagName === 'BUTTON'),
+            neutralAvailable: available.every(day => [day, day.querySelector('.day-number')].every(element => {
+                const background = getComputedStyle(element).backgroundColor;
+                return background === 'rgba(0, 0, 0, 0)' || background === 'rgb(255, 255, 255)';
+            })),
+            selectedNumber: selectedNumber ? { width: selectedNumber.getBoundingClientRect().width, height: selectedNumber.getBoundingClientRect().height } : null
+        };
+    });
+    assert.equal(geometry.tracks, 7, 'calendar has seven columns');
+    assert.equal(geometry.headingDecoration, 'none', 'month heading has no inherited form-section underline');
+    assert.equal(geometry.headers.length, 7);
+    assert.ok(geometry.headers.every(header => header.left >= geometry.left && header.right <= geometry.right), 'all weekday columns fit');
+    assert.ok(geometry.left >= 0 && geometry.right <= page.viewportSize().width, 'calendar fits viewport');
+    assert.ok(geometry.scrollWidth <= geometry.clientWidth + 1, 'calendar has no horizontal overflow');
+    assert.equal(geometry.nativeButtons, true);
+    assert.equal(geometry.neutralAvailable, true, 'unselected available days are neutral');
+    assert.ok(geometry.selectedNumber && geometry.selectedNumber.width <= 36 && geometry.selectedNumber.height <= 36, 'selected date has a compact indicator');
+
+    const selected = await page.locator('#articleDesiredDelivery').inputValue();
+    await expectFocusedDate(page, selected);
+    for (const [key, delta] of [['ArrowRight', 1], ['ArrowLeft', -1], ['ArrowDown', 7], ['ArrowUp', -7]]) {
+        const date = await page.evaluate(() => document.activeElement.dataset.argDate);
+        await page.keyboard.press(key);
+        await expectFocusedDate(page, shiftDate(date, delta));
+    }
+    const dayOfWeek = (new Date(`${selected}T12:00:00`).getDay() + 6) % 7;
+    await page.keyboard.press('Home');
+    await expectFocusedDate(page, shiftDate(selected, -dayOfWeek));
+    await page.keyboard.press('End');
+    await expectFocusedDate(page, shiftDate(selected, 6 - dayOfWeek));
+    const weekEnd = await page.evaluate(() => document.activeElement.dataset.argDate);
+    const nextMonth = new Date(`${weekEnd}T12:00:00`);
+    const desiredDay = nextMonth.getDate();
+    nextMonth.setDate(1);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    nextMonth.setDate(Math.min(desiredDay, new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate()));
+    const nextMonthIso = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-${String(nextMonth.getDate()).padStart(2, '0')}`;
+    await page.keyboard.press('PageDown');
+    await expectFocusedDate(page, nextMonthIso);
+    await page.keyboard.press('PageUp');
+    const previousMonth = new Date(nextMonth);
+    previousMonth.setMonth(previousMonth.getMonth() - 1);
+    await expectFocusedDate(page, shiftDate(`${previousMonth.getFullYear()}-${String(previousMonth.getMonth() + 1).padStart(2, '0')}-${String(previousMonth.getDate()).padStart(2, '0')}`, 0));
+
+    const unavailable = page.locator('#deliveryCalendar button.delivery-day-cell[aria-disabled="true"]').first();
+    assert.ok(await unavailable.count(), 'fixture month includes unavailable dates');
+    await unavailable.focus();
+    for (const key of ['Enter', 'Space']) {
+        await unavailable.press(key);
+        assert.equal(await page.locator('#articleDesiredDelivery').inputValue(), selected, 'unavailable date cannot be selected');
+        assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+    }
+    const next = page.locator('#deliveryCalendar [data-action="navigate-delivery-calendar"][data-arg-direction="1"]');
+    const previousMonthLabel = await page.locator('#deliveryCalendar .calendar-month').innerText();
+    await next.click();
+    await page.waitForFunction(previous => document.querySelector('#deliveryCalendar .calendar-month')?.textContent !== previous, previousMonthLabel);
+    assert.equal(await trigger.getAttribute('aria-expanded'), 'true', 'month navigation keeps the calendar open');
+    await page.waitForFunction(() => document.activeElement?.dataset.argDirection === '1');
+    await page.keyboard.press('Escape');
+    assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+    assert.equal(await trigger.evaluate(element => element === document.activeElement), true, 'Escape returns trigger focus');
+    await trigger.press('Space');
+    await page.locator('#deliveryCalendar.is-open').waitFor();
+    await page.locator('#deliveryCalendar [data-action="select-recommended-delivery-date"]').click();
+    assert.equal(await page.locator('#articleDesiredDelivery').inputValue(), selected, 'earliest action uses the API recommendation across navigation');
+    await trigger.press('Enter');
+    await page.locator('#deliveryCalendar.is-open').waitFor();
+    await capture(page, 'date-picker', '#deliveryCalendar');
+    await page.keyboard.press('Escape');
+    report.assertions.push(`Date picker ${page.viewportSize().width}px: seven columns, neutral/compact states, keyboard navigation, unavailable guards, API earliest and focus restoration`);
+}
+
+async function runDatePickerOnly(width, height = 1000) {
+    // Configure locale before shrinking the viewport; this scenario targets the date picker, not the profile menu.
+    const page = await newPage(width);
+    try {
+        await login(page);
+        await page.waitForFunction(() => window.kiwiCustomerWorkSession && window.kiwiCustomerDetailSlice);
+        await page.locator('#agentProfileTrigger').click();
+        await page.locator('[data-locale-option="nl"]').click();
+        await page.waitForFunction(() => document.documentElement.lang === 'nl');
+        await page.setViewportSize({ width, height });
+        await page.locator('[data-action="open-article-sale-form"]').click();
+        await page.locator('#articleSaleForm').waitFor({ state: 'visible' });
+        await inspectDatePicker(page);
+        if (!baselineDir && height < 500) {
+            await page.locator('#deliveryDateDisplay').press('Enter');
+            await page.locator('#deliveryCalendar.is-open').waitFor();
+            await page.keyboard.press('End');
+            for (let index = 0; index < 3; index += 1) await page.keyboard.press('ArrowDown');
+            await page.waitForFunction(() => {
+                const calendar = document.getElementById('deliveryCalendar').getBoundingClientRect();
+                const focused = document.activeElement.getBoundingClientRect();
+                return Boolean(document.activeElement.dataset.argDate)
+                    && focused.top >= Math.max(0, calendar.top)
+                    && focused.bottom <= Math.min(innerHeight, calendar.bottom);
+            });
+            await capture(page, 'date-picker-keyboard-scroll', '#deliveryCalendar');
+            report.assertions.push(`Date picker ${width}x${height}: keyboard focus remains visible while the calendar scrolls`);
+        }
+    } catch (error) {
+        console.error('Date picker failure state:', await page.evaluate(() => ({
+            activeElement: { tag: document.activeElement?.tagName, id: document.activeElement?.id, classes: document.activeElement?.className, date: document.activeElement?.dataset.argDate },
+            expanded: document.getElementById('deliveryDateDisplay')?.getAttribute('aria-expanded'),
+            calendarClasses: document.getElementById('deliveryCalendar')?.className,
+            articleFormDisplay: getComputedStyle(document.getElementById('articleSaleForm')).display
+        })));
+        await capture(page, 'date-picker-failure').catch(() => {});
+        throw error;
+    } finally {
+        await page.context().close();
+    }
+}
+
 async function runWorkspace(width) {
     const page = await newPage(width);
     try {
@@ -179,10 +337,7 @@ async function runWorkspace(width) {
         await assertStyle(page, '#articleInitials', 'borderTopColor', 'rgb(118, 136, 148)');
         await assertKeyboardFocus(page, '#articleInitials', 'rgb(73, 98, 117)');
         await capture(page, 'article-form');
-        await page.locator('#deliveryDateDisplay').click();
-        await page.locator('#deliveryCalendar.is-open').waitFor({ state: 'visible' });
-        await capture(page, 'date-picker', '#deliveryCalendar');
-        await page.locator('#deliveryDateDisplay').click();
+        await inspectDatePicker(page);
         await page.locator('#articleSearch').fill('a');
         await page.locator('#articleDropdown').waitFor({ state: 'visible' });
         await capture(page, 'article-search', '.article-sale-right');
@@ -234,7 +389,13 @@ async function runWorkspace(width) {
 }
 
 try {
-    for (const width of [1440, 390]) await runWorkspace(width);
+    if (process.env.KIWI_THEME_DATEPICKER_ONLY === '1') {
+        for (const width of [1440, 390, 320]) await runDatePickerOnly(width);
+        await runDatePickerOnly(390, 320);
+    } else {
+        for (const width of [1440, 390]) await runWorkspace(width);
+        await runDatePickerOnly(320);
+    }
     console.log(`[compose-smoke-theme] ${browserName} ${mode}: ${report.screenshots.length} screenshots; ${report.assertions.length} assertions passed.`);
 } finally {
     await writeFile(path.join(evidenceDir, `${browserName}-${mode}-report.json`), JSON.stringify(report, null, 2));
