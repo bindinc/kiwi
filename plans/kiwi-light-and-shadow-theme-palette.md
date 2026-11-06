@@ -2,7 +2,15 @@
 
 ## Status
 
-Planning only. This document defines the intended palette migration; it does not implement any theme changes.
+Implementation is tracked in [SC-206629](https://app.shortcut.com/bindincit/story/206629) and [PR #130](https://github.com/bindinc/kiwi/pull/130). This document records the design contract; the PR contains the application changes and validation results.
+
+### Implementation validation
+
+The implementation passed the JavaScript suite, palette/contrast tests, guardrails, 438 PHP tests (2,537 assertions), and fallback OIDC smoke. The theme browser smoke passed 62 assertions and captured 22 images per browser in Chromium and Firefox at 1440px and 390px. Call, ACW and outbox presentation states use a clearly labeled diagnostic fixture without creating business records.
+
+Run `make compose-smoke-theme` against a local Compose app, with `KIWI_SMOKE_BROWSER=chromium` or `firefox`. `KIWI_SMOKE_BASE_URL` selects the app URL, `PLAYWRIGHT_MODULE_PATH` selects an existing installation, and `KIWI_THEME_EVIDENCE_DIR` selects the output directory. The script downloads no dependencies. Optional `KIWI_THEME_BASELINE_DIR` serves the five original stylesheets from `<directory>/assets/css` for a CSS-only comparison on the current application, with new-theme assertions disabled.
+
+Both full feedback-privacy browser smokes passed the unchanged 2% image-difference threshold. The smoke now follows retained-dialog behavior and aligns its capture target to integer pixels before native/clone comparison. Application capture, annotation, pseudonymization and redaction code remain unchanged. Use an isolated `COMPOSE_PROJECT_NAME` for `make compose-smoke-oidc`, because that smoke removes its own stack and volumes when it exits.
 
 ## Visual artifact
 
@@ -213,7 +221,7 @@ Cover article search, delivery-date picker, session outbox, call and ACW bars, c
 
 ## Boundaries
 
-- This plan does not implement the palette.
+- This document records the palette design; application assets implement it.
 - It does not introduce dark mode, a selectable alternative theme, user preference storage, typography changes, layout redesign, or animation changes.
 - It does not recolor publication/customer logos or the Bindinc logo asset.
 - It does not make Pantone accent colors substitutes for semantic danger, warning, success, or privacy colors.
