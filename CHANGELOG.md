@@ -8,9 +8,9 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- Add design plan, showcase artifact, and WCAG 2.2 token contract for the Pantone Light & Shadow default theme.
+- Apply the Light & Shadow palette as Kiwi's default light theme using semantic colors, accessible control borders and keyboard focus, while preserving operational states and feedback privacy; include the design showcase, contrast checks and browser smoke coverage. [sc-206629]
 
 ### Fixed
 

@@ -7,13 +7,13 @@
 
 .delivery-date-display {
     padding: 0.85rem 1rem;
-    border: 1px solid transparent;
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.02));
+    background: var(--surface-subdued);
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     font-size: 0.95rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -21,17 +21,17 @@
 }
 
 .delivery-date-display:hover {
-    border-color: rgba(37, 99, 235, 0.35);
+    border-color: var(--action);
     box-shadow: var(--shadow-md);
     transform: translateY(-1px);
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .delivery-date-display.selected {
-    color: var(--text-primary);
+    color: var(--text);
     font-weight: 600;
-    border-color: rgba(37, 99, 235, 0.5);
-    background: rgba(37, 99, 235, 0.08);
+    border-color: var(--action);
+    background: var(--surface-calm);
 }
 
 
@@ -40,8 +40,8 @@
     top: calc(100% + 0.5rem);
     left: 0;
     min-width: 100%;
-    background: var(--bg-secondary);
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     z-index: 1000;
@@ -81,14 +81,14 @@
     flex: 1 1 32%;
     min-width: 140px;
     padding: 0.65rem 1rem;
-    border: 1px solid rgba(37, 99, 235, 0.2);
-    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid var(--action);
+    background: var(--surface-calm);
     border-radius: var(--radius-md);
     font-size: 0.85rem;
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
     white-space: nowrap;
-    color: var(--text-primary);
+    color: var(--text);
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
@@ -99,9 +99,9 @@
 }
 
 .delivery-quick-btn:hover {
-    background: var(--primary-color);
-    color: #fff;
-    border-color: var(--primary-color);
+    background: var(--action);
+    color: var(--text-inverse);
+    border-color: var(--action);
     box-shadow: var(--shadow-sm);
     transform: translateY(-1px);
 }
@@ -116,34 +116,34 @@
     justify-content: space-between;
     align-items: center;
     padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .calendar-month {
     font-weight: 600;
     font-size: 1rem;
-    color: var(--text-primary);
+    color: var(--text);
     text-transform: capitalize;
 }
 
 .calendar-nav {
     padding: 0.45rem 0.75rem;
-    border: 1px solid rgba(37, 99, 235, 0.25);
-    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid var(--action);
+    background: var(--surface-calm);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
     font-size: 1rem;
-    color: var(--primary-color);
+    color: var(--action);
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
 
 .calendar-nav:hover {
-    background: var(--primary-color);
-    color: #fff;
-    border-color: var(--primary-color);
+    background: var(--action);
+    color: var(--text-inverse);
+    border-color: var(--action);
     transform: translateY(-1px);
 }
 
@@ -160,7 +160,7 @@
     text-align: center;
     font-weight: 600;
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .delivery-day-cell {
@@ -174,7 +174,7 @@
     justify-content: center;
     position: relative;
     transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.2s ease, border-color 0.2s ease;
-    background: #f8fafc;
+    background: var(--surface-subdued);
 }
 
 .delivery-day-cell.empty {
@@ -188,42 +188,42 @@
 }
 
 .delivery-day-cell.unavailable {
-    background: #f3f4f6;
-    color: var(--text-secondary);
+    background: var(--surface-disabled);
+    color: var(--text);
     cursor: not-allowed;
-    border-color: rgba(100, 116, 139, 0.2);
+    border-color: var(--border-subtle);
 }
 
 .delivery-day-cell.available {
     cursor: pointer;
-    border-color: rgba(37, 99, 235, 0.25);
-    background: rgba(37, 99, 235, 0.08);
-    color: var(--text-primary);
+    border-color: var(--action);
+    background: var(--surface-calm);
+    color: var(--text);
 }
 
 .delivery-day-cell.available:hover {
-    background: rgba(37, 99, 235, 0.18);
-    border-color: rgba(37, 99, 235, 0.45);
+    background: var(--surface-selected);
+    border-color: var(--action);
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
 
 .delivery-day-cell.recommended {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: rgba(16, 185, 129, 0.35);
+    background: var(--surface-success);
+    border-color: var(--success);
     cursor: pointer;
 }
 
 .delivery-day-cell.recommended:hover {
-    background: rgba(16, 185, 129, 0.25);
+    background: var(--surface-success);
     box-shadow: var(--shadow-md);
 }
 
 .delivery-day-cell.selected {
-    background: var(--primary-color);
-    color: #fff;
-    border-color: var(--primary-color);
-    box-shadow: 0 10px 20px -15px rgba(37, 99, 235, 0.8);
+    background: var(--action);
+    color: var(--text-inverse);
+    border-color: var(--action);
+    box-shadow: var(--shadow-md);
     transform: translateY(-2px);
 }
 
@@ -235,7 +235,6 @@
 .day-name {
     font-size: 0.7rem;
     margin-top: 0.25rem;
-    opacity: 0.8;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -253,13 +252,13 @@
 }
 
 .recommended-badge {
-    background: rgba(16, 185, 129, 0.2);
-    color: #047857;
+    background: var(--surface-success);
+    color: var(--success);
 }
 
 .unavailable-badge {
-    background: rgba(239, 68, 68, 0.15);
-    color: #b91c1c;
+    background: var(--surface-danger);
+    color: var(--danger);
 }
 
 @keyframes deliveryCalendarFade {
@@ -302,4 +301,17 @@
     .day-name {
         font-size: 0.65rem;
     }
+}
+
+.delivery-day-cell.selected:focus-visible,
+.delivery-quick-btn:hover:focus-visible,
+.calendar-nav:hover:focus-visible {
+    outline: 3px solid var(--focus-inverse);
+    outline-offset: -5px;
+}
+
+.delivery-day-cell.selected:hover {
+    background: var(--action-hover);
+    color: var(--text-inverse);
+    border-color: var(--action-hover);
 }

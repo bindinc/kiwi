@@ -6,7 +6,7 @@
     border: 0;
     border-radius: var(--radius-sm);
     background: transparent;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-inverse);
     font-size: 17px;
     font-weight: 700;
     line-height: 1;
@@ -23,13 +23,13 @@
 
 .contextual-feedback-settings-button:hover,
 .contextual-feedback-settings-button.is-active {
-    background: rgba(255, 255, 255, 0.16);
-    color: #ffffff;
+    background: var(--surface-inverse-hover);
+    color: var(--text-inverse);
     transform: translateY(-1px);
 }
 
 .contextual-feedback-header-button:focus-visible {
-    outline: 2px solid #ffffff;
+    outline: 3px solid var(--focus-inverse);
     outline-offset: 2px;
 }
 
@@ -51,9 +51,9 @@
     overflow: hidden;
     border: 0;
     border-radius: 23px 0 0 23px;
-    background: var(--primary-color);
-    color: #ffffff;
-    box-shadow: 0 12px 28px rgba(30, 41, 59, 0.26);
+    background: var(--action);
+    color: var(--text-inverse);
+    box-shadow: var(--elevation-overlay);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -69,17 +69,17 @@
 .contextual-feedback-button:hover,
 .contextual-feedback-button:focus-visible {
     width: 124px;
-    background: var(--primary-hover);
+    background: var(--action-hover);
 }
 
 .contextual-feedback-button.is-active {
     width: 46px;
-    background: var(--primary-hover);
+    background: var(--action-hover);
     cursor: wait;
 }
 
 .contextual-feedback-button:focus-visible {
-    outline: 3px solid #fbbf24;
+    outline: 3px solid var(--focus);
     outline-offset: 3px;
 }
 
@@ -112,6 +112,7 @@
     opacity: 0;
 }
 
+/* Picker annotations and privacy-verification colors stay independent of the app theme. */
 .contextual-feedback-picker-overlay {
     position: fixed;
     inset: 0;
@@ -192,13 +193,13 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-panel {
     width: min(640px, 100%);
     min-height: 0;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
-    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
+    box-shadow: var(--shadow-lg);
 }
 
 .contextual-feedback-modal.has-screenshot {
@@ -211,10 +212,10 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 
 .contextual-feedback-settings-panel {
     width: min(680px, 100%);
-    background: #ffffff;
-    color: #111827;
+    background: var(--surface);
+    color: var(--text);
     border-radius: 8px;
-    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
+    box-shadow: var(--shadow-lg);
 }
 
 .contextual-feedback-panel-header {
@@ -222,8 +223,8 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     justify-content: space-between;
     gap: 16px;
     padding: 16px 18px;
-    border-bottom: 1px solid var(--border-color);
-    background: #ffffff;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface);
 }
 
 .contextual-feedback-panel-header h2,
@@ -241,12 +242,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #475569;
+    color: var(--text-muted);
     font-size: 13px;
 }
 
 .contextual-feedback-panel-header span {
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 .contextual-feedback-close {
@@ -254,8 +255,8 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     height: 32px;
     border: 0;
     border-radius: var(--radius-sm);
-    background: #f1f5f9;
-    color: var(--text-primary);
+    background: var(--surface-subdued);
+    color: var(--text);
     cursor: pointer;
 }
 
@@ -270,9 +271,9 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-toolbar {
-    border-right: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-subtle);
     padding: 12px;
-    background: #f8fafc;
+    background: var(--surface-subdued);
     display: grid;
     align-content: start;
     gap: 8px;
@@ -283,10 +284,10 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-form button[type="submit"] {
     min-height: 34px;
     padding-inline: 10px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    background: #ffffff;
-    color: var(--text-primary);
+    background: var(--surface);
+    color: var(--text);
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
@@ -303,17 +304,17 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-tool.is-active {
-    border-color: var(--primary-color);
-    background: #eff6ff;
-    color: var(--primary-hover);
-    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.16);
+    border-color: var(--action);
+    background: var(--surface-selected);
+    color: var(--action-hover);
+    box-shadow: inset 0 0 0 1px var(--action);
 }
 
 .contextual-feedback-canvas-wrap {
     position: relative;
     min-height: 0;
     overflow: auto;
-    background: #eef2f7;
+    background: var(--surface-subdued);
     display: grid;
     align-content: start;
     gap: 10px;
@@ -426,7 +427,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #334155;
+    color: var(--text);
     font-size: 12px;
     font-weight: 700;
     line-height: 1.2;
@@ -453,7 +454,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     height: 20px;
     flex: 0 0 auto;
     border-radius: 999px;
-    background: #94a3b8;
+    background: var(--action-secondary);
     transition: background-color 0.16s ease;
 }
 
@@ -464,14 +465,14 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.35);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
     content: "";
     transition: transform 0.16s ease;
 }
 
 .contextual-feedback-screenshot-toggle input:checked + .contextual-feedback-switch-track {
-    background: var(--primary-color);
+    background: var(--action);
 }
 
 .contextual-feedback-screenshot-toggle input:checked + .contextual-feedback-switch-track::after {
@@ -479,12 +480,12 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-screenshot-toggle input:focus-visible + .contextual-feedback-switch-track {
-    outline: 3px solid #fbbf24;
+    outline: 3px solid var(--focus);
     outline-offset: 2px;
 }
 
 .contextual-feedback-screenshot-toggle:has(input:disabled) {
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: not-allowed;
 }
 
@@ -493,7 +494,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-screenshot-toggle input:disabled + .contextual-feedback-switch-track {
-    background: #cbd5e1;
+    background: var(--surface-disabled);
 }
 
 .contextual-feedback-privacy-summary > span.is-critical {
@@ -506,10 +507,10 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     max-width: 100%;
     height: auto;
     display: block;
-    background: #ffffff;
-    border: 1px solid var(--border-color);
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
     border-radius: 2px;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+    box-shadow: var(--elevation-overlay);
 }
 
 .contextual-feedback-canvas-wrap canvas.is-zoomable {
@@ -525,9 +526,9 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-form {
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-subtle);
     padding: 14px 18px 16px;
-    background: #ffffff;
+    background: var(--surface);
     display: grid;
     gap: 10px;
 }
@@ -542,7 +543,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     display: grid;
     gap: 10px;
     padding-bottom: 14px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .contextual-feedback-settings-form section:last-of-type {
@@ -556,7 +557,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 
 .contextual-feedback-settings-form p {
     margin: 0;
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 13px;
 }
 
@@ -568,7 +569,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-form label small {
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 12px;
     font-weight: 500;
 }
@@ -584,10 +585,10 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-form select,
 .contextual-feedback-settings-form input {
     width: 100%;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     padding: 8px 10px;
-    background: #ffffff;
+    background: var(--surface);
     font: inherit;
 }
 
@@ -609,8 +610,8 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     gap: 16px;
     padding: 8px 10px;
     border-radius: 6px;
-    background: #f8fafc;
-    color: #334155;
+    background: var(--surface-subdued);
+    color: var(--text);
     font-size: 13px;
 }
 
@@ -633,15 +634,15 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-note {
-    color: #475569;
+    color: var(--text-muted);
 }
 
 .contextual-feedback-status {
-    color: #166534;
+    color: var(--success);
 }
 
 .contextual-feedback-error {
-    color: #b91c1c;
+    color: var(--danger);
 }
 
 .contextual-feedback-actions {
@@ -658,15 +659,15 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-form button[type="submit"] {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-    color: #ffffff;
+    background: var(--action);
+    border-color: var(--action);
+    color: var(--text-inverse);
     padding-inline: 18px;
 }
 
 .contextual-feedback-form button[type="submit"]:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
+    background: var(--action-hover);
+    border-color: var(--action-hover);
 }
 
 @media (max-width: 760px) {
@@ -681,7 +682,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 
     .contextual-feedback-toolbar {
         border-right: 0;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--border-subtle);
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
@@ -702,4 +703,9 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     .contextual-feedback-switch-track::after {
         transition: none;
     }
+}
+
+.contextual-feedback-form button[type="submit"]:focus-visible {
+    outline: 3px solid var(--focus-inverse);
+    outline-offset: -5px;
 }

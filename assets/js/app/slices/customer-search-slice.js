@@ -700,7 +700,7 @@ function buildSubscriptionApiBadges(summary) {
 }
 
 function buildSubscriptionStatusText(text) {
-    return `<span style="color: var(--text-secondary); font-size: 0.875rem;">${text}</span>`;
+    return `<span class="customer-search-secondary">${text}</span>`;
 }
 
 function buildCustomerSearchReference(customer) {
