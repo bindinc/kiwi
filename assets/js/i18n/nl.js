@@ -395,6 +395,11 @@ const nl = {
         "printOwnTitles": "Print eigen titels"
     },
     "werfsleutel": {
+        "mandantLabel": "Mandant",
+        "mandantMissingLabel": "Mandant ontbreekt",
+        "mandantRequired": "Een werfsleutel heeft geen mandant. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.",
+        "mandantMissing": "Mandant ontbreekt. Kies een andere werfsleutel of laat de mandantkoppeling corrigeren.",
+        "mandantHint": "De werfsleutel bepaalt de mandant. Klantgegevens worden per mandant apart verwerkt. Voor een andere mandant maken we een aparte klant aan met de ingevulde gegevens, ook voor een aparte betaler.",
         "unknown": "Onbekende werfsleutel.",
         "unknownTitle": "Onbekende werfsleutel",
         "notActive": "Deze werfsleutel is niet meer actief.",
@@ -540,6 +545,7 @@ const nl = {
         "updateFailed": "Klantgegevens bijwerken via backend mislukt"
     },
     "subscription": {
+        "useActiveCustomer": "Gebruik actieve klant",
         "extraAdded": "Extra abonnement succesvol toegevoegd!",
         "created": "Nieuw abonnement succesvol aangemaakt!",
         "selectOne": "Selecteer een abonnement",
@@ -608,6 +614,8 @@ const nl = {
             "personNotFoundControlList": "Geselecteerde persoon niet gevonden in controlelijst"
         },
         "search": {
+            "chooseAnotherPerson": "Andere persoon zoeken",
+            "noResults": "Geen personen gevonden. Pas de zoekvelden aan.",
             "selectButton": "Selecteer",
             "enterQuery": "Voer eerst een zoekterm in",
             "failed": "Zoeken van personen mislukt",

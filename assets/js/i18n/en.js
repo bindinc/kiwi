@@ -395,6 +395,11 @@ const en = {
         "printOwnTitles": "Print your own titles"
     },
     "werfsleutel": {
+        "mandantLabel": "Mandant",
+        "mandantMissingLabel": "Mandant missing",
+        "mandantRequired": "An offer has no mandant. Choose another offer or have its mandant mapping corrected.",
+        "mandantMissing": "Mandant missing. Choose another offer or have its mandant mapping corrected.",
+        "mandantHint": "The offer determines the mandant. Customer details are handled separately per mandant. For another mandant, we create a separate customer using the entered details, including a separate payer.",
         "unknown": "Unknown site key.",
         "unknownTitle": "Unknown site key",
         "notActive": "This site key is no longer active.",
@@ -540,6 +545,7 @@ const en = {
         "updateFailed": "Updating customer details via backend failed"
     },
     "subscription": {
+        "useActiveCustomer": "Use active customer",
         "extraAdded": "Extra subscription successfully added!",
         "created": "New subscription successfully created!",
         "selectOne": "Select a subscription",
@@ -608,6 +614,8 @@ const en = {
             "personNotFoundControlList": "Selected person was not found in the check list"
         },
         "search": {
+            "chooseAnotherPerson": "Find another person",
+            "noResults": "No people found. Adjust the search fields.",
             "selectButton": "Select",
             "enterQuery": "Enter a search term first",
             "failed": "Searching people failed",

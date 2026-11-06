@@ -252,6 +252,7 @@ function testSummaryHeaderStatesAndCardTerminology() {
         catalog: [
             {
                 salesCode: 'AV1',
+                mandant: 'AVROTROS',
                 title: 'Avrobode 1 jaar',
                 price: 52,
                 allowedChannels: ['OL', 'TM/IB'],
@@ -285,6 +286,7 @@ function testPluralSummaryAndFirstIncompleteStaysExpanded() {
         catalog: [
             {
                 salesCode: 'AV1',
+                mandant: 'AVROTROS',
                 title: 'Avrobode 1 jaar',
                 price: 52,
                 allowedChannels: ['OL'],
@@ -292,6 +294,7 @@ function testPluralSummaryAndFirstIncompleteStaysExpanded() {
             },
             {
                 salesCode: 'MI2',
+                mandant: 'AVROTROS',
                 title: 'Mikrogids 2 jaar',
                 price: 98,
                 allowedChannels: ['OL', 'TM/IB'],
@@ -323,6 +326,7 @@ function testEnglishSingularAndPluralSummaryCopy() {
         catalog: [
             {
                 salesCode: 'AV1',
+                mandant: 'AVROTROS',
                 title: 'Avrobode 1 year',
                 price: 52,
                 allowedChannels: ['OL', 'TM/IB'],
@@ -330,6 +334,7 @@ function testEnglishSingularAndPluralSummaryCopy() {
             },
             {
                 salesCode: 'MI2',
+                mandant: 'AVROTROS',
                 title: 'Mikrogids 2 years',
                 price: 98,
                 allowedChannels: ['OL', 'TM/IB'],
@@ -358,6 +363,7 @@ function testSelectingOfferDoesNotShowSuccessToast() {
         catalog: [
             {
                 salesCode: 'AV1',
+                mandant: 'AVROTROS',
                 title: 'Avrobode 1 jaar',
                 price: 52,
                 allowedChannels: ['OL', 'TM/IB'],
@@ -417,6 +423,12 @@ function testWerfsleutelMandantBadgesUseLogoBranding() {
 
     assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('avrotros-logo.svg'), true);
     assert.equal(elements.subscriptionOfferSelections.innerHTML.includes('kroncrv-logo.svg'), true);
+    assert.match(elements.subscriptionOfferSelections.innerHTML, /Mandant: <strong>TROS<\/strong>/);
+    assert.match(elements.subscriptionOfferSelections.innerHTML, /Mandant: <strong>KRONCRV<\/strong>/);
+    dispatchClick('select-werfsleutel', { salesCode: 'UNK1' });
+    assert.match(elements.subscriptionOfferSelections.innerHTML, /role="alert">Mandant ontbreekt/);
+    assert.match(elements.werfsleutelSummary.innerHTML, /Mandant ontbreekt/);
+    assert.equal(elements.werfsleutelSummary.classList.contains('is-complete'), false);
 }
 
 function testDebouncedQueryUsesInjectedTimer() {

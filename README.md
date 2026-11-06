@@ -63,7 +63,7 @@ A modern, lightweight web interface for customer service agents to manage magazi
 
 ## Installation & Usage
 
-- Runs as a Symfony 7.4 LTS application on FrankenPHP with PHP 8.4.
+- Runs as a Symfony 7.4 LTS application on FrankenPHP 1.13.2 with PHP 8.5.12.
 - Twig templates live under `templates/`.
 - Frontend source assets live under `assets/`.
 - The migration contract is documented in `docs/reference/symfony-migration-contract-matrix.md`.
@@ -391,6 +391,16 @@ make image-build
 
 The local image build uses the Dockerfile `prod` target so it matches the release runtime shape.
 
+The shared development and production stage uses
+`dunglas/frankenphp:1.13.2-php8.5.12-trixie` and requires PHP 8.5.12 or newer.
+Builds reject base images below that security baseline; CI also checks the PHP
+version in the final production image.
+
+The Debian runtime replaces the Alpine variant after the latter repeatedly
+exited with code 137 on BINK8S. A standalone Debian runtime remained healthy
+under the same CPU and memory limits. The PHP and FrankenPHP versions are
+unchanged.
+
 ## Data Storage
 
 - **Session store**: OIDC state, authenticated user context, `kiwi_poc_state`, and agent status live in the shared PostgreSQL-backed Symfony session.
@@ -436,7 +446,7 @@ The local image build uses the Dockerfile `prod` target so it matches the releas
 - **HTML5**: Semantic structure
 - **CSS3**: Modern styling with CSS variables
 - **Vanilla JavaScript**: No frameworks, pure JS
-- **Symfony 7.4 LTS on PHP 8.4**: Security-based OIDC integration and controller/runtime layer
+- **Symfony 7.4 LTS on PHP 8.5**: Security-based OIDC integration and controller/runtime layer
 - **FrankenPHP**: Single-container HTTP runtime on port `8000`
 
 ### Browser Compatibility

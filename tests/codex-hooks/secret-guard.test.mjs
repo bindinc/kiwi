@@ -13,6 +13,7 @@ import test from "node:test";
 
 import {
   evaluateHook,
+  scanRepository,
   isForbiddenPath,
 } from "../../.codex/hooks/secret-guard.mjs";
 
@@ -299,4 +300,144 @@ test("the command entrypoint emits only redacted findings", () => {
   assert.match(result.stdout, /SG004-provider-token/);
   assert.equal(result.stdout.includes(candidate), false);
   assert.equal(result.stderr, "");
+});
+
+function newSourcePatch(source, filePath = "automation/launcher.mjs") {
+  return [
+    "*** Begin Patch",
+    `*** Add File: ${filePath}`,
+    ...source.split("\n").map((line) => `+${line}`),
+    "*** End Patch",
+  ].join("\n");
+}
+
+function checkNewSource(source, filePath) {
+  return evaluateHook(preToolEvent(repositoryRoot, "apply_patch", {
+    command: newSourcePatch(source, filePath),
+  }));
+}
+
+const runtimeReference = ["source", "INTEGRATIONS_API_KEY"].join(".");
+
+function assertAssignmentBlocked(result) {
+  assert.equal(result.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(JSON.stringify(result), /SG007-credential-assignment/);
+}
+
+test("allows syntactic runtime references in a complete new JavaScript module", () => {
+  const references = [
+    runtimeReference,
+    ["process", "env", "OPENAI_API_KEY"].join("."),
+    ["env", "RUNTIME_API_KEY"].join("."),
+  ];
+  const source = [
+    'import { readFile } from "node:fs/promises";',
+    ...references.map((value, index) => `const config${index} = { apiKey: ${value} };`),
+  ].join("\n");
+
+  assert.deepEqual(checkNewSource(source), {});
+});
+
+test("quoted references and literal credentials remain blocked", () => {
+  for (const quote of ['"', "'", "`"]) {
+    assertAssignmentBlocked(checkNewSource(
+      `const config = { apiKey: ${quote}${runtimeReference}${quote} };`,
+    ));
+  }
+  const candidate = "A".repeat(24);
+  const result = checkNewSource(`const config = { password: "${candidate}" };`);
+  assertAssignmentBlocked(result);
+  assert.equal(JSON.stringify(result).includes(candidate), false);
+});
+
+test("references inside comments, strings, regexes and templates are still data", () => {
+  const assignment = `apiKey: ${runtimeReference},`;
+  const sources = [
+    `// ${assignment}`,
+    `/*\n${assignment}\n*/`,
+    `const text = "${assignment}";`,
+    `const text = \`\n${assignment}\n\`;`,
+    `const pattern = /${assignment}/;`,
+    `const pattern = /[${assignment}]/u;`,
+    `const template = \`outer \${\`inner\`}\n${assignment}\`;`,
+  ];
+
+  for (const source of sources) {
+    assertAssignmentBlocked(checkNewSource(source));
+  }
+});
+
+test("unknown contexts, incomplete patches and invalid source fail closed", () => {
+  const assignment = `apiKey: ${runtimeReference}`;
+  for (const filePath of ["config.json", "config.yaml", "README.md"]) {
+    assertAssignmentBlocked(checkNewSource(assignment, filePath));
+  }
+  assertAssignmentBlocked(checkNewSource(`const config = { ${assignment}`));
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "Bash", {
+    command: `echo '${assignment}'`,
+  })));
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "apply_patch", {
+    command: [
+      "*** Begin Patch", "*** Update File: existing.mjs", "@@",
+      `+const config = { ${assignment} };`, "*** End Patch",
+    ].join("\n"),
+  })));
+  const prompt = evaluateHook({
+    hook_event_name: "UserPromptSubmit", cwd: repositoryRoot, prompt: assignment,
+  });
+  assert.equal(prompt.decision, "block");
+});
+
+test("syntax validation does not execute source or inherit Node loader options", () => {
+  const previous = process.env.NODE_OPTIONS;
+  process.env.NODE_OPTIONS = "--require=/missing/guard-test-loader.cjs";
+  try {
+    assert.deepEqual(checkNewSource([
+      'import "module-that-must-not-be-loaded";',
+      'throw new Error("source must never execute");',
+      `const config = { apiKey: ${runtimeReference} };`,
+    ].join("\n")), {});
+  } finally {
+    if (previous === undefined) delete process.env.NODE_OPTIONS;
+    else process.env.NODE_OPTIONS = previous;
+  }
+});
+
+test("runtime allowance never exempts provider-shaped values elsewhere", () => {
+  const candidate = ["github", "_pat_", "A".repeat(36)].join("");
+  const result = checkNewSource([
+    `const config = { apiKey: ${runtimeReference} };`,
+    `const other = "${candidate}";`,
+  ].join("\n"));
+
+  assert.equal(result.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(JSON.stringify(result), /SG004-provider-token/);
+  assert.equal(JSON.stringify(result).includes(candidate), false);
+});
+
+test("syntax checks have a per-hook budget and exhaustion fails closed", () => {
+  const source = Array.from({ length: 15 }, (_, index) =>
+    `const config${index} = { apiKey: ${runtimeReference} };`,
+  ).join("\n");
+  assertAssignmentBlocked(checkNewSource(source));
+});
+
+test("repository scans use complete staged, committed and unstaged JavaScript", () => {
+  const fixture = createRepository();
+  const filePath = path.join(fixture.repository, "launcher.mjs");
+  const assignment = `apiKey: ${runtimeReference},`;
+  try {
+    writeFileSync(filePath, `const config = {\n${assignment}\n};\n`);
+    runGit(fixture.repository, ["add", "launcher.mjs"]);
+    assert.deepEqual(scanRepository(fixture.repository), []);
+    runGit(fixture.repository, ["commit", "-m", "Add runtime reference"]);
+    assert.deepEqual(scanRepository(fixture.repository), []);
+    runGit(fixture.repository, ["push"]);
+    const changed = assignment.replace("INTEGRATIONS", "RUNTIME");
+    writeFileSync(filePath, `const text = \`\n${changed}\n\`;\n`);
+    const findings = scanRepository(fixture.repository);
+    assert.equal(findings.some((item) => item.ruleId === "SG007-credential-assignment"), true);
+  } finally {
+    fixture.cleanup();
+  }
 });

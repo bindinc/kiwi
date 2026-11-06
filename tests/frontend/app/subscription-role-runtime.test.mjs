@@ -1,4 +1,6 @@
 import { renderAddressFields } from '../../../assets/js/app/address-fields.js';
+import { sameSubscriptionPerson } from '../../../assets/js/app/subscription-shared-helpers.js';
+import { createBootstrapSlice } from '../../../assets/js/app/slices/bootstrap-slice.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -75,6 +77,10 @@ function createRuntimeContext(options = {}) {
         requesterSameAsRecipient: checkbox,
         requesterRolePanel: createElementStub(),
         recipientRolePanel: createElementStub(),
+        recipientPersonSearch: createElementStub(),
+        recipientReuseCustomer: createElementStub(),
+        requesterPersonSearch: createElementStub(),
+        requesterReuseCustomer: createElementStub(),
         recipientSearchPostalCode: createElementStub(),
         recipientSearchHouseNumber: createElementStub(),
         recipientSearchQuery: createElementStub(),
@@ -138,6 +144,9 @@ function createRuntimeContext(options = {}) {
     }
     const recipientSelectedPerson = options.recipientSelectedPerson || null;
     const requesterSelectedPerson = options.requesterSelectedPerson || null;
+    const marketingInputs = Object.fromEntries(['Email', 'Phone', 'Post'].map(channel => [
+        `subOptin${channel}`, ['yes', 'no'].map(value => ({ value, checked: false, disabled: false }))
+    ]));
 
     const contextObject = {
         renderAddressFields,
@@ -153,6 +162,10 @@ function createRuntimeContext(options = {}) {
             },
             getElementById(id) {
                 return elementById[id] || null;
+            },
+            querySelectorAll(selector) {
+                const name = selector.match(/^input\[name="(subOptin\w+)"\]$/)?.[1];
+                return marketingInputs[name] || [];
             },
             querySelector(selector) {
                 if (selector === 'input[name="requesterMode"][value="existing"]') {
@@ -207,6 +220,7 @@ function createRuntimeContext(options = {}) {
             kroncrvLogo: '/assets/img/kroncrv-logo.svg'
         },
         kiwiSubscriptionIdentityPricingHelpers: {
+            sameSubscriptionPerson,
             normalizeNameFragment: sharedNormalizeNameFragment
         },
         DUPLICATE_CHECK_DEBOUNCE_MS: 750,
@@ -264,7 +278,8 @@ function createRuntimeContext(options = {}) {
         context,
         elements: elementById,
         checkbox,
-        runtime: context.window.kiwiSubscriptionRoleRuntime
+        runtime: context.window.kiwiSubscriptionRoleRuntime,
+        marketingInputs
     };
 }
 
@@ -307,6 +322,16 @@ function testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester()
     assert.equal(context.subscriptionRoleState.requester.selectedPerson.id, 51);
     assert.equal(context.__toasts.length, 1);
     assert.equal(context.__toasts[0].type, 'info');
+}
+
+function testEqualPersonNumbersAcrossMandantsDoNotMergeRecipientAndPayer() {
+    const { context, checkbox, runtime } = createRuntimeContext({ checkboxChecked: false,
+        recipientSelectedPerson: { id: 51, mandant: 'AVROTROS', credentialKey: 'avro' },
+        requesterSelectedPerson: { id: 51, mandant: 'HMC', credentialKey: 'tvk' } });
+    assert.equal(runtime.hasSameSelectedExistingRecipientAndRequester(), false);
+    runtime.normalizeRequesterSameAsRecipientSelection();
+    assert.equal(checkbox.checked, false);
+    assert.equal(context.subscriptionRoleState.requesterSameAsRecipient, false);
 }
 
 function testNormalizeDuplicateLastNameUsesSharedHelpers() {
@@ -568,6 +593,7 @@ function testRefreshSubscriptionDuplicateMatchesUsesBackendCachedMatchesOnly() {
 async function testSelectSubscriptionRolePersonHydratesDetailAndPrefillsIban() {
     let requestedUrl = '';
     const { context, elements, runtime } = createRuntimeContext({
+        werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }],
         kiwiApi: {
             get(url) {
                 requestedUrl = url;
@@ -601,7 +627,7 @@ async function testSelectSubscriptionRolePersonHydratesDetailAndPrefillsIban() {
     assert.equal(requestedUrl, '/api/v1/persons/73?credentialKey=tvk&sourceSystem=subscription-api&mandant=HMC');
     assert.equal(context.subscriptionRoleState.recipient.selectedPerson.iban, 'NL80INGB0001340187');
     assert.equal(elements.subIBAN.value, 'NL80INGB0001340187');
-    assert.equal(context.__upserts.length, 1);
+    assert.equal(context.__upserts.length, 0);
 }
 
 function testRenderSelectedPersonShowsAvrotrosBadgeForHmcMandant() {
@@ -1027,15 +1053,155 @@ async function testLateHydrationKeepsEnteredDetails() {
     context.kiwiApi = { get: () => new Promise(resolve => { respond = resolve; }) };
     const pending = runtime.hydrateSubscriptionRoleSelectedPerson('recipient');
     elements.subRecipientAddress.value = 'Entered while loading';
-    respond({ ...person, address: 'Late address 10' });
+    elements.subRecipientInitials.value = 'E.D.';
+    respond({ ...person, initials: 'P.T.', address: 'Late address 10' });
     await pending;
     assert.equal(elements.subRecipientAddress.value, 'Entered while loading');
+    assert.equal(elements.subRecipientInitials.value, 'E.D.');
+}
+
+function testExistingInitialsPopulateIndependentRoleEditorsAndPayloads() {
+    const recipient = { id: 73, salutation: 'Dhr.', firstName: 'Alex', initials: 'A.B.', lastName: 'Tester',
+        postalCode: '1234AB', houseNumber: '10', address: 'Teststraat 10', city: 'Hilversum',
+        email: 'recipient@example.invalid', credentialKey: 'demo', mandant: 'HMC', sourceSystem: 'subscription-api' };
+    const requester = { ...recipient, id: 74, firstName: 'Robin', initials: 'R.S.', email: 'payer@example.invalid' };
+    const { context, elements, runtime } = createRuntimeContext({
+        requesterSelectedPerson: requester,
+        werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }]
+    });
+    context.currentCustomer = recipient;
+    runtime.initializeSubscriptionRolesForForm();
+    elements.requesterSameAsRecipient.checked = false;
+    runtime.toggleRequesterSameAsRecipient();
+    context.subscriptionRoleState.requester.searchResults = [requester];
+    runtime.selectSubscriptionRolePerson('requester', requester.id);
+
+    assert.equal(elements.subRecipientInitials.value, 'A.B.');
+    assert.equal(elements.subRequesterInitials.value, 'R.S.');
+    assert.equal(runtime.buildSubscriptionRolePayload('recipient').personEdits.firstName, 'A.B.');
+    assert.equal(runtime.buildSubscriptionRolePayload('requester').personEdits.firstName, 'R.S.');
+    assert.equal(recipient.firstName, 'Alex');
+    assert.equal(requester.firstName, 'Robin');
+
+    elements.subRecipientInitials.value = 'A.C.';
+    const recipientPayload = runtime.buildSubscriptionRolePayload('recipient');
+    const requesterPayload = runtime.buildSubscriptionRolePayload('requester');
+    assert.equal(recipientPayload.personEdits.firstName, 'A.C.');
+    assert.equal(requesterPayload.personEdits.firstName, 'R.S.');
+    runtime.restoreOutboxSubscriptionRoles({
+        recipient: { personId: 73, person: recipientPayload.personEdits },
+        requester: { personId: 74, person: requesterPayload.personEdits }
+    });
+    assert.equal(elements.subRecipientInitials.value, 'A.C.');
+    assert.equal(elements.subRequesterInitials.value, 'R.S.');
+}
+
+async function testRoleSelectionHydratesInitialsAndIgnoresPreviousPerson() {
+    for (const role of ['recipient', 'requester']) {
+        const responses = [];
+        const { context, elements, runtime } = createRuntimeContext({
+            werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }],
+            kiwiApi: {
+                get(url, options) {
+                    return new Promise(resolve => responses.push({ url, options, resolve }));
+                }
+            }
+        });
+        const prefix = runtime.getSubscriptionRoleConfig(role).prefix;
+        const person = { id: 73, firstName: 'Alex', credentialKey: 'demo', mandant: 'HMC', sourceSystem: 'subscription-api' };
+        context.subscriptionRoleState[role].searchResults = [person];
+        runtime.selectSubscriptionRolePerson(role, 73);
+        assert.equal(responses.length, 1);
+        assert.match(responses[0].url, /credentialKey=demo&sourceSystem=subscription-api&mandant=HMC/);
+        assert.equal(responses[0].options.headers['X-Kiwi-Customer-Person-Id'], '73');
+        responses[0].resolve({ ...person, firstName: '', initials: 'A.B.' });
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(elements[`${prefix}Initials`].value, 'A.B.');
+
+        // The same numeric ID in another source must not accept the previous selection's details.
+        context.subscriptionRoleState[role].searchResults = [person];
+        runtime.selectSubscriptionRolePerson(role, 73);
+        const nextPerson = { ...person, firstName: '', initials: 'R.S.', credentialKey: 'other' };
+        context.subscriptionRoleState[role].searchResults = [nextPerson];
+        runtime.selectSubscriptionRolePerson(role, 73);
+        responses[2].resolve({ ...nextPerson, initials: 'R.T.' });
+        await new Promise(resolve => setImmediate(resolve));
+        responses[1].resolve({ ...person, initials: 'A.L.' });
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(elements[`${prefix}Initials`].value, 'R.T.');
+        assert.equal(context.subscriptionRoleState[role].selectedPerson.credentialKey, 'other');
+
+        context.kiwiApi = null;
+        context.subscriptionRoleState[role].searchResults = [{ id: 75, firstName: 'L.' }];
+        runtime.selectSubscriptionRolePerson(role, 75);
+        assert.equal(elements[`${prefix}Initials`].value, 'L.');
+        context.subscriptionRoleState[role].searchResults = [{ id: 76, firstName: '', initials: '' }];
+        runtime.selectSubscriptionRolePerson(role, 76);
+        assert.equal(elements[`${prefix}Initials`].value, '');
+    }
+}
+
+async function testPayerHydrationCannotReplaceActiveCustomerFromAnotherSource() {
+    const activeCustomer = { id: 51, personId: '51', credentialKey: 'source-a', mandant: 'A',
+        sourceSystem: 'subscription-api', firstName: 'Reader', initials: 'R.' };
+    const recipient = { id: 73, credentialKey: 'source-a', mandant: 'A',
+        sourceSystem: 'subscription-api', firstName: 'Recipient', initials: 'E.' };
+    const payer = { id: 51, personId: '51', credentialKey: 'source-b', mandant: 'B',
+        sourceSystem: 'subscription-api', firstName: 'Other-source-payer' };
+    let respond;
+    const { context, elements, runtime } = createRuntimeContext({
+        recipientSelectedPerson: recipient,
+        werfsleutelSelections: [{ selectedKey: { mandant: 'A' } }, { selectedKey: { mandant: 'B' } }],
+        kiwiApi: { get: () => new Promise(resolve => { respond = resolve; }) }
+    });
+    context.currentCustomer = activeCustomer;
+    context.customers = [activeCustomer, recipient];
+    const initialCustomers = [...context.customers];
+    const cache = createBootstrapSlice();
+    const activeCustomerChanges = [];
+    // Use the application's cache writer: a stub that only records calls hides this regression.
+    context.upsertCustomerInCache = person => cache.upsertCustomerInCache(person, {
+        customers: context.customers,
+        currentCustomer: context.currentCustomer,
+        setCustomers(customers) { context.customers = customers; },
+        setCurrentCustomer(customer) {
+            activeCustomerChanges.push(customer);
+            context.currentCustomer = customer;
+        }
+    });
+    context.subscriptionRoleState.requester.searchResults = [payer];
+    runtime.selectSubscriptionRolePerson('requester', payer.id);
+    assert.equal(context.currentCustomer, activeCustomer);
+
+    respond({ ...payer, initials: 'P.B.' });
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.equal(elements.subRequesterInitials.value, 'P.B.');
+    assert.equal(context.subscriptionRoleState.requester.selectedPerson.credentialKey, 'source-b');
+    assert.equal(context.subscriptionRoleState.requester.selectedPerson.initials, 'P.B.');
+    assert.equal(context.subscriptionRoleState.recipient.selectedPerson, recipient);
+    assert.equal(context.currentCustomer, activeCustomer);
+    assert.deepEqual(context.customers, initialCustomers);
+    assert.deepEqual(activeCustomerChanges, []);
 }
 
 async function run() {
+    testActiveCustomerIsRecipientWithoutLookup();
+    await testActiveCustomerCanBeReusedWithIndependentPayer();
+    testReuseRejectsIncompatibleMandant();
+    testSameNumericIdDoesNotMergeSources();
+    await testRoleSearchUsesLocalCustomersAndReportsNoResults();
+    await testRoleSearchDiscardsStaleResponses();
+    await testRoleSearchFailureKeepsSelectionAndEdits();
+    await testHydrationDiscardsObsoleteCustomerContext();
+    testMarketingPreferencesFollowOnlyTheRecipient();
+    await testPayerHydrationCannotReplaceActiveCustomerFromAnotherSource();
+    testExistingInitialsPopulateIndependentRoleEditorsAndPayloads();
+    await testRoleSelectionHydratesInitialsAndIgnoresPreviousPerson();
     testExistingRoleEditsStayIndependentAndRestore();
     await testLateHydrationKeepsEnteredDetails();
     testSelectSubscriptionDuplicatePersonNormalizesSameRecipientRequester();
+    testEqualPersonNumbersAcrossMandantsDoNotMergeRecipientAndPayer();
     testNormalizeDuplicateLastNameUsesSharedHelpers();
     testBuildSubscriptionRolePayloadKeepsExistingPersonCredentialContext();
     testNewSubscriptionPersonKeepsPpaPhoneTypesSeparate();
@@ -1060,6 +1226,224 @@ async function run() {
     testDuplicateApiIdentifiesStaleResponsesByRequestVersion();
     testToggleCustomerFormAddressKeepsAddressExtensionOptional();
     console.log('subscription role runtime tests passed');
+}
+
+const signupCustomer = {
+    id: 101, firstName: 'A.', lastName: 'Testklant', postalCode: '1234AB', houseNumber: '10',
+    address: 'Teststraat 10', city: 'Teststad', email: 'test@example.org',
+    sourceSystem: 'subscription-api', credentialKey: 'test-hmc', mandant: 'HMC', divisionId: '14'
+};
+
+function testActiveCustomerIsRecipientWithoutLookup() {
+    let calls = 0;
+    const selections = [];
+    const { context, elements, runtime } = createRuntimeContext({
+        werfsleutelSelections: selections,
+        kiwiApi: { get() { calls += 1; throw Error('No lookup expected'); } }
+    });
+    context.currentCustomer = { ...signupCustomer };
+    runtime.initializeSubscriptionRolesForForm();
+    assert.equal(context.subscriptionRoleState.recipient.selectedPerson.id, 101);
+    assert.equal(elements.recipientPersonSearch.open, false);
+    assert.equal(elements.recipientSearchPostalCode.value, '');
+    assert.equal(elements.subRecipientPostalCode.value, '1234AB');
+    assert.equal(context.subscriptionRoleState.requesterSameAsRecipient, true);
+    selections.push({ selectedKey: { mandant: 'HMC', divisionId: '14' } });
+    runtime.updateSubscriptionRoleSearchAvailability();
+    const payload = runtime.buildSubscriptionRolePayload('recipient');
+    assert.equal(payload.personId, 101);
+    assert.equal(payload.credentialKey, 'test-hmc');
+    assert.equal(payload.person.sourceSystem, 'subscription-api');
+    assert.equal(calls, 0);
+    elements.subRecipientLastName.value = 'Edited';
+    assert.equal(context.currentCustomer.lastName, 'Testklant');
+}
+
+async function testActiveCustomerCanBeReusedWithIndependentPayer() {
+    const { context, elements, runtime } = createRuntimeContext({
+        werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }]
+    });
+    context.currentCustomer = { ...signupCustomer };
+    runtime.initializeSubscriptionRolesForForm();
+    elements.requesterSameAsRecipient.checked = false;
+    runtime.toggleRequesterSameAsRecipient();
+    const payer = { ...signupCustomer, id: 202, credentialKey: 'test-payer' };
+    context.subscriptionRoleState.requester.searchResults = [payer];
+    runtime.selectSubscriptionRolePerson('requester', 202, 0);
+    const recipient = { ...signupCustomer, id: 303 };
+    context.subscriptionRoleState.recipient.searchResults = [recipient];
+    runtime.selectSubscriptionRolePerson('recipient', 303, 0);
+    assert.equal(elements.recipientReuseCustomer.hidden, false);
+    runtime.useActiveCustomerForSubscriptionRole('recipient');
+    assert.equal(runtime.buildSubscriptionRolePayload('recipient').personId, 101);
+    assert.equal(runtime.buildSubscriptionRolePayload('requester').personId, 202);
+    assert.equal(context.currentCustomer.id, 101);
+    assert.equal(elements.recipientPersonSearch.open, false);
+    runtime.setSubscriptionRoleMode('recipient', 'create');
+    runtime.setSubscriptionRoleMode('recipient', 'existing');
+    runtime.useActiveCustomerForSubscriptionRole('recipient');
+    assert.equal(runtime.buildSubscriptionRolePayload('recipient').credentialKey, 'test-hmc');
+    assert.equal(runtime.buildSubscriptionRolePayload('requester').personId, 202);
+}
+
+function testReuseRejectsIncompatibleMandant() {
+    const selections = [{ selectedKey: { mandant: 'KRONCRV', divisionId: '14' } }];
+    const { context, elements, runtime } = createRuntimeContext({ werfsleutelSelections: selections });
+    context.currentCustomer = { ...signupCustomer };
+    runtime.updateSubscriptionRoleSearchAvailability();
+    assert.equal(elements.recipientReuseCustomer.hidden, true);
+    runtime.useActiveCustomerForSubscriptionRole('recipient');
+    assert.equal(context.subscriptionRoleState.recipient.selectedPerson, null);
+    runtime.initializeSubscriptionRolesForForm();
+    assert.equal(runtime.buildSubscriptionRolePayload('recipient'), null);
+}
+
+function testSameNumericIdDoesNotMergeSources() {
+    for (const difference of [{ credentialKey: 'other' }, { sourceSystem: 'other' }, { mandant: 'KRONCRV' }, { divisionId: '6' }]) {
+        const { context, runtime } = createRuntimeContext({ recipientSelectedPerson: signupCustomer,
+            requesterSelectedPerson: { ...signupCustomer, ...difference } });
+        assert.equal(runtime.normalizeRequesterSameAsRecipientSelection(), false);
+        assert.equal(context.subscriptionRoleState.requesterSameAsRecipient, false);
+    }
+    const { context, runtime } = createRuntimeContext({ werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }] });
+    const other = { ...signupCustomer, credentialKey: 'other' };
+    context.subscriptionRoleState.recipient.searchResults = [signupCustomer, other];
+    runtime.selectSubscriptionRolePerson('recipient', 101);
+    assert.equal(context.subscriptionRoleState.recipient.selectedPerson, null);
+    runtime.selectSubscriptionRolePerson('recipient', 101, 1);
+    assert.equal(context.subscriptionRoleState.recipient.selectedPerson.credentialKey, 'other');
+}
+
+async function testRoleSearchUsesLocalCustomersAndReportsNoResults() {
+    const { context, elements, runtime } = createRuntimeContext({ werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }] });
+    context.customers = [signupCustomer];
+    elements.recipientSearchPostalCode.value = '1234 AB';
+    elements.recipientSearchHouseNumber.value = '10';
+    await runtime.searchSubscriptionRolePerson('recipient');
+    assert.equal(context.subscriptionRoleState.recipient.searchResults.length, 1);
+    runtime.selectSubscriptionRolePerson('recipient', 101, 0);
+    assert.equal(runtime.buildSubscriptionRolePayload('recipient').personId, 101);
+    elements.recipientSearchPostalCode.value = '9999ZZ';
+    await runtime.searchSubscriptionRolePerson('recipient');
+    assert.match(elements.recipientSearchResults.textContent, /Geen personen gevonden/);
+    assert.equal(context.subscriptionRoleState.recipient.selectedPerson.id, 101);
+}
+
+async function testRoleSearchDiscardsStaleResponses() {
+    for (const change of ['new-search', 'reset', 'mode', 'scope', 'session', 'reuse', 'filters', 'failure-after-reset']) {
+        const pending = [];
+        let currentSession = true;
+        const selections = [{ selectedKey: { mandant: 'HMC' } }];
+        const { context, elements, runtime } = createRuntimeContext({ werfsleutelSelections: selections,
+            kiwiApi: { get: () => new Promise((resolve, reject) => pending.push({ resolve, reject })) } });
+        context.kiwiCustomerWorkSession = { getRequestContext: () => ({}), isCurrent: () => currentSession };
+        context.currentCustomer = { ...signupCustomer };
+        elements.recipientSearchPostalCode.value = '1234AB';
+        const first = runtime.searchSubscriptionRolePerson('recipient');
+        if (change === 'new-search') {
+            const second = runtime.searchSubscriptionRolePerson('recipient');
+            pending[1].resolve({ items: [{ ...signupCustomer, id: 202 }] });
+            await second;
+        }
+        if (change === 'reset') runtime.resetSubscriptionRoleState();
+        if (change === 'mode') runtime.setSubscriptionRoleMode('recipient', 'create');
+        if (change === 'scope') {
+            selections[0].selectedKey.mandant = 'KRONCRV';
+            context.dispatchEvent(new context.CustomEvent('kiwi:werfsleutel-selections-updated'));
+        }
+        if (change === 'session') currentSession = false;
+        if (change === 'reuse') runtime.useActiveCustomerForSubscriptionRole('recipient');
+        if (change === 'filters') elements.recipientSearchPostalCode.value = '9999ZZ';
+        if (change === 'failure-after-reset') {
+            runtime.resetSubscriptionRoleState();
+            pending[0].reject(Error('Obsolete failure'));
+        } else {
+            pending[0].resolve({ items: [signupCustomer] });
+        }
+        await first;
+        const results = context.subscriptionRoleState.recipient.searchResults;
+        assert.equal(results.length, change === 'new-search' ? 1 : 0, change);
+        if (change === 'new-search') assert.equal(results[0].id, 202);
+        assert.equal(context.__toasts.length, 0, change);
+    }
+}
+
+async function testRoleSearchFailureKeepsSelectionAndEdits() {
+    const { context, elements, runtime } = createRuntimeContext({
+        werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }],
+        kiwiApi: { get: async () => { throw Error('Search temporarily unavailable'); } }
+    });
+    context.currentCustomer = { ...signupCustomer };
+    runtime.initializeSubscriptionRolesForForm();
+    elements.subRecipientLastName.value = 'Entered surname';
+    elements.recipientSearchPostalCode.value = '1234AB';
+    await runtime.searchSubscriptionRolePerson('recipient');
+    assert.equal(context.subscriptionRoleState.recipient.selectedPerson.id, 101);
+    assert.equal(elements.subRecipientLastName.value, 'Entered surname');
+    assert.equal(context.__toasts[0].message, 'Search temporarily unavailable');
+}
+
+async function testHydrationDiscardsObsoleteCustomerContext() {
+    for (const change of ['session', 'selection', 'reset', 'scope', 'source-response']) {
+        let respond;
+        let currentSession = true;
+        const selections = [{ selectedKey: { mandant: 'HMC' } }];
+        const { context, elements, runtime } = createRuntimeContext({ recipientSelectedPerson: { ...signupCustomer },
+            werfsleutelSelections: selections,
+            kiwiApi: { get: () => new Promise(resolve => { respond = resolve; }) } });
+        context.kiwiCustomerWorkSession = { getRequestContext: () => ({}), isCurrent: () => currentSession };
+        runtime.populateSubscriptionRoleEditor('recipient');
+        const request = runtime.hydrateSubscriptionRoleSelectedPerson('recipient');
+        if (change === 'session') currentSession = false;
+        if (change === 'selection') context.subscriptionRoleState.recipient.selectedPerson = { ...signupCustomer, credentialKey: 'other' };
+        if (change === 'reset') runtime.resetSubscriptionRoleState();
+        if (change === 'scope') selections[0].selectedKey.mandant = 'KRONCRV';
+        respond({ ...signupCustomer, lastName: 'Obsolete',
+            ...(change === 'source-response' ? { credentialKey: 'other' } : {}) });
+        await request;
+        assert.equal(elements.subRecipientLastName.value, 'Testklant', change);
+        assert.equal(context.__upserts.length, 0, change);
+    }
+}
+
+function testMarketingPreferencesFollowOnlyTheRecipient() {
+    const person = { id: 73, firstName: 'P.', lastName: 'Tester', postalCode: '1234AB', houseNumber: '10',
+        address: 'Teststraat 10', city: 'Hilversum', email: 'fixture@example.invalid',
+        optinEmail: 'yes', optinPhone: 'no', optinPost: null };
+    const { context, runtime, marketingInputs } = createRuntimeContext({ recipientSelectedPerson: person });
+    const selection = name => marketingInputs[`subOptin${name}`].find(input => input.checked)?.value ?? null;
+    runtime.populateSubscriptionRoleEditor('recipient');
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), ['yes', 'no', null]);
+    assert.equal(marketingInputs.subOptinEmail.every(input => input.disabled), true);
+
+    runtime.setSubscriptionRoleMode('recipient', 'create');
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), [null, null, null]);
+    assert.equal(marketingInputs.subOptinEmail.every(input => !input.disabled), true);
+    marketingInputs.subOptinEmail[1].checked = true;
+    runtime.setSubscriptionRoleMode('requester', 'create');
+    assert.equal(selection('Email'), 'no');
+
+    runtime.setSubscriptionRoleMode('recipient', 'existing');
+    assert.equal(selection('Email'), null);
+    context.subscriptionRoleState.recipient.searchResults = [{ ...person, id: 74, optinEmail: null, optinPhone: '', optinPost: undefined }];
+    runtime.selectSubscriptionRolePerson('recipient', 74);
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), [null, null, null]);
+    runtime.setSubscriptionRoleMode('recipient', 'create');
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), [null, null, null]);
+    assert.equal(person.optinEmail, 'yes');
+    assert.equal(person.optinPhone, 'no');
+    runtime.restoreOutboxSubscriptionRoles({ recipient: { person }, requester: { sameAsRecipient: true } });
+    assert.deepEqual(['Email', 'Phone', 'Post'].map(selection), ['yes', 'no', null], 'saved new-person choices survive role restoration');
+    const newRecipient = runtime.buildSubscriptionRolePayload('recipient', { optinData: {
+        optinEmail: 'yes', optinPhone: 'no', optinPost: null
+    } });
+    assert.equal(newRecipient.person.optinEmail, 'yes');
+    assert.equal(newRecipient.person.optinPhone, 'no');
+    assert.equal(newRecipient.person.optinPost, null);
+    context.subscriptionRoleState.recipient.mode = 'existing';
+    context.subscriptionRoleState.recipient.selectedPerson = person;
+    const existingRecipient = runtime.buildSubscriptionRolePayload('recipient', { optinData: { optinEmail: 'no' } });
+    assert.equal(Object.hasOwn(existingRecipient.personEdits, 'optinEmail'), false, 'an order does not overwrite stored preferences');
 }
 
 run().catch((error) => {

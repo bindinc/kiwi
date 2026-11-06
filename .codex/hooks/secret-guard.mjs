@@ -7,6 +7,8 @@ import { pathToFileURL } from "node:url";
 
 const MAX_INPUT_BYTES = 8 * 1024 * 1024;
 const MAX_FINDINGS = 5;
+const MAX_JAVASCRIPT_CHECKS = 12;
+const JAVASCRIPT_CHECK_TIMEOUT_MS = 300;
 const PRIVATE_KEY_PATTERN = new RegExp([
   "-----BEGIN ",
   "(?:(?:OPENSSH|RSA|EC|DSA) )?",
@@ -43,7 +45,7 @@ const SECRET_PATTERNS = [
   },
 ];
 
-const CREDENTIAL_ASSIGNMENT = /\b(?:api[_-]?key|client[_-]?secret|password|passwd|access[_-]?token|refresh[_-]?token|secret)\b\s*[:=]\s*["']?([A-Za-z0-9._~+/=-]{16,})/gi;
+const CREDENTIAL_ASSIGNMENT = /\b(?:api[_-]?key|client[_-]?secret|password|passwd|access[_-]?token|refresh[_-]?token|secret)\b\s*[:=]\s*(["'`]?)([A-Za-z0-9._~+/=-]{16,})/gi;
 const PLACEHOLDER_VALUE = /^(?:x+|example|placeholder|redacted|changeme|replace[-_]?me|your[-_].*)$/i;
 const SAFE_ENV_FILES = new Set([
   ".env.example",
@@ -117,7 +119,66 @@ function uniqueFindings(findings) {
   return result;
 }
 
-export function findSensitiveData(text, source = "<input>") {
+function javascriptContext(text, filePath, budget) {
+  if (!/\.(?:js|mjs|cjs)$/.test(filePath)) {
+    return null;
+  }
+
+  return { text, budget, valid: null };
+}
+
+function checkJavaScript(text, budget) {
+  if (budget.remaining === 0) {
+    return null;
+  }
+  budget.remaining -= 1;
+
+  // Syntax checking never evaluates source or imports. An empty environment
+  // prevents NODE_OPTIONS from injecting a loader into this security check.
+  const result = spawnSync(process.execPath, ["--check", "--input-type=module"], {
+    input: text,
+    encoding: "utf8",
+    env: {},
+    timeout: JAVASCRIPT_CHECK_TIMEOUT_MS,
+    maxBuffer: MAX_INPUT_BYTES,
+  });
+
+  if (result.error || result.signal) {
+    return null;
+  }
+  if (result.status === 0) {
+    return true;
+  }
+  return result.status === 1 && /SyntaxError:/.test(result.stderr) ? false : null;
+}
+
+function isRuntimeReference(match, text, context, offset) {
+  const [assignment, quote, value] = match;
+  const isEnvironmentReference = /^(?:process\.env|source|env)\.[A-Z][A-Z0-9_]+$/.test(value);
+  const hasExpressionBoundary = /^(?:\s*[,;})]|\s*$)/.test(text.slice(match.index + assignment.length));
+  if (quote || !isEnvironmentReference || !hasExpressionBoundary || !context) {
+    return false;
+  }
+  if (context.text.slice(offset, offset + text.length) !== text) {
+    return false;
+  }
+  if (context.valid === null) {
+    context.valid = checkJavaScript(context.text, context.budget);
+  }
+  if (context.valid !== true) {
+    return false;
+  }
+
+  // A filename or a matching spelling cannot prove that a reference is code.
+  // Replacing it with @ breaks JavaScript syntax, but stays ordinary text in
+  // strings, templates, comments and regex literals. Ambiguity fails closed.
+  const valueStart = offset + match.index + assignment.length - value.length;
+  const modified = context.text.slice(0, valueStart)
+    + "@" + context.text.slice(valueStart + value.length);
+  return checkJavaScript(modified, context.budget) === false;
+}
+
+export function findSensitiveData(text, source = "<input>", context = null, offset = 0) {
   if (typeof text !== "string" || text.length === 0) {
     return [];
   }
@@ -132,7 +193,7 @@ export function findSensitiveData(text, source = "<input>") {
 
   CREDENTIAL_ASSIGNMENT.lastIndex = 0;
   for (const match of text.matchAll(CREDENTIAL_ASSIGNMENT)) {
-    if (!PLACEHOLDER_VALUE.test(match[1])) {
+    if (!PLACEHOLDER_VALUE.test(match[2]) && !isRuntimeReference(match, text, context, offset)) {
       findings.push(finding("SG007-credential-assignment", source));
       break;
     }
@@ -190,64 +251,103 @@ function pathFromPatchHeader(line) {
   };
 }
 
-function scanPatch(patch) {
+function scanAddedSource(lines, filePath, complete, budget) {
+  const text = lines.map((line) => line.text).join("\n");
+  const context = complete ? javascriptContext(text, filePath, budget) : null;
+  const findings = [];
+  let offset = 0;
+
+  for (const line of lines) {
+    if (line.added) {
+      findings.push(...findSensitiveData(line.text, filePath, context, offset));
+    }
+    offset += line.text.length + 1;
+  }
+
+  return findings;
+}
+
+function scanPatch(patch, budget) {
   const findings = [];
   let currentPath = "<patch>";
+  let isNewFile = false;
+  let lines = [];
+
+  function flush() {
+    findings.push(...scanAddedSource(lines, currentPath, isNewFile, budget));
+    lines = [];
+  }
 
   for (const line of patch.split(/\r?\n/)) {
     const header = pathFromPatchHeader(line);
     if (header !== null) {
+      flush();
       currentPath = header.filePath;
+      isNewFile = line.startsWith("*** Add File:");
       if (header.isNew) {
         findings.push(...scanPath(currentPath));
       }
       continue;
     }
 
-    const isAddedLine = line.startsWith("+") && !line.startsWith("+++");
-    if (isAddedLine) {
-      findings.push(...findSensitiveData(line.slice(1), currentPath));
+    if (line.startsWith("+")) {
+      lines.push({ text: line.slice(1), added: true });
     }
   }
+  flush();
 
   return uniqueFindings(findings);
 }
 
-function scanDiff(diff) {
+function scanDiff(diff, budget) {
   const findings = [];
   let currentPath = "<diff>";
   let isNewFile = false;
+  let lines = [];
+  let hunkCount = 0;
+  let startsAtBeginning = false;
+
+  function flush() {
+    const complete = hunkCount === 1 && startsAtBeginning;
+    findings.push(...scanAddedSource(lines, currentPath, complete, budget));
+    lines = [];
+    hunkCount = 0;
+    startsAtBeginning = false;
+  }
 
   for (const line of diff.split(/\r?\n/)) {
     if (line.startsWith("diff --git ")) {
+      flush();
       isNewFile = false;
+      currentPath = "<diff>";
       continue;
     }
-
     if (line.startsWith("new file mode ")) {
       isNewFile = true;
       continue;
     }
-
     if (line.startsWith("rename to ")) {
       currentPath = line.slice("rename to ".length).trim();
       findings.push(...scanPath(currentPath));
       continue;
     }
-
-    if (line.startsWith("+++ b/")) {
+    if (line.startsWith("+++ b/") && hunkCount === 0) {
       currentPath = line.slice(6).trim();
       if (isNewFile) {
         findings.push(...scanPath(currentPath));
       }
       continue;
     }
-
-    const isAddedLine = line.startsWith("+") && !line.startsWith("+++");
-    if (isAddedLine) {
-      findings.push(...findSensitiveData(line.slice(1), currentPath));
+    if (line.startsWith("@@ ")) {
+      hunkCount += 1;
+      startsAtBeginning = /^@@ -[0-9]+(?:,[0-9]+)? \+1(?:,[0-9]+)? @@/.test(line);
+      continue;
+    }
+    if (hunkCount > 0 && (line.startsWith("+") || line.startsWith(" "))) {
+      lines.push({ text: line.slice(1), added: line.startsWith("+") });
     }
   }
+  flush();
 
   return uniqueFindings(findings);
 }
@@ -303,20 +403,20 @@ function findComparisonRef(repositoryRoot) {
   return originMain ? "origin/main" : null;
 }
 
-export function scanRepository(cwd) {
+export function scanRepository(cwd, budget = { remaining: MAX_JAVASCRIPT_CHECKS }) {
   const repositoryRoot = findRepositoryRoot(cwd);
-  const diffArguments = ["diff", "--no-ext-diff", "--unified=0", "--diff-filter=ACMR"];
+  const diffArguments = ["diff", "--no-ext-diff", "--unified=2147483647", "--diff-filter=ACMR"];
   const findings = scanUntrackedPaths(repositoryRoot);
 
-  findings.push(...scanDiff(runGit(repositoryRoot, [...diffArguments, "--"])));
-  findings.push(...scanDiff(runGit(repositoryRoot, [...diffArguments, "--cached", "--"])));
+  findings.push(...scanDiff(runGit(repositoryRoot, [...diffArguments, "--"]), budget));
+  findings.push(...scanDiff(runGit(repositoryRoot, [...diffArguments, "--cached", "--"]), budget));
 
   const comparisonRef = findComparisonRef(repositoryRoot);
   if (comparisonRef) {
     findings.push(...scanDiff(runGit(
       repositoryRoot,
       [...diffArguments, `${comparisonRef}...HEAD`, "--"],
-    )));
+    ), budget));
   }
 
   return uniqueFindings(findings);
@@ -379,7 +479,7 @@ function validateToolCommand(event) {
   return command;
 }
 
-function evaluateBashBeforeUse(event) {
+function evaluateBashBeforeUse(event, budget) {
   const command = validateToolCommand(event);
   const findings = findSensitiveData(command, "<shell-command>");
   const mentionsSecretFile = SECRET_FILE_MENTION.test(command);
@@ -394,19 +494,19 @@ function evaluateBashBeforeUse(event) {
   }
 
   if (PUBLICATION_COMMAND.test(command)) {
-    findings.push(...scanRepository(event.cwd));
+    findings.push(...scanRepository(event.cwd, budget));
   }
 
   return uniqueFindings(findings);
 }
 
-function evaluateBeforeToolUse(event) {
+function evaluateBeforeToolUse(event, budget) {
   if (event.tool_name === "Bash") {
-    return evaluateBashBeforeUse(event);
+    return evaluateBashBeforeUse(event, budget);
   }
 
   if (event.tool_name === "apply_patch") {
-    return scanPatch(validateToolCommand(event));
+    return scanPatch(validateToolCommand(event), budget);
   }
 
   const findings = scanToolInput(event.tool_input);
@@ -415,15 +515,15 @@ function evaluateBeforeToolUse(event) {
   }
 
   if (GITHUB_PUBLICATION_TOOLS.has(event.tool_name)) {
-    findings.push(...scanRepository(event.cwd));
+    findings.push(...scanRepository(event.cwd, budget));
   }
 
   return uniqueFindings(findings);
 }
 
-function evaluateAfterToolUse(event) {
+function evaluateAfterToolUse(event, budget) {
   validateToolCommand(event);
-  return scanRepository(event.cwd);
+  return scanRepository(event.cwd, budget);
 }
 
 function formatReason(findings) {
@@ -475,6 +575,7 @@ export function evaluateHook(event) {
   }
 
   let findings;
+  const budget = { remaining: MAX_JAVASCRIPT_CHECKS };
 
   switch (event.hook_event_name) {
     case "UserPromptSubmit":
@@ -484,13 +585,13 @@ export function evaluateHook(event) {
       findings = findSensitiveData(event.prompt, "<prompt>");
       break;
     case "PreToolUse":
-      findings = evaluateBeforeToolUse(event);
+      findings = evaluateBeforeToolUse(event, budget);
       break;
     case "PostToolUse":
-      findings = evaluateAfterToolUse(event);
+      findings = evaluateAfterToolUse(event, budget);
       break;
     case "Stop":
-      findings = scanRepository(event.cwd);
+      findings = scanRepository(event.cwd, budget);
       break;
     default:
       throw new Error("Unsupported hook event");

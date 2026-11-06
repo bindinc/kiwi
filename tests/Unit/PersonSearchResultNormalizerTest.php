@@ -191,6 +191,7 @@ final class PersonSearchResultNormalizerTest extends TestCase
         self::assertSame('11860448', $normalized['personId']);
         self::assertSame('41929371', $normalized['personNumber']);
         self::assertSame('', $normalized['firstName']);
+        self::assertSame('R.', $normalized['initials']);
         self::assertSame('de', $normalized['middleName']);
         self::assertSame('Bakker-Bakker', $normalized['lastName']);
         self::assertSame('Dhr.', $normalized['salutation']);

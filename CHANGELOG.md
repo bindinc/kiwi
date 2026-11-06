@@ -14,10 +14,29 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Fixed
 
+- Reuse the active customer as subscription recipient without another lookup, while keeping independent recipient and payer selection through submission using full source identity and rejecting stale or incompatible customer selections. [sc-203540]
+- Leave marketing preferences unselected for new customers until explicitly chosen, retain existing customers' preferences, and prevent choices carrying over between recipients or form resets. [sc-203457]
+- Derive and display the required subscription mandant from the offer catalog, reject missing or inconsistent mappings, and keep recipient and payer identities separate across mandants and source customers while grouping offers for the same customer and mandant. [sc-203528]
+- Prevent stale recipient address errors and premature rejection before address selection, while retaining mandatory full-address confirmation and recovery within the same session. [sc-203455]
+- Preserve provider initials in existing recipient and payer fields during subscription signup, including detail hydration and person switching, while keeping role enrichment separate from the active customer cache. [sc-203539]
+- Use the earliest subscription end date consistently for status and displayed dates in customer details and search summaries, and preserve publication titles in feedback screenshots while keeping customer identities anonymized. [sc-203454]
+
+## [v1.0.35] - 2026-10-22
+
+### Fixed
+
+- Use the Debian Trixie runtime for FrankenPHP 1.13.2 and PHP 8.5.12 after the Alpine variant repeatedly exited with code 137 on BINK8S, retaining the security baseline and required extensions. [sc-205460]
+
+## [v1.0.34] - 2026-10-22
+
+### Fixed
+
+- Distinguish proven JavaScript runtime credential references from literal secrets in the Codex guard, retaining strict checks for unknown source contexts. [sc-199729]
 - Keep the home welcome message centered after starting a new customer session, including repeated resets. [sc-203422]
 
 ### Changed
 
+- Upgrade the shared development and production runtime to FrankenPHP 1.13.2 and PHP 8.5.12, enforce the PHP security baseline, include the required `intl` extension for country validation, and run CI on PHP 8.5.12. [sc-205460]
 - Reconcile releases v1.0.22 through v1.0.33 with their Git tags and organize the changelog with change categories, release dates and comparison links.
 
 ## [v1.0.33] - 2026-09-25
@@ -464,7 +483,9 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 - Configure cert-manager values for CRDs, add Gateway API ACME issuers, and install the issuer chart during addons
 - Update deploy-app to wait for all kiwi deployments after applying kustomize overlays
 
-[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.33...HEAD
+[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.35...HEAD
+[v1.0.35]: https://github.com/bindinc/kiwi/compare/v1.0.34...v1.0.35
+[v1.0.34]: https://github.com/bindinc/kiwi/compare/v1.0.33...v1.0.34
 [v1.0.33]: https://github.com/bindinc/kiwi/compare/v1.0.32...v1.0.33
 [v1.0.32]: https://github.com/bindinc/kiwi/compare/v1.0.31...v1.0.32
 [v1.0.31]: https://github.com/bindinc/kiwi/compare/v1.0.30...v1.0.31

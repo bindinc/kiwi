@@ -160,6 +160,16 @@ async function testRequiredSourceReloadNeverFallsBackToCachedSuccess() {
 }
 
 async function run() {
+    const customerWithInitials = __customerDetailTestUtils.mergeCustomerDetail(
+        { firstName: 'Alex', initials: 'A.', credentialKey: 'demo', sourceSystem: 'subscription-api' },
+        { firstName: '', initials: 'A.B.', credentialKey: 'demo', sourceSystem: 'subscription-api' }
+    );
+    assert.equal(customerWithInitials.firstName, '');
+    assert.equal(customerWithInitials.initials, 'A.B.');
+    const partialDetail = __customerDetailTestUtils.mergeCustomerDetail(customerWithInitials, { email: 'alex@example.invalid' });
+    assert.equal(partialDetail.initials, 'A.B.');
+    const clearedInitials = __customerDetailTestUtils.mergeCustomerDetail(customerWithInitials, { initials: '', sourceSystem: 'subscription-api' });
+    assert.equal(clearedInitials.initials, '');
     const refreshed = __customerDetailTestUtils.mergeCustomerDetail(
         { firstName: 'Old cached name', email: 'old@example.org', sourceSystem: 'subscription-api' },
         { firstName: '', email: '', sourceSystem: 'subscription-api' }

@@ -66,6 +66,11 @@ export function registerSubscriptionRoleSlice(actionRouter, options = {}) {
         'toggle-requester-same-as-recipient': () => {
             runtime.toggleRequesterSameAsRecipient();
         },
+        'use-active-customer-for-subscription-role': (payload) => {
+            if (isSupportedRole(payload.role)) {
+                runtime.useActiveCustomerForSubscriptionRole(payload.role);
+            }
+        },
         'select-subscription-duplicate-person': (payload) => {
             if (!isSupportedRole(payload.role)) {
                 return;
@@ -100,7 +105,8 @@ export function registerSubscriptionRoleSlice(actionRouter, options = {}) {
                 return;
             }
 
-            runtime.selectSubscriptionRolePerson(payload.role, personId);
+            const resultIndex = payload.resultIndex === undefined ? undefined : Number(payload.resultIndex);
+            runtime.selectSubscriptionRolePerson(payload.role, personId, resultIndex);
         }
     });
 }

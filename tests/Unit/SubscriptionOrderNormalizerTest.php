@@ -97,4 +97,71 @@ final class SubscriptionOrderNormalizerTest extends TestCase
 
         self::assertSame([], $normalizer->normalizeOrders([], $credential));
     }
+
+    /**
+     * @dataProvider subscriptionEndDates
+     * @param array<string, mixed> $dates
+     */
+    public function testStatusAndDisplayedDatesUseTheEarliestEndDate(
+        array $dates,
+        string $expectedEndDate,
+        string $expectedStatus,
+    ): void {
+        $credential = new HupApiCredential(
+            name: 'tvk',
+            title: 'TV Krant',
+            mandant: 'HMC',
+            divisionId: null,
+            supportsPersonLookup: true,
+            username: 'tvk-user',
+            password: 'tvk-password',
+            refreshToken: null,
+        );
+        $subscription = (new SubscriptionOrderNormalizer())->normalizeOrder(
+            ['activeFrom' => '2000-01-01', ...$dates], $credential,
+        );
+
+        self::assertSame($expectedStatus, $subscription['status']);
+        self::assertSame($expectedEndDate, $subscription['endDate']);
+        self::assertSame('' !== $expectedEndDate ? $expectedEndDate : '2000-01-01', $subscription['lastEdition']);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>, string, string}> */
+    public static function subscriptionEndDates(): iterable
+    {
+        $today = new \DateTimeImmutable('today');
+        $yesterday = $today->modify('-1 day')->format('Y-m-d');
+        $todayString = $today->format('Y-m-d');
+        $tomorrow = $today->modify('+1 day')->format('Y-m-d');
+
+        yield 'termination overrides open-ended activity' => [
+            ['activeTo' => '2999-12-31', 'orderEndDate' => '2999-12-31', 'termination' => ['terminationDate' => $yesterday]],
+            $yesterday, 'cancelled',
+        ];
+        yield 'order end overrides open-ended activity' => [
+            ['activeTo' => '2999-12-31', 'orderEndDate' => $yesterday], $yesterday, 'ended',
+        ];
+        yield 'earlier activity end is retained' => [
+            ['activeTo' => $yesterday, 'orderEndDate' => '2999-12-31'], $yesterday, 'ended',
+        ];
+        yield 'later termination cannot extend activity' => [
+            ['activeTo' => $yesterday, 'termination' => ['terminationDate' => $tomorrow]], $yesterday, 'cancelled',
+        ];
+        foreach (['activeTo', 'orderEndDate', 'terminationDate'] as $field) {
+            foreach ([$yesterday => 'ended', $todayString => 'active', $tomorrow => 'active'] as $date => $status) {
+                $dates = 'terminationDate' === $field ? ['termination' => [$field => $date]] : [$field => $date];
+                $expectedStatus = 'terminationDate' === $field && 'ended' === $status ? 'cancelled' : $status;
+                yield $field.' '.$date => [$dates, $date, $expectedStatus];
+            }
+        }
+        yield 'future termination remains active' => [
+            ['activeTo' => '2999-12-31', 'termination' => ['terminationDate' => $tomorrow]], $tomorrow, 'active',
+        ];
+        yield 'open-ended remains active' => [['activeTo' => '2999-12-31'], '2999-12-31', 'active'];
+        yield 'no end dates' => [[], '', 'active'];
+        yield 'invalid dates fall back to order end' => [
+            ['activeTo' => 'invalid-date', 'orderEndDate' => $yesterday, 'termination' => ['terminationDate' => '']],
+            $yesterday, 'ended',
+        ];
+    }
 }
