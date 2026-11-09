@@ -8,7 +8,17 @@ Date: 2026-11-09. Story: [SC-206629](https://app.shortcut.com/bindincit/story/20
 
 Evaluate the complete application against the reviewed Light & Shadow showcase, then define implementation slices beside the affected code. The reported radio outlines and new-subscription appearance are examples of a wider mismatch; they do not define the scope or receive exclusive priority.
 
-This PR changes documentation only. It does not implement the slices, change business behavior, create customer transactions, merge implementation work, release an image or deploy Kiwi. Each future implementation slice needs its own branch, worktree, PR, changelog entry and applicable validation under the existing Shortcut workflow.
+PR #142 introduced this audit as documentation only. The authorized implementation now proceeds through separate stacked branches, worktrees and PRs, each with one changelog entry and applicable validation under the existing Shortcut workflow. Merge and deployment require separate explicit authorization.
+
+## Implementation progress
+
+Slice 10 started with a fresh baseline before slice 01 changes. Baseline provenance, screenshots and measurements are retained under `/tmp/kiwi-theme-audit-implementation/baseline`; implementation evidence is added per slice. Runtime browser coverage and source review are reported separately.
+
+| Slice | Current status | Branch / PR | Acceptance |
+| --- | --- | --- | --- |
+| 01 | Implemented; ready for review | `codex/align-theme-foundations` / [#143](https://github.com/bindinc/kiwi/pull/143) | Independent source/rendered review; 76 theme assertions per browser, privacy checks, native 200% zoom and short-height keyboard regression passed |
+| 02–09 | Planned | Separate sequential branches after the preceding slice passes | Not accepted |
+| 10 | Baseline and reusable checks in progress | `codex/validate-theme-showcase-alignment` / [#144](https://github.com/bindinc/kiwi/pull/144) | Baseline and native zoom protocol established; final gate after 01–09 |
 
 ## Reference and baseline
 
@@ -97,4 +107,4 @@ The confirmed desktop grid measures `320px 770px 380px` tracks plus gutters; its
 
 Source-level and representative visual evaluation is complete for planning. Exhaustive runtime state coverage, screen-reader checks, native browser zoom and full cross-browser acceptance remain the explicit gates in slice 10. No new WCAG conformance claim is made. No business forms were submitted and no production version was inspected or changed.
 
-All implementation slices remain **planned**, not completed. Approval or merge of this documentation PR does not imply that the application has been restyled, deployed or accepted.
+The evaluation above records the original planning baseline. Current implementation and acceptance status are tracked in the progress table and each adjacent slice document. Approval or merge of the original documentation PR does not imply application acceptance.

@@ -16,12 +16,20 @@ function color(name) {
     const value = tokens[name];
     assert.ok(value, `Missing token ${name}`);
     const reference = value.match(/^var\((--[\w-]+)\)$/);
-    return reference ? color(reference[1]) : value;
+    if (reference) return color(reference[1]);
+    const mix = value.match(/^color-mix\(in srgb, var\((--[\w-]+)\) (\d+)%, var\((--[\w-]+)\)\)$/);
+    if (mix) {
+        const first = color(mix[1]);
+        const second = color(mix[3]);
+        const proportion = Number(mix[2]) / 100;
+        return first.map((channel, index) => channel * proportion + second[index] * (1 - proportion));
+    }
+    assert.match(value, /^#[\da-f]{6}$/i, name);
+    return value.slice(1).match(/../g).map(channel => parseInt(channel, 16));
 }
 
-function luminance(hex) {
-    assert.match(hex, /^#[\da-f]{6}$/i);
-    const channels = hex.slice(1).match(/../g).map(channel => parseInt(channel, 16) / 255);
+function luminance(rgb) {
+    const channels = rgb.map(channel => channel / 255);
     const linear = channels.map(channel => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
     return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
 }
@@ -43,8 +51,6 @@ test('the eight approved swatches have one canonical declaration', () => {
 test('semantic surfaces and interactions retain their approved palette roles', () => {
     const roles = {
         page: 'cloud-dancer', 'surface-subdued': 'cloud-dancer', 'surface-calm': 'veiled-vista',
-        'surface-selected': 'veiled-vista', 'surface-info': 'baltic-sea',
-        'surface-attention': 'golden-mist', 'surface-group': 'quiet-violet',
         'surface-disabled': 'cloud-cover', 'text-palette': 'blue-fusion', action: 'blue-fusion',
         'action-secondary': 'hematite', focus: 'blue-fusion'
     };
@@ -59,11 +65,34 @@ test('semantic surfaces and interactions retain their approved palette roles', (
     })) assert.equal(tokens[`--${role}`], value, role);
     for (const [role, value] of Object.entries({
         'border-subtle': 'rgba(117, 111, 107, 0.28)',
-        'shadow-sm': '0 1px 2px 0 rgba(117, 111, 107, 0.08)',
-        'shadow-md': '0 4px 6px -1px rgba(117, 111, 107, 0.12)',
-        'shadow-lg': '0 10px 15px -3px rgba(117, 111, 107, 0.16)',
+        'elevation-flat': 'none',
         'elevation-overlay': '0 8px 24px rgba(15, 23, 42, 0.14)'
     })) assert.equal(tokens[`--${role}`], value, role);
+});
+
+test('workflow foundations follow the reviewed showcase rather than the old palette-only geometry', () => {
+    const showcase = readFileSync(new URL('../../plans/kiwi-light-and-shadow-theme-palette-showcase.html', import.meta.url), 'utf8');
+    const referenceDeclarations = Object.fromEntries([...showcase.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)]
+        .map(([, name, value]) => [name, value.trim().toLowerCase()]));
+    for (const name of ['space-1', 'space-2', 'space-3', 'space-4', 'space-5', 'space-6', 'space-8', 'space-12', 'control-height']) {
+        assert.equal(tokens[`--${name}`], referenceDeclarations[`--${name}`], name);
+    }
+    const surfaces = {
+        'surface-canvas': 'preview-canvas', 'surface-data': 'preview-data-surface',
+        'surface-label': 'preview-label-surface', 'surface-selected': 'preview-selected-surface',
+        'surface-info': 'preview-info-surface', 'surface-attention': 'preview-attention-surface',
+        'surface-group': 'preview-workflow-surface'
+    };
+    for (const [role, reference] of Object.entries(surfaces)) {
+        const recipe = referenceDeclarations[`--${reference}`]
+            .replace(/var\(--(cloud-dancer|veiled-vista|baltic-sea|golden-mist|quiet-violet|blue-fusion)\)/g, 'var(--palette-$1)')
+            .replace('var(--white)', 'var(--surface)');
+        assert.equal(tokens[`--${role}`], recipe, role);
+    }
+    assert.equal(tokens['--elevation-flat'], 'none');
+    for (const role of ['radius-sm', 'radius-md', 'radius-lg']) {
+        assert.ok(['0px', '4px'].includes(tokens[`--${role}`]), role);
+    }
 });
 
 test('normal text meets unrounded WCAG AA contrast on its intended surfaces', () => {
@@ -76,6 +105,9 @@ test('normal text meets unrounded WCAG AA contrast on its intended surfaces', ()
         ['--surface', '--action-hover'], ['--surface', '--action-active'],
         ['--surface', '--action-secondary'], ['--surface', '--action-secondary-hover'],
         ['--text', '--surface-info'], ['--text', '--surface-attention'],
+        ['--text-muted', '--surface-info'], ['--text-muted', '--surface-data'],
+        ['--text-muted', '--surface-group'], ['--text-muted', '--surface-canvas'],
+        ['--text-palette', '--surface-selected'],
         ['--text', '--surface-group'], ['--text', '--surface-disabled'],
         ['--success', '--surface-success'], ['--danger', '--surface-danger'],
         ['--warning', '--surface-warning'], ['--success', '--surface'],

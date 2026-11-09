@@ -14,7 +14,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .contextual-feedback-header-button[hidden] {
@@ -25,7 +25,6 @@
 .contextual-feedback-settings-button.is-active {
     background: var(--surface-inverse-hover);
     color: var(--text-inverse);
-    transform: translateY(-1px);
 }
 
 .contextual-feedback-header-button:focus-visible {
@@ -199,7 +198,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     border-radius: var(--radius-md);
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--elevation-overlay);
 }
 
 .contextual-feedback-modal.has-screenshot {
@@ -215,7 +214,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     background: var(--surface);
     color: var(--text);
     border-radius: 8px;
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--elevation-overlay);
 }
 
 .contextual-feedback-panel-header {
@@ -466,7 +465,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     height: 14px;
     border-radius: 50%;
     background: var(--surface);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--elevation-flat);
     content: "";
     transition: transform 0.16s ease;
 }

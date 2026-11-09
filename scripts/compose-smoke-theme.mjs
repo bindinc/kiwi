@@ -67,6 +67,10 @@ async function assertKeyboardFocus(page, selector, expectedColor) {
     if (baselineDir) return;
     await page.keyboard.press('Tab');
     await page.locator(selector).first().focus();
+    await page.waitForFunction(({ selector, expectedColor }) => {
+        const element = document.querySelector(selector);
+        return element.matches(':focus-visible') && getComputedStyle(element).outlineColor === expectedColor;
+    }, { selector, expectedColor });
     const focus = await page.locator(selector).first().evaluate(element => ({
         visible: element.matches(':focus-visible'),
         width: getComputedStyle(element).outlineWidth,
@@ -83,9 +87,12 @@ async function assertContrast(page, foregroundSelector, backgroundSelector, mini
     const foreground = await page.locator(foregroundSelector).evaluate((element, name) => getComputedStyle(element)[name], property);
     const background = await page.locator(backgroundSelector).evaluate(element => getComputedStyle(element).backgroundColor);
     function luminance(rgb) {
-        const values = rgb.match(/[\d.]+/g).map(Number);
+        const normalizedSrgb = rgb.startsWith('color(srgb ');
+        const channels = rgb.replace(/^color\(srgb\s*|^rgba?\(|\)$/g, '');
+        const values = channels.split(/[\s,/]+/).filter(Boolean).map(Number);
         assert.ok(values.length === 3 || values[3] === 1, `Contrast needs an opaque color: ${rgb}`);
-        const linear = values.slice(0, 3).map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+        const linear = values.slice(0, 3).map(value => normalizedSrgb ? value : value / 255)
+            .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
         return linear.reduce((total, value, index) => total + value * [0.2126, 0.7152, 0.0722][index], 0);
     }
     const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
@@ -326,6 +333,10 @@ async function runWorkspace(width) {
         await assertStyle(page, 'body', 'backgroundColor', 'rgb(240, 238, 233)');
         await assertStyle(page, '.header', 'backgroundColor', 'rgb(73, 98, 117)');
         await assertStyle(page, '.card', 'backgroundColor', 'rgb(255, 255, 255)');
+        await assertStyle(page, 'body', 'fontSize', '15px');
+        await assertStyle(page, '.card', 'borderTopLeftRadius', '0px');
+        await assertStyle(page, '.card', 'boxShadow', 'none');
+        await assertStyle(page, '.card', 'paddingLeft', width <= 768 ? '16px' : '20px');
         await assertKeyboardFocus(page, '#agentProfileTrigger', 'rgb(255, 255, 255)');
         await capture(page, 'shell');
         await page.locator('#agentProfileTrigger').click();
@@ -388,13 +399,44 @@ async function runWorkspace(width) {
     }
 }
 
+async function inspectShortViewportFocus() {
+    const page = await newPage(390);
+    try {
+        await login(page);
+        await page.waitForFunction(() => window.kiwiCustomerWorkSession && window.kiwiCustomerDetailSlice);
+        await page.locator('#agentProfileTrigger').click();
+        await page.locator('[data-locale-option="nl"]').click();
+        await page.waitForFunction(() => document.documentElement.lang === 'nl');
+        await page.setViewportSize({ width: 390, height: 320 });
+        await page.locator('[data-action="show-new-subscription"]').first().click();
+        await page.locator('#newSubscriptionForm').waitFor({ state: 'visible' });
+        await page.keyboard.press('Tab');
+        await page.locator('#werfsleutelInput').focus();
+        await page.locator('#werfsleutelInput').scrollIntoViewIfNeeded();
+        await page.keyboard.press('Tab');
+        // Observe native Tab scrolling; manually scrolling the button would hide this regression.
+        await page.waitForFunction(() => {
+            const button = document.getElementById('werfsleutelClear');
+            const bounds = button.getBoundingClientRect();
+            return document.activeElement === button && bounds.top >= 0 && bounds.bottom <= innerHeight
+                && bounds.left >= 0 && bounds.right <= innerWidth;
+        });
+        report.assertions.push('390x320 subscription: native Tab reveals the complete focused clear action');
+        await capture(page, 'subscription-keyboard-focus');
+    } finally {
+        await page.context().close();
+    }
+}
+
 try {
     if (process.env.KIWI_THEME_DATEPICKER_ONLY === '1') {
         for (const width of [1440, 390, 320]) await runDatePickerOnly(width);
         await runDatePickerOnly(390, 320);
     } else {
         for (const width of [1440, 390]) await runWorkspace(width);
+        await inspectShortViewportFocus();
         await runDatePickerOnly(320);
+        await runDatePickerOnly(390, 320);
     }
     console.log(`[compose-smoke-theme] ${browserName} ${mode}: ${report.screenshots.length} screenshots; ${report.assertions.length} assertions passed.`);
 } finally {
