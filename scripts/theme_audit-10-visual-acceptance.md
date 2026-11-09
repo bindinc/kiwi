@@ -4,7 +4,7 @@ Status: in progress. Baseline capture and reusable rendered comparison started b
 
 ## Implementation evidence register
 
-Dedicated worktree: `/home/bartdeijkers/_worktrees/validate-theme-showcase-alignment`. Branch: `codex/validate-theme-showcase-alignment`. PR: pending the initial acceptance-harness commit; finalization follows slice 09. No merge or deployment is included.
+Dedicated worktree: `/home/bartdeijkers/_worktrees/validate-theme-showcase-alignment`. Branch: `codex/validate-theme-showcase-alignment`. PR: [#144](https://github.com/bindinc/kiwi/pull/144); finalization follows slice 09. No merge or deployment is included.
 
 The fresh baseline is retained outside Git at `/tmp/kiwi-theme-audit-implementation/baseline`. Its `provenance.json` records the palette worktree at `5b3222e`, with application assets/templates/scripts verified equivalent to merged baseline `c05973e`. The reference originated at `ecec72d`, SHA-256 `478a652ec6da827c7e15f839ba77352585bd53eb561bc2dd09535339665bd4c4`.
 
@@ -28,6 +28,14 @@ node scripts/compose-smoke-theme-audit.mjs
 Repeat with `KIWI_SMOKE_BROWSER=firefox`. Defaults include 1440×1000, 390×1000, 320×1000 and 390×320. `KIWI_THEME_AUDIT_VIEWPORTS` can specify additional comma-separated widths/heights such as `1440x1000,1024x1000,768x1000`. The runner allows local Compose hosts only and aborts API writes; it does not submit forms or persist feedback settings. Screenshots remain outside the repository.
 
 Initial foundation gates compare system typography, the spacing scale, composited workflow tints, flat panel geometry and insets against the rendered showcase. Control and workspace gates become required at their owning slice. This initial runner does not yet cover every conditional workflow or replace the existing functional/privacy suites. Native 200% browser zoom uses a separate opt-in OS-shortcut path with measured pixel ratio, viewport reduction and reset; CSS zoom or pinch scaling are never labeled native zoom. Successful syntax checks alone do not establish browser acceptance.
+
+### Slice 01 native zoom result
+
+The actual Compose app at `7bf6ea1` passed the native zoom path in Chromium `157.0.8103.38` and Firefox `150.0.2`. Both runs verified actual OS shortcuts from 100% to 200%, device pixel ratio 1→2, halved CSS viewport width, unchanged physical window width, visual-viewport scale 1, visible keyboard focus and reset to 100%. Profile/menu, initial subscription, payment/consent and feedback settings were traversed with the keyboard without submitting data. Each final report records seven verified checks, zero deviations/errors/attempted API writes and six actual desktop captures. Evidence: `/tmp/kiwi-theme-audit-implementation/slice01-native/{chromium,firefox}/report.json`.
+
+Native captures use the dedicated 1600×1200 Xvfb screen via `ffmpeg x11grab`. Chromium's zoomed CSS viewport was 525×546; Firefox's was 640×478. Browser-protocol screenshots and pointer coordinates were unsuitable under native zoom: initial protocol captures were blank or offset, and were replaced by real desktop captures and keyboard traversal. Those initial captures are not acceptance evidence. The actual screenshots were visually inspected. Existing menu content extends below the first zoomed viewport, and initial subscription nesting/payment defects remain assigned to slices 03, 05 and 02 respectively; this result does not accept those later-slice behaviors.
+
+To reproduce only native zoom, add `KIWI_THEME_AUDIT_NATIVE_ZOOM=1 KIWI_THEME_AUDIT_NATIVE_ZOOM_ONLY=1` to the command above. Use a separate evidence directory from the headless matrix. This optional Linux path requires installed `Xvfb`, `ffmpeg`, Python, `libX11` and `libXtst`; it selects a dedicated display (`:95` by default, overridable with `KIWI_THEME_AUDIT_DISPLAY`). It forces Firefox's X11 backend so inherited Wayland cannot bypass that display. No host display permissions or existing application stack are changed.
 
 ## Outcome and dependencies
 
