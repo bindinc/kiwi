@@ -1,6 +1,15 @@
 # theme_audit 02 — Shared controls, labels and actions
 
-Status: planned implementation slice; no application code changed by this document. Audit date: 2026-11-09. Baseline: `c05973e`. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629. Depends on [slice 01](theme_audit-01-foundations.md).
+Status: implementation in progress; acceptance is pending. Audit date: 2026-11-09. Baseline: `c05973e`. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629. Depends on [slice 01](theme_audit-01-foundations.md).
+
+## Implementation record
+
+- Branch: `codex/align-theme-controls-and-actions`.
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-controls-and-actions`.
+- Base: [slice 01 / PR #143](https://github.com/bindinc/kiwi/pull/143), accepted application source `f1f7c4e`.
+- PR and source/rendered acceptance: pending.
+- Evidence root: `/tmp/kiwi-theme-audit-implementation/slice-02`; compare with the original baseline and slice 01 evidence.
+- Scope: shared controls, labels and action states; feature composition remains with subsequent slices. No merge or deployment is authorized.
 
 ## Findings and impact
 

@@ -17,7 +17,8 @@ Slice 10 started with a fresh baseline before slice 01 changes. Baseline provena
 | Slice | Current status | Branch / PR | Acceptance |
 | --- | --- | --- | --- |
 | 01 | Implemented; ready for review | `codex/align-theme-foundations` / [#143](https://github.com/bindinc/kiwi/pull/143) | Independent source/rendered review; 76 theme assertions per browser, privacy checks, native 200% zoom and short-height keyboard regression passed |
-| 02–09 | Planned | Separate sequential branches after the preceding slice passes | Not accepted |
+| 02 | In progress | `codex/align-theme-controls-and-actions` | Shared controls/actions and keyboard/payment acceptance pending |
+| 03–09 | Planned | Separate sequential branches after the preceding slice passes | Not accepted |
 | 10 | Baseline and reusable checks in progress | `codex/validate-theme-showcase-alignment` / [#144](https://github.com/bindinc/kiwi/pull/144) | Baseline and native zoom protocol established; final gate after 01–09 |
 
 ## Reference and baseline
