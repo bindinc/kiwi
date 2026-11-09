@@ -1,6 +1,33 @@
 # theme_audit 10 — Complete visual acceptance against the showcase
 
-Status: planned; documentation only. This is the verification slice for [theme_audit](../plans/theme_audit.md), not a claim that the application already matches the reference.
+Status: in progress. Baseline capture and reusable rendered comparison started before slice 01. Final acceptance remains pending slices 01–09 and the complete matrix below. This is the verification slice for [theme_audit](../plans/theme_audit.md), not a claim that the application already matches the reference.
+
+## Implementation evidence register
+
+Dedicated worktree: `/home/bartdeijkers/_worktrees/validate-theme-showcase-alignment`. Branch: `codex/validate-theme-showcase-alignment`. PR: pending the initial acceptance-harness commit; finalization follows slice 09. No merge or deployment is included.
+
+The fresh baseline is retained outside Git at `/tmp/kiwi-theme-audit-implementation/baseline`. Its `provenance.json` records the palette worktree at `5b3222e`, with application assets/templates/scripts verified equivalent to merged baseline `c05973e`. The reference originated at `ecec72d`, SHA-256 `478a652ec6da827c7e15f839ba77352585bd53eb561bc2dd09535339665bd4c4`.
+
+Chromium `157.0.8103.38` and Firefox `150.0.2` each captured the actual local Compose flows at 1440, 390 and 320px, with Dutch locale, reduced motion and device scale 1. Both runs reported zero scenario errors and zero attempted API writes. The retained images cover shell/profile, search/results/customer/editor, initial subscription/payment/consent, article/catalog/calendar, edit/resend/complaint/initial winback, feedback/settings and logged out, plus standalone reference specimens. Feedback used its installed hidden-button handler without changing preference. These are baseline observations, not complete state acceptance.
+
+The baseline reproduces the 1542px populated document at a 1440px viewport. At 320px, the populated document reaches 350px in Chromium and 345px in Firefox. These remain defects to resolve under slices 03/04, alongside payment reachability under slice 02. Native zoom, later conditional service branches, role permutations and write outcomes were not part of that baseline.
+
+The new [rendered comparison harness](compose-smoke-theme-audit.mjs) records reference/application provenance, actual browser/version/viewport, source and fetched stylesheet hashes, screenshots, computed geometry and role-specific surface comparisons. It measures the showcase at the same viewport and compares the application to those measurements. Reports distinguish `verified`, `deviation` and later-slice `deferred` checks; inaccessible scenarios and blocked writes fail the run. No screenshot count is treated as visual acceptance.
+
+Run the harness against the isolated stack owned by the current slice worktree:
+
+```bash
+KIWI_THEME_APP_ROOT=/home/bartdeijkers/_worktrees/align-theme-foundations \
+KIWI_SMOKE_BASE_URL=https://bdc.rtvmedia.org.local:9444/kiwi/ \
+KIWI_THEME_AUDIT_SLICE=1 \
+KIWI_THEME_EVIDENCE_DIR=/tmp/kiwi-theme-audit-implementation/slice01-contract \
+KIWI_SMOKE_BROWSER=chromium \
+node scripts/compose-smoke-theme-audit.mjs
+```
+
+Repeat with `KIWI_SMOKE_BROWSER=firefox`. Defaults include 1440×1000, 390×1000, 320×1000 and 390×320. `KIWI_THEME_AUDIT_VIEWPORTS` can specify additional comma-separated widths/heights such as `1440x1000,1024x1000,768x1000`. The runner allows local Compose hosts only and aborts API writes; it does not submit forms or persist feedback settings. Screenshots remain outside the repository.
+
+Initial foundation gates compare system typography, the spacing scale, composited workflow tints, flat panel geometry and insets against the rendered showcase. Control and workspace gates become required at their owning slice. This initial runner does not yet cover every conditional workflow or replace the existing functional/privacy suites. Native 200% browser zoom uses a separate opt-in OS-shortcut path with measured pixel ratio, viewport reduction and reset; CSS zoom or pinch scaling are never labeled native zoom. Successful syntax checks alone do not establish browser acceptance.
 
 ## Outcome and dependencies
 
