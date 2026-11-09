@@ -11,7 +11,7 @@
     border: 2px solid var(--border-control);
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 #articleSearch:focus {
@@ -29,7 +29,7 @@
     background: var(--surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--elevation-overlay);
     z-index: 1000;
     max-height: 400px;
     overflow-y: auto;
@@ -53,7 +53,7 @@
     align-items: center;
     padding: 0.75rem 1rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -173,7 +173,7 @@
     font-weight: 500;
     cursor: pointer;
     border-bottom: 3px solid transparent;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     white-space: nowrap;
 }
 
@@ -202,15 +202,15 @@
     padding: 1rem;
     background: var(--surface);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     display: flex;
     flex-direction: column;
 }
 
 .article-card:hover {
     border-color: var(--action);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    box-shadow: var(--elevation-flat);
+
 }
 
 .article-card-header {
@@ -295,7 +295,7 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
     margin-bottom: 0.75rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .order-item:last-child {
@@ -304,7 +304,7 @@
 
 .order-item:hover {
     border-color: var(--action);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--elevation-flat);
 }
 
 .order-item-details {
@@ -366,12 +366,11 @@
     cursor: pointer;
     font-size: 0.85rem;
     font-weight: 600;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .order-item-remove:hover {
     background: var(--danger-hover);
-    transform: scale(1.05);
 }
 
 /* Coupon Section */

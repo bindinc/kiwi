@@ -67,6 +67,10 @@ async function assertKeyboardFocus(page, selector, expectedColor) {
     if (baselineDir) return;
     await page.keyboard.press('Tab');
     await page.locator(selector).first().focus();
+    await page.waitForFunction(({ selector, expectedColor }) => {
+        const element = document.querySelector(selector);
+        return element.matches(':focus-visible') && getComputedStyle(element).outlineColor === expectedColor;
+    }, { selector, expectedColor });
     const focus = await page.locator(selector).first().evaluate(element => ({
         visible: element.matches(':focus-visible'),
         width: getComputedStyle(element).outlineWidth,
@@ -326,6 +330,10 @@ async function runWorkspace(width) {
         await assertStyle(page, 'body', 'backgroundColor', 'rgb(240, 238, 233)');
         await assertStyle(page, '.header', 'backgroundColor', 'rgb(73, 98, 117)');
         await assertStyle(page, '.card', 'backgroundColor', 'rgb(255, 255, 255)');
+        await assertStyle(page, 'body', 'fontSize', '15px');
+        await assertStyle(page, '.card', 'borderTopLeftRadius', '0px');
+        await assertStyle(page, '.card', 'boxShadow', 'none');
+        await assertStyle(page, '.card', 'paddingLeft', width <= 768 ? '16px' : '20px');
         await assertKeyboardFocus(page, '#agentProfileTrigger', 'rgb(255, 255, 255)');
         await capture(page, 'shell');
         await page.locator('#agentProfileTrigger').click();
