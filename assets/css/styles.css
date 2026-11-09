@@ -2409,6 +2409,7 @@ select option {
     padding: 2rem;
     padding-top: 3rem;
     overflow-y: auto;
+    scroll-padding-block: var(--space-4);
 }
 
 .form-container .card,
@@ -2418,6 +2419,11 @@ select option {
     max-height: none;
     overflow-y: visible;
     margin-bottom: 3rem;
+}
+
+/* Native keyboard scrolling must reveal the full focused control in short dialogs. */
+:is(.form-container, .form-lightbox) :is(input, select, textarea, button, a[href], [tabindex]) {
+    scroll-margin-block: var(--space-4);
 }
 
 /* Native dialogs share the form overlay; only browser defaults need resetting. */

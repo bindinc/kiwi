@@ -399,13 +399,42 @@ async function runWorkspace(width) {
     }
 }
 
+async function inspectShortViewportFocus() {
+    const page = await newPage(390);
+    try {
+        await login(page);
+        await page.locator('#agentProfileTrigger').click();
+        await page.locator('[data-locale-option="nl"]').click();
+        await page.setViewportSize({ width: 390, height: 320 });
+        await page.locator('[data-action="show-new-subscription"]').first().click();
+        await page.locator('#newSubscriptionForm').waitFor({ state: 'visible' });
+        await page.keyboard.press('Tab');
+        await page.locator('#werfsleutelInput').focus();
+        await page.locator('#werfsleutelInput').scrollIntoViewIfNeeded();
+        await page.keyboard.press('Tab');
+        // Observe native Tab scrolling; manually scrolling the button would hide this regression.
+        await page.waitForFunction(() => {
+            const button = document.getElementById('werfsleutelClear');
+            const bounds = button.getBoundingClientRect();
+            return document.activeElement === button && bounds.top >= 0 && bounds.bottom <= innerHeight
+                && bounds.left >= 0 && bounds.right <= innerWidth;
+        });
+        report.assertions.push('390x320 subscription: native Tab reveals the complete focused clear action');
+        await capture(page, 'subscription-keyboard-focus');
+    } finally {
+        await page.context().close();
+    }
+}
+
 try {
     if (process.env.KIWI_THEME_DATEPICKER_ONLY === '1') {
         for (const width of [1440, 390, 320]) await runDatePickerOnly(width);
         await runDatePickerOnly(390, 320);
     } else {
         for (const width of [1440, 390]) await runWorkspace(width);
+        await inspectShortViewportFocus();
         await runDatePickerOnly(320);
+        await runDatePickerOnly(390, 320);
     }
     console.log(`[compose-smoke-theme] ${browserName} ${mode}: ${report.screenshots.length} screenshots; ${report.assertions.length} assertions passed.`);
 } finally {
