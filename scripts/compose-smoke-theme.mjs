@@ -403,8 +403,10 @@ async function inspectShortViewportFocus() {
     const page = await newPage(390);
     try {
         await login(page);
+        await page.waitForFunction(() => window.kiwiCustomerWorkSession && window.kiwiCustomerDetailSlice);
         await page.locator('#agentProfileTrigger').click();
         await page.locator('[data-locale-option="nl"]').click();
+        await page.waitForFunction(() => document.documentElement.lang === 'nl');
         await page.setViewportSize({ width: 390, height: 320 });
         await page.locator('[data-action="show-new-subscription"]').first().click();
         await page.locator('#newSubscriptionForm').waitFor({ state: 'visible' });
