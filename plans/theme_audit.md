@@ -12,7 +12,7 @@ This PR changes documentation only. It does not implement the slices, change bus
 
 ## Reference and baseline
 
-- The user-facing reference `/docs/kiwi-light-and-shadow-theme-palette-showcase.html` corresponds to the repository's [showcase](kiwi-light-and-shadow-theme-palette-showcase.html). The source file is under `plans/`; no equivalent file exists under `docs/` in this checkout.
+- The user references `/docs/kiwi-light-and-shadow-theme-palette-showcase.html`. This evaluation uses the repository's same-named [showcase](kiwi-light-and-shadow-theme-palette-showcase.html) under `plans/`; no equivalent file exists under `docs/` in this checkout, and a serving alias was not verified. If a separately served copy differs, resolve its provenance against the recorded hash before implementation acceptance.
 - Compare the showcase's working customer/subscription examples and component grammar, not its documentation navigation, explanatory copy or fictional business data.
 - The [showcase review](kiwi-light-and-shadow-theme-palette-review.md) documents the intended visual and interaction refinements. Its standalone verification is not application verification.
 - Evaluated application baseline: `main` at `c05973e60cb0b4ede9b05e49c5b68b7b3962e7ee`, containing merged [PR #130](https://github.com/bindinc/kiwi/pull/130). The remote branch was checked on the audit date.
@@ -60,6 +60,7 @@ Slice 10 is a cross-cutting acceptance plan, not a reason to postpone verificati
 
 | Priority | Finding | Evidence and impact | Correction |
 | --- | --- | --- | --- |
+| P1 | Search results overflow the desktop workspace | At a 1440px viewport the populated results layout measures 1542px wide; the right rail extends 102px beyond the viewport. The table's intrinsic minimum width expands the center grid track. | 03/04 constrain the workspace and keep any necessary table scrolling inside its own region. |
 | P1 | Hidden payment controls lose keyboard reachability | Existing payment radios use `display:none`; enabled inputs cannot receive focus. This is a functional accessibility failure, distinct from visual preference. | 02 fixes the shared pattern; 05/06 verify workflow variants. |
 | P2 | Palette adoption preserved a conflicting component system | Current card/onepager/button rules retain larger radii, shadows, filled secondary actions and per-flow spacing. | 01–03 establish shared grammar; 04–09 apply it coherently. |
 | P2 | Native-control styling depends on browser behavior | Global radio/checkbox outlines and broad input rules combine differently in Chromium and Firefox; the latter visibly renders square radio outlines. | 02 scopes text-control styling and verifies native controls in both engines. |
@@ -71,6 +72,29 @@ These are consolidated root causes. Visual inconsistency is not labeled a functi
 
 ## Evidence and completion status
 
-The audit combines source comparison, isolated native-control rendering and local browser inspection. Detailed coverage and limitations will be recorded here before this documentation PR is finalized. Screenshots and computed-style records are local evidence under `/tmp/kiwi-styling-evaluation-2026-11-09`; do not commit screenshots or customer data.
+The audit combines source comparison, isolated native-control rendering and local browser inspection. Screenshots and computed-style records are local evidence under `/tmp/kiwi-styling-evaluation-2026-11-09`; do not commit screenshots or customer data. The source comparison covers all component families below; rendered coverage is deliberately reported separately from future implementation acceptance.
+
+Reference SHA-256: `478a652ec6da827c7e15f839ba77352585bd53eb561bc2dd09535339665bd4c4`. The local reference was loaded directly from the repository HTML. Chromium inspection used Google Chrome `157.0.8103.38`, 1440×1000 and 390×1000 viewports, device scale 1, Dutch application language and reduced-motion preference. The focused Firefox inspection records its own native-control geometry; it is not a second complete application matrix. The local Compose project is `kiwi-theme-sc206629` and uses the fallback development login.
+
+| Area | Audit evidence | Limit of this evaluation |
+| --- | --- | --- |
+| Shell, profile and session context | Source plus Chromium desktop/narrow shell, selected-customer and profile captures; Firefox profile capture | Active-call and every role permutation not replayed |
+| Search, filters, result table and paging controls | Source plus populated local search in Chromium at both widths; repeated geometry confirms 102px desktop page overflow | Loading, network-error/retry and many-page states are specified in slice 10, not all replayed |
+| Customer detail, editor, address and bank sections | Source plus local customer/detail/editor and address-warning views | Save, bank mutation, every address provider state and readonly variant not executed |
+| New subscription | Source plus empty/disabled initial roles, payment/date/consent regions at both widths; focused Firefox enabled-payment keyboard checks | Populated product/recipient/payer combinations and submission outcomes remain implementation validation gates |
+| Article sale and catalog | Source plus open article form, catalog dropdown and surrounding field geometry | Cart mutations, discount/coupon outcomes and order submission not executed |
+| Delivery calendar | Source plus actual open calendar in its article context at both widths | Earlier keyboard/availability verification is historical; not rerun as a complete suite here |
+| Existing service workflows | Source across all families; live edit-subscription, resend, editorial complaint and initial cancellation/winback views at both widths | No subscription change, complaint, cancellation, restitution or transfer submitted; later conditional branches source-reviewed only |
+| Contact history | Source plus empty and populated real local timeline in the workspace | All categories/expanded details not replayed |
+| Outbox | Source plus empty panel in local workspace | Queued, paused, error and retry states source-reviewed; prior synthetic fixtures are not current live proof |
+| Calls, recording, ACW and disposition | Source review of actual modules/styles/template and existing test coverage | No live call/session simulation or disposition submission in this audit |
+| Feedback and settings | Source plus settings and actual dialog rendering at both widths | Feedback preference remained unchanged; the installed hidden-button handler opened the dialog for component inspection. No feedback submitted, screenshot capture/redaction or annotation acceptance claimed |
+| Account/system surfaces | Source plus logged-out and access-denied pages at both widths; a natural local success toast | All permission/error/success variants and development-only dialogs not replayed |
+
+Evidence contains 44 Chromium PNG files (including four reference captures and targeted repeat captures), three Firefox PNG files, `audit-report.json`, `followup-measurements.json` and `firefox/control-measurements.json`. Counts are capture counts, not proof that every screen or state passed. Representative images were visually inspected alongside measured CSS and source. The initial narrow subscription capture was interrupted by an open profile-menu overlay; `390-subscription-top-confirmed.png` and `390-subscription-consent-confirmed.png` are the successful focused repeat. Prefer `*-results-confirmed.png` for result-layout inspection because the initial search captures retained an unhelpful scroll position.
+
+The confirmed desktop grid measures `320px 770px 380px` tracks plus gutters; its right rail ends at x=1542 in a 1440px viewport. At 390px, the page itself stays within the viewport, but the history-first order remains a hierarchy problem. Per-element containment matters in addition to page width: a short search field exceeds its card inset, and article field rows need protection against intrinsic input widths. These observations are acceptance inputs for slices 02–04/06, not fixes in this PR.
+
+Source-level and representative visual evaluation is complete for planning. Exhaustive runtime state coverage, screen-reader checks, native browser zoom and full cross-browser acceptance remain the explicit gates in slice 10. No new WCAG conformance claim is made. No business forms were submitted and no production version was inspected or changed.
 
 All implementation slices remain **planned**, not completed. Approval or merge of this documentation PR does not imply that the application has been restyled, deployed or accepted.
