@@ -1250,11 +1250,11 @@ body {
 }
 
 .card > h2 {
-    font-size: var(--font-size-title);
-    font-weight: var(--weight-strong);
+    font-size: var(--font-size-body);
+    font-weight: var(--weight-medium);
     margin-bottom: var(--space-4);
     color: var(--text);
-    line-height: 1.15;
+    line-height: 1.25;
 }
 
 .card > h3,

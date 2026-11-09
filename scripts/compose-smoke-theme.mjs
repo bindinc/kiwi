@@ -87,9 +87,12 @@ async function assertContrast(page, foregroundSelector, backgroundSelector, mini
     const foreground = await page.locator(foregroundSelector).evaluate((element, name) => getComputedStyle(element)[name], property);
     const background = await page.locator(backgroundSelector).evaluate(element => getComputedStyle(element).backgroundColor);
     function luminance(rgb) {
-        const values = rgb.match(/[\d.]+/g).map(Number);
+        const normalizedSrgb = rgb.startsWith('color(srgb ');
+        const channels = rgb.replace(/^color\(srgb\s*|^rgba?\(|\)$/g, '');
+        const values = channels.split(/[\s,/]+/).filter(Boolean).map(Number);
         assert.ok(values.length === 3 || values[3] === 1, `Contrast needs an opaque color: ${rgb}`);
-        const linear = values.slice(0, 3).map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+        const linear = values.slice(0, 3).map(value => normalizedSrgb ? value : value / 255)
+            .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
         return linear.reduce((total, value, index) => total + value * [0.2126, 0.7152, 0.0722][index], 0);
     }
     const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
