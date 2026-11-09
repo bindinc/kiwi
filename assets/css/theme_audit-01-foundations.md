@@ -1,6 +1,15 @@
 # theme_audit 01 — Shared visual foundations
 
-Status: planned implementation slice; this document changes no application behavior. Audit date: 2026-11-09. Baseline: `c05973e` / merged PR #130. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629.
+Status: implementation in progress; acceptance is pending. Audit date: 2026-11-09. Baseline: `c05973e` / merged PR #130. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629.
+
+## Implementation record
+
+- Branch: `codex/align-theme-foundations`.
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-foundations`.
+- Base: PR #142 (`codex/plan-kiwi-styleguide-alignment-slices`).
+- Review and acceptance: pending independent source review and rendered comparison in Chromium/Firefox. No merge or deployment is authorized.
+- Slice 10 baseline: `/tmp/kiwi-theme-audit-implementation/baseline`; reference and application evidence are recorded separately. The baseline is evidence of the starting deviations, not acceptance.
+- Isolated Compose project: `kiwi-theme-audit-01`, port `9444`, public OIDC/address fixtures and separate database/cache/vendor volumes. It does not reuse the earlier palette preview's data.
 
 ## Problem and reference contract
 
