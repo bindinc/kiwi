@@ -16,6 +16,7 @@ const browserName = process.env.KIWI_SMOKE_BROWSER || 'chromium';
 const slice = Number(process.env.KIWI_THEME_AUDIT_SLICE || '1');
 const nativeZoomOnly = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM_ONLY === '1';
 const nativeZoom = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM === '1' || nativeZoomOnly;
+const controlsOnly = process.env.KIWI_THEME_AUDIT_CONTROLS_ONLY === '1';
 const evidenceRoot = path.resolve(process.env.KIWI_THEME_EVIDENCE_DIR || path.join(sourceRoot, '..', '.kiwi-theme-audit/evidence', `slice-${String(slice).padStart(2, '0')}`, `contract-${new Date().toISOString().replace(/[:.]/g, '-')}`));
 const evidenceDir = path.join(evidenceRoot, browserName);
 const referencePath = path.join(sourceRoot, 'plans/kiwi-light-and-shadow-theme-palette-showcase.html');
@@ -37,6 +38,8 @@ const viewports = process.env.KIWI_THEME_AUDIT_VIEWPORTS
 
 if (!['chromium', 'firefox'].includes(browserName)) throw new Error('Use chromium or firefox.');
 if (!Number.isInteger(slice) || slice < 1 || slice > 10) throw new Error('KIWI_THEME_AUDIT_SLICE must be 1–10.');
+if (controlsOnly && slice < 2) throw new Error('Controlled action scenarios start at slice 02.');
+if (controlsOnly && nativeZoom) throw new Error('Run native zoom separately with the main theme audit runner.');
 if (!['bdc.rtvmedia.org.local', 'localhost', '127.0.0.1'].includes(baseUrl.hostname)) {
     throw new Error('This harness accepts only an isolated local Compose URL.');
 }
@@ -116,6 +119,7 @@ const report = {
         browser: browserName, browserVersion: browser.version(), playwrightVersion: require(path.join(playwrightPath, 'package.json')).version,
         locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', role: 'kiwi-admin', deviceScaleFactor: 1,
         reducedMotion: 'reduce', nativeZoom: nativeZoom ? 'Actual OS Ctrl+plus/0; measured per capture' : '100% default; 200% native zoom is a separate, unverified gate',
+        scenarioSet: controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
         input: 'Pointer flows plus keyboard focus and Escape checks', requestedViewports: viewports
     },
     checks: [], captures: [], controlContainers: [], blockedWrites: [], errors: [], loadedStylesheets: [],
@@ -1054,8 +1058,16 @@ try {
     if (!nativeZoomOnly) {
         for (const viewport of viewports) {
             const contract = await referenceContract(viewport);
-            await inspectApplication(viewport, contract);
-            await inspectEnabledRoleFixture(viewport, contract);
+            if (controlsOnly) {
+                const { inspectControls } = await import('./compose-smoke-theme-audit-controls.mjs');
+                await inspectControls({
+                    actionChecks, baseUrl, capture, check, compositedTextContrast, controlChecks, evidenceDir,
+                    keyboardFocus, login, newContext, painted, report, saveReport, trackStylesheets, unverified
+                }, viewport, contract);
+            } else {
+                await inspectApplication(viewport, contract);
+                await inspectEnabledRoleFixture(viewport, contract);
+            }
         }
     }
     if (nativeZoom) {
