@@ -4874,3 +4874,17 @@ dialog.form-lightbox::backdrop {
 }
 
 .customer-search-secondary { color: var(--text-muted); font-size: .875rem; }
+/* Keep each guide and its edition/date together when ordering several products. */
+.subscription-start-date {
+    min-width: 0;
+    margin: 0 0 1rem;
+    padding: .75rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+}
+.subscription-start-date legend { font-weight: 600; padding: 0; }
+.subscription-start-date label { display: block; margin-top: .5rem; }
+.subscription-start-date select, .subscription-start-date input {
+    display: block; width: 100%; max-width: 22rem; box-sizing: border-box;
+}
+.subscription-start-date p { margin: .4rem 0; font-size: .875rem; }

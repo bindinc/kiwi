@@ -9,6 +9,7 @@ use App\Http\JsonRequestDecoder;
 use App\Oidc\OidcConfiguration;
 use App\Oidc\OidcRoleAccess;
 use App\Oidc\RequestOidcContext;
+use App\Service\SubscriptionStartDates;
 use App\Service\WebaboOfferCatalogService;
 use App\Service\WebaboSalesCodeCombinationCatalogService;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -45,6 +46,14 @@ final class WebaboOfferController extends AbstractApiController
             'items' => $items,
             'total' => count($items),
         ]);
+    }
+
+    #[Route('/offers/{salesCode}/start-date', name: 'api_webabo_offer_start_date', methods: ['GET'])]
+    public function startDate(Request $request, string $salesCode, SubscriptionStartDates $dates): JsonResponse
+    {
+        $this->requireApiAccess($request);
+
+        return $this->json($dates->lookup($salesCode, $request->query->get('variantCode')), headers: ['Cache-Control' => 'no-store']);
     }
 
     #[Route('/offers/{salesCode}/salescodecombinations', name: 'api_webabo_offer_salescode_combinations', methods: ['GET'])]
