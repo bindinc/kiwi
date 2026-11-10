@@ -53,11 +53,13 @@ button.session-outbox-customer:hover { color: var(--action); text-decoration: un
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 36px;
-    height: 36px;
+    min-width: var(--control-height);
+    min-height: var(--control-height);
+    width: var(--control-height);
+    height: var(--control-height);
     padding: 8px;
     border: 0;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--action);
     cursor: pointer;
@@ -90,7 +92,7 @@ button.session-outbox-customer:hover { color: var(--action); text-decoration: un
 #sessionOutboxChanges { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
 #sessionOutboxChanges h3 { margin: 0; font-size: .875rem; font-weight: 650; }
 #sessionOutboxChanges > .session-outbox-caption { margin-bottom: 8px; }
-.session-outbox-change { display: grid; grid-template-columns: 24px minmax(0, 1fr) 36px; align-items: center; gap: 8px; min-height: 44px; font-size: .875rem; }
+.session-outbox-change { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 44px; font-size: .875rem; }
 .session-outbox-sequence { color: var(--text-muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
 @media (hover: hover) and (pointer: fine) {
     .session-outbox-reveal { opacity: 0; }

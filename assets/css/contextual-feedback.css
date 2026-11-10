@@ -250,8 +250,14 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-close {
-    width: 32px;
-    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: var(--control-height);
+    min-height: var(--control-height);
+    width: var(--control-height);
+    height: var(--control-height);
     border: 0;
     border-radius: var(--radius-sm);
     background: var(--surface-subdued);
