@@ -17,6 +17,7 @@ const slice = Number(process.env.KIWI_THEME_AUDIT_SLICE || '1');
 const nativeZoomOnly = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM_ONLY === '1';
 const nativeZoom = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM === '1' || nativeZoomOnly;
 const controlsOnly = process.env.KIWI_THEME_AUDIT_CONTROLS_ONLY === '1';
+const shellOnly = process.env.KIWI_THEME_AUDIT_SHELL_ONLY === '1';
 const evidenceRoot = path.resolve(process.env.KIWI_THEME_EVIDENCE_DIR || path.join(sourceRoot, '..', '.kiwi-theme-audit/evidence', `slice-${String(slice).padStart(2, '0')}`, `contract-${new Date().toISOString().replace(/[:.]/g, '-')}`));
 const evidenceDir = path.join(evidenceRoot, browserName);
 const referencePath = path.join(sourceRoot, 'plans/kiwi-light-and-shadow-theme-palette-showcase.html');
@@ -34,11 +35,15 @@ const viewports = process.env.KIWI_THEME_AUDIT_VIEWPORTS
         const [width, height = 1000] = value.split('x').map(Number);
         return { width, height };
     })
-    : [{ width: 1440, height: 1000 }, { width: 390, height: 1000 }, { width: 320, height: 1000 }, { width: 390, height: 320 }];
+    : shellOnly
+        ? [1440, 1024, 768, 390, 320].map(width => ({ width, height: 1000 })).concat({ width: 390, height: 320 })
+        : [{ width: 1440, height: 1000 }, { width: 390, height: 1000 }, { width: 320, height: 1000 }, { width: 390, height: 320 }];
 
 if (!['chromium', 'firefox'].includes(browserName)) throw new Error('Use chromium or firefox.');
 if (!Number.isInteger(slice) || slice < 1 || slice > 10) throw new Error('KIWI_THEME_AUDIT_SLICE must be 1–10.');
 if (controlsOnly && slice < 2) throw new Error('Controlled action scenarios start at slice 02.');
+if (shellOnly && (controlsOnly || nativeZoom)) throw new Error('Run shell, controls and native zoom modes separately.');
+if (shellOnly && slice < 3) throw new Error('Shell scenarios start at slice 03.');
 if (controlsOnly && nativeZoom) throw new Error('Run native zoom separately with the main theme audit runner.');
 if (!['bdc.rtvmedia.org.local', 'localhost', '127.0.0.1'].includes(baseUrl.hostname)) {
     throw new Error('This harness accepts only an isolated local Compose URL.');
@@ -119,7 +124,7 @@ const report = {
         browser: browserName, browserVersion: browser.version(), playwrightVersion: require(path.join(playwrightPath, 'package.json')).version,
         locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', role: 'kiwi-admin', deviceScaleFactor: 1,
         reducedMotion: 'reduce', nativeZoom: nativeZoom ? 'Actual OS Ctrl+plus/0; measured per capture' : '100% default; 200% native zoom is a separate, unverified gate',
-        scenarioSet: controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
+        scenarioSet: shellOnly ? 'Observed shell states; no parity verdict' : controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
         input: 'Pointer flows plus keyboard focus and Escape checks', requestedViewports: viewports
     },
     checks: [], captures: [], controlContainers: [], blockedWrites: [], errors: [], loadedStylesheets: [],
@@ -318,6 +323,12 @@ async function referenceContract(viewport) {
         contract.quietHover = await measure(page, '#themeAuditQuietReference');
         await page.locator('#themeAuditQuietReference').evaluate(sample => sample.remove());
         await page.mouse.move(0, 0);
+        if (shellOnly) {
+            contract.shell = {};
+            for (const selector of ['.preview-topbar', '.preview-body', '.preview-sidebar', '.preview-main']) {
+                contract.shell[selector] = await measure(page, selector);
+            }
+        }
         contract.spaces = await page.evaluate(() => Object.fromEntries([1, 2, 3, 4, 5, 6, 8, 12].map(step => [`--space-${step}`, getComputedStyle(document.documentElement).getPropertyValue(`--space-${step}`).trim()])));
         contract.surfaces = await resolveSurfaces(page, '.preview-shell', {
             canvas: '--preview-canvas', data: '--preview-data-surface', label: '--preview-label-surface',
@@ -1140,7 +1151,10 @@ try {
     if (!nativeZoomOnly) {
         for (const viewport of viewports) {
             const contract = await referenceContract(viewport);
-            if (controlsOnly) {
+            if (shellOnly) {
+                const { inspectShell } = await import('./compose-smoke-theme-audit-shell.mjs');
+                await inspectShell({ baseUrl, capture, check, login, newContext, painted, report, saveReport, trackStylesheets }, viewport, contract);
+            } else if (controlsOnly) {
                 const { inspectControls } = await import('./compose-smoke-theme-audit-controls.mjs');
                 await inspectControls({
                     actionChecks, baseUrl, capture, check, compositedTextContrast, controlChecks, evidenceDir,
