@@ -891,6 +891,8 @@ const nl = {
         }
     },
     "articleSearch": {
+        "removeOrderItem": "Artikel uit bestelling verwijderen",
+        "removeCoupon": "Kortingscode verwijderen",
         "searchLabel": "Artikel zoeken",
         "closeLabel": "Artikeloverzicht sluiten",
         "noResults": "Geen artikelen gevonden.",

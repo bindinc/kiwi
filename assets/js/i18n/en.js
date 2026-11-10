@@ -891,6 +891,8 @@ const en = {
         }
     },
     "articleSearch": {
+        "removeOrderItem": "Remove article from order",
+        "removeCoupon": "Remove coupon",
         "searchLabel": "Search articles",
         "closeLabel": "Close article catalog",
         "noResults": "No articles found.",

@@ -778,6 +778,8 @@ export async function renderOrderItems() {
     }
 
     section.style.display = 'block';
+    const removeOrderItemLabel = translateArticle('articleSearch.removeOrderItem', {}, 'Artikel uit bestelling verwijderen');
+    const removeCouponLabel = translateArticle('articleSearch.removeCoupon', {}, 'Kortingscode verwijderen');
 
     try {
         const quote = await requestOrderQuote();
@@ -798,6 +800,7 @@ export async function renderOrderItems() {
                     <div class="order-item-quantity">${item.quantity}x</div>
                     <div class="order-item-price">${asCurrency(itemTotal)}</div>
                     <button class="order-item-remove"
+                            aria-label="${removeOrderItemLabel}" title="${removeOrderItemLabel}"
                             data-action="remove-article-from-order"
                             data-arg-article-id="${item.articleId}"
                             type="button">🗑️</button>
@@ -825,7 +828,7 @@ export async function renderOrderItems() {
                         </div>
                         <div class="discount-item-amount">
                             -${asCurrency(discount.amount)}
-                            ${isCoupon ? '<button data-action="remove-coupon" type="button" class="coupon-remove" title="Verwijder kortingscode">✕</button>' : ''}
+                            ${isCoupon ? `<button data-action="remove-coupon" type="button" class="coupon-remove" aria-label="${removeCouponLabel}" title="${removeCouponLabel}">✕</button>` : ''}
                         </div>
                     </div>
                 `;

@@ -1351,6 +1351,7 @@ body {
 
 .form-group label,
 .form-label,
+.coupon-section label,
 .address-fields .customer-address-field label,
 .datepicker-label,
 .werfsleutel-fieldset label[for],
@@ -1411,13 +1412,19 @@ select option {
 }
 
 .additional-filters-toggle {
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
+    line-height: 1.2;
+    white-space: normal;
+    text-align: left;
+    gap: var(--space-2);
     width: 100%;
     background: none;
     border: none;
-    padding: 0.25rem 0;
+    padding: var(--space-2) 0;
     color: var(--text-muted);
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: var(--font-size-action);
+    font-weight: var(--weight-medium);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1425,6 +1432,7 @@ select option {
 }
 
 .additional-filters-toggle:hover {
+    background: var(--surface-quiet-hover);
     color: var(--text);
 }
 
@@ -1503,16 +1511,19 @@ select option {
 
 .btn-primary {
     background-color: var(--action);
+    border-color: var(--action);
     color: var(--text-inverse);
 }
 
 .btn-primary:hover {
     background-color: var(--action-hover);
+    border-color: var(--action-hover);
     box-shadow: var(--elevation-flat);
 }
 
 .btn-primary:active {
     background-color: var(--action-active);
+    border-color: var(--action-active);
 }
 
 .btn-secondary {
@@ -1845,9 +1856,9 @@ select option {
 }
 
 .btn-close-results:hover {
-    background: var(--danger);
-    color: var(--text-inverse);
-    border-color: var(--danger);
+    background: var(--surface-quiet-hover);
+    color: var(--action);
+    border-color: var(--action);
 }
 
 .btn-close-customer {
@@ -1864,9 +1875,9 @@ select option {
 }
 
 .btn-close-customer:hover {
-    background: var(--danger);
-    color: var(--text-inverse);
-    border-color: var(--danger);
+    background: var(--surface-quiet-hover);
+    color: var(--action);
+    border-color: var(--action);
 }
 
 /* Results Table */
@@ -2703,6 +2714,10 @@ dialog.form-lightbox::backdrop {
     border-color: var(--action);
 }
 
+.timeline-nav-btn:focus-visible {
+    outline-offset: -3px;
+}
+
 .timeline-nav-btn:disabled {
     cursor: not-allowed;
     opacity: 0.5;
@@ -3384,12 +3399,18 @@ dialog.form-lightbox::backdrop {
 }
 
 .onepager-container .subscription-duplicate-action {
-    border: 1px solid var(--border-control);
+    min-height: var(--control-height);
+    max-width: 100%;
+    font-family: var(--font-ui);
+    font-weight: var(--weight-medium);
+    line-height: 1.2;
+    white-space: normal;
+    border: 1px solid var(--action-secondary);
     border-radius: var(--radius-sm);
-    padding: 0.2rem 0.5rem;
-    font-size: 0.78rem;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-action);
     background-color: var(--surface);
-    color: var(--text);
+    color: var(--action-secondary);
     cursor: pointer;
 }
 
@@ -3398,8 +3419,12 @@ dialog.form-lightbox::backdrop {
     color: var(--warning);
 }
 
-.onepager-container .subscription-duplicate-action:hover {
-    background-color: var(--surface);
+.onepager-container .subscription-duplicate-action:hover:not(:disabled) {
+    background-color: var(--surface-secondary-hover);
+}
+
+.onepager-container .subscription-duplicate-action:hover:not(:disabled):not(.warning) {
+    color: var(--action-secondary-hover);
 }
 
 .onepager-container .subscription-duplicate-list {
@@ -3630,7 +3655,7 @@ dialog.form-lightbox::backdrop {
     margin-bottom: 1rem;
 }
 
-.winback-step .form-group label {
+.winback-step .form-group label:has(input[type="checkbox"]) {
     display: flex;
     align-items: center;
     cursor: pointer;
@@ -4229,8 +4254,10 @@ dialog.form-lightbox::backdrop {
 }
 
 .werfsleutel-suggestion {
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
     border: 1px solid var(--border-control);
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     padding: 9px 11px;
     background: var(--surface);
     display: grid;
@@ -4440,6 +4467,8 @@ dialog.form-lightbox::backdrop {
 }
 
 .subscription-offer-toggle {
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
@@ -4603,8 +4632,10 @@ dialog.form-lightbox::backdrop {
 }
 
 .channel-chip {
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
     border: 1px solid var(--border-control);
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
     padding: 10px 12px;
     background: var(--surface);
     display: flex;

@@ -118,17 +118,24 @@
 }
 
 .browse-all-link {
+    min-height: var(--control-height);
+    max-width: 100%;
+    padding: var(--space-2) var(--space-3);
+    font-family: var(--font-ui);
+    line-height: 1.2;
+    white-space: normal;
     background: none;
     border: none;
     color: var(--action);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 0.2em;
-    font-size: 0.9rem;
+    font-size: var(--font-size-action);
 }
 
 .browse-all-link:hover {
+    background: var(--surface-quiet-hover);
     color: var(--action-hover);
 }
 
@@ -168,11 +175,15 @@
 }
 
 .article-tab {
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-action);
+    line-height: 1.2;
     padding: 0.75rem 1.5rem;
     border: none;
     background: none;
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     cursor: pointer;
     border-bottom: 3px solid transparent;
     transition: background-color 0.2s, border-color 0.2s, color 0.2s;
@@ -360,14 +371,18 @@
 }
 
 .order-item-remove {
+    min-width: var(--control-height);
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
+    line-height: 1.2;
     background: var(--danger);
     color: var(--text-inverse);
     border: none;
-    padding: 0.5rem 0.75rem;
+    padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--font-size-action);
+    font-weight: var(--weight-medium);
     transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
@@ -386,10 +401,8 @@
 
 .coupon-section label {
     display: block;
-    font-weight: 600;
     margin-bottom: 0.5rem;
     color: var(--text);
-    font-size: 0.9rem;
 }
 
 .coupon-input-group {
@@ -593,15 +606,33 @@
 }
 
 .coupon-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--control-height);
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
+    font-weight: var(--weight-medium);
+    line-height: 1.2;
     margin-left: 0.5rem;
     background: none;
     border: none;
     cursor: pointer;
     color: var(--danger);
-    font-size: 1rem;
+    font-size: var(--font-size-action);
 }
 
 .order-item-remove:focus-visible {
     outline: 3px solid var(--focus-inverse);
     outline-offset: -5px;
+}
+
+.article-tab:focus-visible,
+.coupon-remove:focus-visible {
+    outline-offset: -3px;
+}
+
+.coupon-remove:hover {
+    background: var(--surface-danger);
+    color: var(--danger-hover);
 }

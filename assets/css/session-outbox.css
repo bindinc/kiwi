@@ -83,7 +83,7 @@ button.session-outbox-customer:hover { color: var(--action); text-decoration: un
     border-radius: 4px;
     box-shadow: var(--elevation-overlay);
 }
-.session-outbox-menu .session-outbox-icon-button { justify-content: flex-start; gap: 12px; width: 100%; height: 40px; font-size: .875rem; line-height: 1.25; padding-inline: 12px; font-weight: 400; text-align: left; }
+.session-outbox-menu .session-outbox-icon-button { justify-content: flex-start; gap: 12px; width: 100%; height: auto; font-family: var(--font-ui); font-size: var(--font-size-action); line-height: 1.2; padding-inline: 12px; font-weight: var(--weight-medium); text-align: left; white-space: normal; }
 .session-outbox-menu .session-outbox-icon-button:focus-visible { outline-offset: -2px; }
 .session-outbox-menu .is-destructive { color: var(--danger); border-top: 1px solid var(--border-subtle); border-radius: 0; margin-top: 4px; }
 .session-changes-disclosure { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 4px; box-shadow: none; }
@@ -99,7 +99,7 @@ button.session-outbox-customer:hover { color: var(--action); text-decoration: un
     .session-outbox-change:hover .session-outbox-reveal,
     .session-outbox-change:focus-within .session-outbox-reveal { opacity: 1; }
 }
-@media (pointer: coarse) { .session-outbox-icon-button { width: 44px; height: 44px; } }
+@media (pointer: coarse) { .session-outbox-icon-button { min-width: 44px; min-height: 44px; width: 44px; height: 44px; } }
 #sessionOutboxHistorical { margin-top: 16px; font-size: .8125rem; color: var(--text-muted); }
 #sessionOutboxPages { display: flex; justify-content: space-between; margin-top: 8px; }
 #sessionOutboxPages:empty { display: none; }
