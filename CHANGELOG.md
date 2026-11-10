@@ -10,7 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
-- Add traceable showcase comparisons, reusable controlled application states, browser coverage and native zoom evidence for the complete interface alignment (`theme_audit` slice 10). [sc-206629]
+- Add traceable showcase comparisons, reusable controlled application and choice states, intended native-paint checks, browser coverage and native zoom evidence for the complete interface alignment (`theme_audit` slice 10). [sc-206629]
 - Document the complete styleguide evaluation and code-adjacent implementation slices, marked `theme_audit`, without changing application styling or behavior. [sc-206629]
 - Apply the Light & Shadow palette as Kiwi's default light theme using semantic colors, accessible control borders and keyboard focus, while preserving operational states and feedback privacy; include a flat, responsive delivery date picker with keyboard navigation, the design showcase, contrast checks and browser smoke coverage. [sc-206629]
 

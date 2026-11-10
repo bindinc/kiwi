@@ -11,8 +11,11 @@ const companionProvenance = {
     path: companionPath,
     sourceSha256: createHash('sha256').update(await readFile(companionPath)).digest('hex')
 };
+const controlScenarios = process.env.KIWI_THEME_AUDIT_CONTROL_SCENARIOS || 'extended';
+if (!['extended', 'choices'].includes(controlScenarios)) throw new Error('Use extended or choices for KIWI_THEME_AUDIT_CONTROL_SCENARIOS.');
 
 export async function inspectControls(driver, viewport, contract) {
+    if (controlScenarios === 'choices') return inspectChoiceValues(driver, viewport, contract);
     const {
         actionChecks, baseUrl, capture, check, compositedTextContrast, controlChecks, evidenceDir,
         keyboardFocus, login, newContext, painted, report, saveReport, trackStylesheets, unverified
@@ -327,6 +330,157 @@ export async function inspectControls(driver, viewport, contract) {
         await context.close();
         await saveReport();
     }
+}
+
+async function inspectChoiceValues(driver, viewport, contract, deviceScaleFactor = 1) {
+    const { baseUrl, capture, check, choiceStyleChecks, consentStateChecks, evidenceDir, login,
+        newContext, painted, paymentChecks, referenceUrl, report, saveReport, trackStylesheets } = driver;
+    const kind = 'Actual isolated local payment/consent state; no submission or copied reference defaults.';
+    const metadata = { viewport, kind, deviceScaleFactor };
+    const prefix = deviceScaleFactor === 2 ? 'dpr2-' : '';
+    report.fixtureEvidence = { kind, nativePaintPolicy: {
+        normalScale: 'DPR1 UI and raw raster observations remain separate from intended native color.',
+        underlyingColor: 'DPR2 actual same-widget stroke cores; 100% browser zoom, not native 200% zoom.',
+        rationale: 'https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html'
+    }, companion: companionProvenance, scenarioSet: 'choices',
+        disabledProbe: 'Temporary disabled property on actual rendered controls, restored exactly; not a permission/workflow acceptance claim.' };
+    report.nativeChoicePixels ||= [];
+    const context = await newContext({ width: viewport.width, height: Math.max(viewport.height, 1000) }, true, deviceScaleFactor);
+    const page = await context.newPage();
+    const finishAssets = trackStylesheets(page, viewport);
+    page.setDefaultTimeout(12000);
+    page.on('pageerror', error => report.errors.push({ scenario: 'choice values runtime', viewport, message: error.message }));
+    async function disabledProbe(rootSelector, state) {
+        const inputs = page.locator(rootSelector).locator('.payment-option input[type="radio"],.optin-options input[type="radio"]');
+        const original = await inputs.evaluateAll(nodes => nodes.map(node => ({
+            key: node.id || node.name + ':' + node.value, disabled: node.disabled, checked: node.checked
+        })));
+        await inputs.evaluateAll(nodes => nodes.forEach(node => { node.disabled = true; }));
+        try {
+            check(state + ' controlled disabled fixture is populated', original.length > 0, true, metadata, 2);
+            check(state + ' fixture remains disabled', await inputs.evaluateAll(nodes => nodes.every(node => node.disabled)), true, metadata, 2);
+            await choiceStyleChecks(page, contract, state + ' controlled disabled rendering', rootSelector,
+                'Controlled disabled-state probe on actual rendered choices; no workflow permission claim.');
+            await capture(page, prefix + state + '-disabled-choice-values', undefined, 'Controlled disabled-state probe on actual rendered choices');
+        } finally {
+            await inputs.evaluateAll((nodes, previous) => {
+                if (nodes.length !== previous.length) throw new Error('Choice nodes changed during controlled disabled probe.');
+                nodes.forEach((node, index) => {
+                    if ((node.id || node.name + ':' + node.value) !== previous[index].key) throw new Error('Choice identity changed during controlled disabled probe.');
+                    node.disabled = previous[index].disabled;
+                });
+            }, original);
+        }
+        const restored = await inputs.evaluateAll(nodes => nodes.map(node => ({ key: node.id || node.name + ':' + node.value, disabled: node.disabled, checked: node.checked })));
+        check(state + ' original disabled and checked states restored', JSON.stringify(restored), JSON.stringify(original), metadata, 2);
+    }
+    async function nativePixels(selector, state, sourceKind = 'actual application') {
+        state = prefix + state;
+        const input = page.locator(selector).first();
+        if (!await input.count()) throw new Error('Missing actual native marker: ' + selector);
+        await page.mouse.move(0, 0); await input.blur(); await painted(page);
+        const observed = await input.evaluate(node => ({ checked: node.checked, disabled: node.disabled,
+            width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height,
+            appearance: getComputedStyle(node).appearance, deviceScaleFactor: devicePixelRatio }));
+        check(state + ' enabled native marker fixture', !observed.disabled && observed.appearance === 'auto', true, { ...metadata, observed }, 2);
+        check(state + ' actual requested device scale', observed.deviceScaleFactor, deviceScaleFactor, { ...metadata, observed }, 2);
+        check(state + ' native marker minimum geometry', observed.width >= 20 && observed.height >= 20, true, { ...metadata, observed }, 2);
+        const filename = viewport.width + 'x' + viewport.height + '-native-choice-' + state + '.png';
+        const filePath = path.join(evidenceDir, filename);
+        await input.screenshot({ path: filePath, animations: 'disabled' });
+        const pixels = await page.evaluate(async dataUrl => {
+            const image = new Image(); image.src = dataUrl; await image.decode();
+            const canvas = document.createElement('canvas'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+            const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+            const { width, height } = canvas, rgba = context.getImageData(0, 0, width, height).data;
+            const rgbAt = (x, y) => [...rgba.slice((y * width + x) * 4, (y * width + x) * 4 + 3)];
+            const luminance = rgb => rgb.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+            let whitePixels = 0;
+            const signal = [];
+            for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+                const rgb = rgbAt(x, y);
+                if (rgb.every(value => value === 255)) whitePixels++;
+                // Locate the painted glyph independently of the contrast gate. This also
+                // excludes the extra background row/column from fractional clipping.
+                if (Math.max(...rgb) < 230) signal.push({ x, y });
+            }
+            if (!signal.length) return { width, height, whitePixels, bounds: null, quadrants: [] };
+            const bounds = { left: Math.min(...signal.map(p => p.x)), right: Math.max(...signal.map(p => p.x)),
+                top: Math.min(...signal.map(p => p.y)), bottom: Math.max(...signal.map(p => p.y)) };
+            const center = { x: (bounds.left + bounds.right) / 2, y: (bounds.top + bounds.bottom) / 2 };
+            const radii = { x: (bounds.right - bounds.left + 1) / 2, y: (bounds.bottom - bounds.top + 1) / 2 };
+            const quadrants = ['top-left', 'top-right', 'bottom-left', 'bottom-right'].map(name => {
+                const samples = [];
+                for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+                    const dx = x - center.x, dy = y - center.y;
+                    const quadrant = (dy < 0 ? 'top-' : 'bottom-') + (dx < 0 ? 'left' : 'right');
+                    const radius = Math.hypot(dx / radii.x, dy / radii.y);
+                    if (quadrant === name && radius >= .72 && radius <= 1.08) samples.push({ x, y, rgb: rgbAt(x, y) });
+                }
+                // Locate repeated outer-stroke cores before evaluating their contrast.
+                // Whole quadrants avoid treating a fractional cardinal AA pixel as the stroke.
+                samples.sort((one, two) => luminance(one.rgb) - luminance(two.rgb));
+                const cores = samples.slice(0, 2).map(core => {
+                    const dx = core.x - center.x, dy = core.y - center.y, distance = Math.hypot(dx, dy);
+                    const backing = [1, 2, 3, 4].map(step => ({
+                        x: Math.round(core.x - dx / distance * step),
+                        y: Math.round(core.y - dy / distance * step)
+                    })).filter(p => p.x >= 0 && p.x < width && p.y >= 0 && p.y < height)
+                        .map(p => ({ ...p, rgb: rgbAt(p.x, p.y) }))
+                        .find(p => p.rgb.every(value => value === 255)) || null;
+                    return { core, backing,
+                        contrast: backing ? (luminance(backing.rgb) + .05) / (luminance(core.rgb) + .05) : 0 };
+                });
+                return { name, cores };
+            });
+            return { width, height, whitePixels, bounds, center, radii, quadrants };
+        }, 'data:image/png;base64,' + (await readFile(filePath)).toString('base64'));
+        check(state + ' actual native white backing pixels', pixels.whitePixels >= pixels.width * pixels.height * .1, true, { ...metadata, pixels }, 2);
+        check(state + ' detected native boundary spans the glyph', Boolean(pixels.bounds && pixels.bounds.right - pixels.bounds.left + 1 >= pixels.width * .75 && pixels.bounds.bottom - pixels.bounds.top + 1 >= pixels.height * .75), true, { ...metadata, pixels }, 2);
+        check(state + ' repeated native boundary in all four quadrants', pixels.quadrants?.length === 4 && pixels.quadrants.every(quadrant => quadrant.cores.length === 2 && quadrant.cores.every(sample => sample.backing)), true, { ...metadata, pixels }, 2);
+        if (deviceScaleFactor === 2) {
+            check(state + ' underlying native marker contrast', pixels.quadrants?.length === 4 && pixels.quadrants.every(quadrant => quadrant.cores.every(sample => sample.contrast >= 3)), true, { ...metadata, pixels, sourceKind }, 2);
+        }
+        report.nativeChoicePixels.push({ state, selector, viewport, deviceScaleFactor, sourceKind, observed, pixels, filename,
+            scope: deviceScaleFactor === 2 ? 'Actual intended native stroke color at device scale2/100% browser zoom; not native 200% zoom.' : 'Actual DPR1 raster observation, including antialiasing; not an underlying-color contrast verdict.' });
+        report.captures.push({ name: state + ' native marker pixels', filename, viewport,
+            kind: sourceKind === 'actual rendered showcase' ? 'Actual rendered showcase native counterpart' : kind,
+            captureMethod: 'Actual native input screenshot at declared device scale; no CSS specimen or browser zoom simulation.' });
+    }
+    try {
+        await login(page); await page.setViewportSize(viewport);
+        await page.locator('[data-action="show-new-subscription"]').first().press('Enter');
+        await page.locator('#newSubscriptionForm').waitFor({ state: 'visible' });
+        await choiceStyleChecks(page, contract, 'subscription initial real values', '#newSubscriptionForm', kind);
+        await paymentChecks(page, contract, { rootSelector: '#newSubscriptionForm', state: prefix + 'choice-subscription',
+            firstId: 'subPaymentAuto', secondId: 'subPaymentInstruction', ibanId: 'subIBAN' });
+        await nativePixels('#subPaymentAuto', 'subscription-checked');
+        await nativePixels('#subPaymentInstruction', 'subscription-unchecked');
+        await consentStateChecks(page, contract, '#newSubscriptionForm', prefix + 'choice-subscription');
+        await nativePixels('#newSubscriptionForm .optin-options input[name="subOptinEmail"][value="yes"]', 'consent-unchecked');
+        await nativePixels('#newSubscriptionForm .optin-options input[name="subOptinEmail"][value="no"]', 'consent-checked');
+        await disabledProbe('#newSubscriptionForm', 'subscription');
+        await page.locator('#newSubscriptionForm [data-action="close-form"]').first().press('Enter');
+        await page.locator('[data-action="open-article-sale-form"]').first().press('Enter');
+        await page.locator('#articleSaleForm').waitFor({ state: 'visible' });
+        await paymentChecks(page, contract, { rootSelector: '#articleSaleForm', state: prefix + 'choice-article',
+            firstId: 'articlePaymentIdeal', secondId: 'articlePaymentTransfer' });
+        await nativePixels('#articlePaymentIdeal', 'article-checked');
+        await nativePixels('#articlePaymentTransfer', 'article-unchecked');
+        await disabledProbe('#articleSaleForm', 'article');
+        if (deviceScaleFactor === 2) {
+            await page.goto(referenceUrl);
+            await nativePixels('.subscription-choice input:checked', 'reference-payment-checked', 'actual rendered showcase');
+            await nativePixels('.subscription-choice input:not(:checked)', 'reference-payment-unchecked', 'actual rendered showcase');
+            await nativePixels('.subscription-consent-row input', 'reference-consent-unchecked', 'actual rendered showcase');
+        }
+    } catch (error) {
+        report.errors.push({ scenario: 'actual choice value states', viewport, message: error.message });
+        await capture(page, prefix + 'choice-values-failure', undefined, kind).catch(() => {});
+    } finally {
+        await finishAssets(); await context.close(); await saveReport();
+    }
+    if (deviceScaleFactor === 1) await inspectChoiceValues(driver, viewport, contract, 2);
 }
 
 const invokedAsCommand = process.argv[1] && path.resolve(process.argv[1]) === companionPath;
