@@ -237,9 +237,9 @@ async function capture(page, name, selector, kind = 'actual Compose application 
     await saveReport();
 }
 
-async function newContext(viewport, readOnly = true) {
+async function newContext(viewport, readOnly = true, deviceScaleFactor = 1) {
     const context = await browser.newContext({
-        ignoreHTTPSErrors: true, viewport, reducedMotion: 'reduce', deviceScaleFactor: 1,
+        ignoreHTTPSErrors: true, viewport, reducedMotion: 'reduce', deviceScaleFactor,
         locale: 'nl-NL', timezoneId: 'Europe/Amsterdam'
     });
     if (!readOnly) return context;
@@ -292,9 +292,24 @@ async function referenceContract(viewport) {
             secondary: await measure(page, '.preview-shell .button-secondary'),
             formPrimary: await measure(page, '.subscription-form-actions .button-primary'),
             formSecondary: await measure(page, '.subscription-form-actions .button-secondary'),
+            choiceText: await measure(page, '.subscription-choice strong'),
+            consentValue: await measure(page, '.subscription-consent-row label'),
             quiet: await measure(page, '#themeAuditQuietReference'),
             choice: await measure(page, '.subscription-choice')
         };
+        contract.choiceStates = {};
+        for (const [state, selector] of [
+            ['checked', '.subscription-choice:has(input:checked)'],
+            ['unchecked', '.subscription-choice:not(:has(input:checked))']
+        ]) {
+            const choice = page.locator(selector).first();
+            const surface = await compositedTextContrast(choice);
+            const border = await compositedTextContrast(choice, 'borderTopColor');
+            contract.choiceStates[state] = {
+                surface: surface.background.map(Math.round), border: border.foreground.map(Math.round),
+                compositingSupported: surface.supported && border.supported
+            };
+        }
         await page.locator('.preview-shell .button-secondary').first().hover();
         await painted(page);
         contract.secondaryHover = await measure(page, '.preview-shell .button-secondary');
@@ -516,6 +531,7 @@ async function controlChecks(page, contract, state, rootSelector, kind = 'actual
             check(`consent channel caption ${index + 1} ${property}`, caption[property], contract.label[property], context, 2);
         }
     }
+    await choiceStyleChecks(page, contract, state, rootSelector, kind);
 
     await actionChecks(page, contract, state, rootSelector, kind);
     if (!inspectHover) return;
@@ -657,8 +673,8 @@ async function actionChecks(page, contract, state, rootSelector, kind = 'actual 
     }
 }
 
-async function compositedTextContrast(locator) {
-    return locator.evaluate(element => {
+async function compositedTextContrast(locator, foregroundProperty = 'color') {
+    return locator.evaluate((element, property) => {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = 1;
         const context = canvas.getContext('2d');
@@ -678,11 +694,54 @@ async function compositedTextContrast(locator) {
         const supported = ancestors.every(node => Number.parseFloat(getComputedStyle(node).opacity) === 1);
         let background = [255, 255, 255];
         for (const node of ancestors) background = over(rgba(getComputedStyle(node).backgroundColor), background);
-        const foreground = over(rgba(getComputedStyle(element).color), background);
+        const foreground = over(rgba(getComputedStyle(element)[property]), background);
         const luminance = rgb => rgb.map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
         const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
         return { supported, ratio: (values[1] + 0.05) / (values[0] + 0.05), foreground, background };
-    });
+    }, foregroundProperty);
+}
+
+async function choiceStyleChecks(page, contract, state, rootSelector, kind = 'actual application choice state') {
+    if (slice < 2) return;
+    const metadata = { state, viewport: page.viewportSize(), kind };
+    const options = page.locator(rootSelector).locator('.payment-option:visible');
+    for (let index = 0; index < await options.count(); index++) {
+        const option = options.nth(index);
+        const text = option.locator('label .payment-text');
+        check('actual payment value text coverage', await text.count(), 1, { ...metadata, index }, 2);
+        const observed = await option.evaluate(node => {
+            const input = node.querySelector('input[type="radio"]');
+            const text = node.querySelector('label .payment-text');
+            const style = text && getComputedStyle(text);
+            return { id: input?.id, checked: Boolean(input?.checked), disabled: Boolean(input?.disabled),
+                fontSize: style?.fontSize, fontWeight: style?.fontWeight, lineHeight: style?.lineHeight, color: style?.color };
+        });
+        for (const property of ['fontSize', 'fontWeight', 'lineHeight', 'color']) {
+            check('payment value ' + property, observed[property], contract.choiceText[property], { ...metadata, observed }, 2);
+        }
+        const surface = await compositedTextContrast(option.locator('label').first());
+        const border = await compositedTextContrast(option, 'borderTopColor');
+        const expected = contract.choiceStates[observed.checked ? 'checked' : 'unchecked'];
+        if (surface.supported && border.supported && expected.compositingSupported) {
+            check('payment choice composited surface', JSON.stringify(surface.background.map(Math.round)), JSON.stringify(expected.surface), { ...metadata, observed }, 2);
+            check('payment choice composited border', JSON.stringify(border.foreground.map(Math.round)), JSON.stringify(expected.border), {
+                ...metadata, observed,
+                reason: observed.checked ? 'Actual selected accent boundary.' : 'Reference decorative 42% wrapper; native marker accessibility is verified separately.'
+            }, 2);
+        } else {
+            unverified('payment choice surface and boundary', 'Ancestor opacity requires separate compositing review.', { ...metadata, observed });
+        }
+    }
+    const values = await page.locator(rootSelector).locator('.optin-options label:visible').evaluateAll(labels => labels.map(label => {
+        const style = getComputedStyle(label), input = label.querySelector('input[type="radio"]');
+        return { checked: Boolean(input?.checked), disabled: Boolean(input?.disabled),
+            fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.lineHeight, color: style.color };
+    }));
+    for (const [index, observed] of values.entries()) {
+        for (const property of ['fontSize', 'fontWeight', 'lineHeight', 'color']) {
+            check('consent value ' + property, observed[property], contract.consentValue[property], { ...metadata, index, observed }, 2);
+        }
+    }
 }
 
 async function paymentChecks(page, contract, { rootSelector, state, firstId, secondId, ibanId, keyboardOnly = false }) {
@@ -703,6 +762,7 @@ async function paymentChecks(page, contract, { rootSelector, state, firstId, sec
         check(`${id} native payment is rendered`, input.visible, true, context, 2);
         check(`${id} whole choice minimum height`, input.labelHeight >= Number.parseFloat(contract.choice.minHeight), true, context, 2);
     }
+    await choiceStyleChecks(page, contract, state + ' initial values', rootSelector, context.kind);
     if (firstState.disabled || secondState.disabled) {
         unverified('enabled payment keyboard and pointer path', 'The actual workflow has disabled payment choices; a permitted enabled fixture is still required.', context);
         return;
@@ -727,6 +787,7 @@ async function paymentChecks(page, contract, { rootSelector, state, firstId, sec
     await first.press('ArrowRight');
     await painted(page);
     check('ArrowRight selects and focuses next payment', await second.evaluate(input => input.checked && document.activeElement === input), true, context, 2);
+    await choiceStyleChecks(page, contract, state + ' next payment selected', rootSelector, context.kind);
     if (ibanId) {
         const iban = await page.locator(`#${ibanId}`).evaluate(input => ({ visible: input.getClientRects().length > 0, required: input.required }));
         check('invoice hides IBAN and removes requiredness', !iban.visible && !iban.required, true, context, 2);
@@ -735,6 +796,7 @@ async function paymentChecks(page, contract, { rootSelector, state, firstId, sec
     await second.press('ArrowLeft');
     await painted(page);
     check('ArrowLeft restores first payment and focus', await first.evaluate(input => input.checked && document.activeElement === input), true, context, 2);
+    await choiceStyleChecks(page, contract, state + ' first payment restored', rootSelector, context.kind);
     if (ibanId) {
         const iban = await page.locator(`#${ibanId}`).evaluate(input => ({ visible: input.getClientRects().length > 0, required: input.required }));
         check('direct debit restores visible required IBAN', iban.visible && iban.required, true, context, 2);
@@ -745,6 +807,25 @@ async function paymentChecks(page, contract, { rootSelector, state, firstId, sec
         await page.locator(`label[for="${firstId}"]`).click();
         check('payment returns to initial first value', await first.isChecked(), true, { ...context, value: firstState.value }, 2);
     }
+}
+
+async function consentStateChecks(page, contract, rootSelector, state) {
+    const metadata = { state, viewport: page.viewportSize(), kind: 'Actual native consent interactions in an isolated local context; no submission.' };
+    const inputs = page.locator(rootSelector).locator('.optin-options input[type="radio"]');
+    check('consent initially remains unset', await inputs.evaluateAll(nodes => nodes.filter(node => node.checked).length), 0, metadata, 2);
+    const first = inputs.first();
+    const name = await first.getAttribute('name');
+    const group = page.locator(rootSelector).locator('.optin-options input[name="' + name + '"]');
+    check('real consent group has two choices', await group.count(), 2, metadata, 2);
+    await group.first().press('Space'); await painted(page);
+    check('consent Space selects the focused option', await group.first().isChecked(), true, metadata, 2);
+    await choiceStyleChecks(page, contract, state + ' first consent choice', rootSelector, metadata.kind);
+    await capture(page, state + '-consent-first');
+    await group.first().press('ArrowRight'); await painted(page);
+    check('consent arrow selects the alternative', await group.nth(1).isChecked(), true, metadata, 2);
+    check('consent native group stays mutually exclusive', await group.evaluateAll(nodes => nodes.filter(node => node.checked).length), 1, metadata, 2);
+    await choiceStyleChecks(page, contract, state + ' alternative consent choice', rootSelector, metadata.kind);
+    await capture(page, state + '-consent-alternative');
 }
 
 async function scenario(page, name, action) {
@@ -1028,6 +1109,7 @@ async function nativeZoomChecks() {
         if (slice >= 2) {
             await controlChecks(page, contract, 'native 200% subscription', '#newSubscriptionForm', 'actual native-zoomed application; keyboard traversal', { inspectHover: false });
             await paymentChecks(page, contract, { rootSelector: '#newSubscriptionForm', state: 'native-200-subscription', firstId: 'subPaymentAuto', secondId: 'subPaymentInstruction', ibanId: 'subIBAN', keyboardOnly: true });
+            await consentStateChecks(page, contract, '#newSubscriptionForm', 'native-200-subscription');
         }
         await page.locator('#subStartDate').scrollIntoViewIfNeeded();
         await capture(page, 'native-200-payment-consent');
@@ -1062,7 +1144,7 @@ try {
                 const { inspectControls } = await import('./compose-smoke-theme-audit-controls.mjs');
                 await inspectControls({
                     actionChecks, baseUrl, capture, check, compositedTextContrast, controlChecks, evidenceDir,
-                    keyboardFocus, login, newContext, painted, report, saveReport, trackStylesheets, unverified
+                    keyboardFocus, login, newContext, painted, paymentChecks, choiceStyleChecks, consentStateChecks, referenceUrl: pathToFileURL(referencePath).href, report, saveReport, trackStylesheets, unverified
                 }, viewport, contract);
             } else {
                 await inspectApplication(viewport, contract);
