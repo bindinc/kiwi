@@ -1631,7 +1631,7 @@
                     </button>
                 </div>
                 
-                <label for="editCustomerDeliveryRemarks" data-i18n="indexHtml.text.standaard_bezorginstructies_f4fae7a1">Standaard bezorginstructies</label>
+                <label class="form-label" for="editCustomerDeliveryRemarks" data-i18n="indexHtml.text.standaard_bezorginstructies_f4fae7a1">Standaard bezorginstructies</label>
                 <textarea id="editCustomerDeliveryRemarks" 
                           rows="4" 
                           placeholder="Voer bezorginstructies in..." data-i18n-placeholder="indexHtml.placeholder.voer_bezorginstructies_in_444e08a0"></textarea>
@@ -1734,7 +1734,7 @@
                     <h3 data-i18n="indexHtml.text.call_simulation_811cb3d1">📞 Call Simulation</h3>
                     
                     <div class="debug-row">
-                        <label for="debugServiceNumber" data-i18n="indexHtml.text.service_nummer_2a497cde">Service Nummer:</label>
+                        <label class="form-label" for="debugServiceNumber" data-i18n="indexHtml.text.service_nummer_2a497cde">Service Nummer:</label>
                         <select id="debugServiceNumber">
                             <option value="AVROBODE" data-i18n="indexHtml.text.avrobode_service_dd733f72">Avrobode Service</option>
                             <option value="MIKROGIDS" data-i18n="indexHtml.text.mikrogids_service_f7763049">Mikrogids Service</option>
@@ -1744,7 +1744,7 @@
                     </div>
                     
                     <div class="debug-row">
-                        <label for="debugWaitTime" data-i18n="indexHtml.text.wachttijd_simulatie_ba4bbac4">Wachttijd simulatie:</label>
+                        <label class="form-label" for="debugWaitTime" data-i18n="indexHtml.text.wachttijd_simulatie_ba4bbac4">Wachttijd simulatie:</label>
                         <select id="debugWaitTime">
                             <option value="random" data-i18n="indexHtml.text.willekeurig_15_90_sec_4e78066b">Willekeurig (15-90 sec)</option>
                             <option value="15" data-i18n="indexHtml.text.15_seconden_71533fee">15 seconden</option>
@@ -1756,7 +1756,7 @@
                     </div>
                     
                     <div class="debug-row">
-                        <label for="debugCallerType" data-i18n="indexHtml.text.beller_type_1176bbdd">Beller type:</label>
+                        <label class="form-label" for="debugCallerType" data-i18n="indexHtml.text.beller_type_1176bbdd">Beller type:</label>
                         <select id="debugCallerType" data-action="debug.toggle-known-caller" data-action-event="change">
                             <option value="anonymous" data-i18n="indexHtml.text.anonieme_beller_0c3daeaf">Anonieme Beller</option>
                             <option value="known" data-i18n="indexHtml.text.bekende_klant_5db14695">Bekende Klant</option>
@@ -1764,7 +1764,7 @@
                     </div>
                     
                     <div id="debugKnownCallerSelect" class="debug-row" style="display: none;">
-                        <label for="debugKnownCustomer" data-i18n="indexHtml.text.selecteer_klant_c3042093">Selecteer klant:</label>
+                        <label class="form-label" for="debugKnownCustomer" data-i18n="indexHtml.text.selecteer_klant_c3042093">Selecteer klant:</label>
                         <select id="debugKnownCustomer">
                             <!-- Populated by JavaScript -->
                         </select>
@@ -1794,13 +1794,13 @@
                     </div>
                     
                     <div class="debug-row">
-                        <label for="debugQueueSize" data-i18n="indexHtml.text.aantal_wachtenden_2ce69ef5">Aantal wachtenden:</label>
+                        <label class="form-label" for="debugQueueSize" data-i18n="indexHtml.text.aantal_wachtenden_2ce69ef5">Aantal wachtenden:</label>
                         <input type="number" id="debugQueueSize" 
                                value="5" min="1" max="50" />
                     </div>
                     
                     <div class="debug-row">
-                        <label for="debugQueueMix" data-i18n="indexHtml.text.mix_van_bellers_8984cf3f">Mix van bellers:</label>
+                        <label class="form-label" for="debugQueueMix" data-i18n="indexHtml.text.mix_van_bellers_8984cf3f">Mix van bellers:</label>
                         <select id="debugQueueMix">
                             <option value="balanced" data-i18n="indexHtml.text.gebalanceerd_50_50_9e94963e">Gebalanceerd (50/50)</option>
                             <option value="mostly_known" data-i18n="indexHtml.text.vooral_bekende_klanten_80_20_d72f4bfd">Vooral bekende klanten (80/20)</option>

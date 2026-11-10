@@ -3881,22 +3881,10 @@ dialog.form-lightbox::backdrop {
 
 .modal-body textarea {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    resize: vertical;
     margin-bottom: 1rem;
 }
 
-.modal-body textarea:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
-}
+
 
 .modal-actions {
     display: flex;
@@ -3937,19 +3925,7 @@ dialog.form-lightbox::backdrop {
 }
 
 .debug-row select {
-    padding: 0.5rem;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    font-size: 0.95rem;
-    background: var(--surface);
     cursor: pointer;
-}
-
-.debug-row select:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .debug-actions {
@@ -4084,21 +4060,6 @@ dialog.form-lightbox::backdrop {
     color: var(--warning);
     font-weight: 600;
     font-family: 'Courier New', monospace;
-}
-
-.debug-row input[type="number"] {
-    padding: 0.5rem;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    font-size: 0.95rem;
-    background: var(--surface);
-}
-
-.debug-row input[type="number"]:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .remark-shortcut:active {
