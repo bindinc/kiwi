@@ -360,20 +360,28 @@ async function searchAndSelectJansen(page) {
 }
 
 async function waitForCustomerCaptureReady(page) {
-    // Selection renders the name before its smooth scroll finishes.
-    // The native baseline and later clone crop must use the same viewport coordinates.
-    await page.waitForFunction(async () => {
+    // Playwright polls synchronously: a Promise(false) would itself be truthy.
+    // Retained customer text can also exist while its detail panel is hidden.
+    await page.waitForFunction(state => {
         const header = document.querySelector('.customer-header');
-        if (!header || window.scrollY !== 0) return false;
+        const retry = document.querySelector('#customerAddressRetry');
+        const bounds = header?.getBoundingClientRect();
+        const headerIsRendered = bounds && bounds.width > 0 && bounds.height > 0
+            && getComputedStyle(header).visibility === 'visible';
+        const selectionIsSettled = retry && !retry.disabled;
+        if (!headerIsRendered || !selectionIsSettled || window.scrollY !== 0) {
+            state.previousBounds = null;
+            state.stableFrames = 0;
+            return false;
+        }
 
-        const before = header.getBoundingClientRect();
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        const after = header.getBoundingClientRect();
-        const headerIsStable = before.x === after.x && before.y === after.y
-            && before.width === after.width && before.height === after.height;
-
-        return window.scrollY === 0 && headerIsStable;
-    }, null, { polling: 'raf', timeout: 10000 });
+        const previous = state.previousBounds;
+        const headerIsStable = previous && previous.x === bounds.x && previous.y === bounds.y
+            && previous.width === bounds.width && previous.height === bounds.height;
+        state.stableFrames = headerIsStable ? state.stableFrames + 1 : 0;
+        state.previousBounds = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+        return state.stableFrames >= 2;
+    }, { previousBounds: null, stableFrames: 0 }, { polling: 'raf', timeout: 10000 });
 }
 
 async function captureCustomArea(page, targetBox) {
