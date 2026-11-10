@@ -392,9 +392,13 @@ async function runWorkspace(width) {
         await page.locator('#endCustomerWorkSessionButton').click();
 
         if (!await page.locator('#searchName').isVisible()) await page.locator('#additionalFiltersToggle').click();
+        await assertStyle(page, '.checkbox-option', 'backgroundColor', 'rgb(255, 255, 255)');
+        await assertStyle(page, '.checkbox-option', 'minHeight', '44px');
         await page.locator('#searchName').fill('Jansen');
         await page.locator('button[data-action="search-customer"]').click();
         await page.locator('#paginatedResults .result-row').first().waitFor();
+        await assertStyle(page, '#sortBy', 'fontSize', '15px');
+        await assertStyle(page, '#sortBy', 'minHeight', '40px');
         await capture(page, 'customer-results');
         await page.locator('#paginatedResults .result-row').first().click();
         await page.locator('#customerDetail').waitFor({ state: 'visible' });

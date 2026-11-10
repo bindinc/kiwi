@@ -1455,6 +1455,7 @@ select option {
     gap: 0.5rem;
 }
 
+/* White choice surfaces keep browser-drawn unchecked edges legible in both engines. */
 .checkbox-option {
     display: flex;
     align-items: center;
@@ -1462,9 +1463,10 @@ select option {
     padding: 0.5rem 0.625rem;
     border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    background: var(--surface-subdued);
+    background: var(--surface);
     color: var(--text);
     cursor: pointer;
+    min-height: var(--choice-height);
 }
 
 .checkbox-option input {
@@ -1787,9 +1789,9 @@ select option {
 }
 
 .sort-label {
-    font-size: 0.9rem;
+    font-size: var(--font-size-label);
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
 }
 
 .sort-select {
@@ -1797,7 +1799,7 @@ select option {
     border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     background: var(--surface);
-    font-size: 0.9rem;
+    font-size: var(--font-size-body);
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
@@ -3189,7 +3191,7 @@ dialog.form-lightbox::backdrop {
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     padding: 0.85rem;
-    background-color: var(--surface-subdued);
+    background-color: var(--surface);
     margin-bottom: 1rem;
 }
 
@@ -3203,9 +3205,10 @@ dialog.form-lightbox::backdrop {
 .onepager-container .party-mode-toggle label {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: 0.92rem;
+    gap: var(--space-2);
+    font-size: var(--font-size-label);
     margin: 0;
+    min-height: var(--choice-height);
 }
 
 .onepager-container .subscription-person-search {
@@ -3486,7 +3489,7 @@ dialog.form-lightbox::backdrop {
     gap: 1rem;
     margin-bottom: 0.75rem;
     padding: 0.625rem 0.75rem;
-    background-color: var(--surface-subdued);
+    background-color: var(--surface);
     border-radius: var(--radius-sm);
 }
 
