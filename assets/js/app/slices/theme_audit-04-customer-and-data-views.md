@@ -1,8 +1,18 @@
 # theme_audit 04 — Customer search, records and data views
 
-Audit marker: `theme_audit`. Status: planned. Baseline: `c05973e`, 2026-11-09.
+Audit marker: `theme_audit`. Status: implementation started; acceptance pending. Baseline: `c05973e`, 2026-11-09.
 
 Coordination: [evaluation and slice index](../../../../plans/theme_audit.md), SC-206629. Depends on 01/02 and the workspace framing from 03; establish reusable person/address presentation before workflow slices 05–07.
+
+## Implementation record
+
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-customer-and-data-views`.
+- Branch: `codex/align-theme-customer-and-data-views`.
+- Base: accepted slice 03 at `80c7cdd81fee820636883fd2278028107feb94dc`, [PR #146](https://github.com/bindinc/kiwi/pull/146), still unmerged at start. Its final GitHub validation passed at run `42841343497`.
+- PR: created immediately after the scaffold is pushed; English text, SC-206629 and one Unreleased changelog entry.
+- Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-04/`, outside Git. Preserve actual application, reference and explicit fixture classifications.
+- Ownership: one application implementation agent; independent source review; slice 10 owner supplies focused Compose before/reference/after, keyboard and native-zoom checks. Parent owns this document, index, changelog and PR.
+- Additional retained-editor gate: both the fixed heading and `customerEditorAddress` input/label prefix collide across retained dialogs. Allocate a stable opaque identifier for each new dialog, without changing map keys, field names, source identity, address-session ownership or draft retention. Existing smoke selectors must follow the active dialog and its declared address prefix; closing intentionally retains a dialog.
 
 ## Findings
 
