@@ -351,6 +351,17 @@ function handleGlobalKeydown(event) {
             return;
         }
 
+        const statusMenu = getElementById('agentStatusMenu');
+        if (statusMenu && statusMenu.hidden === false) {
+            closeStatusMenu();
+            const profileTrigger = getElementById('agentProfileTrigger');
+            if (profileTrigger && getDocumentRef()?.activeElement !== profileTrigger) {
+                profileTrigger.focus();
+            }
+            if (typeof event.preventDefault === 'function') event.preventDefault();
+            return;
+        }
+
         hideVisibleFormContainers(getDocumentRef());
         return;
     }

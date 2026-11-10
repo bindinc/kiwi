@@ -79,7 +79,7 @@ const en = {
             "anonieme_beller_0c3daeaf": "Anonymous Caller",
             "artikel_286630a5": "Item *",
             "artikel_toevoegen_aan_bestelling_d23832ab": "➕ Add Item to Order",
-            "artikel_verkoop_89f9bcc6": "🛒 Item sales",
+            "artikel_verkoop_89f9bcc6": "Item sales",
             "artikel_verkoop_baa29866": "🛒 Item Sales",
             "artikel_verkoop_d7a4b513": "Item Sales",
             "artikelen_170a4739": "🛒 Articles",
@@ -121,7 +121,7 @@ const en = {
             "categorie_6c59dc2c": "Category",
             "categorie_add0d64a": "Category *",
             "compliment_b18f9c89": "Compliment",
-            "contact_geschiedenis_7d71e784": "📋 Contact History",
+            "contact_geschiedenis_7d71e784": "Contact History",
             "dag_4b5425c3": "Day",
             "de_gegevens_hieronder_zijn_automatisch_ingevuld_op_basis_van_de_acties_t_d0fef57c": "The information below is automatically filled in based on the actions during the conversation",
             "de_opzegbevestiging_en_restitutie_informatie_wordt_naar_dit_adres_gestuu_3a20ffcd": "The cancellation confirmation and refund information will be sent to this address",
@@ -180,7 +180,7 @@ const en = {
             "klant_e504253b": "Customer:",
             "klant_verwacht_terugkoppeling_van_redactie_9b1357a7": "Customer expects feedback from editors",
             "klant_wijst_af_opzeggen_e84bae32": "❌ Customer rejects, cancel",
-            "klant_zoeken_8c2cfd01": "🔍 Customer Search",
+            "klant_zoeken_8c2cfd01": "Customer Search",
             "klanten_gevonden_a7066e8e": "customers found",
             "klantenservice_portal_magazine_abonnementen_21dfa5e2": "Customer Service Portal - Magazine Subscriptions",
             "klantgegevens_bewerken_de8f3786": "✏️Customer Details Edit",
@@ -204,8 +204,8 @@ const en = {
             "nee_992443bb": "No",
             "niet_ontvangen_1d136f53": "Not received",
             "niet_storen_7f6c03ee": "Do not disturb",
-            "nieuw_abonnement_aanmaken_a7bddc25": "➕ Create New Subscription",
-            "nieuw_abonnement_ed26c367": "➕ New Subscription",
+            "nieuw_abonnement_aanmaken_a7bddc25": "Create New Subscription",
+            "nieuw_abonnement_ed26c367": "New Subscription",
             "nieuwe_abonnee_gegevens_39e1f2ce": "New subscriber data",
             "nieuwe_persoon_c574b0f2": "New person",
             "notities_8284cfda": "Notes",
@@ -248,7 +248,7 @@ const en = {
             "selecteer_reden_24d8f787": "Select reason:",
             "service_nummer_2a497cde": "Service Number:",
             "service_nummer_ad4a39bf": "📞 Service number:",
-            "snelle_acties_b0debf12": "⚡ Quick Actions",
+            "snelle_acties_b0debf12": "Quick Actions",
             "sorteren_0388b769": "Sort:",
             "standaard_bezorginstructies_f4fae7a1": "Standard delivery instructions",
             "start_gesprek_simulatie_b219f5d2": "📞 Start Call Simulation",
@@ -301,7 +301,7 @@ const en = {
             "zelfde_persoon_als_ontvanger_52ac9149": "Same person as recipient",
             "zoek_op_salescode_of_titel_en_kies_het_kanaal_83ec4db3": "Search by sales code or title, add one or more products, and choose the channel per product",
             "zoeken_23d150c5": "search",
-            "zoekresultaten_b9b61881": "🔍 Search results"
+            "zoekresultaten_b9b61881": "Search results"
         },
         "placeholder": {
             "1234ab_7d777582": "1234AB",
@@ -890,6 +890,11 @@ const en = {
             "feedback_forbidden": "Contextual feedback is not available for this role."
         }
     },
+    "shell": {
+        "profileLabel": "Profile and availability",
+        "outboxToggleTitle": "Show or hide outbox",
+        "outboxLabel": "Outbox"
+    },
     "articleSearch": {
         "removeOrderItem": "Remove article from order",
         "removeCoupon": "Remove coupon",
@@ -945,7 +950,7 @@ const en = {
         "viewAction": "View",
         "noneFoundTitle": "No customers found",
         "noneFoundDescription": "Adjust your search criteria and try again",
-        "resultsTitle": '🔍 Search results: "{query}"',
+        "resultsTitle": 'Search results: "{query}"',
         "resultsRange": "Showing {start}-{end} of {total}",
         "subscriptionStatusLoading": "Loading subscription status…",
         "subscriptionStatusUnavailable": "Status unavailable",

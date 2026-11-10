@@ -892,7 +892,7 @@ export function displayPaginatedResults() {
     resultsTitle.textContent = translateKey(
         'search.resultsTitle',
         { query: searchQueryLabel },
-        `🔍 Zoekresultaten: "${searchQueryLabel}"`
+        `Zoekresultaten: "${searchQueryLabel}"`
     );
     resultsRange.textContent = translateKey(
         'search.resultsRange',

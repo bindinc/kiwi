@@ -1,5 +1,6 @@
 import { mountAddressFields } from './address-fields.js';
 import { initAddressCompletion } from './address-completion.js';
+import { observeHeaderScrollInset } from './header-scroll-inset.js';
 import { createActionRouter } from './actions.js';
 import { getDispositionCategories } from './disposition-categories.js';
 import { installLegacyAppState, applyBootstrapData, legacyState } from './legacy-app-state.js';
@@ -221,14 +222,13 @@ async function runBootstrapInitialization() {
 async function bootstrapApplication() {
     try {
         const header = document.querySelector('.header');
+        if (header) observeHeaderScrollInset({ header });
         header?.addEventListener('wheel', (event) => {
             const isPinchZoomed = window.visualViewport?.scale > 1;
-            const headerBounds = header.getBoundingClientRect();
-            const isToolbar = event.clientY >= headerBounds.top && event.clientY < headerBounds.bottom;
+            const toolbarTarget = event.target?.closest?.('.header-brand, .agent-profile-trigger, .workbox-toggle-button, .contextual-feedback-header-button, .customer-work-session-end');
 
-            // Trackpads use wheel events, which are not covered by touch-action.
-            // Leave browser zoom and scrolling inside dropdowns available.
-            if (isPinchZoomed && isToolbar && !event.ctrlKey) {
+            // Prevent toolbar-control gestures from panning a zoomed page, while menu/context scroll stays native.
+            if (isPinchZoomed && toolbarTarget && !event.ctrlKey) {
                 event.preventDefault();
             }
         }, { passive: false });

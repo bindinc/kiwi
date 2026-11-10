@@ -474,6 +474,8 @@ function startAgentWorkSessionTimer() {
     }, 1000);
 }
 
+let statusMenuLayoutObserver = null;
+
 function setStatusMenuOpen(shouldOpen) {
     const menu = document.getElementById('agentStatusMenu');
     const trigger = document.getElementById('agentProfileTrigger');
@@ -481,8 +483,64 @@ function setStatusMenuOpen(shouldOpen) {
         return;
     }
 
+    const returnFocus = !shouldOpen && !menu.hidden
+        && typeof menu.contains === 'function' && menu.contains(document.activeElement);
     menu.hidden = !shouldOpen;
     trigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+
+    if (shouldOpen) {
+        positionStatusMenu();
+        const header = document.querySelector('.header');
+        if (header && !statusMenuLayoutObserver) {
+            statusMenuLayoutObserver = new window.ResizeObserver(positionStatusMenu);
+            statusMenuLayoutObserver.observe(header, { box: 'border-box' });
+        }
+        window.addEventListener?.('resize', positionStatusMenu);
+        window.addEventListener?.('scroll', positionStatusMenu, true);
+        window.visualViewport?.addEventListener('resize', positionStatusMenu);
+        window.visualViewport?.addEventListener('scroll', positionStatusMenu);
+        return;
+    }
+
+    statusMenuLayoutObserver?.disconnect();
+    statusMenuLayoutObserver = null;
+    window.removeEventListener?.('resize', positionStatusMenu);
+    window.removeEventListener?.('scroll', positionStatusMenu, true);
+    window.visualViewport?.removeEventListener('resize', positionStatusMenu);
+    window.visualViewport?.removeEventListener('scroll', positionStatusMenu);
+    if (returnFocus) trigger.focus();
+}
+
+function positionStatusMenu() {
+    const menu = document.getElementById('agentStatusMenu');
+    const trigger = document.getElementById('agentProfileTrigger');
+    if (!menu || menu.hidden || !trigger) return;
+
+    const viewport = window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft || 0;
+    const viewportTop = viewport?.offsetTop || 0;
+    const viewportWidth = viewport?.width || window.innerWidth;
+    const viewportHeight = viewport?.height || window.innerHeight;
+    const edge = 8;
+    const gap = 8;
+    const viewportBottom = viewportTop + viewportHeight;
+    const triggerBounds = trigger.getBoundingClientRect();
+
+    menu.style.maxWidth = `${Math.max(1, viewportWidth - 2 * edge)}px`;
+    const menuWidth = menu.getBoundingClientRect().width;
+    const spaceBelow = Math.max(0, viewportBottom - triggerBounds.bottom - gap - edge);
+    const spaceAbove = Math.max(0, triggerBounds.top - viewportTop - gap - edge);
+    const openBelow = spaceBelow >= Math.min(menu.scrollHeight, 240) || spaceBelow >= spaceAbove;
+    const availableHeight = openBelow ? spaceBelow : spaceAbove;
+    const maxHeight = Math.max(1, Math.min(availableHeight, viewportHeight - 2 * edge));
+    const visibleHeight = Math.min(menu.scrollHeight + 2, maxHeight);
+    const requestedTop = openBelow ? triggerBounds.bottom + gap : triggerBounds.top - gap - visibleHeight;
+    const maxTop = viewportBottom - edge - visibleHeight;
+    const maxLeft = viewportLeft + viewportWidth - edge - menuWidth;
+
+    menu.style.top = `${Math.max(viewportTop + edge, Math.min(requestedTop, maxTop))}px`;
+    menu.style.left = `${Math.max(viewportLeft + edge, Math.min(triggerBounds.right - menuWidth, maxLeft))}px`;
+    menu.style.maxHeight = `${maxHeight}px`;
 }
 
 function closeStatusMenu() {
