@@ -1,8 +1,22 @@
 # theme_audit 03 — Shell, navigation and workspace hierarchy
 
-Audit marker: `theme_audit`. Status: planned. Baseline: `c05973e`, 2026-11-09.
+Audit marker: `theme_audit`. Status: implementation started; before-state capture pending. Audit baseline: `c05973e`, 2026-11-09; implementation baseline: merged slice 02 at `851dc77`, 2026-11-10.
 
-Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-206629. Implement after slices 01 and 02. This document does not authorize changing the application or deploying it.
+Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-206629. Implement after slices 01 and 02. Implementation is authorized by the ten-slice task; merge and deployment require separate explicit authorization.
+
+## Implementation record
+
+- Branch: `codex/align-theme-shell-and-navigation`.
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-shell-and-navigation`.
+- Base: `851dc77a11667975311f533df8c1294a91513e0e`, the user-merged [slice 02 / PR #145](https://github.com/bindinc/kiwi/pull/145) in `codex/plan-kiwi-styleguide-alignment-slices`. Application files are identical to accepted source `d39ed64`; the corrected privacy smoke helper is included through `14eb8cc`.
+- PR: draft initialization pending; one Unreleased changelog entry, SC-206629.
+- Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-03/`; actual baseline runtime, reference, controlled renderer fixtures and after-state evidence must remain distinguished.
+- Ownership: one application implementation owner; parent owns audit/index/changelog/PR. Independent source review and slice 10 browser/native validation run without overlapping application edits.
+- Current source correction: the actual workspace is `.main-content`. Existing Twig DOM order is search/actions → main work → history/outbox; remove the narrow CSS negative ordering rather than unnecessarily moving those regions.
+
+### Acceptance register
+
+All implementation, rendered comparison, keyboard/session checks and current-source CI remain pending. Before-state captures must complete before application edits. Compare actual identity/source/session context and populated results at 1440, 1024, 768, 390 and 320px, plus 390×320 and genuine native 200% zoom, in Chromium and Firefox. Preserve precise scope and source/served hashes, including synthetic long-label and operational placement fixtures where live states cannot be exercised without mutation. No whole-interface acceptance is claimed by this slice.
 
 ## Finding and intended outcome
 
@@ -15,7 +29,7 @@ Populated search also exposes a functional layout defect: the 1440px viewport pr
 ## Source and reference
 
 - [Base workspace](index.html.twig): header, customer work-session bar, profile controls, search/quick-action rail, center panel, history and outbox placement.
-- [Shared CSS](../../assets/css/styles.css): `.header`, `.header-content`, `.header-top`, `.header-right`, `.main-container`, `.left-panel`, `.center-panel`, `.right-panel`, `.card`, `.welcome-message`, profile/status-menu rules and their media queries.
+- [Shared CSS](../../assets/css/styles.css): `.header`, `.header-content`, `.header-top`, `.header-right`, `.main-content`, `.left-panel`, `.center-panel`, `.right-panel`, `.card`, `.welcome-message`, profile/status-menu rules and their media queries.
 - [Shell behavior](../../assets/js/app/slices/app-shell-slice.js) and session/profile modules: inspect consumers before moving any container or control.
 - [Showcase](../../plans/kiwi-light-and-shadow-theme-palette-showcase.html#preview): `.preview-topbar`, `.preview-body`, `.preview-sidebar` and the record/workspace relationship. Use its geometry and hierarchy, adapted to the application's actual number of regions.
 
