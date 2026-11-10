@@ -10,6 +10,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 - Use Abel’s next delivery date per guide and selected edition during subscription signup, revalidate before staging an order, and keep ATV/ATL/ATM/STKN memberships independent of delivery dates. [sc-203456]
 
+### Changed
+
+- Apply the Light & Shadow palette as Kiwi's default light theme using semantic colors, accessible control borders and keyboard focus, while preserving operational states and feedback privacy; include a flat, responsive delivery date picker with keyboard navigation, the design showcase, contrast checks and browser smoke coverage. [sc-206629]
+
 ### Fixed
 
 - Reuse the active customer as subscription recipient without another lookup, while keeping independent recipient and payer selection through submission using full source identity and rejecting stale or incompatible customer selections. [sc-203540]

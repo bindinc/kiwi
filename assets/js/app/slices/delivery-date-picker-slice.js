@@ -2,7 +2,7 @@ import { getGlobalScope } from '../services.js';
 
 const DELIVERY_DATE_PICKER_SLICE_NAMESPACE = 'kiwiDeliveryDatePickerSlice';
 const DELIVERY_CALENDAR_API_URL = '/api/v1/catalog/delivery-calendar';
-const DAY_HEADERS = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
+const FALLBACK_DAY_NAMES_SHORT = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
 const FALLBACK_MONTH_NAMES = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 const FALLBACK_DAY_NAMES = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
 const CALENDAR_SCAN_LIMIT_IN_MONTHS = 24;
@@ -10,6 +10,10 @@ const CALENDAR_SCAN_LIMIT_IN_MONTHS = 24;
 const deliveryCalendarCache = new Map();
 let currentCalendarDate = new Date();
 let selectedDeliveryDate = null;
+let focusedDeliveryDate = null;
+let renderedCalendarDays = new Map();
+let renderedRecommendedDate = null;
+let calendarRenderVersion = 0;
 let deliveryCalendarClickHandler = null;
 let deliveryCalendarKeyHandler = null;
 let deliveryCalendarResizeHandlerAttached = false;
@@ -86,14 +90,6 @@ function stopEventPropagation(event) {
     event.stopPropagation();
 }
 
-function isActivationKey(event) {
-    if (!event) {
-        return false;
-    }
-
-    return event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar';
-}
-
 function calendarCacheKey(year, month) {
     return `${year}-${month}`;
 }
@@ -108,9 +104,20 @@ function getDayNames() {
     return Array.isArray(translatedDays) ? translatedDays : FALLBACK_DAY_NAMES;
 }
 
+function getShortDayNames() {
+    const days = translateDelivery('delivery.dayNamesShort', {}, FALLBACK_DAY_NAMES_SHORT);
+    return Array.isArray(days) ? days : FALLBACK_DAY_NAMES_SHORT;
+}
+
+function escapeCalendarText(value) {
+    return String(value).replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[character]));
+}
+
 function buildCalendarErrorMarkup() {
     const message = translateDelivery('delivery.calendarLoadFailed', {}, 'Kan kalender niet laden');
-    return `<div class="delivery-calendar-content"><p>${message}</p></div>`;
+    return `<p role="alert">${escapeCalendarText(message)}</p>`;
 }
 
 function queueCalendarPositioning() {
@@ -124,7 +131,7 @@ function queueCalendarPositioning() {
     positionCalendarWithinViewport();
 }
 
-function buildDayCellClass(dayItem, isSelected, isRecommended) {
+function buildDayCellClass(dayItem, isSelected) {
     let cellClass = 'delivery-day-cell';
     if (dayItem.past) {
         cellClass += ' past';
@@ -132,44 +139,42 @@ function buildDayCellClass(dayItem, isSelected, isRecommended) {
         cellClass += ' unavailable';
     } else if (isSelected) {
         cellClass += ' selected';
-    } else if (isRecommended) {
-        cellClass += ' recommended';
     } else {
         cellClass += ' available';
     }
 
-    return cellClass;
+    const isToday = dayItem.date === formatDateInputValue(getCurrentDate());
+    return isToday ? `${cellClass} today` : cellClass;
 }
 
 function buildDayCellAriaLabel(dayItem, isSelected, isRecommended) {
-    const ariaParts = [dayItem.title];
+    const ariaParts = [`${formatDeliveryDateLabel(dayItem.date)} ${dayItem.date.slice(0, 4)}`];
     if (dayItem.past) {
-        ariaParts.push('verlopen datum');
+        ariaParts.push(translateDelivery('delivery.pastDate', {}, 'verlopen datum'));
     } else if (!dayItem.available) {
-        ariaParts.push('niet beschikbaar');
+        ariaParts.push(translateDelivery('delivery.unavailableDate', {}, 'niet beschikbaar'));
     } else if (isSelected) {
-        ariaParts.push('geselecteerd');
+        ariaParts.push(translateDelivery('delivery.selectedDate', {}, 'geselecteerd'));
     } else if (isRecommended) {
-        ariaParts.push('aanbevolen');
+        ariaParts.push(translateDelivery('delivery.firstAvailable', {}, 'Eerst beschikbaar'));
     } else {
-        ariaParts.push('beschikbaar');
+        ariaParts.push(translateDelivery('delivery.availableDate', {}, 'beschikbaar'));
     }
 
     return ariaParts.join(' - ');
 }
 
-function buildDayCellAttributes(dayItem) {
-    const attrs = [];
+function buildDayCellAttributes(dayItem, tabDate) {
     const canSelectDay = dayItem.available && !dayItem.past;
-    if (canSelectDay) {
-        attrs.push('role="button"');
-        attrs.push('tabindex="0"');
-        attrs.push('data-action="select-delivery-date"');
-        attrs.push('data-action-event="click,keydown"');
-        attrs.push(`data-arg-date="${dayItem.date}"`);
-    }
-
-    return attrs;
+    return [
+        'type="button"',
+        `tabindex="${dayItem.date === tabDate ? '0' : '-1'}"`,
+        `aria-disabled="${!canSelectDay}"`,
+        `aria-current="${dayItem.date === formatDateInputValue(getCurrentDate()) ? 'date' : 'false'}"`,
+        'data-action="select-delivery-date"',
+        'data-action-event="click,keydown"',
+        `data-arg-date="${escapeCalendarText(dayItem.date)}"`
+    ];
 }
 
 function getCalendarElements() {
@@ -210,9 +215,12 @@ function attachCalendarDismissHandlers() {
     if (!deliveryCalendarClickHandler) {
         deliveryCalendarClickHandler = (event) => {
             const container = getElementById('deliveryDatePickerContainer');
-            const clickedOutsideContainer = container && !container.contains(event.target);
-            if (clickedOutsideContainer) {
-                closeCalendar();
+            const isOpen = getElementById('deliveryCalendar')?.classList.contains('is-open');
+            // A calendar render can replace the clicked button before this listener runs.
+            const clickedInsideContainer = event.composedPath?.().includes(container) || container?.contains(event.target);
+            const clickedOutsideContainer = container && !clickedInsideContainer;
+            if (isOpen && clickedOutsideContainer) {
+                closeCalendar(false);
             }
         };
         documentRef.addEventListener('click', deliveryCalendarClickHandler);
@@ -220,11 +228,22 @@ function attachCalendarDismissHandlers() {
 
     if (!deliveryCalendarKeyHandler) {
         deliveryCalendarKeyHandler = (event) => {
-            if (event.key === 'Escape') {
+            const isOpen = getElementById('deliveryCalendar')?.classList.contains('is-open');
+            if (event.key === 'Escape' && isOpen) {
+                event.preventDefault();
+                stopEventPropagation(event);
                 closeCalendar();
             }
         };
-        documentRef.addEventListener('keydown', deliveryCalendarKeyHandler);
+        // Capture Escape before the surrounding article form handles it.
+        documentRef.addEventListener('keydown', deliveryCalendarKeyHandler, true);
+        documentRef.addEventListener('focusin', (event) => {
+            const container = getElementById('deliveryDatePickerContainer');
+            const isOpen = getElementById('deliveryCalendar')?.classList.contains('is-open');
+            if (isOpen && container && !container.contains(event.target)) {
+                closeCalendar(false);
+            }
+        });
     }
 
     const windowRef = getWindowRef();
@@ -318,51 +337,90 @@ export function formatDeliveryDateLabel(isoDate) {
 
 export async function initDeliveryDatePicker() {
     const { container, hiddenInput, displayDiv, calendarDiv } = getCalendarElements();
-    const hasRequiredElements = container && hiddenInput && displayDiv && calendarDiv;
-    if (!hasRequiredElements) {
+    if (!container || !hiddenInput || !displayDiv || !calendarDiv) {
         return;
     }
 
+    closeCalendar(false);
+    selectedDeliveryDate = hiddenInput.value || null;
     const today = getCurrentDate();
     currentCalendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    try {
-        const initialCalendar = await fetchDeliveryCalendar(today.getFullYear(), today.getMonth() + 1);
-        const hasRecommendedDate = initialCalendar && initialCalendar.recommendedDate;
-        if (hasRecommendedDate) {
-            selectDeliveryDateByString(initialCalendar.recommendedDate);
-        }
-    } catch (error) {
-        if (typeof console !== 'undefined' && typeof console.error === 'function') {
-            console.error('Kan bezorgkalender niet laden', error);
-        }
-    }
+    const initializationVersion = calendarRenderVersion;
 
     attachDisplayToggleHandler(displayDiv, calendarDiv);
     attachCalendarDismissHandlers();
+    if (selectedDeliveryDate) {
+        selectDeliveryDateByString(selectedDeliveryDate);
+        return;
+    }
+
+    try {
+        const initialCalendar = await fetchDeliveryCalendar(today.getFullYear(), today.getMonth() + 1);
+        const initializationIsCurrent = initializationVersion === calendarRenderVersion;
+        if (initializationIsCurrent && !hiddenInput.value && initialCalendar?.recommendedDate) {
+            selectDeliveryDateByString(initialCalendar.recommendedDate);
+        }
+    } catch (error) {
+        console.error('Kan bezorgkalender niet laden', error);
+    }
+}
+
+function focusCalendarDay(dateString) {
+    const calendarDiv = getElementById('deliveryCalendar');
+    const buttons = calendarDiv?.querySelectorAll?.('.delivery-day-cell[data-arg-date]') || [];
+    let target;
+    for (const button of buttons) {
+        const matchesDate = button.dataset.argDate === dateString;
+        button.tabIndex = matchesDate ? 0 : -1;
+        if (matchesDate) {
+            target = button;
+        }
+    }
+    focusedDeliveryDate = dateString;
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
 }
 
 export async function openCalendar() {
-    const calendarDiv = getElementById('deliveryCalendar');
+    const { calendarDiv, displayDiv } = getCalendarElements();
     if (!calendarDiv) {
         return;
     }
 
-    await generateCalendar(currentCalendarDate);
     calendarDiv.style.display = 'block';
     calendarDiv.classList.add('is-open');
+    displayDiv?.setAttribute?.('aria-expanded', 'true');
+    const openingDate = selectedDeliveryDate ? new Date(`${selectedDeliveryDate}T12:00:00`) : currentCalendarDate;
+    const rendering = generateCalendar(openingDate);
+    const openingVersion = calendarRenderVersion;
+    const rendered = await rendering;
+    if (openingVersion !== calendarRenderVersion || !calendarDiv.classList.contains('is-open')) {
+        return;
+    }
+    if (rendered) {
+        focusCalendarDay(focusedDeliveryDate);
+    } else {
+        calendarDiv.focus?.({ preventScroll: true });
+    }
     queueCalendarPositioning();
 }
 
-export function closeCalendar() {
-    const calendarDiv = getElementById('deliveryCalendar');
+export function closeCalendar(restoreFocus = true) {
+    calendarRenderVersion += 1;
+    const { calendarDiv, displayDiv } = getCalendarElements();
     if (!calendarDiv) {
         return;
     }
 
+    const wasOpen = calendarDiv.classList.contains('is-open');
     calendarDiv.style.display = 'none';
     calendarDiv.classList.remove('is-open');
     calendarDiv.classList.remove('align-top');
+    calendarDiv.removeAttribute?.('aria-busy');
+    displayDiv?.setAttribute?.('aria-expanded', 'false');
+    if (wasOpen && restoreFocus) {
+        displayDiv?.focus?.({ preventScroll: true });
+    }
 }
 
 export function handleCalendarResize() {
@@ -388,8 +446,15 @@ export function positionCalendarWithinViewport() {
     }
 
     calendarDiv.classList.remove('align-top');
+    calendarDiv.style.marginLeft = '';
     const rect = calendarDiv.getBoundingClientRect();
     const viewportHeight = windowRef.innerHeight;
+
+    if (windowRef.innerWidth > 768) {
+        const overflowRight = Math.max(0, rect.right - windowRef.innerWidth + 8);
+        const overflowLeft = Math.max(0, 8 - rect.left);
+        calendarDiv.style.marginLeft = `${overflowLeft - overflowRight}px`;
+    }
 
     const bottomOverflow = rect.bottom - viewportHeight;
     const hasSpaceAbove = rect.top > rect.height + 16;
@@ -413,94 +478,127 @@ export function positionCalendarWithinViewport() {
     }
 }
 
-export async function generateCalendar(startDate) {
+function buildCalendarHeader(year, month) {
+    const monthLabel = escapeCalendarText(`${getMonthNames()[month - 1]} ${year}`);
+    const previousLabel = escapeCalendarText(translateDelivery('delivery.previousMonth', {}, 'Vorige maand'));
+    const nextLabel = escapeCalendarText(translateDelivery('delivery.nextMonth', {}, 'Volgende maand'));
+    return `<div class="delivery-calendar-header">
+        <h3 id="deliveryCalendarMonth" class="calendar-month" aria-live="polite">${monthLabel}</h3>
+        <div class="delivery-calendar-navigation">
+            <button type="button" class="calendar-nav" data-action="navigate-delivery-calendar" data-action-event="click" data-arg-direction="-1" aria-label="${previousLabel}"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m12 5-5 5 5 5"/></svg></button>
+            <button type="button" class="calendar-nav" data-action="navigate-delivery-calendar" data-action-event="click" data-arg-direction="1" aria-label="${nextLabel}"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m8 5 5 5-5 5"/></svg></button>
+        </div>
+    </div>`;
+}
+
+function buildCalendarFooter(recommendedDate) {
+    const parts = ['<div class="delivery-calendar-footer">'];
+    if (recommendedDate) {
+        const date = new Date(`${recommendedDate}T12:00:00`);
+        const shortDate = `${getShortDayNames()[date.getDay()]} ${date.getDate()} ${getMonthNames()[date.getMonth()].slice(0, 3)}`;
+        const label = translateDelivery('delivery.firstAvailable', {}, 'Eerst beschikbaar');
+        parts.push(`<button type="button" class="delivery-quick-btn" data-action="select-recommended-delivery-date" data-action-event="click" data-arg-date="${escapeCalendarText(recommendedDate)}">${escapeCalendarText(label)}: ${escapeCalendarText(shortDate)}</button>`);
+    }
+    const hint = translateDelivery('delivery.unavailableHint', {}, 'Doorgestreepte dagen zijn niet beschikbaar.');
+    parts.push(`<p id="deliveryCalendarHint" class="delivery-calendar-hint">${escapeCalendarText(hint)}</p></div>`);
+    return parts.join('');
+}
+
+function buildCalendarGrid(calendarData, year, month, tabDate) {
+    const parts = ['<div class="delivery-calendar-grid" role="grid" aria-labelledby="deliveryCalendarMonth" aria-describedby="deliveryCalendarHint">'];
+    const shortDays = getShortDayNames();
+    const fullDays = getDayNames();
+    parts.push('<div class="delivery-calendar-row" role="row">');
+    for (const index of [1, 2, 3, 4, 5, 6, 0]) {
+        parts.push(`<div class="delivery-day-header" role="columnheader" aria-label="${escapeCalendarText(fullDays[index])}">${escapeCalendarText(shortDays[index])}</div>`);
+    }
+    parts.push('</div><div class="delivery-calendar-row" role="row">');
+    const firstDayOfWeek = (new Date(year, month - 1, 1, 12).getDay() + 6) % 7;
+    for (let index = 0; index < firstDayOfWeek; index += 1) {
+        parts.push('<div class="delivery-calendar-cell empty" role="gridcell"></div>');
+    }
+    calendarData.days.forEach((dayItem, index) => {
+        const isSelected = dayItem.date === selectedDeliveryDate;
+        const isRecommended = dayItem.date === calendarData.recommendedDate;
+        const cellClass = buildDayCellClass(dayItem, isSelected);
+        const label = escapeCalendarText(buildDayCellAriaLabel(dayItem, isSelected, isRecommended));
+        const attributes = buildDayCellAttributes(dayItem, tabDate);
+        parts.push(`<div class="delivery-calendar-cell" role="gridcell" aria-selected="${isSelected}"><button class="${cellClass}" ${attributes.join(' ')} aria-label="${label}"><span class="day-number">${escapeCalendarText(dayItem.day)}</span></button></div>`);
+        const endOfWeek = (firstDayOfWeek + index + 1) % 7 === 0;
+        if (endOfWeek && index < calendarData.days.length - 1) {
+            parts.push('</div><div class="delivery-calendar-row" role="row">');
+        }
+    });
+    const trailingCells = (7 - (firstDayOfWeek + calendarData.days.length) % 7) % 7;
+    for (let index = 0; index < trailingCells; index += 1) {
+        parts.push('<div class="delivery-calendar-cell empty" role="gridcell"></div>');
+    }
+    parts.push('</div></div>');
+    return parts.join('');
+}
+
+export async function generateCalendar(startDate, preferredFocusDate = null) {
     const calendarDiv = getElementById('deliveryCalendar');
     if (!calendarDiv) {
-        return;
+        return false;
     }
 
     const year = startDate.getFullYear();
     const month = startDate.getMonth() + 1;
-
+    const renderVersion = ++calendarRenderVersion;
+    currentCalendarDate = new Date(year, month - 1, 1);
+    calendarDiv.setAttribute?.('aria-busy', 'true');
     let calendarData;
     try {
         calendarData = await fetchDeliveryCalendar(year, month);
     } catch (_error) {
-        calendarDiv.innerHTML = buildCalendarErrorMarkup();
-        return;
-    }
-
-    currentCalendarDate = new Date(year, month - 1, 1);
-
-    const selectedDate = selectedDeliveryDate;
-    const recommendedDate = calendarData.recommendedDate;
-
-    const markupParts = [];
-    markupParts.push('<div class="delivery-calendar-content">');
-    markupParts.push('<div class="delivery-quick-buttons">');
-    markupParts.push('<button type="button" class="delivery-quick-btn" data-action="select-recommended-delivery-date" aria-label="Selecteer eerst beschikbare datum"><span aria-hidden="true">★</span> Eerst beschikbare</button>');
-    markupParts.push('</div>');
-
-    markupParts.push('<div class="delivery-calendar-header">');
-    markupParts.push('<button type="button" class="calendar-nav" data-action="navigate-delivery-calendar" data-arg-direction="-1" aria-label="Vorige maand"><span aria-hidden="true">&lsaquo;</span></button>');
-    markupParts.push(`<span class="calendar-month" aria-live="polite">${calendarData.monthLabel}</span>`);
-    markupParts.push('<button type="button" class="calendar-nav" data-action="navigate-delivery-calendar" data-arg-direction="1" aria-label="Volgende maand"><span aria-hidden="true">&rsaquo;</span></button>');
-    markupParts.push('</div>');
-
-    markupParts.push('<div class="delivery-calendar-grid">');
-    DAY_HEADERS.forEach((dayLabel) => {
-        markupParts.push(`<div class="delivery-day-header">${dayLabel}</div>`);
-    });
-
-    const firstOfMonth = new Date(`${year}-${String(month).padStart(2, '0')}-01T12:00:00`);
-    let firstDayOfWeek = firstOfMonth.getDay() - 1;
-    if (firstDayOfWeek === -1) {
-        firstDayOfWeek = 6;
-    }
-
-    for (let index = 0; index < firstDayOfWeek; index += 1) {
-        markupParts.push('<div class="delivery-day-cell empty"></div>');
-    }
-
-    calendarData.days.forEach((dayItem) => {
-        const isSelected = dayItem.date === selectedDate;
-        const isRecommended = dayItem.date === recommendedDate;
-        const dayCellClass = buildDayCellClass(dayItem, isSelected, isRecommended);
-        const dayCellAriaLabel = buildDayCellAriaLabel(dayItem, isSelected, isRecommended);
-        const dayCellAttributes = buildDayCellAttributes(dayItem);
-
-        dayCellAttributes.push(`title="${dayItem.title}"`);
-        dayCellAttributes.push(`aria-label="${dayCellAriaLabel}"`);
-
-        markupParts.push(`<div class="${dayCellClass}" ${dayCellAttributes.join(' ')}>`);
-        markupParts.push(`<div class="day-number">${dayItem.day}</div>`);
-        markupParts.push(`<div class="day-name">${dayItem.weekdayShort}</div>`);
-        if (isRecommended && !isSelected) {
-            markupParts.push('<div class="day-badge recommended-badge" aria-hidden="true">Aanr.</div>');
+        if (renderVersion === calendarRenderVersion) {
+            renderedCalendarDays.clear();
+            renderedRecommendedDate = null;
+            calendarDiv.innerHTML = buildCalendarHeader(year, month) + buildCalendarErrorMarkup();
+            calendarDiv.removeAttribute?.('aria-busy');
         }
-        if (!dayItem.available && !dayItem.past) {
-            markupParts.push('<div class="day-badge unavailable-badge" aria-hidden="true">X</div>');
-        }
-        markupParts.push('</div>');
-    });
+        return false;
+    }
+    if (renderVersion !== calendarRenderVersion) {
+        return false;
+    }
 
-    markupParts.push('</div>');
-    markupParts.push('</div>');
-
-    calendarDiv.innerHTML = markupParts.join('');
+    renderedCalendarDays = new Map(calendarData.days.map((day) => [day.date, day]));
+    renderedRecommendedDate = calendarData.recommendedDate;
+    const candidates = [preferredFocusDate, selectedDeliveryDate, calendarData.recommendedDate];
+    const matchingDate = candidates.find((date) => renderedCalendarDays.has(date));
+    const firstAvailable = calendarData.days.find((day) => day.available && !day.past);
+    focusedDeliveryDate = matchingDate || firstAvailable?.date || calendarData.days[0]?.date;
+    calendarDiv.innerHTML = '<div class="delivery-calendar-content">'
+        + buildCalendarHeader(year, month)
+        + buildCalendarGrid(calendarData, year, month, focusedDeliveryDate)
+        + buildCalendarFooter(calendarData.recommendedDate)
+        + '</div>';
+    calendarDiv.removeAttribute?.('aria-busy');
+    return true;
 }
 
 export async function navigateCalendar(direction, event) {
     stopEventPropagation(event);
-
     const numericDirection = Number(direction);
-    const hasValidDirection = Number.isFinite(numericDirection) && numericDirection !== 0;
-    if (!hasValidDirection) {
+    if (!Number.isInteger(numericDirection) || numericDirection === 0) {
         return;
     }
 
-    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + numericDirection);
-    await generateCalendar(currentCalendarDate);
+    const calendarDiv = getElementById('deliveryCalendar');
+    const focusWasInside = calendarDiv?.contains?.(getDocumentRef()?.activeElement);
+    const nextMonth = new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() + numericDirection, 1);
+    const rendering = generateCalendar(nextMonth);
+    const navigationVersion = calendarRenderVersion;
+    await rendering;
+    if (navigationVersion !== calendarRenderVersion) {
+        return;
+    }
+    if (focusWasInside && calendarDiv?.classList.contains('is-open')) {
+        calendarDiv.querySelector?.(`[data-arg-direction="${numericDirection}"]`)?.focus({ preventScroll: true });
+    }
+    queueCalendarPositioning();
 }
 
 export function selectDeliveryDate(date) {
@@ -514,7 +612,8 @@ export function selectDeliveryDate(date) {
     const dateValue = formatDateInputValue(date);
     selectedDeliveryDate = dateValue;
     hiddenInput.value = dateValue;
-    displayDiv.textContent = formatDeliveryDateLabel(dateValue);
+    const valueElement = displayDiv.querySelector?.('.delivery-date-value') || displayDiv;
+    valueElement.textContent = formatDeliveryDateLabel(dateValue);
     displayDiv.classList.add('selected');
     closeCalendar();
 }
@@ -531,23 +630,58 @@ export function selectDeliveryDateByString(dateStr, event) {
     selectDeliveryDate(date);
 }
 
-export function handleDayCellKeydown(event, dateStr) {
-    if (!isActivationKey(event)) {
+export async function handleDayCellKeydown(event, dateStr) {
+    const date = new Date(`${dateStr}T12:00:00`);
+    const weekday = (date.getDay() + 6) % 7;
+    const dayOffsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7, Home: -weekday, End: 6 - weekday };
+    const isMonthNavigation = event.key === 'PageUp' || event.key === 'PageDown';
+    if (!Object.hasOwn(dayOffsets, event.key) && !isMonthNavigation) {
+        return;
+    }
+    event.preventDefault();
+    stopEventPropagation(event);
+    if (isMonthNavigation) {
+        const monthOffset = event.key === 'PageUp' ? -1 : 1;
+        const targetMonth = new Date(date.getFullYear(), date.getMonth() + monthOffset, 1, 12);
+        const lastDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
+        date.setDate(1);
+        date.setFullYear(targetMonth.getFullYear(), targetMonth.getMonth(), Math.min(Number(dateStr.slice(-2)), lastDay));
+    } else {
+        date.setDate(date.getDate() + dayOffsets[event.key]);
+    }
+    const targetDate = formatDateInputValue(date);
+    const changesMonth = date.getMonth() !== currentCalendarDate.getMonth() || date.getFullYear() !== currentCalendarDate.getFullYear();
+    if (changesMonth && !await generateCalendar(date, targetDate)) {
+        return;
+    }
+    const calendarDiv = getElementById('deliveryCalendar');
+    if (calendarDiv?.classList.contains('is-open')) {
+        focusCalendarDay(targetDate);
+        queueCalendarPositioning();
+    }
+}
+
+export async function selectRecommendedDate(event, displayedDate = null) {
+    stopEventPropagation(event);
+    if (displayedDate) {
+        if (displayedDate === renderedRecommendedDate) {
+            selectDeliveryDateByString(displayedDate);
+        }
         return;
     }
 
-    if (typeof event.preventDefault === 'function') {
-        event.preventDefault();
-    }
-    selectDeliveryDateByString(dateStr);
-}
-
-export async function selectRecommendedDate(event) {
-    stopEventPropagation(event);
-
     const year = currentCalendarDate.getFullYear();
     const month = currentCalendarDate.getMonth() + 1;
-    const calendarData = await fetchDeliveryCalendar(year, month);
+    const selectionVersion = calendarRenderVersion;
+    let calendarData;
+    try {
+        calendarData = await fetchDeliveryCalendar(year, month);
+    } catch (_error) {
+        return;
+    }
+    if (selectionVersion !== calendarRenderVersion) {
+        return;
+    }
     const hasRecommendedDate = calendarData && calendarData.recommendedDate;
     if (!hasRecommendedDate) {
         return;
@@ -611,8 +745,8 @@ export function registerDeliveryDatePickerSlice(actionRouter) {
     }
 
     actionRouter.registerMany({
-        'select-recommended-delivery-date': (_payload, context) => {
-            void selectRecommendedDate(context.event);
+        'select-recommended-delivery-date': (payload = {}, context) => {
+            void selectRecommendedDate(context.event, payload.date);
         },
         'navigate-delivery-calendar': (payload = {}, context) => {
             const direction = Number(payload.direction);
@@ -628,20 +762,16 @@ export function registerDeliveryDatePickerSlice(actionRouter) {
                 return;
             }
 
-            const isKeyboardEvent = context && context.event && context.event.type === 'keydown';
-            if (!isKeyboardEvent) {
-                selectDeliveryDateByString(payload.date, context.event);
+            const isKeyboardEvent = context?.event?.type === 'keydown';
+            if (isKeyboardEvent) {
+                void handleDayCellKeydown(context.event, payload.date);
                 return;
             }
-
-            if (!isActivationKey(context.event)) {
+            const day = renderedCalendarDays.get(payload.date);
+            if (!day || day.past || !day.available) {
                 return;
             }
-
-            if (typeof context.event.preventDefault === 'function') {
-                context.event.preventDefault();
-            }
-            selectDeliveryDateByString(payload.date);
+            selectDeliveryDateByString(payload.date, context.event);
         }
     });
 }
@@ -656,5 +786,9 @@ export function __resetDeliveryDatePickerForTests() {
     deliveryCalendarCache.clear();
     currentCalendarDate = getCurrentDate();
     selectedDeliveryDate = null;
+    focusedDeliveryDate = null;
+    renderedCalendarDays.clear();
+    renderedRecommendedDate = null;
+    calendarRenderVersion += 1;
     configureDeliveryDatePickerRuntimeForTests();
 }

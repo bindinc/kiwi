@@ -133,10 +133,47 @@ async function runNoDuplicateTopLevelFunctionGuardrail() {
 async function main() {
     const noInlinePasses = await runNoInlineHandlerGuardrail();
     const noDuplicatePasses = await runNoDuplicateTopLevelFunctionGuardrail();
+    const themePasses = await runThemePaletteGuardrail();
 
-    if (!noInlinePasses || !noDuplicatePasses) {
+    if (!noInlinePasses || !noDuplicatePasses || !themePasses) {
         process.exitCode = 1;
     }
+}
+
+async function runThemePaletteGuardrail() {
+    const paletteHex = /#(?:f0eee9|c7e2c8|7ab6d9|d5cd94|a693ac|999393|756f6b|496275)\b/gi;
+    const rawReference = /var\(\s*--palette-[\w-]+/g;
+    const legacyToken = /--(?:primary-color|primary-hover|secondary-color|success-color|danger-color|warning-color|bg-primary|bg-secondary|text-primary|text-secondary|border-color|decorative-line)\b/g;
+    const files = (await Promise.all(['assets', 'templates', 'src'].map(directory =>
+        collectFiles(path.join(repoRoot, directory), new Set(['.css', '.js', '.mjs', '.twig', '.php']))
+    ))).flat();
+    const violations = [];
+
+    for (const file of files) {
+        const relative = path.relative(repoRoot, file);
+        const source = await fs.readFile(file, 'utf8');
+        const root = relative === 'assets/css/styles.css' ? /:root\s*\{[^}]*\}/.exec(source) : null;
+        for (const [pattern, reason] of [[paletteHex, 'raw palette value'], [rawReference, 'raw palette reference'], [legacyToken, 'legacy theme token']]) {
+            pattern.lastIndex = 0;
+            for (const match of source.matchAll(pattern)) {
+                const insideTokenLayer = root && match.index >= root.index && match.index < root.index + root[0].length;
+                const line = source.slice(source.lastIndexOf('\n', match.index) + 1, match.index);
+                const canonicalDeclaration = /--palette-[\w-]+\s*:\s*$/.test(line);
+                const permitted = insideTokenLayer && (
+                    (pattern === paletteHex && canonicalDeclaration) || pattern === rawReference
+                );
+                if (!permitted) violations.push(`${relative}:${lineNumberAt(source, match.index)} (${reason}: ${match[0]})`);
+            }
+        }
+    }
+
+    if (violations.length === 0) {
+        console.log('[guardrail:theme-palette] ok');
+        return true;
+    }
+    console.error('[guardrail:theme-palette] use semantic tokens; declare palette values only in the root token layer:');
+    for (const violation of violations) console.error(`- ${violation}`);
+    return false;
 }
 
 main().catch((error) => {

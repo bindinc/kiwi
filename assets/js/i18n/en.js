@@ -723,6 +723,15 @@ const en = {
         "returnPossibleUntilLabel": "Return possible until"
     },
     "delivery": {
+        "calendarLoadFailed": "Unable to load calendar",
+        "pastDate": "past date",
+        "unavailableDate": "unavailable",
+        "selectedDate": "selected",
+        "availableDate": "available",
+        "previousMonth": "Previous month",
+        "nextMonth": "Next month",
+        "firstAvailable": "First available",
+        "unavailableHint": "Crossed-out dates are unavailable.",
         "remarksSaved": "Delivery preferences saved!",
         "saveFailed": "Saving delivery preferences via backend failed",
         "remarkPresets": {

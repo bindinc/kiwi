@@ -1,0 +1,2839 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="Standalone design showcase for KIWI's proposed Pantone Light &amp; Shadow default theme palette.">
+    <title>KIWI — Light &amp; Shadow theme palette showcase</title>
+    <link rel="icon" href="data:,">
+    <style>
+        :root {
+            color-scheme: light;
+
+            --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+            /* Canonical Light & Shadow sRGB screen approximations. */
+            --cloud-dancer: #f0eee9;
+            --veiled-vista: #c7e2c8;
+            --baltic-sea: #7ab6d9;
+            --golden-mist: #d5cd94;
+            --quiet-violet: #a693ac;
+            --cloud-cover: #999393;
+            --hematite: #756f6b;
+            --blue-fusion: #496275;
+
+            /* Supporting accessibility and semantic colors. */
+            --ink: #0f172a;
+            --white: #ffffff;
+            --success: #087f5b;
+            --warning: #a16207;
+            --danger: #b42318;
+
+            /* Proposed default-theme roles. */
+            --page: var(--cloud-dancer);
+            --surface: var(--white);
+            --surface-calm: var(--veiled-vista);
+            --text: var(--ink);
+            --text-palette: var(--blue-fusion);
+            --action: var(--blue-fusion);
+            --action-secondary: var(--hematite);
+            --focus: var(--blue-fusion);
+            --action-hover: #354c5e;
+            --control-border: #768894;
+            --text-muted: #475569;
+            --surface-info: var(--baltic-sea);
+            --surface-attention: var(--golden-mist);
+            --surface-group: var(--quiet-violet);
+            --surface-disabled: var(--cloud-cover);
+            --decorative-line: rgba(117, 111, 107, 0.28);
+            --shadow: none;
+            --shadow-small: none;
+            --radius-large: 4px;
+            --radius-medium: 4px;
+            --radius-small: 4px;
+
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            --space-12: 48px;
+            --page-gutter: var(--space-6);
+            --panel-padding: var(--space-5);
+            --workspace-padding: var(--space-4);
+            --section-gap: var(--space-12);
+            --heading-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+            --context-width: 240px;
+            --control-height: 40px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: auto;
+            scroll-padding-top: 96px;
+        }
+
+        body {
+            min-width: 320px;
+            margin: 0;
+            background: var(--page);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 1rem;
+            font-optical-sizing: auto;
+            font-synthesis: none;
+            line-height: 1.55;
+        }
+
+        a {
+            color: var(--blue-fusion);
+            text-underline-offset: 0.2em;
+        }
+
+        a:hover {
+            text-decoration-thickness: 0.14em;
+        }
+
+        button,
+        input,
+        select {
+            font: inherit;
+        }
+
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        summary:focus-visible,
+        a:focus-visible {
+            outline: 3px solid var(--focus);
+            outline-offset: 3px;
+        }
+
+        .skip-link {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 20;
+            padding: var(--space-3) var(--space-4);
+            border-radius: 8px;
+            background: var(--white);
+            color: var(--ink);
+            box-shadow: var(--shadow-small);
+            transform: translateY(-180%);
+        }
+
+        .skip-link:focus {
+            transform: translateY(0);
+        }
+
+        .page-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+            background: var(--action);
+            color: var(--white);
+        }
+
+        .header-inner {
+            display: flex;
+            width: min(1440px, calc(100% - var(--page-gutter) - var(--page-gutter)));
+            min-height: 64px;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-6);
+            margin: 0 auto;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            color: var(--white);
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            display: grid;
+            width: 38px;
+            height: 38px;
+            border: 2px solid rgba(255, 255, 255, 0.75);
+            border-radius: 4px;
+            background: var(--cloud-dancer);
+            color: var(--blue-fusion);
+            font-size: 0.78rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            place-items: center;
+        }
+
+        .brand-copy strong,
+        .brand-copy span {
+            display: block;
+        }
+
+        .brand-copy strong {
+            font-size: 0.96rem;
+            letter-spacing: 0.06em;
+        }
+
+        .brand-copy span {
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 0.8125rem;
+        }
+
+        .header-nav {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: var(--space-2);
+        }
+
+        .header-nav a {
+            padding: var(--space-2) var(--space-3);
+            border-radius: 0;
+            color: var(--white);
+            font-size: 0.875rem;
+            text-decoration: none;
+        }
+
+        .header-nav a:hover {
+            background: rgba(255, 255, 255, 0.13);
+        }
+
+        main {
+            width: min(1440px, calc(100% - var(--page-gutter) - var(--page-gutter)));
+            margin: 0 auto;
+            padding: var(--space-8) 0 var(--space-12);
+        }
+
+        main > section + section {
+            margin-top: var(--section-gap);
+        }
+
+        .hero {
+            display: block;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-3);
+            margin: 0 0 var(--space-2);
+            color: var(--blue-fusion);
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .eyebrow::before {
+            width: 30px;
+            height: 4px;
+            border-radius: 999px;
+            background: var(--golden-mist);
+            content: "";
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin-top: 0;
+        }
+
+        h1 {
+            max-width: 760px;
+            margin-bottom: var(--space-3);
+            color: var(--blue-fusion);
+            font-size: 2rem;
+            line-height: 1.2;
+            letter-spacing: -0.025em;
+        }
+
+        h1 span {
+            display: inline;
+            color: var(--text-palette);
+            font-weight: 600;
+        }
+
+        .lede {
+            max-width: 76ch;
+            margin-bottom: var(--space-3);
+            color: #334155;
+            font-size: 1rem;
+        }
+
+        .plan-only {
+            display: block;
+            align-items: center;
+            gap: var(--space-2);
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            color: var(--blue-fusion);
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .plan-only::before {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--golden-mist);
+            box-shadow: 0 0 0 4px rgba(213, 205, 148, 0.25);
+            content: none;
+        }
+
+        .section-heading {
+            display: grid;
+            grid-template-columns: var(--heading-columns);
+            gap: var(--space-6);
+            align-items: start;
+            margin-bottom: var(--space-6);
+        }
+
+        .section-heading h2 {
+            margin-bottom: 0;
+            color: var(--blue-fusion);
+            font-size: 1.5rem;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
+        }
+
+        .section-heading p {
+            max-width: 680px;
+            margin: 0;
+            color: #475569;
+        }
+
+        .palette-ribbon {
+            display: grid;
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            min-height: 24px;
+            overflow: hidden;
+            border: 0;
+            border-radius: 0;
+            box-shadow: var(--shadow-small);
+        }
+
+        .palette-ribbon span {
+            min-width: 0;
+        }
+
+        .tone-cloud-dancer { background: var(--cloud-dancer); }
+        .tone-veiled-vista { background: var(--veiled-vista); }
+        .tone-baltic-sea { background: var(--baltic-sea); }
+        .tone-golden-mist { background: var(--golden-mist); }
+        .tone-quiet-violet { background: var(--quiet-violet); }
+        .tone-cloud-cover { background: var(--cloud-cover); }
+        .tone-hematite { background: var(--hematite); }
+        .tone-blue-fusion { background: var(--blue-fusion); }
+
+        .swatch-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: var(--space-4);
+            margin-top: var(--space-4);
+        }
+
+        .swatch {
+            overflow: hidden;
+            border: 0;
+            border-radius: var(--radius-medium);
+            background: var(--white);
+            box-shadow: var(--shadow-small);
+        }
+
+        .swatch:hover {
+            box-shadow: none;
+            transform: none;
+        }
+
+        .swatch-color {
+            display: flex;
+            min-height: 72px;
+            align-items: flex-start;
+            justify-content: space-between;
+            padding: var(--space-4);
+        }
+
+        .swatch-index,
+        .swatch-family {
+            padding: var(--space-1) var(--space-2);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.72);
+            color: var(--ink);
+            font-size: 0.66rem;
+            font-weight: 850;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .swatch--dark .swatch-index,
+        .swatch--dark .swatch-family {
+            background: rgba(15, 23, 42, 0.32);
+            color: var(--white);
+        }
+
+        .swatch-copy {
+            min-height: 0;
+            padding: var(--space-4);
+        }
+
+        .swatch-copy h3 {
+            margin-bottom: var(--space-1);
+            color: var(--blue-fusion);
+            font-size: 1.12rem;
+        }
+
+        .pantone-code {
+            margin-bottom: var(--space-3);
+            color: var(--text-muted);
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .color-value {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: var(--space-3);
+            margin-bottom: var(--space-2);
+            padding-top: var(--space-2);
+            border-top: 1px solid #e2e8f0;
+            margin: 0;
+            padding: var(--space-2) 0;
+        }
+
+        .color-value span {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .color-value code {
+            color: var(--ink);
+            font-size: 0.88rem;
+            font-weight: 800;
+        }
+
+        .role {
+            margin: var(--space-3) 0 0;
+            color: #475569;
+            font-size: 0.82rem;
+        }
+
+        .preview-shell {
+            /* Existing Bindinc identity accents frame, but do not replace, the Pantone theme tokens. */
+            --preview-ink: var(--ink);
+            --preview-brand: #00b279;
+            --preview-rule: rgba(73, 98, 117, 0.2);
+            --preview-rule-strong: rgba(73, 98, 117, 0.42);
+            --preview-control-rule: var(--control-border);
+            --preview-canvas: color-mix(in srgb, var(--cloud-dancer) 72%, var(--white));
+            --preview-data-surface: color-mix(in srgb, var(--blue-fusion) 8%, var(--white));
+            --preview-selected-surface: color-mix(in srgb, var(--veiled-vista) 58%, var(--white));
+            --preview-label-surface: color-mix(in srgb, var(--golden-mist) 58%, var(--white));
+            --preview-info-surface: color-mix(in srgb, var(--baltic-sea) 30%, var(--white));
+            --preview-attention-surface: color-mix(in srgb, var(--golden-mist) 38%, var(--white));
+            --preview-workflow-surface: color-mix(in srgb, var(--quiet-violet) 26%, var(--white));
+            --preview-circle: color-mix(in srgb, var(--blue-fusion) 10%, transparent);
+            --preview-circle-brand: color-mix(in srgb, var(--preview-brand) 12%, transparent);
+            --preview-font: var(--font-ui);
+            --preview-weight-regular: 400;
+            --preview-weight-medium: 600;
+            --preview-weight-strong: 700;
+
+            overflow: hidden;
+            border: 1px solid var(--preview-rule-strong);
+            border-radius: 0;
+            background: var(--white);
+            box-shadow: none;
+            font-family: var(--preview-font);
+            font-size: 0.9375rem;
+            font-synthesis: none;
+            line-height: 1.4;
+        }
+
+        .preview-topbar {
+            display: flex;
+            min-height: 60px;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-5);
+            padding: var(--space-3) var(--panel-padding);
+            border-bottom: 2px solid var(--preview-brand);
+            background: var(--action);
+            color: var(--white);
+        }
+
+        .preview-brand {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: 1rem;
+            font-weight: var(--preview-weight-strong);
+            letter-spacing: 0.015em;
+            line-height: 1.1;
+        }
+
+        .preview-brand::before {
+            width: 12px;
+            height: 12px;
+            flex: 0 0 auto;
+            border: 2px solid var(--white);
+            border-radius: 50%;
+            background: var(--preview-brand);
+            content: "";
+        }
+
+        .preview-version {
+            color: var(--white);
+            font-size: 0.8125rem;
+            font-weight: var(--preview-weight-regular);
+            letter-spacing: 0;
+            line-height: 1.2;
+        }
+
+        .agent {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: 0.8125rem;
+            font-weight: var(--preview-weight-regular);
+            line-height: 1.2;
+        }
+
+        .agent-avatar {
+            display: grid;
+            width: 36px;
+            height: 36px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            background: var(--page);
+            color: var(--action);
+            font-weight: var(--preview-weight-medium);
+            place-items: center;
+        }
+
+        .agent-state {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .agent-state::before {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--preview-brand);
+            content: "";
+        }
+
+        .preview-body {
+            display: grid;
+            grid-template-columns: var(--context-width) minmax(0, 1fr);
+            min-height: 0;
+            background: var(--preview-canvas);
+        }
+
+        .preview-sidebar {
+            padding: var(--panel-padding);
+            border-right: 1px solid var(--preview-rule);
+            background: var(--white);
+        }
+
+        .preview-sidebar h3 {
+            margin-bottom: var(--space-4);
+            padding-bottom: 0;
+            border-bottom: 0;
+            color: var(--preview-ink);
+            font-size: 0.9375rem;
+            font-weight: var(--preview-weight-medium);
+            letter-spacing: 0;
+            line-height: 1.25;
+            text-transform: none;
+        }
+
+        .search-label {
+            display: block;
+            margin-bottom: var(--space-2);
+            color: var(--preview-ink);
+            font-size: 0.8125rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.3;
+        }
+
+        .search-input {
+            width: 100%;
+            min-height: var(--control-height);
+            padding: 0 var(--space-3);
+            border: 1px solid var(--preview-control-rule);
+            border-radius: 0;
+            background: var(--white);
+            color: var(--ink);
+            line-height: 1.3;
+        }
+
+        .search-button {
+            width: 100%;
+            min-height: var(--control-height);
+            margin-top: var(--space-2);
+            border: 1px solid var(--action);
+            border-radius: 0;
+            background: rgba(73, 98, 117, 0.06);
+            color: var(--action);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.2;
+            padding: var(--space-2) var(--space-3);
+        }
+
+        .sidebar-result {
+            margin-top: var(--space-4);
+            padding: var(--space-3) var(--space-4);
+            border: 0;
+            border-left: 2px solid var(--action);
+            border-radius: 0;
+            background: var(--preview-selected-surface);
+        }
+
+        .sidebar-result strong,
+        .sidebar-result span {
+            display: block;
+        }
+
+        .sidebar-result strong {
+            color: var(--preview-ink);
+            font-size: 0.9375rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.3;
+        }
+
+        .sidebar-result span {
+            margin-top: var(--space-1);
+            color: #475569;
+            font-size: 0.8125rem;
+            line-height: 1.35;
+        }
+
+        .preview-main {
+            padding: var(--workspace-padding);
+            background-color: var(--preview-canvas);
+        }
+
+        .customer-card {
+            overflow: hidden;
+            border: 1px solid var(--preview-rule-strong);
+            border-radius: 0;
+            background: var(--white);
+            box-shadow: none;
+        }
+
+        .customer-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: var(--space-4);
+            padding: var(--panel-padding);
+            border-bottom: 1px solid var(--preview-rule);
+            background: var(--white);
+        }
+
+        .customer-header h3 {
+            margin-bottom: var(--space-1);
+            color: var(--preview-ink);
+            font-size: 1.375rem;
+            font-weight: var(--preview-weight-strong);
+            letter-spacing: -0.01em;
+            line-height: 1.15;
+        }
+
+        .customer-header p {
+            margin-bottom: 0;
+            color: var(--text-muted);
+            font-size: 0.8125rem;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.4;
+        }
+
+        .customer-label {
+            padding: var(--space-1) var(--space-2);
+            border: 1px solid var(--preview-rule-strong);
+            border-radius: 0;
+            background: var(--preview-label-surface);
+            color: var(--preview-ink);
+            font-size: 0.75rem;
+            font-weight: var(--preview-weight-medium);
+            letter-spacing: 0;
+            line-height: 1.2;
+            text-transform: none;
+        }
+
+        .customer-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            column-gap: var(--space-6);
+            row-gap: 0;
+            padding: var(--space-1) var(--panel-padding);
+            background: var(--preview-data-surface);
+        }
+
+        .detail {
+            padding: var(--space-3) 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+        }
+
+        .detail:nth-child(n + 3) {
+            border-top: 1px solid var(--preview-rule);
+        }
+
+        .detail span,
+        .detail strong {
+            display: block;
+        }
+
+        .detail span {
+            margin-bottom: var(--space-1);
+            color: var(--action);
+            font-size: 0.8125rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.25;
+            text-transform: none;
+        }
+
+        .detail strong {
+            color: var(--ink);
+            font-size: 0.9375rem;
+            font-weight: var(--preview-weight-medium);
+            font-variant-numeric: tabular-nums;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .preview-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-2);
+            padding: var(--space-4) var(--panel-padding);
+            background: var(--white);
+        }
+
+        .button {
+            min-height: var(--control-height);
+            padding: var(--space-2) var(--space-4);
+            border: 2px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .preview-shell .button {
+            min-height: var(--control-height);
+            padding: var(--space-2) var(--space-3);
+            border-width: 1px;
+            border-radius: 0;
+            font-size: 0.875rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.2;
+        }
+
+        .preview-shell .button-primary {
+            border-color: var(--action);
+            background: var(--action);
+            color: var(--white);
+        }
+
+        .preview-shell .button-calm {
+            border-color: transparent;
+            background: transparent;
+            color: var(--action);
+            text-decoration: underline;
+            text-underline-offset: 0.2em;
+        }
+
+        .preview-shell .button-muted {
+            border-color: #cbd5e1;
+            background: #f1f5f9;
+            color: var(--text-muted);
+        }
+
+        .search-button:hover { background: var(--preview-data-surface); }
+        .button-primary:hover, .preview-shell .button-primary:hover {
+            background: var(--action-hover);
+        }
+
+        .button-secondary:hover {
+            background: rgba(117, 111, 107, 0.1);
+            color: var(--action-secondary);
+        }
+
+        .preview-shell .button-calm:hover {
+            background: rgba(73, 98, 117, 0.1);
+        }
+
+        .button-primary {
+            background: var(--action);
+            color: var(--white);
+        }
+
+        .button-secondary {
+            padding: var(--space-2) var(--space-3);
+            border: 1px solid var(--action-secondary);
+            border-radius: 0;
+            background: var(--white);
+            color: var(--action-secondary);
+            font-size: 0.875rem;
+            line-height: 1.2;
+        }
+
+        .button-calm {
+            border-color: var(--action);
+            background: var(--surface-calm);
+            color: var(--action);
+        }
+
+        .button-muted {
+            border-color: transparent;
+            background: #e2e8f0;
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .notice-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: var(--space-3);
+            margin-top: var(--space-4);
+        }
+
+        .notice {
+            min-height: 0;
+            padding: var(--space-3) var(--space-4);
+            border: 0;
+            border-left: 2px solid var(--notice-edge);
+            border-radius: 0;
+            background: var(--notice-tone);
+        }
+
+        .notice strong {
+            display: block;
+            padding: 0;
+            border-bottom: 0;
+            background: transparent;
+            color: var(--preview-ink);
+            font-size: 0.875rem;
+            font-weight: var(--preview-weight-medium);
+            letter-spacing: 0;
+            line-height: 1.25;
+            text-transform: none;
+        }
+
+        .notice p {
+            padding: 0;
+            margin: var(--space-1) 0 0;
+            color: var(--preview-ink);
+            font-size: 0.8125rem;
+            line-height: 1.45;
+        }
+
+        .notice-info {
+            --notice-edge: var(--action);
+            --notice-tone: var(--preview-info-surface);
+        }
+
+        .notice-attention {
+            --notice-edge: var(--action-secondary);
+            --notice-tone: var(--preview-attention-surface);
+        }
+
+        .notice-workflow {
+            --notice-edge: var(--action-secondary);
+            --notice-tone: var(--preview-workflow-surface);
+        }
+
+        .preview-example-heading {
+            display: grid;
+            grid-template-columns: var(--heading-columns);
+            align-items: start;
+            gap: var(--space-6);
+            margin: var(--section-gap) 0 var(--space-6);
+            padding-top: var(--space-6);
+            border-top: 1px solid var(--decorative-line);
+        }
+
+        .preview-example-heading h3 {
+            margin: 0;
+            color: var(--action);
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.035em;
+            line-height: 1.3;
+        }
+
+        .preview-example-heading p {
+            max-width: 68ch;
+            margin: 0;
+            color: #475569;
+        }
+
+        .subscription-workspace {
+            display: grid;
+            grid-template-columns: var(--context-width) minmax(0, 1fr);
+            background: var(--preview-canvas);
+        }
+
+        .subscription-context {
+            padding: var(--panel-padding);
+            border-right: 1px solid var(--preview-rule);
+            background: var(--white);
+        }
+
+        .subscription-context h3 {
+            margin: 0 0 var(--space-4);
+            color: var(--preview-ink);
+            font-size: 0.9375rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.25;
+        }
+
+        .subscription-context-list {
+            margin: 0;
+        }
+
+        .subscription-context-list div {
+            padding: var(--space-3) 0;
+            border-top: 1px solid var(--preview-rule);
+        }
+
+        .subscription-context-list dt {
+            color: var(--action);
+            font-size: 0.8125rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.25;
+        }
+
+        .subscription-context-list dd {
+            margin: var(--space-1) 0 0;
+            color: var(--preview-ink);
+            font-size: 0.9375rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.35;
+        }
+
+        .subscription-context-state {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .subscription-context-state::before {
+            content: none;
+        }
+
+        .subscription-context-note {
+            margin: var(--space-5) 0 0;
+            padding: var(--space-3) 0 0;
+            border-top: 1px solid var(--preview-rule);
+            color: #475569;
+            font-size: 0.8125rem;
+            line-height: 1.45;
+        }
+
+        .subscription-main {
+            padding: var(--workspace-padding);
+            background-color: var(--preview-canvas);
+        }
+
+        .subscription-form-panel {
+            overflow: hidden;
+            border: 1px solid var(--preview-rule-strong);
+            border-radius: 0;
+            background: var(--white);
+        }
+
+        .subscription-form-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: var(--space-4);
+            padding: var(--panel-padding);
+            border-bottom: 1px solid var(--preview-rule);
+            background: var(--white);
+        }
+
+        .subscription-form-header p {
+            margin: 0 0 var(--space-1);
+            color: var(--action);
+            font-size: 0.8125rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.25;
+        }
+
+        .subscription-form-header h3 {
+            margin: 0;
+            color: var(--preview-ink);
+            font-size: 1.375rem;
+            font-weight: var(--preview-weight-strong);
+            letter-spacing: -0.01em;
+            line-height: 1.15;
+        }
+
+        .subscription-draft-label {
+            padding: var(--space-1) var(--space-2);
+            border: 1px solid var(--preview-rule-strong);
+            background: var(--preview-label-surface);
+            color: var(--preview-ink);
+            font-size: 0.75rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.2;
+        }
+
+        .subscription-form-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+        }
+
+        .subscription-form-column {
+            min-width: 0;
+        }
+
+        .subscription-form-column + .subscription-form-column {
+            border-left: 1px solid var(--preview-rule);
+        }
+
+        .subscription-form-block {
+            min-width: 0;
+            margin: 0;
+            padding: var(--panel-padding);
+            border: 0;
+            border-bottom: 1px solid var(--preview-rule);
+        }
+
+        .subscription-form-column .subscription-form-block:last-child {
+            border-bottom: 0;
+        }
+
+        .subscription-form-block > h4,
+        .subscription-form-block > legend {
+            margin: 0 0 var(--space-3);
+            padding: 0;
+            color: var(--preview-ink);
+            font-size: 0.9375rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.25;
+        }
+
+        .subscription-form-block > legend {
+            float: left;
+            width: 100%;
+        }
+
+        .subscription-form-block > legend + * {
+            clear: both;
+        }
+
+        .subscription-fields {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--space-3);
+        }
+
+        .subscription-field {
+            min-width: 0;
+        }
+
+        .subscription-field--wide {
+            grid-column: 1 / -1;
+        }
+
+        .subscription-field > label,
+        .subscription-selection-channel > label {
+            display: block;
+            margin-bottom: var(--space-2);
+            color: var(--preview-ink);
+            font-size: 0.8125rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.3;
+        }
+
+        .subscription-preview input[type="text"],
+        .subscription-preview input[type="search"],
+        .subscription-preview input[type="date"],
+        .subscription-preview select {
+            width: 100%;
+            min-height: 40px;
+            padding: 0 var(--space-3);
+            border: 1px solid var(--preview-control-rule);
+            border-radius: 0;
+            background: var(--white);
+            color: var(--preview-ink);
+            font-size: 0.9375rem;
+            line-height: 1.3;
+        }
+
+        .subscription-preview input[type="radio"],
+        .subscription-preview input[type="checkbox"] {
+            accent-color: var(--action);
+        }
+
+        .subscription-inline-search {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: var(--space-2);
+        }
+
+        .subscription-inline-search .button,
+        .subscription-person-search-grid .button {
+            min-height: 40px;
+            white-space: nowrap;
+        }
+
+        .subscription-field-hint {
+            margin: var(--space-1) 0 0;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .subscription-selection-summary {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(132px, 0.38fr);
+            align-items: center;
+            gap: var(--space-4);
+            margin-top: var(--space-4);
+            padding: var(--space-3) var(--space-4);
+            border-left: 2px solid var(--action);
+            background: var(--preview-data-surface);
+        }
+
+        .subscription-selection-copy strong,
+        .subscription-selection-copy span {
+            display: block;
+        }
+
+        .subscription-selection-copy strong {
+            color: var(--preview-ink);
+            font-size: 0.9375rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.3;
+        }
+
+        .subscription-selection-copy span {
+            margin-top: var(--space-1);
+            color: #475569;
+            font-size: 0.8125rem;
+            line-height: 1.35;
+        }
+
+        .subscription-person-search-grid {
+            display: grid;
+            grid-template-columns: minmax(82px, 0.7fr) minmax(68px, 0.45fr) minmax(150px, 1.5fr) auto;
+            align-items: end;
+            gap: var(--space-2);
+        }
+
+        .subscription-more-search {
+            margin-top: var(--space-3);
+        }
+
+        .subscription-more-search summary {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            color: var(--action);
+            cursor: pointer;
+            font-size: 0.8125rem;
+            font-weight: var(--preview-weight-medium);
+            list-style: none;
+        }
+
+        .subscription-more-search summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .subscription-more-search summary::before {
+            content: "+";
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .subscription-more-search[open] summary::before {
+            content: "−";
+        }
+
+        .subscription-more-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: var(--space-2);
+            margin-top: var(--space-3);
+        }
+
+        .subscription-selected-person {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-3);
+            margin-top: var(--space-4);
+            padding: var(--space-3) var(--space-4);
+            border-left: 2px solid var(--action);
+            background: var(--preview-selected-surface);
+        }
+
+        .subscription-selected-person strong,
+        .subscription-selected-person span {
+            display: block;
+        }
+
+        .subscription-selected-person strong {
+            color: var(--preview-ink);
+            font-size: 0.9375rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.3;
+        }
+
+        .subscription-selected-person span {
+            margin-top: var(--space-1);
+            color: #475569;
+            font-size: 0.8125rem;
+            line-height: 1.35;
+        }
+
+        .subscription-selected-state {
+            flex: 0 0 auto;
+            color: var(--action);
+            font-size: 0.75rem;
+            font-weight: var(--preview-weight-medium);
+        }
+
+        .subscription-same-payer {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-2);
+            margin-top: var(--space-4);
+            color: var(--preview-ink);
+            font-size: 0.8125rem;
+            line-height: 1.35;
+        }
+
+        .subscription-same-payer input {
+            flex: 0 0 auto;
+            margin-top: var(--space-1);
+            margin: 0;
+        }
+
+        .subscription-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--space-2);
+        }
+
+        .subscription-choice {
+            display: flex;
+            min-height: 44px;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-3);
+            border: 1px solid var(--preview-rule-strong);
+            background: var(--white);
+            color: var(--preview-ink);
+            cursor: pointer;
+            font-size: 0.8125rem;
+            line-height: 1.3;
+        }
+
+        .subscription-choice:has(input:checked) {
+            border-color: var(--action);
+            background: rgba(73, 98, 117, 0.06);
+        }
+
+        .subscription-choice input {
+            flex: 0 0 auto;
+            margin: 0;
+        }
+
+        .subscription-choice strong {
+            display: block;
+            font-weight: var(--preview-weight-medium);
+        }
+
+        .subscription-iban-field {
+            margin-top: var(--space-3);
+        }
+
+        .subscription-consent-list {
+            border-top: 1px solid var(--preview-rule);
+            margin-top: var(--space-3);
+        }
+
+        .subscription-consent-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            align-items: center;
+            gap: var(--space-3);
+            min-height: 44px;
+            border-bottom: 1px solid var(--preview-rule);
+            padding: var(--space-2) 0;
+        }
+
+        .subscription-consent-row > span {
+            color: var(--preview-ink);
+            font-size: 0.8125rem;
+            font-weight: var(--preview-weight-medium);
+            line-height: 1.3;
+        }
+
+        .subscription-consent-row label {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            color: #475569;
+            font-size: 0.8125rem;
+            margin: 0;
+        }
+
+        .subscription-form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--space-2);
+            padding: var(--space-4) var(--panel-padding);
+            border-top: 1px solid var(--preview-rule);
+            background: var(--white);
+        }
+
+        .subscription-review {
+            padding: var(--space-4) var(--panel-padding);
+            border-top: 1px solid var(--preview-rule);
+        }
+
+        .subscription-review h4 {
+            margin: 0 0 var(--space-3);
+            font-size: 0.9375rem;
+            font-weight: var(--preview-weight-medium);
+        }
+
+        .subscription-review-details {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: var(--space-3) var(--space-4);
+            margin: 0;
+        }
+
+        .subscription-review-details dt {
+            margin-bottom: var(--space-1);
+            color: var(--text-muted);
+            font-size: 0.8125rem;
+        }
+
+        .subscription-review-details dd {
+            margin: 0;
+            font-size: 0.875rem;
+            font-weight: var(--preview-weight-medium);
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 720px) {
+            .subscription-review-details {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .subscription-review-details > div:first-child {
+                grid-column: 1 / -1;
+            }
+        }
+
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--space-6);
+        }
+
+        .component-card {
+            padding: var(--space-5) 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: var(--shadow-small);
+            border-top: 1px solid var(--decorative-line);
+        }
+
+        .component-card h3 {
+            margin-bottom: var(--space-2);
+            color: var(--action);
+        }
+
+        .component-card > p {
+            margin-bottom: var(--space-4);
+            color: var(--text-muted);
+            font-size: 0.86rem;
+        }
+
+        .button-row,
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-2);
+        }
+
+        .chip-row--spaced {
+            margin-top: var(--space-4);
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            min-height: 32px;
+            padding: 0 var(--space-3);
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            border-radius: 2px;
+            color: var(--ink);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .chip::before {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+            content: none;
+        }
+
+        .chip-info { background: var(--surface-info); }
+        .chip-attention { background: var(--surface-attention); }
+        .chip-group { background: var(--surface-group); }
+        .chip-muted { background: var(--surface-disabled); }
+
+        .status-list {
+            display: grid;
+            gap: 0;
+        }
+
+        .status-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: var(--space-3);
+            align-items: center;
+            padding: var(--space-3) 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            border-bottom: 1px solid var(--decorative-line);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-dot-success { background: var(--success); }
+        .status-dot-warning { background: var(--warning); }
+        .status-dot-danger { background: var(--danger); }
+
+        .status-item strong {
+            font-size: 0.82rem;
+        }
+
+        .status-item span:last-child {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+        }
+
+        .status-note {
+            margin: var(--space-4) 0 0;
+            padding: var(--space-3) var(--space-4);
+            border-left: 4px solid var(--surface-attention);
+            background: rgba(213, 205, 148, 0.24);
+            color: #475569;
+            font-size: 0.76rem;
+        }
+
+        .contrast-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: var(--space-4);
+        }
+
+        .contrast-card {
+            overflow: hidden;
+            border: 0;
+            border-radius: var(--radius-medium);
+            background: var(--white);
+            box-shadow: var(--shadow-small);
+        }
+
+        .contrast-sample {
+            display: grid;
+            min-height: 112px;
+            padding: var(--space-4);
+            align-content: center;
+        }
+
+        .contrast-sample strong {
+            font-size: 1.1rem;
+        }
+
+        .contrast-sample span {
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .contrast-blue-cloud {
+            background: var(--page);
+            color: var(--action);
+        }
+
+        .contrast-blue-veiled {
+            background: var(--surface-calm);
+            color: var(--action);
+        }
+
+        .contrast-white-blue {
+            background: var(--action);
+            color: var(--white);
+        }
+
+        .contrast-white-hematite {
+            background: var(--action-secondary);
+            color: var(--white);
+        }
+
+        .contrast-copy {
+            padding: var(--space-4);
+        }
+
+        .contrast-ratio {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-3);
+            margin-bottom: var(--space-2);
+        }
+
+        .contrast-ratio strong {
+            color: var(--action);
+            font-size: 1.25rem;
+        }
+
+        .pass {
+            padding: var(--space-1) var(--space-2);
+            border-radius: 999px;
+            background: #dcfce7;
+            color: #166534;
+            font-size: 0.65rem;
+            font-weight: 850;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .contrast-copy p {
+            margin-bottom: 0;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .decision-panel {
+            display: grid;
+            grid-template-columns: var(--heading-columns);
+            gap: var(--space-6);
+            padding: var(--space-6) 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            color: var(--text);
+            box-shadow: var(--shadow);
+            border-top: 1px solid var(--decorative-line);
+        }
+
+        .decision-panel h2 {
+            margin-bottom: var(--space-3);
+            font-size: 1.5rem;
+            line-height: 1.3;
+            letter-spacing: -0.02em;
+        }
+
+        .decision-panel p {
+            margin-bottom: 0;
+            color: var(--text-muted);
+        }
+
+        .decision-list {
+            display: grid;
+            gap: 0;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .decision-list li {
+            position: relative;
+            padding: var(--space-3) 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            font-size: 0.82rem;
+            font-weight: 700;
+            border-bottom: 1px solid var(--decorative-line);
+        }
+
+        .decision-list li::before {
+            position: absolute;
+            top: 12px;
+            left: 13px;
+            color: var(--surface-attention);
+            content: none;
+        }
+
+        .page-footer {
+            margin-top: var(--space-12);
+            padding-top: var(--space-6);
+            border-top: 1px solid rgba(73, 98, 117, 0.25);
+            color: #475569;
+            font-size: 0.8rem;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-4);
+            margin-top: var(--space-2);
+        }
+
+        @media (max-width: 1100px) {
+            .subscription-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .subscription-form-column + .subscription-form-column {
+                border-top: 1px solid var(--preview-rule);
+                border-left: 0;
+            }
+        }
+
+        @media (max-width: 980px) {
+            :root {
+                --heading-columns: minmax(0, 1fr);
+                --context-width: 220px;
+            }
+            .hero,
+            .section-heading,
+            .decision-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .swatch-grid,
+            .contrast-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .preview-body {
+                grid-template-columns: var(--context-width) minmax(0, 1fr);
+            }
+
+            .preview-example-heading {
+                grid-template-columns: 1fr;
+                gap: var(--space-3);
+            }
+
+            .subscription-workspace {
+                grid-template-columns: var(--context-width) minmax(0, 1fr);
+            }
+        }
+
+        @media (max-width: 720px) {
+            :root {
+                --page-gutter: var(--space-4);
+                --panel-padding: var(--space-4);
+                --workspace-padding: var(--space-3);
+                --section-gap: var(--space-8);
+            }
+            .page-header {
+                position: static;
+            }
+
+            .header-inner {
+                align-items: flex-start;
+                padding: var(--space-4) 0;
+            }
+
+            .header-inner { flex-wrap: wrap; gap: var(--space-3); }
+            .header-nav { justify-content: flex-start; }
+            .header-nav a { padding: var(--space-2); }
+
+            main {
+                padding-top: var(--space-6);
+            }
+
+            .hero {
+                gap: var(--space-8);
+            }
+
+            .palette-ribbon { min-height: 24px; }
+
+            .swatch-grid,
+            .component-grid,
+            .contrast-grid,
+            .notice-row,
+            .customer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .preview-body {
+                grid-template-columns: 1fr;
+            }
+
+            .subscription-workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .subscription-context {
+                border-right: 0;
+                border-bottom: 1px solid var(--preview-rule);
+            }
+
+            .subscription-context-list {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: var(--space-4);
+            }
+
+            .preview-sidebar {
+                border-right: 0;
+                border-bottom: 1px solid var(--preview-rule);
+            }
+
+            .preview-version {
+                display: none;
+            }
+
+            .preview-topbar {
+                min-height: 56px;
+            }
+
+            .detail + .detail {
+                border-top: 1px solid var(--preview-rule);
+            }
+
+            .preview-actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: var(--space-2);
+            }
+
+            .preview-actions .button {
+                width: 100%;
+                padding-inline: var(--space-2);
+            }
+
+            .preview-actions .button-primary,
+            .preview-actions .button-muted {
+                grid-column: 1 / -1;
+            }
+
+            .notice-row {
+                gap: var(--space-2);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .subscription-context-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0 var(--space-4);
+            }
+
+            .subscription-fields {
+                grid-template-columns: 1fr;
+            }
+
+            .subscription-field--wide {
+                grid-column: auto;
+            }
+
+            .subscription-selection-summary,
+            .subscription-person-search-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .subscription-selection-copy,
+            .subscription-selection-channel,
+            .subscription-person-name,
+            .subscription-person-search-action {
+                grid-column: 1 / -1;
+            }
+
+            .subscription-more-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .customer-header {
+                flex-direction: column;
+                gap: var(--space-2);
+            }
+
+            .customer-label {
+                align-self: flex-start;
+            }
+
+            .subscription-context-list,
+            .subscription-inline-search,
+            .subscription-choice-grid,
+            .subscription-more-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .subscription-form-header {
+                flex-direction: column;
+                gap: var(--space-2);
+            }
+
+            .subscription-draft-label {
+                align-self: flex-start;
+            }
+
+            .subscription-selected-person {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .subscription-form-actions {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .subscription-form-actions .button {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .preview-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .preview-actions .button,
+            .preview-actions .button-primary,
+            .preview-actions .button-muted {
+                grid-column: 1;
+            }
+        }
+
+        @media (prefers-contrast: more) {
+            .preview-shell {
+                --preview-rule: color-mix(in srgb, var(--blue-fusion) 65%, var(--white));
+                --preview-rule-strong: var(--blue-fusion);
+                --preview-control-rule: var(--blue-fusion);
+            }
+
+            .preview-main,
+            .subscription-main {
+                background-image: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html {
+                scroll-behavior: auto;
+            }
+
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        @media (forced-colors: active) {
+            .palette-ribbon span,
+            .swatch-color,
+            .contrast-sample {
+                forced-color-adjust: none;
+            }
+
+            .swatch,
+            .component-card,
+            .contrast-card,
+            .preview-shell,
+            .subscription-form-panel,
+            .subscription-choice {
+                border: 1px solid CanvasText;
+            }
+        }
+
+        [hidden] { display: none !important; }
+        :target { scroll-margin-top: 96px; }
+        :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+        .page-header :focus-visible { outline-color: var(--white); }
+        .demo-controls { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-4); margin: 0 0 var(--space-4); padding: var(--space-4) 0; border-block: 1px solid var(--decorative-line); }
+        .demo-controls label { display: block; margin-bottom: var(--space-2); font-weight: 600; font-size: 0.875rem; }
+        .demo-controls select { min-height: 40px; max-width: 100%; border: 1px solid var(--control-border); background: var(--surface); color: var(--text); padding: var(--space-2); }
+        .demo-controls p { flex: 1 1 220px; margin: 0; font-size: 0.875rem; color: var(--text-muted); }
+        .demo-controls > div { min-width: 0; }
+        .demo-feedback { padding: var(--space-3) var(--space-4); margin: var(--space-4) 0 0; border-left: 3px solid var(--action); background: var(--surface); overflow-wrap: anywhere; }
+        .demo-feedback h4, .demo-feedback p { margin: 0; }
+        .demo-error { border-left-color: var(--danger); }
+        .field-error { display: block; margin: var(--space-1) 0 0; color: var(--danger); font-size: 0.875rem; }
+        .field-error:empty { display: none; }
+        [aria-invalid="true"] { border: 2px solid var(--danger) !important; }
+        button:disabled, select:disabled, input:disabled { cursor: not-allowed; opacity: 1; background: var(--page) !important; color: var(--text-muted) !important; border-color: var(--control-border) !important; }
+        .button { display: inline-flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; }
+        .specimen { cursor: default; }
+        .subscription-inline-search { grid-template-columns: minmax(0, 1fr); }
+        .subscription-inline-search .field-error { grid-row: 2; }
+        .subscription-consent-row label, .subscription-same-payer, .subscription-more-search summary { min-height: 32px; padding-block: var(--space-1); }
+        .subscription-preview input[type="radio"], .subscription-preview input[type="checkbox"] { min-width: 20px; min-height: 20px; }
+        .subscription-choice input { margin-top: 0; }
+        .subscription-field, .subscription-context-list dd, .customer-header { overflow-wrap: anywhere; }
+        .subscription-more-search summary { display: flex; width: fit-content; }
+        .subscription-person-search-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .subscription-person-name, .subscription-person-search-action { grid-column: 1 / -1; }
+        .subscription-form-panel > .demo-feedback { margin: var(--space-4) var(--panel-padding); }
+        .pass, .swatch-index, .swatch-family { border-radius: 2px; }
+        dialog { max-width: min(440px, calc(100% - 32px)); padding: var(--space-6); border: 1px solid var(--control-border); border-radius: 4px; background: var(--surface); color: var(--text); }
+        dialog::backdrop { background: rgb(15 23 42 / 40%); }
+        dialog h2 { font-size: 1.25rem; }
+        dialog .button-row { justify-content: flex-end; }
+        @media (min-width: 1280px) {
+            .subscription-inline-search { grid-template-columns: minmax(0, 1fr) auto; }
+            .subscription-inline-search .field-error { grid-column: 1 / -1; }
+            .subscription-inline-search .button { grid-column: 2; grid-row: 1; }
+            .subscription-person-search-grid { grid-template-columns: minmax(88px, 0.7fr) minmax(56px, 0.45fr) minmax(112px, 1.5fr) auto; }
+            .subscription-person-name, .subscription-person-search-action { grid-column: auto; }
+        }
+        @media (max-width: 720px) {
+            .demo-controls { align-items: stretch; }
+            .demo-controls > div { flex: 1 1 220px; }
+            .demo-controls select { width: 100%; }
+            .swatch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .swatch-color { padding: var(--space-2); }
+            .swatch-family { display: none; }
+            .color-value { flex-wrap: wrap; }
+            .agent { flex-wrap: wrap; justify-content: flex-end; }
+            .status-item { grid-template-columns: auto 1fr; }
+            .status-item span:last-child { grid-column: 2; }
+            .subscription-context-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .subscription-context-list > div:last-child { grid-column: 1 / -1; }
+            .preview-actions .button { grid-column: 1 / -1; }
+        }
+        @media (max-width: 360px) { .swatch-grid { grid-template-columns: 1fr; } }
+
+        #payer-field {
+            margin-top: var(--space-3);
+        }
+
+        .subscription-consent-row input {
+            margin: 0;
+        }
+
+        .component-card > .status-note {
+            margin-bottom: 0;
+        }
+
+        .demo-feedback h4 + p {
+            margin-top: var(--space-2);
+        }
+
+        dialog h2 {
+            margin: 0 0 var(--space-3);
+        }
+
+        dialog p {
+            margin: 0 0 var(--space-5);
+        }
+    </style>
+</head>
+<body>
+    <a class="skip-link" href="#content">Skip to showcase content</a>
+
+    <header class="page-header">
+        <div class="header-inner">
+            <a class="brand" href="#overview" aria-label="KIWI Light and Shadow showcase home">
+                <span class="brand-mark" aria-hidden="true">KW</span>
+                <span class="brand-copy">
+                    <strong>KIWI</strong>
+                    <span>Theme design artifact</span>
+                </span>
+            </a>
+            <nav class="header-nav" aria-label="Showcase sections">
+                <a href="#preview">Workflows</a>
+                <a href="#palette">Palette</a>
+                <a href="#components">Components</a>
+                <a href="#contrast">Contrast</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="content">
+        <section class="hero" id="overview" aria-labelledby="showcase-title">
+            <div>
+                <p class="eyebrow">Default theme proposal · 2026</p>
+                <h1 id="showcase-title">KIWI · Light &amp; Shadow</h1>
+                <p class="lede">
+                    Review the proposed palette in two everyday tasks: finding a customer and preparing a subscription. Cloud Dancer frames the workspace; Blue Fusion identifies the next action.
+                </p>
+                <span class="plan-only">Interactive design example · Fictional data · No information is saved or sent</span>
+            </div>
+        </section>
+
+        <section id="preview" aria-labelledby="preview-title">
+            <div class="section-heading">
+                <h2 id="preview-title">KIWI in the palette</h2>
+                <p>
+                    Selected customer first, actions second. Try the Dutch workflow examples with a keyboard, then compare loading, recovery, and read-only states. All names, addresses, products, and amounts below are illustrative.
+                </p>
+            </div>
+
+            <div class="demo-controls" lang="nl" aria-label="Bediening van het voorbeeld">
+                <div><label for="demo-state">Voorbeeldsituatie</label>
+                    <select id="demo-state">
+                        <option value="populated">Klant geselecteerd</option>
+                        <option value="empty">Begin zonder klant</option>
+                        <option value="loading">Laden</option>
+                        <option value="no-results">Geen zoekresultaten</option>
+                        <option value="error">Zoekfout</option>
+                        <option value="readonly">Alleen lezen</option>
+                    </select>
+                </div>
+                <div><label for="demo-response">Verzenden simuleren</label>
+                    <select id="demo-response"><option value="success">Geslaagd</option><option value="error">Fout met opnieuw proberen</option></select>
+                </div>
+                <p>Alleen een voorbeeld. Gebruik uitsluitend fictieve gegevens.</p>
+            </div>
+            <noscript><p>JavaScript is nodig om de voorbeeldinteracties te gebruiken. De kleuren en formulieren blijven zichtbaar.</p></noscript>
+            <p id="demo-permission" class="demo-feedback" lang="nl" hidden>Alleen lezen: je kunt de voorbeeldklant bekijken, maar geen abonnement wijzigen of aanmaken.</p>
+            <article class="preview-shell" lang="nl" aria-label="Voorbeeld klant zoeken">
+                <header class="preview-topbar">
+                    <div class="preview-brand">KIWI <span class="preview-version">Demo · Klantenservice</span></div>
+                    <div class="agent">
+                        <span class="agent-state">Beschikbaar</span>
+                        <span class="agent-avatar" aria-hidden="true">KA</span>
+                    </div>
+                </header>
+
+                <div class="preview-body">
+                    <aside class="preview-sidebar" aria-label="Klant zoeken">
+                        <h3>Klant zoeken</h3>
+                        <form id="customer-search" role="search">
+                        <label class="search-label" for="showcase-search">Naam of klantnummer</label>
+                        <input class="search-input" id="showcase-search" type="search" value="De Vries" aria-describedby="search-hint">
+                        <button class="search-button" type="submit">Klant zoeken</button>
+                        <p id="search-hint" class="subscription-field-hint">Probeer De Vries of 10012345.</p>
+                        </form>
+                        <div class="sidebar-result">
+                            <strong>Mevr. S. de Vries</strong>
+                            <span>Rotterdam · Klant 10012345</span>
+                        </div>
+                    </aside>
+
+                    <div class="preview-main">
+                        <article class="customer-card">
+                            <header class="customer-header">
+                                <div>
+                                    <h3 id="customer-result-title" tabindex="-1">Mevr. S. de Vries</h3>
+                                    <p>Klant 10012345 · Fictieve voorbeeldklant</p>
+                                </div>
+                                <span class="customer-label">Geselecteerde klant</span>
+                            </header>
+                            <div class="customer-grid">
+                                <div class="detail"><span>E-mail</span><strong>s.devries@example.test</strong></div>
+                                <div class="detail"><span>Telefoon</span><strong>Niet opgegeven</strong></div>
+                                <div class="detail"><span>Adres</span><strong>Voorbeeldstraat 8</strong></div>
+                                <div class="detail"><span>Abonnement</span><strong>Avrobode · Actief (voorbeeld)</strong></div>
+                            </div>
+                            <div class="preview-actions">
+                                <a class="button button-primary" href="#subscription-example">Nieuw abonnement</a>
+                                <button class="button button-secondary" id="show-history" type="button" aria-expanded="false" aria-controls="customer-history">Contacthistorie bekijken</button>
+                            </div>
+                        </article>
+
+                        <p id="customer-search-status" class="demo-feedback" role="status" aria-atomic="true">1 voorbeeldklant gevonden en geselecteerd.</p>
+                        <button id="search-retry" class="button button-secondary" type="button" hidden>Opnieuw zoeken</button>
+                        <section id="customer-history" class="demo-feedback" aria-label="Contacthistorie" hidden>
+                            <h4>Contacthistorie · Klant 10012345</h4><p>Geen contactmomenten in dit voorbeeld.</p>
+                        </section>
+                    </div>
+                </div>
+            </article>
+
+            <div class="preview-example-heading" id="subscription-example">
+                <h3>KIWI UI demonstration · Nieuw abonnement</h3>
+                <p>
+                    Prepare an example subscription. Change the payment method, select a different payer, and test validation or a failed submission.
+                </p>
+            </div>
+
+            <article class="preview-shell subscription-preview" lang="nl" aria-label="Voorbeeld nieuw abonnement">
+                <header class="preview-topbar">
+                    <div class="preview-brand">KIWI <span class="preview-version">Demo · Nieuw abonnement</span></div>
+                    <div class="agent">
+                        <span class="agent-state">Beschikbaar</span>
+                        <span class="agent-avatar" aria-hidden="true">KA</span>
+                    </div>
+                </header>
+
+                <div class="subscription-workspace">
+                    <aside class="subscription-context" aria-label="Aanmaakoverzicht">
+                        <h3>Aanmaakoverzicht</h3>
+                        <dl class="subscription-context-list">
+                            <div>
+                                <dt>Status</dt>
+                                <dd><span class="subscription-context-state">Concept</span></dd>
+                            </div>
+                            <div>
+                                <dt>Product</dt>
+                                <dd id="context-product">Avrobode</dd>
+                            </div>
+                            <div>
+                                <dt>Ontvanger</dt>
+                                <dd id="context-recipient">S. de Vries · 10012345</dd>
+                            </div>
+                        </dl>
+                        <p class="subscription-context-note">Fictieve voorbeeldgegevens. Velden met * zijn verplicht. Er wordt geen abonnement opgeslagen.</p>
+                    </aside>
+
+                    <div class="subscription-main">
+                        <form class="subscription-form-panel" id="subscription-form" aria-label="Nieuw abonnement" autocomplete="off" novalidate>
+                            <p id="form-errors" class="demo-feedback demo-error" role="alert" hidden></p>
+                            <header class="subscription-form-header">
+                                <div>
+                                    <p>Abonnement aanmaken</p>
+                                    <h3>Nieuw abonnement</h3>
+                                </div>
+                                <span class="subscription-draft-label">Concept</span>
+                            </header>
+
+                            <p id="form-permission" class="demo-feedback" hidden>Alleen lezen: abonnementen wijzigen of aanmaken is niet toegestaan in deze voorbeeldsituatie.</p>
+                            <div class="subscription-form-grid">
+                                <div class="subscription-form-column">
+                                    <section class="subscription-form-block" aria-labelledby="demo-product-title">
+                                        <h4 id="demo-product-title">Product en kanaal</h4>
+                                        <div class="subscription-field subscription-field--wide">
+                                            <label for="demo-offer">Werfsleutel *</label>
+                                            <div class="subscription-inline-search">
+                                                <input id="demo-offer" type="search" value="AVRV525" required aria-describedby="demo-offer-hint demo-offer-error">
+                                                <span class="field-error" id="demo-offer-error"></span>
+                                                <button class="button button-secondary" id="add-product" type="button">Product selecteren</button>
+                                            </div>
+                                            <p class="subscription-field-hint" id="demo-offer-hint">Dit voorbeeld bevat alleen AVRV525 / Avrobode.</p>
+                                        </div>
+
+                                        <div class="subscription-selection-summary">
+                                            <div class="subscription-selection-copy">
+                                                <strong>Avrobode · 1 jaar</strong>
+                                                <span>AVRV525 · € 42,50 · product toegevoegd</span>
+                                            </div>
+                                            <div class="subscription-selection-channel">
+                                                <label for="demo-channel">Kanaal *</label>
+                                                <select id="demo-channel" required>
+                                                    <option selected>TM · Inbound</option>
+                                                    <option>OL · Online</option>
+                                                    <option>EM · E-mail</option>
+                                                    <option>PR · Print</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="subscription-form-block" aria-labelledby="demo-recipient-title">
+                                        <h4 id="demo-recipient-title">Ontvanger abonnement</h4>
+                                        <div class="subscription-person-search-grid">
+                                            <div class="subscription-field">
+                                                <label for="demo-postal-code">Postcode</label>
+                                                <input id="demo-postal-code" type="text" value="3011 AA">
+                                            </div>
+                                            <div class="subscription-field">
+                                                <label for="demo-house-number">Huisnr.</label>
+                                                <input id="demo-house-number" type="text" value="8">
+                                            </div>
+                                            <div class="subscription-field subscription-person-name">
+                                                <label for="demo-recipient-name">Naam ontvanger</label>
+                                                <input id="demo-recipient-name" type="search" value="S. de Vries" aria-describedby="recipient-status demo-recipient-name-error">
+                                            </div>
+                                            <button class="button button-secondary subscription-person-search-action" id="select-recipient" type="button">Ontvanger zoeken</button>
+                                        </div>
+
+                                        <details class="subscription-more-search">
+                                            <summary>Meer zoekvelden</summary>
+                                            <div class="subscription-more-grid">
+                                                <div class="subscription-field">
+                                                    <label for="demo-customer-number">Klantnummer</label>
+                                                    <input id="demo-customer-number" type="text">
+                                                </div>
+                                                <div class="subscription-field">
+                                                    <label for="demo-search-email">E-mail</label>
+                                                    <input id="demo-search-email" type="text">
+                                                </div>
+                                                <div class="subscription-field">
+                                                    <label for="demo-search-iban">IBAN</label>
+                                                    <input id="demo-search-iban" type="text">
+                                                </div>
+                                            </div>
+                                        </details>
+
+                                        <div class="subscription-selected-person">
+                                            <div>
+                                                <strong>Mevr. S. de Vries</strong>
+                                                <span>Klant 10012345 · Rotterdam</span>
+                                            </div>
+                                            <span class="subscription-selected-state">Geselecteerd</span>
+                                        </div>
+
+                                        <p id="recipient-status" class="subscription-field-hint" role="status">Voorbeeld: S. de Vries, 3011 AA, huisnummer 8.</p>
+                                        <p id="demo-recipient-name-error" class="field-error"></p>
+                                        <label class="subscription-same-payer">
+                                            <input id="demo-same-payer" type="checkbox" checked>
+                                            <span>Aanvrager / betaler is dezelfde persoon als de ontvanger.</span>
+                                        </label>
+                                        <div class="subscription-field" id="payer-field" hidden>
+                                            <label for="demo-payer">Andere betaler *</label>
+                                            <select id="demo-payer" disabled aria-describedby="demo-payer-error"><option value="">Kies een voorbeeldbetaler</option><option value="example-payer">A. Voorbeeld · DEMO-02 (fictief)</option></select>
+                                            <p id="demo-payer-error" class="field-error"></p>
+                                        </div>
+                                    </section>
+                                </div>
+
+                                <div class="subscription-form-column">
+                                    <fieldset class="subscription-form-block">
+                                        <legend>Betaalmethode *</legend>
+                                        <div class="subscription-choice-grid">
+                                            <label class="subscription-choice">
+                                                <input type="radio" name="demo-payment" value="direct-debit" checked>
+                                                <span><strong>Automatische incasso</strong></span>
+                                            </label>
+                                            <label class="subscription-choice">
+                                                <input type="radio" name="demo-payment" value="payment-instruction">
+                                                <span><strong>Betaalinstructie</strong></span>
+                                            </label>
+                                        </div>
+                                        <div class="subscription-field subscription-iban-field">
+                                            <label for="demo-payment-iban">IBAN rekeningnummer (voorbeeld)</label>
+                                            <input id="demo-payment-iban" type="text" value="DEMO-REKENING" readonly aria-describedby="iban-hint">
+                                            <p class="subscription-field-hint" id="iban-hint">Fictieve rekening, alleen voor de vormgeving. Geen bankvalidatie.</p>
+                                        </div>
+                                    </fieldset>
+
+                                    <section class="subscription-form-block" aria-labelledby="demo-subscription-title">
+                                        <h4 id="demo-subscription-title">Abonnementsgegevens</h4>
+                                        <div class="subscription-fields">
+                                            <div class="subscription-field subscription-field--wide">
+                                                <label for="demo-start-date">Startdatum *</label>
+                                                <input id="demo-start-date" type="date" value="2026-09-12" required aria-describedby="date-hint demo-start-date-error">
+                                                <p class="subscription-field-hint" id="date-hint">Voorbeelddatum. Beschikbare bezorgdata worden hier niet gecontroleerd.</p>
+                                                <p id="demo-start-date-error" class="field-error"></p>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <fieldset class="subscription-form-block">
+                                        <legend>Marketingvoorkeuren</legend>
+                                        <p class="subscription-field-hint">Maak per kanaal een keuze; er is niets vooraf geselecteerd.</p>
+                                        <div class="subscription-consent-list">
+                                            <div class="subscription-consent-row" role="group" aria-labelledby="demo-email-consent">
+                                                <span id="demo-email-consent">E-mail contact</span>
+                                                <label><input type="radio" name="demo-email-consent"> Ja</label>
+                                                <label><input type="radio" name="demo-email-consent"> Nee</label>
+                                            </div>
+                                            <div class="subscription-consent-row" role="group" aria-labelledby="demo-phone-consent">
+                                                <span id="demo-phone-consent">Telefonisch contact</span>
+                                                <label><input type="radio" name="demo-phone-consent"> Ja</label>
+                                                <label><input type="radio" name="demo-phone-consent"> Nee</label>
+                                            </div>
+                                            <div class="subscription-consent-row" role="group" aria-labelledby="demo-post-consent">
+                                                <span id="demo-post-consent">Direct marketing</span>
+                                                <label><input type="radio" name="demo-post-consent"> Ja</label>
+                                                <label><input type="radio" name="demo-post-consent"> Nee</label>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            </div>
+
+                            <p id="subscription-status" class="demo-feedback" role="status" aria-atomic="true">Conceptvoorbeeld. Er is niets opgeslagen.</p>
+                            <section class="subscription-review" aria-labelledby="subscription-review-title">
+                                <h4 id="subscription-review-title">Controle voor aanmaken</h4>
+                                <dl class="subscription-review-details">
+                                    <div>
+                                        <dt>Ontvanger</dt>
+                                        <dd id="review-recipient">S. de Vries · 10012345</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Product</dt>
+                                        <dd id="review-product">Avrobode · 1 jaar · €&nbsp;42,50</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Betaler</dt>
+                                        <dd id="review-payer">S. de Vries · 10012345</dd>
+                                    </div>
+                                </dl>
+                            </section>
+                            <footer class="subscription-form-actions">
+                                <button class="button button-secondary" id="reset-example" type="button">Voorbeeld herstellen</button>
+                                <button class="button button-primary" id="submit-example" type="submit">Aanmaken simuleren</button>
+                            </footer>
+                        </form>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section id="palette" aria-labelledby="palette-title">
+            <div class="section-heading">
+                <h2 id="palette-title">Eight source colors</h2>
+                <p>
+                    The swatches are locked TCX sRGB approximations for the web theme. Components should consume semantic roles, never Pantone-named variables directly.
+                </p>
+            </div>
+
+            <div class="palette-ribbon" role="img" aria-label="Light and Shadow palette in order: Cloud Dancer, Veiled Vista, Baltic Sea, Golden Mist, Quiet Violet, Cloud Cover, Hematite, Blue Fusion">
+                <span class="tone-cloud-dancer"></span>
+                <span class="tone-veiled-vista"></span>
+                <span class="tone-baltic-sea"></span>
+                <span class="tone-golden-mist"></span>
+                <span class="tone-quiet-violet"></span>
+                <span class="tone-cloud-cover"></span>
+                <span class="tone-hematite"></span>
+                <span class="tone-blue-fusion"></span>
+            </div>
+
+            <div class="swatch-grid">
+                <article class="swatch">
+                    <div class="swatch-color tone-cloud-dancer">
+                        <span class="swatch-index">01</span>
+                        <span class="swatch-family">Light</span>
+                    </div>
+                    <div class="swatch-copy">
+                        <h3>Cloud Dancer</h3>
+                        <p class="pantone-code">PANTONE 11-4201 TCX</p>
+                        <div class="color-value"><span>Hex</span><code>#F0EEE9</code></div>
+                        <div class="color-value"><span>RGB</span><code>240 · 238 · 233</code></div>
+                        <p class="role">Page background and lightest structural layer.</p>
+                    </div>
+                </article>
+
+                <article class="swatch">
+                    <div class="swatch-color tone-veiled-vista">
+                        <span class="swatch-index">02</span>
+                        <span class="swatch-family">Calm</span>
+                    </div>
+                    <div class="swatch-copy">
+                        <h3>Veiled Vista</h3>
+                        <p class="pantone-code">PANTONE 12-6000 TCX</p>
+                        <div class="color-value"><span>Hex</span><code>#C7E2C8</code></div>
+                        <div class="color-value"><span>RGB</span><code>199 · 226 · 200</code></div>
+                        <p class="role">Secondary surface, selection, and calm positive highlight.</p>
+                    </div>
+                </article>
+
+                <article class="swatch">
+                    <div class="swatch-color tone-baltic-sea">
+                        <span class="swatch-index">03</span>
+                        <span class="swatch-family">Info</span>
+                    </div>
+                    <div class="swatch-copy">
+                        <h3>Baltic Sea</h3>
+                        <p class="pantone-code">PANTONE 14-4320 TCX</p>
+                        <div class="color-value"><span>Hex</span><code>#7AB6D9</code></div>
+                        <div class="color-value"><span>RGB</span><code>122 · 182 · 217</code></div>
+                        <p class="role">Informational surface and decorative highlight.</p>
+                    </div>
+                </article>
+
+                <article class="swatch">
+                    <div class="swatch-color tone-golden-mist">
+                        <span class="swatch-index">04</span>
+                        <span class="swatch-family">Warm</span>
+                    </div>
+                    <div class="swatch-copy">
+                        <h3>Golden Mist</h3>
+                        <p class="pantone-code">PANTONE 13-0624 TCX</p>
+                        <div class="color-value"><span>Hex</span><code>#D5CD94</code></div>
+                        <div class="color-value"><span>RGB</span><code>213 · 205 · 148</code></div>
+                        <p class="role">Warm attention surface and non-critical highlight.</p>
+                    </div>
+                </article>
+
+                <article class="swatch">
+                    <div class="swatch-color tone-quiet-violet">
+                        <span class="swatch-index">05</span>
+                        <span class="swatch-family">Accent</span>
+                    </div>
+                    <div class="swatch-copy">
+                        <h3>Quiet Violet</h3>
+                        <p class="pantone-code">PANTONE 16-3610 TCX</p>
+                        <div class="color-value"><span>Hex</span><code>#A693AC</code></div>
+                        <div class="color-value"><span>RGB</span><code>166 · 147 · 172</code></div>
+                        <p class="role">Secondary accent and grouped-workflow highlight.</p>
+                    </div>
+                </article>
+
+                <article class="swatch">
+                    <div class="swatch-color tone-cloud-cover">
+                        <span class="swatch-index">06</span>
+                        <span class="swatch-family">Muted</span>
+                    </div>
+                    <div class="swatch-copy">
+                        <h3>Cloud Cover</h3>
+                        <p class="pantone-code">PANTONE 16-1523 TCX</p>
+                        <div class="color-value"><span>Hex</span><code>#999393</code></div>
+                        <div class="color-value"><span>RGB</span><code>153 · 147 · 147</code></div>
+                        <p class="role">Disabled and decorative neutral, not body text.</p>
+                    </div>
+                </article>
+
+                <article class="swatch swatch--dark">
+                    <div class="swatch-color tone-hematite">
+                        <span class="swatch-index">07</span>
+                        <span class="swatch-family">Shadow</span>
+                    </div>
+                    <div class="swatch-copy">
+                        <h3>Hematite</h3>
+                        <p class="pantone-code">PANTONE 17-5800 TCX</p>
+                        <div class="color-value"><span>Hex</span><code>#756F6B</code></div>
+                        <div class="color-value"><span>RGB</span><code>117 · 111 · 107</code></div>
+                        <p class="role">Secondary dark control and strong neutral boundary.</p>
+                    </div>
+                </article>
+
+                <article class="swatch swatch--dark">
+                    <div class="swatch-color tone-blue-fusion">
+                        <span class="swatch-index">08</span>
+                        <span class="swatch-family">Structure</span>
+                    </div>
+                    <div class="swatch-copy">
+                        <h3>Blue Fusion</h3>
+                        <p class="pantone-code">PANTONE 18-4218 TCX</p>
+                        <div class="color-value"><span>Hex</span><code>#496275</code></div>
+                        <div class="color-value"><span>RGB</span><code>73 · 98 · 117</code></div>
+                        <p class="role">Header, primary action, link, focus, and dark palette text.</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section id="components" aria-labelledby="components-title">
+            <div class="section-heading">
+                <h2 id="components-title">Semantic components</h2>
+                <p>
+                    Pantone names belong in the source layer. KIWI components consume roles such as action, information, attention, muted, success, warning, and danger.
+                </p>
+            </div>
+
+            <div class="component-grid">
+                <article class="component-card">
+                    <h3>Actions and accents</h3>
+                    <p>Static color specimens. Blue Fusion identifies primary actions; secondary actions use an outline. These samples are not controls.</p>
+                    <div class="button-row">
+                        <span class="button button-primary specimen">Primary action</span>
+                        <span class="button button-secondary specimen">Secondary</span>
+                        <span class="button button-calm specimen">Calm action</span>
+                    </div>
+                    <div class="chip-row chip-row--spaced">
+                        <span class="chip chip-info">Information</span>
+                        <span class="chip chip-attention">Attention</span>
+                        <span class="chip chip-group">Grouped work</span>
+                        <span class="chip chip-muted">Muted</span>
+                    </div>
+                </article>
+
+                <article class="component-card">
+                    <h3>Operational states stay semantic</h3>
+                    <p>The theme does not force safety-critical or call-state colors into the decorative palette.</p>
+                    <div class="status-list">
+                        <div class="status-item"><span class="status-dot status-dot-success"></span><strong>Beschikbaar</strong><span>Success · icon + label</span></div>
+                        <div class="status-item"><span class="status-dot status-dot-warning"></span><strong>After-call work</strong><span>Warning · icon + label</span></div>
+                        <div class="status-item"><span class="status-dot status-dot-danger"></span><strong>Call ended</strong><span>Danger · icon + label</span></div>
+                    </div>
+                    <p class="status-note">Annotation, privacy-mask, recording, danger, warning, and success colors require their own semantic tokens and tests.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="contrast" aria-labelledby="contrast-title">
+            <div class="section-heading">
+                <h2 id="contrast-title">Verified AA pairs</h2>
+                <p>
+                    These pairs meet WCAG 2.2 AA for normal text. Other palette combinations remain decorative, large-text-only, or require the supporting near-black ink.
+                </p>
+            </div>
+
+            <div class="contrast-grid">
+                <article class="contrast-card">
+                    <div class="contrast-sample contrast-blue-cloud"><strong>Readable structure</strong><span>Blue Fusion on Cloud Dancer</span></div>
+                    <div class="contrast-copy"><div class="contrast-ratio"><strong>5.51:1</strong><span class="pass">AA pass</span></div><p>Normal text, links, icons, and controls.</p></div>
+                </article>
+                <article class="contrast-card">
+                    <div class="contrast-sample contrast-blue-veiled"><strong>Calm selection</strong><span>Blue Fusion on Veiled Vista</span></div>
+                    <div class="contrast-copy"><div class="contrast-ratio"><strong>4.61:1</strong><span class="pass">AA pass</span></div><p>Normal text and controls on calm surfaces.</p></div>
+                </article>
+                <article class="contrast-card">
+                    <div class="contrast-sample contrast-white-blue"><strong>Primary action</strong><span>White on Blue Fusion</span></div>
+                    <div class="contrast-copy"><div class="contrast-ratio"><strong>6.39:1</strong><span class="pass">AA pass</span></div><p>Header, primary buttons, and strong actions.</p></div>
+                </article>
+                <article class="contrast-card">
+                    <div class="contrast-sample contrast-white-hematite"><strong>Secondary action</strong><span>White on Hematite</span></div>
+                    <div class="contrast-copy"><div class="contrast-ratio"><strong>4.95:1</strong><span class="pass">AA pass</span></div><p>Secondary dark controls and compact labels.</p></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="decision-panel" aria-labelledby="decision-title">
+            <div>
+                <h2 id="decision-title">Recommended theme direction</h2>
+                <p>
+                    Use the palette to create hierarchy, not to replace every color. Accessibility neutrals and operational state colors remain first-class semantic tools.
+                </p>
+            </div>
+            <ul class="decision-list">
+                <li>Cloud Dancer page canvas</li>
+                <li>White work surfaces; elevation only for overlays</li>
+                <li>Blue Fusion navigation and action</li>
+                <li>Veiled Vista calm selection</li>
+                <li>Dark ink on mid-tone accents</li>
+                <li>Semantic safety colors preserved</li>
+            </ul>
+        </section>
+
+        <footer class="page-footer">
+            <strong>Planning artifact only.</strong> Pantone colors shown on screen are sRGB approximations and do not replace physical Pantone standards.
+            <div class="footer-links">
+                <a href="./kiwi-light-and-shadow-theme-palette.md">Read the implementation plan</a>
+                <a href="https://www.bindinc.nl/">Bindinc. visual reference</a>
+                <a href="https://www.pantone.com/na/en-us/color-of-the-year/2026">Pantone 2026 source</a>
+                <a href="https://www.w3.org/TR/WCAG22/">WCAG 2.2</a>
+            </div>
+        </footer>
+    </main>
+    <dialog id="reset-dialog" lang="nl" aria-labelledby="reset-title" aria-describedby="reset-description">
+        <h2 id="reset-title">Voorbeeld herstellen?</h2>
+        <p id="reset-description">Je invoer in dit voorbeeld wordt vervangen door de oorspronkelijke fictieve gegevens.</p>
+        <form method="dialog" class="button-row">
+            <button class="button button-secondary" value="cancel" autofocus>Verder bewerken</button>
+            <button class="button button-primary" value="reset">Voorbeeld herstellen</button>
+        </form>
+    </dialog>
+    <script>
+        (() => {
+            'use strict';
+
+            const byId = (id) => document.getElementById(id);
+            const form = byId('subscription-form');
+            const scenario = byId('demo-state');
+            const searchInput = byId('showcase-search');
+            const customerCard = document.querySelector('.customer-card');
+            const searchResult = document.querySelector('.sidebar-result');
+            const searchStatus = byId('customer-search-status');
+            const formStatus = byId('subscription-status');
+            const resetDialog = byId('reset-dialog');
+            const offer = byId('demo-offer');
+            const recipient = byId('demo-recipient-name');
+            const payer = byId('demo-payer');
+            const startDate = byId('demo-start-date');
+            const validationFields = [offer, recipient, payer, startDate];
+            const searchRetry = byId('search-retry');
+            let productSelected = true;
+            let recipientSelected = true;
+            let dirty = false;
+            let saving = false;
+            let searchRequest = 0;
+            let draftStatus = 'Concept';
+            let validationStarted = false;
+
+            const normalize = (value) => value.trim().toLocaleLowerCase('nl-NL');
+            const isReadOnly = () => scenario.value === 'readonly';
+
+            function setDraftStatus(text) {
+                draftStatus = text;
+                const visibleStatus = isReadOnly() ? 'Alleen lezen' : draftStatus;
+                document.querySelector('.subscription-draft-label').textContent = visibleStatus;
+                document.querySelector('.subscription-context-state').textContent = visibleStatus;
+            }
+
+            function updatePaymentAndPayer() {
+                const directDebit = form.querySelector('[name="demo-payment"]:checked').value === 'direct-debit';
+                const samePayer = byId('demo-same-payer').checked;
+                document.querySelector('.subscription-iban-field').hidden = !directDebit;
+                byId('demo-payment-iban').disabled = !directDebit || isReadOnly() || saving;
+                byId('payer-field').hidden = samePayer;
+                payer.required = !samePayer;
+                payer.disabled = samePayer || isReadOnly() || saving;
+                updateReviewSummary();
+            }
+
+            function updateAvailability() {
+                form.querySelectorAll('input, select, button').forEach((control) => {
+                    control.disabled = isReadOnly() || saving;
+                });
+                byId('demo-permission').hidden = !isReadOnly();
+                byId('form-permission').hidden = !isReadOnly();
+                byId('demo-state').disabled = saving;
+                byId('demo-response').disabled = saving;
+                form.setAttribute('aria-busy', String(saving));
+                updatePaymentAndPayer();
+                setDraftStatus(draftStatus);
+            }
+
+            function showCustomerState(state) {
+                if (!isReadOnly()) scenario.value = state;
+                const hasCustomer = state === 'populated' || state === 'readonly';
+                const messages = {
+                    populated: '1 voorbeeldklant gevonden en geselecteerd.',
+                    readonly: 'Voorbeeldklant geselecteerd. Je hebt alleen leesrechten.',
+                    empty: 'Zoek een voorbeeldklant op naam of klantnummer.',
+                    loading: 'Voorbeeldklant laden…',
+                    'no-results': `Geen voorbeeldklant gevonden voor “${searchInput.value}”. Probeer De Vries of 10012345.`,
+                    error: 'Klant zoeken is mislukt in deze simulatie. Je zoekterm is behouden. Probeer opnieuw.'
+                };
+                customerCard.hidden = !hasCustomer;
+                searchResult.hidden = !hasCustomer;
+                byId('customer-history').hidden = true;
+                byId('show-history').setAttribute('aria-expanded', 'false');
+                byId('show-history').textContent = 'Contacthistorie bekijken';
+                searchStatus.textContent = messages[state];
+                searchStatus.classList.toggle('demo-error', state === 'error');
+                byId('customer-search').setAttribute('aria-busy', String(state === 'loading'));
+                byId('search-retry').hidden = !['error', 'no-results', 'loading'].includes(state);
+                byId('search-retry').textContent = state === 'no-results' ? 'Zoek De Vries' : 'Opnieuw zoeken';
+                searchRetry.dataset.action = state === 'no-results' ? 'example' : 'retry';
+            }
+
+            function selectScenario() {
+                searchRequest += 1;
+                const state = scenario.value;
+                if (state === 'empty') searchInput.value = '';
+                else if (state === 'no-results') searchInput.value = 'Onbekend';
+                else searchInput.value = 'De Vries';
+                showCustomerState(state);
+                updateAvailability();
+            }
+
+            function searchCustomer({ focusResult = false } = {}) {
+                const request = ++searchRequest;
+                const query = normalize(searchInput.value);
+                if (!query) {
+                    showCustomerState('empty');
+                    searchInput.focus();
+                    return;
+                }
+                showCustomerState('loading');
+                window.setTimeout(() => {
+                    // A newer search or scenario must win over a pending demo response.
+                    if (request !== searchRequest) return;
+                    const found = ['de vries', 's. de vries', '10012345'].includes(query);
+                    const nextState = found ? (isReadOnly() ? 'readonly' : 'populated') : 'no-results';
+                    showCustomerState(nextState);
+                    // Do not move focus back if the user has continued elsewhere while waiting.
+                    if (focusResult && found && document.activeElement === searchInput) {
+                        byId('customer-result-title').focus();
+                    }
+                }, 500);
+            }
+
+            function updateSelection() {
+                document.querySelector('.subscription-selection-summary').hidden = !productSelected;
+                document.querySelector('.subscription-selected-person').hidden = !recipientSelected;
+                byId('context-product').textContent = productSelected ? 'Avrobode' : 'Geen product geselecteerd';
+                byId('context-recipient').textContent = recipientSelected ? 'S. de Vries · 10012345' : 'Geen ontvanger geselecteerd';
+                updateReviewSummary();
+            }
+
+            function updateReviewSummary() {
+                const recipientText = recipientSelected ? 'S. de Vries · 10012345' : 'Geen ontvanger geselecteerd';
+                byId('review-recipient').textContent = recipientText;
+                byId('review-product').textContent = productSelected ? 'Avrobode · 1 jaar · €\u00a042,50' : 'Geen product geselecteerd';
+                let payerText = recipientText;
+                if (!byId('demo-same-payer').checked) {
+                    payerText = payer.value ? payer.selectedOptions[0].textContent : 'Geen betaler geselecteerd';
+                }
+                byId('review-payer').textContent = payerText;
+            }
+
+            function clearErrors() {
+                validationStarted = false;
+                form.querySelectorAll('.field-error').forEach((error) => { error.textContent = ''; });
+                form.querySelectorAll('[aria-invalid]').forEach((field) => field.removeAttribute('aria-invalid'));
+                byId('form-errors').hidden = true;
+                offer.setCustomValidity('');
+                recipient.setCustomValidity('');
+            }
+
+            function markDirty() {
+                dirty = true;
+                setDraftStatus('Niet opgeslagen · demo');
+                formStatus.classList.remove('demo-error');
+                formStatus.textContent = 'Voorbeeld gewijzigd. Je invoer blijft alleen in deze pagina staan.';
+            }
+
+            function selectProduct() {
+                productSelected = ['avrv525', 'avrobode'].includes(normalize(offer.value));
+                markDirty();
+                updateSelection();
+                updateFieldValidation(offer);
+                updateErrorSummary();
+                formStatus.textContent = productSelected ? 'Voorbeeldproduct Avrobode geselecteerd.' : 'Geen voorbeeldproduct gevonden. Gebruik AVRV525 of Avrobode.';
+                if (!productSelected) offer.focus();
+            }
+
+            function selectRecipient() {
+                const nameMatches = ['s. de vries', 'de vries'].includes(normalize(recipient.value));
+                const constraints = [
+                    ['demo-postal-code', '3011aa'], ['demo-house-number', '8'],
+                    ['demo-customer-number', '10012345'], ['demo-search-email', 's.devries@example.test'],
+                    ['demo-search-iban', 'demo-rekening']
+                ];
+                const filtersMatch = constraints.every(([id, expected]) => {
+                    const value = normalize(byId(id).value).replaceAll(' ', '');
+                    return value === '' || value === expected;
+                });
+                recipientSelected = nameMatches && filtersMatch;
+                markDirty();
+                updateSelection();
+                updateFieldValidation(recipient);
+                updateErrorSummary();
+                byId('recipient-status').textContent = recipientSelected
+                    ? 'Mevr. S. de Vries · Klant 10012345 geselecteerd.'
+                    : 'Geen voorbeeldontvanger gevonden. Gebruik S. de Vries, 3011 AA, huisnummer 8 en wis afwijkende extra zoekvelden.';
+            }
+
+            function validationMessage(field) {
+                if (field.validity.customError) return field.validationMessage;
+                if (field === payer) return 'Kies een voorbeeldbetaler of gebruik dezelfde persoon als de ontvanger.';
+                if (field === startDate) return 'Vul een startdatum in.';
+                return 'Vul de werfsleutel in en selecteer het product.';
+            }
+
+            function updateFieldValidation(field) {
+                if (!validationStarted || !validationFields.includes(field)) return;
+                if (field === offer) {
+                    offer.setCustomValidity(productSelected ? '' : 'Selecteer het voorbeeldproduct met Product selecteren.');
+                }
+                if (field === recipient) {
+                    recipient.setCustomValidity(recipientSelected ? '' : 'Zoek en selecteer de voorbeeldontvanger opnieuw.');
+                }
+                const invalid = !field.disabled && !field.validity.valid;
+                byId(`${field.id}-error`).textContent = invalid ? validationMessage(field) : '';
+                if (invalid) field.setAttribute('aria-invalid', 'true');
+                else field.removeAttribute('aria-invalid');
+            }
+
+            function updateErrorSummary() {
+                const count = form.querySelectorAll('[aria-invalid="true"]').length;
+                const summary = byId('form-errors');
+                const message = count ? `Controleer ${count} veld${count === 1 ? '' : 'en'} hieronder. Je invoer is behouden.` : '';
+                if (summary.textContent !== message) summary.textContent = message;
+                summary.hidden = count === 0;
+            }
+
+            function validateForm() {
+                validationStarted = true;
+                validationFields.forEach(updateFieldValidation);
+                updateErrorSummary();
+                const invalid = validationFields.filter((field) => field.getAttribute('aria-invalid') === 'true');
+                if (!invalid.length) return true;
+                invalid[0].focus();
+                return false;
+            }
+
+            function submitExample(event) {
+                event.preventDefault();
+                if (isReadOnly() || saving || !validateForm()) return;
+                const response = byId('demo-response').value;
+                saving = true;
+                updateAvailability();
+                formStatus.classList.remove('demo-error');
+                formStatus.textContent = 'Aanmaken simuleren… Er wordt niets verstuurd.';
+                setDraftStatus('Simulatie bezig');
+                window.setTimeout(() => {
+                    saving = false;
+                    updateAvailability();
+                    const failed = response === 'error';
+                    formStatus.classList.toggle('demo-error', failed);
+                    formStatus.textContent = failed
+                        ? 'Simulatie mislukt. Je invoer is behouden. Kies Geslaagd bij Verzenden simuleren en probeer opnieuw.'
+                        : 'Simulatie geslaagd voor S. de Vries · Klant 10012345. Er is geen abonnement opgeslagen.';
+                    if (!failed) dirty = false;
+                    setDraftStatus(failed ? 'Niet opgeslagen · demo' : 'Gecontroleerd · demo');
+                    byId('submit-example').focus();
+                }, 650);
+            }
+
+            function resetExample() {
+                form.reset();
+                productSelected = true;
+                recipientSelected = true;
+                dirty = false;
+                clearErrors();
+                updateSelection();
+                updateAvailability();
+                setDraftStatus('Concept');
+                formStatus.classList.remove('demo-error');
+                formStatus.textContent = 'Voorbeeld hersteld. Er is niets opgeslagen.';
+                byId('recipient-status').textContent = 'Voorbeeld: S. de Vries, 3011 AA, huisnummer 8.';
+                offer.focus();
+            }
+
+            scenario.addEventListener('change', selectScenario);
+            byId('customer-search').addEventListener('submit', (event) => { event.preventDefault(); searchCustomer(); });
+            searchRetry.addEventListener('click', () => {
+                if (searchRetry.dataset.action === 'example') searchInput.value = 'De Vries';
+                searchInput.focus();
+                searchCustomer({ focusResult: true });
+            });
+            byId('show-history').addEventListener('click', (event) => {
+                const panel = byId('customer-history');
+                panel.hidden = !panel.hidden;
+                event.currentTarget.setAttribute('aria-expanded', String(!panel.hidden));
+                event.currentTarget.textContent = panel.hidden ? 'Contacthistorie bekijken' : 'Contacthistorie verbergen';
+            });
+            byId('add-product').addEventListener('click', selectProduct);
+            byId('select-recipient').addEventListener('click', selectRecipient);
+            byId('demo-same-payer').addEventListener('change', updatePaymentAndPayer);
+            form.addEventListener('input', (event) => {
+                markDirty();
+                const field = event.target;
+                if (field === offer) productSelected = false;
+                const recipientFields = ['demo-recipient-name', 'demo-postal-code', 'demo-house-number', 'demo-customer-number', 'demo-search-email', 'demo-search-iban'];
+                if (recipientFields.includes(field.id)) {
+                    recipientSelected = false;
+                    byId('recipient-status').textContent = 'Zoekcriteria gewijzigd. Zoek de ontvanger opnieuw om deze te selecteren.';
+                }
+                updateSelection();
+                updatePaymentAndPayer();
+                const validationField = recipientFields.includes(field.id) ? recipient : field;
+                updateFieldValidation(validationField);
+                if (field.id === 'demo-same-payer') updateFieldValidation(payer);
+                updateErrorSummary();
+            });
+            form.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') return;
+                if (event.target === offer) { event.preventDefault(); selectProduct(); }
+                if (event.target === recipient) { event.preventDefault(); selectRecipient(); }
+            });
+            form.addEventListener('submit', submitExample);
+            byId('reset-example').addEventListener('click', () => {
+                if (!dirty) { resetExample(); return; }
+                resetDialog.returnValue = '';
+                resetDialog.showModal();
+            });
+            resetDialog.addEventListener('close', () => {
+                if (resetDialog.returnValue === 'reset') resetExample();
+            });
+            updateAvailability();
+        })();
+    </script>
+</body>
+</html>
