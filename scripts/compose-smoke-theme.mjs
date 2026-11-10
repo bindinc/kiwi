@@ -112,7 +112,7 @@ async function inspectPresentationFixture(page) {
             <h2>Theme diagnostic fixture — synthetic presentation states</h2>
             <p>No active call or queued customer change is represented here.</p>
             <button type="button" class="btn btn-primary">Example primary action</button>
-            <button type="button" class="btn btn-secondary">Example secondary action</button>
+            <button type="button" class="btn btn-secondary" data-theme-example="secondary">Example secondary action</button>
             <button type="button" class="channel-chip"><span class="channel-code">TEST</span><span class="channel-label">Example channel</span></button>
             <button type="button" class="werfsleutel-suggestion"><span class="code">TEST</span><span class="title">Example offer</span></button>
             <div class="subscription-item subscription-ended"><div class="subscription-info"><div class="subscription-name">Example ended subscription</div><div class="subscription-details">Ended — diagnostic state</div></div></div>
@@ -136,7 +136,7 @@ async function inspectPresentationFixture(page) {
         } finally {
             await page.mouse.up();
         }
-        const secondary = `${root} .btn-secondary`;
+        const secondary = `${root} [data-theme-example="secondary"]`;
         await assertStyle(page, secondary, 'backgroundColor', 'rgb(255, 255, 255)');
         await assertStyle(page, secondary, 'color', 'rgb(117, 111, 107)');
         await assertStyle(page, secondary, 'borderTopColor', 'rgb(117, 111, 107)');
