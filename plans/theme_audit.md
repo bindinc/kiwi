@@ -18,7 +18,7 @@ Slice 10 started with a fresh baseline before slice 01 changes. Baseline provena
 | --- | --- | --- | --- |
 | 01 | Accepted; merged into planning branch | [#143](https://github.com/bindinc/kiwi/pull/143), merge `a627d2d`; local worktree/branch cleaned after authorization | Independent source/rendered review passed on 2026-11-09; historical temporary images are no longer accessible, as recorded in the slice document |
 | 02 | Accepted; user-merged into planning branch | `codex/align-theme-controls-and-actions` / [#145](https://github.com/bindinc/kiwi/pull/145), application `d39ed64`, accepted head `3674e3c`, merge `851dc77` | Independent source/rendered review, 37-file suite, application CI, scoped broad/focused/keyboard/native-zoom checks and final Chromium/Firefox theme/privacy integration pass; test-only readiness correction `14eb8cc`, exact source boundaries in the slice document |
-| 03 | Before-state capture and implementation started | `codex/align-theme-shell-and-navigation`; draft PR initialization | Not accepted; source/rendered/interaction gates pending |
+| 03 | Implemented; full acceptance in progress | `codex/align-theme-shell-and-navigation` / draft [#146](https://github.com/bindinc/kiwi/pull/146) | Application `a467d33`; independent source and targeted Firefox review pass; full AFTER/native/role/draft/integration acceptance pending |
 | 04–09 | Planned | Separate sequential branches after the preceding slice passes | Not accepted |
 | 10 | Baseline and reusable checks in progress | `codex/validate-theme-showcase-alignment` / [#144](https://github.com/bindinc/kiwi/pull/144) | Baseline, source-bound comparison/controls runner and actual native zoom checks pushed at `62c7a8a`; final gate after 01–09 |
 

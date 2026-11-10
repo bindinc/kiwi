@@ -1,6 +1,6 @@
 # theme_audit 03 — Shell, navigation and workspace hierarchy
 
-Audit marker: `theme_audit`. Status: implementation started; before-state capture pending. Audit baseline: `c05973e`, 2026-11-09; implementation baseline: merged slice 02 at `851dc77`, 2026-11-10.
+Audit marker: `theme_audit`. Status: implemented and source-reviewed; full rendered/interaction acceptance in progress. Before-state captures use the frozen accepted slice 02 runtime. Audit baseline: `c05973e`, 2026-11-09; implementation baseline: merged slice 02 at `851dc77`, 2026-11-10.
 
 Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-206629. Implement after slices 01 and 02. Implementation is authorized by the ten-slice task; merge and deployment require separate explicit authorization.
 
@@ -8,19 +8,37 @@ Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-20662
 
 - Branch: `codex/align-theme-shell-and-navigation`.
 - Worktree: `/home/bartdeijkers/_worktrees/align-theme-shell-and-navigation`.
-- Base: `851dc77a11667975311f533df8c1294a91513e0e`, the user-merged [slice 02 / PR #145](https://github.com/bindinc/kiwi/pull/145) in `codex/plan-kiwi-styleguide-alignment-slices`. Application files are identical to accepted source `d39ed64`; the corrected privacy smoke helper is included through `14eb8cc`.
-- PR: draft initialization pending; one Unreleased changelog entry, SC-206629.
+- Base: `851dc77a11667975311f533df8c1294a91513e0e`, the user-merged [slice 02 / PR #145](https://github.com/bindinc/kiwi/pull/145) in `codex/plan-kiwi-styleguide-alignment-slices`. At that base, product files are identical to accepted source `d39ed64`; the corrected privacy smoke helper is included through `14eb8cc`.
+- PR: [#146](https://github.com/bindinc/kiwi/pull/146), draft; one Unreleased changelog entry, SC-206629.
 - Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-03/`; actual baseline runtime, reference, controlled renderer fixtures and after-state evidence must remain distinguished.
 - Ownership: one application implementation owner; parent owns audit/index/changelog/PR. Independent source review and slice 10 browser/native validation run without overlapping application edits.
 - Current source correction: the actual workspace is `.main-content`. Existing Twig DOM order is search/actions → main work → history/outbox; remove the narrow CSS negative ordering rather than unnecessarily moving those regions.
 
 ### Acceptance register
 
-All implementation, rendered comparison, keyboard/session checks and current-source CI remain pending. Before-state captures must complete before application edits. Compare actual identity/source/session context and populated results at 1440, 1024, 768, 390 and 320px, plus 390×320 and genuine native 200% zoom, in Chromium and Firefox. Preserve precise scope and source/served hashes, including synthetic long-label and operational placement fixtures where live states cannot be exercised without mutation. No whole-interface acceptance is claimed by this slice.
+Application source `a467d3366092772cd09e3e842554459f1b89b2c0` is committed and pushed. Independent review covers all 13 changed app/test files, including the dynamic header scroll-inset observer, menu geometry/focus/resize lifecycle and preserved business/identity/privacy hooks. All 38 frontend test files, palette checks, guardrails, whitespace and Compose Twig syntax pass. [Application CI passed](https://github.com/bindinc/kiwi/actions/runs/42823538418), including PHPUnit, all frontend files and production-image/runtime checks. Both existing privacy suites also pass at unchanged thresholds on this application source: Firefox native/original 0%, 0%, 0.511%, outside-sensitive 0.570%; Chromium 1.925%, 1.483%, 1.518%, outside-sensitive 0%. Logs are `slice-03/a467d33/privacy-{browser}/stdout.log`. Full AFTER/native/roles/draft/theme acceptance remains separate; this is not completed slice acceptance.
 
-## Finding and intended outcome
+The source-verified BEFORE matrix is versioned at slice 10 checkpoint `b3bfbb6` in draft PR #144: both engines captured 144 images (72 actual local flow, 60 explicitly labeled DOM placement fixtures, 12 reference) and 132 locale/provenance checks at six viewports in NL/EN. Zero runtime errors or attempted API writes does not mean observed layout defects passed. `slice-03/before-final-provenance.json` and `before-visual-review.md` retain all 288 PNG hashes and exact accepted source `3674e3c` ↔ merged base `851dc77` application equivalence.
 
-The showcase's customer workspace uses flat, aligned regions and a compact header. Current Kiwi retains separate raised cards, large gaps, repeated decorative icons and a welcome region that occupies the main work area. At 1440px, the empty contact-history card consumes a full-height right rail. At 390px, the empty history card appears before customer search and quick actions. These are observed local layouts, not merely differences in palette.
+Root Firefox targeted diagnostics on the frozen final app are retained in `slice-03/root-firstlook-attempt-02/`: 96 images, 88 locale/source checks, no runtime errors or attempted API writes. Independent visual review confirms the actual 1440/2048 compact grouping and corrected search fields. Sixteen paired comparisons across four viewports, NL/EN and active/pending fixture states show exactly 0px reset x/y movement against the corresponding empty state; `reset-paired-bound-check.json` is separate from the observational counts. The ordinary desktop header is 64px in empty and active states. This targeted proof does not replace the full required AFTER matrix, actual native zoom, real role rendering, draft/guard behavior or unchanged-threshold privacy/theme integration.
+
+The BEFORE captures used the unchanged slice 02 worktree/runtime at `3674e3c`, whose product source is identical to merge `851dc77`. Isolated slice 03 edits did not alter that baseline. After both captures completed, project `kiwi-theme-audit-02` was stopped without removing containers, volumes or worktrees; the independent `kiwi-theme-audit-03` gateway now serves port 9444. Remaining gates: Compare actual identity/source/session context and populated results at 1440, 1024, 768, 390 and 320px, plus 390×320 and genuine native 200% zoom, in Chromium and Firefox. Preserve precise scope and source/served hashes, including synthetic long-label and operational placement fixtures where live states cannot be exercised without mutation. No whole-interface acceptance is claimed by this slice.
+
+### Rendered review findings during implementation — 2026-11-10
+
+Two user-supplied Firefox screenshots rejected issues that source review alone did not establish. The narrowed 240px search rail allowed the native postcode/house-number row to extend outside its own card into the work area. A page-width-only assertion would miss this cross-region overflow. Slice 03 owns this regression: use constrained field tracks and native input/group minimum widths, then prove each label, field and action remains inside the actual card content bounds at 1440 and 2048 CSS pixels as well as narrow sizes. Screenshot physical pixels and viewport/DPR must be recorded separately.
+
+The active-session header also became unnecessarily tall because the first implementation always allocated a second full-width context row. The requested direction is now one compact desktop row when real content fits, preserving customer name, person reference, source/mandant, reset and system controls. Additional wrapping is reserved for actual space or long-content needs. The earlier full-width-strip direction is superseded. These screenshots remain conversation evidence; no browser chrome or customer image is committed to Git.
+
+Further user review rejected the scattered active-session identity and the reset action moving between empty and selected states. The current direction is three deliberate groups: brand, compact customer/session context and system utilities. Customer caption/name and adjacent person/source metadata form one readable cluster. `Nieuwe sessie` has a fixed left anchor in the session group, with active identity immediately to its right; empty, active and pending states must not reposition the action. Root Firefox diagnostics on the preceding revision measured a 64px ordinary desktop header but reset x positions 1365.417→592.483 at 2048px and 881.417→468.483 at 1440px. This demonstrates a real state-transition defect despite a compact height. The paired-state correction remains an acceptance gate.
+
+Diagnostic evidence: `slice-03/root-firstlook-attempt-01/root-visual-review.md` under the durable evidence root, with its report hash and representative actual Firefox images. Its 88 counts are locale/source checks, not geometry acceptance; the pending reset correction is not hidden by an observational successful exit.
+
+Independent review additionally requires the natural search navigation outcome: existing `scrollIntoView({block: 'start'})` must expose the result heading/sort/actions below the measured sticky header. Canonical top-of-page captures do not prove anchoring. Short-screen nonsticky mode must contribute zero obstruction. Targeted Firefox samples now show the corrected fields, 64px ordinary desktop header and stable reset anchor. The corresponding full Firefox/Chromium geometry, natural-scroll, keyboard and visual gates remain required before completion.
+
+## Original audit findings and intended outcome
+
+The showcase's customer workspace uses flat, aligned regions and a compact header. The original audited baseline retained separate raised cards, large gaps, repeated decorative icons and a welcome region that occupied the main work area. At 1440px, the empty contact-history card consumes a full-height right rail. At 390px, the empty history card appears before customer search and quick actions. These are observed local layouts, not merely differences in palette.
 
 The goal is a stable working frame: active customer/session context remains clear, the current task receives the available space, and supporting history remains accessible without preceding the task on narrow screens. The showcase's documentation header and miniature demo brand are not replacements for Kiwi's actual branding or operational controls.
 
@@ -33,7 +51,7 @@ Populated search also exposes a functional layout defect: the 1440px viewport pr
 - [Shell behavior](../../assets/js/app/slices/app-shell-slice.js) and session/profile modules: inspect consumers before moving any container or control.
 - [Showcase](../../plans/kiwi-light-and-shadow-theme-palette-showcase.html#preview): `.preview-topbar`, `.preview-body`, `.preview-sidebar` and the record/workspace relationship. Use its geometry and hierarchy, adapted to the application's actual number of regions.
 
-Local evidence: `/tmp/kiwi-styling-evaluation-2026-11-09/1440-shell.png`, `390-shell.png`, `1440-profile.png` and `1440-reference-customer.png`. The local preview represents source at the audited commit, not a verified production deployment.
+Local evidence: `/tmp/kiwi-styling-evaluation-2026-11-09/1440-shell.png`, `390-shell.png`, `1440-profile.png` and `1440-reference-customer.png`. The local preview represented source at the audited commit, not a verified production deployment. These original temporary images were lost after the environment restart; they remain a historical record. Current accessible baseline/reference evidence and exact source boundaries are registered above.
 
 ## Bounded implementation
 
