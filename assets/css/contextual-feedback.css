@@ -289,7 +289,6 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-form button[type="submit"],
 .contextual-feedback-settings-form button[type="submit"] {
     min-height: var(--control-height);
-    padding-inline: 10px;
     border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     background: var(--surface);
