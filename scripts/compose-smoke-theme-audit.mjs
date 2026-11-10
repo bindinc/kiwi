@@ -18,6 +18,8 @@ const nativeZoomOnly = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM_ONLY === '1';
 const nativeZoom = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM === '1' || nativeZoomOnly;
 const controlsOnly = process.env.KIWI_THEME_AUDIT_CONTROLS_ONLY === '1';
 const shellOnly = process.env.KIWI_THEME_AUDIT_SHELL_ONLY === '1';
+const shellPhase = process.env.KIWI_THEME_AUDIT_SHELL_PHASE || 'before';
+const shellSuite = process.env.KIWI_THEME_AUDIT_SHELL_SUITE || 'matrix';
 const evidenceRoot = path.resolve(process.env.KIWI_THEME_EVIDENCE_DIR || path.join(sourceRoot, '..', '.kiwi-theme-audit/evidence', `slice-${String(slice).padStart(2, '0')}`, `contract-${new Date().toISOString().replace(/[:.]/g, '-')}`));
 const evidenceDir = path.join(evidenceRoot, browserName);
 const referencePath = path.join(sourceRoot, 'plans/kiwi-light-and-shadow-theme-palette-showcase.html');
@@ -30,19 +32,30 @@ const actionPrimitiveClasses = [
     'subscription-duplicate-action', 'werfsleutel-suggestion', 'subscription-offer-toggle', 'channel-chip'
 ];
 const sourceCssByName = Object.fromEntries(await Promise.all(stylesheetNames.map(async name => [name, await readFile(path.join(sourceRoot, 'assets/css', name), 'utf8')])));
+function shellViewports() {
+    if (shellPhase === 'before') return [1440, 1024, 768, 390, 320].map(width => ({ width, height: 1000 })).concat({ width: 390, height: 320 });
+    if (shellSuite === 'boundaries') {
+        return [1201, 1200, 1199, 1001, 1000, 999, 769, 767, 601, 600, 599, 481, 480, 479].map(width => ({ width, height: 1000 }))
+            .concat([541, 540, 539].map(height => ({ width: 390, height })));
+    }
+    if (['roles', 'interactions', 'profile'].includes(shellSuite)) return [{ width: 1440, height: 1000 }, { width: 390, height: 320 }];
+    return [2048, 1440, 1024, 768, 390, 320].map(width => ({ width, height: 1000 })).concat({ width: 390, height: 320 });
+}
+
 const viewports = process.env.KIWI_THEME_AUDIT_VIEWPORTS
     ? process.env.KIWI_THEME_AUDIT_VIEWPORTS.split(',').map(value => {
         const [width, height = 1000] = value.split('x').map(Number);
         return { width, height };
     })
-    : shellOnly
-        ? [1440, 1024, 768, 390, 320].map(width => ({ width, height: 1000 })).concat({ width: 390, height: 320 })
+    : shellOnly ? shellViewports()
         : [{ width: 1440, height: 1000 }, { width: 390, height: 1000 }, { width: 320, height: 1000 }, { width: 390, height: 320 }];
 
 if (!['chromium', 'firefox'].includes(browserName)) throw new Error('Use chromium or firefox.');
 if (!Number.isInteger(slice) || slice < 1 || slice > 10) throw new Error('KIWI_THEME_AUDIT_SLICE must be 1–10.');
 if (controlsOnly && slice < 2) throw new Error('Controlled action scenarios start at slice 02.');
 if (shellOnly && (controlsOnly || nativeZoom)) throw new Error('Run shell, controls and native zoom modes separately.');
+if (shellOnly && !['before', 'after'].includes(shellPhase)) throw new Error('Shell phase must be before or after.');
+if (shellOnly && !['matrix', 'boundaries', 'roles', 'interactions', 'profile'].includes(shellSuite)) throw new Error('Unknown shell acceptance suite.');
 if (shellOnly && slice < 3) throw new Error('Shell scenarios start at slice 03.');
 if (controlsOnly && nativeZoom) throw new Error('Run native zoom separately with the main theme audit runner.');
 if (!['bdc.rtvmedia.org.local', 'localhost', '127.0.0.1'].includes(baseUrl.hostname)) {
@@ -99,7 +112,7 @@ const launchEnvironment = nativeZoom ? {
 const browser = await playwright[browserName].launch(browserName === 'firefox' ? { headless: !nativeZoom, env: launchEnvironment } : {
     headless: !nativeZoom,
     executablePath: process.env.CHROME_EXECUTABLE_PATH || '/usr/bin/google-chrome',
-    args: ['--host-resolver-rules=MAP bdc.rtvmedia.org.local 127.0.0.1'],
+    args: ['--host-resolver-rules=MAP bdc.rtvmedia.org.local 127.0.0.1', ...(nativeZoom && slice >= 3 ? ['--disable-features=Translate,TranslateUI'] : [])],
     env: launchEnvironment
 });
 const report = {
@@ -122,9 +135,9 @@ const report = {
     },
     environment: {
         browser: browserName, browserVersion: browser.version(), playwrightVersion: require(path.join(playwrightPath, 'package.json')).version,
-        locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', role: 'kiwi-admin', deviceScaleFactor: 1,
+        locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', role: shellOnly && shellSuite === 'roles' ? 'Actual per-context fallback roles; see shellAcceptance.roles' : 'kiwi-admin', deviceScaleFactor: 1,
         reducedMotion: 'reduce', nativeZoom: nativeZoom ? 'Actual OS Ctrl+plus/0; measured per capture' : '100% default; 200% native zoom is a separate, unverified gate',
-        scenarioSet: shellOnly ? 'Observed shell states; no parity verdict' : controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
+        scenarioSet: shellOnly ? (shellPhase === 'before' ? 'Observed shell states; no parity verdict' : 'Required shell AFTER acceptance: ' + shellSuite) : controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
         input: 'Pointer flows plus keyboard focus and Escape checks', requestedViewports: viewports
     },
     checks: [], captures: [], controlContainers: [], blockedWrites: [], errors: [], loadedStylesheets: [],
@@ -259,9 +272,9 @@ async function newContext(viewport, readOnly = true, deviceScaleFactor = 1) {
     return context;
 }
 
-async function login(page) {
+async function login(page, username = 'kiwi-admin') {
     await page.goto(baseUrl.href);
-    await page.locator('[name="username"]').fill('kiwi-admin');
+    await page.locator('[name="username"]').fill(username);
     await page.locator('[name="password"]').fill('kiwi-local-dev-password');
     await Promise.all([
         page.waitForURL(url => url.pathname === baseUrl.pathname),
@@ -323,9 +336,9 @@ async function referenceContract(viewport) {
         contract.quietHover = await measure(page, '#themeAuditQuietReference');
         await page.locator('#themeAuditQuietReference').evaluate(sample => sample.remove());
         await page.mouse.move(0, 0);
-        if (shellOnly) {
+        if (shellOnly || (nativeZoom && slice >= 3)) {
             contract.shell = {};
-            for (const selector of ['.preview-topbar', '.preview-body', '.preview-sidebar', '.preview-main']) {
+            for (const selector of ['.preview-topbar', '.preview-body', '.preview-sidebar', '.preview-main', '.preview-brand']) {
                 contract.shell[selector] = await measure(page, selector);
             }
         }
@@ -1064,6 +1077,75 @@ x11.XCloseDisplay(display)
     execFileSync('python3', ['-'], { input: script, env: launchEnvironment });
 }
 
+function dismissNativeBrowserPopup() {
+    const script = `
+import ctypes, time
+x11 = ctypes.CDLL('libX11.so.6')
+xtest = ctypes.CDLL('libXtst.so.6')
+x11.XOpenDisplay.argtypes = [ctypes.c_char_p]
+x11.XOpenDisplay.restype = ctypes.c_void_p
+x11.XKeysymToKeycode.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+x11.XKeysymToKeycode.restype = ctypes.c_ubyte
+x11.XFlush.argtypes = [ctypes.c_void_p]
+x11.XCloseDisplay.argtypes = [ctypes.c_void_p]
+xtest.XTestFakeKeyEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_int, ctypes.c_ulong]
+display = x11.XOpenDisplay(None)
+if not display: raise RuntimeError('Dedicated X display unavailable')
+key = x11.XKeysymToKeycode(display, 0xff1b)
+for _ in range(2):
+    xtest.XTestFakeKeyEvent(display, key, 1, 0)
+    xtest.XTestFakeKeyEvent(display, key, 0, 0)
+    x11.XFlush(display)
+    time.sleep(0.2)
+x11.XCloseDisplay(display)
+`;
+    execFileSync('python3', ['-'], { input: script, env: launchEnvironment });
+}
+
+async function waitForNativeHeaderUncovered(page) {
+    const probe = await page.evaluate(() => {
+        const header = document.querySelector('.header'), bounds = header.getBoundingClientRect();
+        const color = getComputedStyle(header).backgroundColor.match(/[\d.]+/g).map(Number);
+        const selectors = ['#agentProfileTrigger', '#contextualFeedbackSettingsButton', '#subscriptionQueueToggle'];
+        const points = selectors.map(selector => {
+            const control = document.querySelector(selector).getBoundingClientRect();
+            const cssPoint = { x: control.x + control.width / 2, y: control.y - 2 };
+            const hit = document.elementFromPoint(cssPoint.x, cssPoint.y);
+            return { selector, cssPoint, backgroundHit: Boolean(hit?.closest('.header') && !hit.closest('button,a,img,[data-action]')),
+                insideHeader: cssPoint.x > bounds.x && cssPoint.x < bounds.right && cssPoint.y > bounds.y && cssPoint.y < bounds.bottom,
+                screenPoint: { x: Math.round(screenX + cssPoint.x * devicePixelRatio),
+                    y: Math.round(screenY + outerHeight - innerHeight * devicePixelRatio + cssPoint.y * devicePixelRatio) } };
+        });
+        return { color, points, window: { x: screenX, y: screenY, outerWidth, outerHeight, innerWidth, innerHeight, dpr: devicePixelRatio } };
+    });
+    const validColor = probe.color.length === 3 || probe.color[3] === 1;
+    const validPoints = probe.points.every(point => point.backgroundHit && point.insideHeader
+        && point.screenPoint.x > 0 && point.screenPoint.x < 1600 && point.screenPoint.y > 0 && point.screenPoint.y < 1200);
+    if (!validColor || !validPoints) throw new Error('Native header requires opaque background and verified free-strip sample points.');
+    const frames = [], started = Date.now();
+    while (Date.now() - started < 5000) {
+        const bytes = execFileSync('ffmpeg', ['-loglevel', 'error', '-f', 'x11grab', '-video_size', '1600x1200', '-i', displayName,
+            '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', 'pipe:1'], { env: launchEnvironment, maxBuffer: 8 * 1024 * 1024 });
+        const colors = await page.evaluate(async ({ dataUrl, points }) => {
+            const image = new Image(); image.src = dataUrl; await image.decode();
+            const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+            const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+            return points.map(point => [...context.getImageData(point.screenPoint.x, point.screenPoint.y, 1, 1).data]);
+        }, { dataUrl: 'data:image/png;base64,' + bytes.toString('base64'), points: probe.points });
+        const clear = colors.every(color => color[3] === 255 && probe.color.slice(0, 3).every((value, index) => color[index] === value));
+        frames.push({ elapsedMs: Date.now() - started, sha256: sha256(bytes), colors, clear });
+        for (const name of [frames.length === 1 ? 'native-header-ui-first-frame' : null, clear ? 'native-header-ui-clear-frame' : null].filter(Boolean)) {
+            const filename = name + '.png'; await writeFile(path.join(evidenceDir, filename), bytes);
+            report.captures.push({ name, filename, viewport: { width: probe.window.innerWidth, height: probe.window.innerHeight },
+                kind: 'Actual native OS desktop browser-UI readiness probe; not a workflow acceptance image.',
+                captureMethod: 'actual1600x1200 X11desktop via ffmpeg x11grab; canvas only reads original PNG pixels',
+                geometry: { viewportWidth: probe.window.innerWidth, viewportHeight: probe.window.innerHeight, devicePixelRatio: probe.window.dpr } });
+        }
+        if (clear) return { probe, frames, boundary: 'Observed actual free header strip; independent full uncropped visual inspection still required.' };
+    }
+    throw new Error('Actual native header remains obscured: ' + JSON.stringify({ probe, frames }));
+}
+
 async function nativeZoomChecks() {
     const contract = slice >= 2 ? await referenceContract({ width: 1440, height: 1000 }) : null;
     const context = await browser.newContext({
@@ -1079,6 +1161,9 @@ async function nativeZoomChecks() {
     });
     const page = await context.newPage();
     const finishAssetEvidence = trackStylesheets(page, 'native window');
+    const finishBehaviorEvidence = slice >= 3
+        ? await (await import('./compose-smoke-theme-audit-shell-acceptance.mjs')).trackShellBehaviorAssets(page, { sourceRoot, baseUrl, check, evidenceDir, report }, { state: 'native window' })
+        : async () => {};
     page.on('pageerror', error => report.errors.push({ scenario: 'native browser runtime', message: error.message }));
     page.setDefaultTimeout(10000);
     const geometry = () => page.evaluate(() => ({ innerWidth, innerHeight, outerWidth, outerHeight, dpr: devicePixelRatio, pinchScale: visualViewport?.scale }));
@@ -1105,6 +1190,25 @@ async function nativeZoomChecks() {
             state: 'native zoom', before, zoomed, increments, kind: 'actual OS browser shortcut'
         });
         if (!native200 || !widthHalved || !outerStable || !noPinch) return;
+        if (browserName === 'chromium' && slice >= 3) {
+            report.nativeBrowserUI = {
+                action: 'Two actual XTest Escape inputs at empty OS200% baseline dismiss Translate; actual X11 pixels gate subsequent browser-popup clearance.' };
+            const appState = () => page.evaluate(() => ({ profileHidden: document.querySelector('#agentStatusMenu').hidden,
+                outboxHidden: document.querySelector('#subscriptionQueuePanel').hidden,
+                selectedCustomer: Boolean(window.kiwiCustomerWorkSession?.getRequestContext?.()?.customerReference),
+                scrollX, scrollY, width: innerWidth, height: innerHeight, dpr: devicePixelRatio }));
+            const beforePopup = await appState();
+            await capture(page, 'native-popup-before-dismissal', undefined, 'Actual OS200% Chrome browser-popup diagnostic before dismissal; uncropped desktop.');
+            dismissNativeBrowserPopup();
+            report.nativeBrowserUI.headerReadiness = await waitForNativeHeaderUncovered(page);
+            check('native browser UI leaves actual header strip uncovered', true, true, { state: 'native browser UI', evidence: report.nativeBrowserUI.headerReadiness });
+            await capture(page, 'native-popup-after-dismissal', undefined, 'Actual OS200% Chrome browser-popup diagnostic after real XTest Escape; uncropped desktop.');
+            const afterPopup = await appState();
+            report.nativeBrowserUI.applicationBefore = beforePopup;
+            report.nativeBrowserUI.applicationAfter = afterPopup;
+            report.nativeBrowserUI.scope = 'Browser UI preparation before the complete native200% application suite; uncropped visual review remains required.';
+            check('actual browser-popup dismissal retains empty application state', JSON.stringify(afterPopup), JSON.stringify(beforePopup), { state: 'native browser UI' });
+        }
         await capture(page, 'native-200-shell');
         await keyboardFocus(page, '#agentProfileTrigger', 'native 200% shell');
         await capture(page, 'native-200-profile-focus');
@@ -1137,11 +1241,16 @@ async function nativeZoomChecks() {
         await capture(page, 'native-200-settings');
         if (slice >= 2) await controlChecks(page, contract, 'native 200% feedback settings', '.contextual-feedback-settings-modal', 'actual native-zoomed application; keyboard traversal', { inspectHover: false });
         await page.locator('[data-feedback-settings-close]').first().press('Enter');
+        if (slice >= 3) {
+            const { inspectNativeShell } = await import('./compose-smoke-theme-audit-shell-acceptance.mjs');
+            await inspectNativeShell(page, { capture, check, controlChecks, evidenceDir, painted, report }, contract);
+        }
         sendNativeZoomKey(true);
         const reset = await geometry();
         check('native zoom reset restored 100%', Math.abs(reset.dpr - before.dpr) < 0.03 && Math.abs(reset.innerWidth - before.innerWidth) < 3, true, { state: 'native zoom reset', before, reset });
     } finally {
         sendNativeZoomKey(true);
+        await finishBehaviorEvidence();
         await finishAssetEvidence();
         await context.close();
     }
@@ -1153,7 +1262,7 @@ try {
             const contract = await referenceContract(viewport);
             if (shellOnly) {
                 const { inspectShell } = await import('./compose-smoke-theme-audit-shell.mjs');
-                await inspectShell({ baseUrl, capture, check, login, newContext, painted, report, saveReport, trackStylesheets }, viewport, contract);
+                await inspectShell({ baseUrl, sourceRoot, capture, check, controlChecks, evidenceDir, login, newContext, painted, report, saveReport, trackStylesheets }, viewport, contract);
             } else if (controlsOnly) {
                 const { inspectControls } = await import('./compose-smoke-theme-audit-controls.mjs');
                 await inspectControls({
@@ -1176,7 +1285,7 @@ try {
 } catch (error) {
     report.errors.push({ scenario: 'runner', message: error.message.slice(0, 1200) });
 } finally {
-    if (!report.checks.length || !report.captures.some(capture => capture.kind.includes('actual'))) {
+    if (!report.checks.length || !report.captures.some(capture => capture.kind.toLowerCase().includes('actual'))) {
         report.errors.push({ scenario: 'runner coverage', message: 'Unexpected empty run: checks and actual application captures are mandatory.' });
     }
     report.environment.capturedViewports = [...new Map(report.captures.map(capture => [JSON.stringify(capture.viewport), capture.viewport])).values()];
@@ -1187,7 +1296,9 @@ try {
         unverified: report.checks.filter(check => check.status === 'unverified').length,
         errors: report.errors.length, blockedWrites: report.blockedWrites.length,
         captures: report.captures.length,
-        acceptance: 'Requires independent visual review and remaining explicit gates; a successful run is not complete slice 10 acceptance.'
+        acceptance: shellOnly && shellPhase === 'before'
+            ? 'Observational BEFORE capture: locale/provenance counters do not accept recorded visual/keyboard defects.'
+            : 'Required gates plus independent visual review remain necessary; a successful run is not complete slice 10 acceptance.'
     };
     await saveReport();
     await browser.close();

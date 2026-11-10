@@ -12,6 +12,12 @@ const phase = process.env.KIWI_THEME_AUDIT_SHELL_PHASE || 'before';
 if (!['before', 'after'].includes(phase)) throw new Error('Shell phase must be before or after.');
 
 export async function inspectShell(driver, viewport, contract) {
+    if (phase === 'after') {
+        const { inspectShellAcceptance, inspectRoleShell } = await import('./compose-smoke-theme-audit-shell-acceptance.mjs');
+        const suite = process.env.KIWI_THEME_AUDIT_SHELL_SUITE || 'matrix';
+        if (suite === 'roles') return inspectRoleShell(driver, viewport, contract);
+        return inspectShellAcceptance(driver, viewport, contract, suite);
+    }
     const { capture, check, login, newContext, painted, report, saveReport, trackStylesheets } = driver;
     report.shellEvidence ||= { phase, companion: provenance, scope: 'Observed actual local shell states; no complete workflow or parity acceptance.', references: [], observations: [], keyboard: [], fixtures: [] };
     report.shellEvidence.references.push({ viewport, measuredShowcase: contract.shell });
