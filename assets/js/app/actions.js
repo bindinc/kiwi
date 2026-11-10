@@ -23,10 +23,16 @@ function parseActionEventList(rawList) {
 
 function canHandleEventType(actionElement, eventType) {
     const allowedEventTypes = parseActionEventList(actionElement?.dataset?.actionEvent);
-    if (!allowedEventTypes) {
-        return true;
+    if (allowedEventTypes) {
+        return allowedEventTypes.includes(eventType);
     }
-    return allowedEventTypes.includes(eventType);
+
+    // Native buttons already turn Enter and Space into clicks; other keys only navigate.
+    if (actionElement?.tagName === 'BUTTON') {
+        return eventType === 'click';
+    }
+
+    return true;
 }
 
 function findActionElement(target) {
