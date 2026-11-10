@@ -21,6 +21,10 @@ Depends on [01 — foundations](../../css/theme_audit-01-foundations.md), [02 �
 
 These are source observations and implementation targets, not a claim that every state has been visually inspected. Add measured screenshots and computed-style findings to the implementation review.
 
+### Confirmed refresh-focus gate — 2026-11-10
+
+Slice 02's actual-renderer supplement found that the five-second outbox refresh replaces the list/trigger while a closed-menu trigger has keyboard focus. The focused element detaches before Enter, losing the user's position. This is an existing operational refresh/focus failure owned by 09, not an accepted shared-control state. Evidence is retained under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-02/02c9a36/compact-attempt-04/chromium/`. The controls supplement separately holds later fixture GET responses pending to inspect stable button geometry/native activation; that pending-response fixture does not prove production refresh acceptance. Preserve capability/revision/idempotency behavior while retaining meaningful focus across refreshes and correctly restoring focus after menu exit.
+
 ## One operational presentation model
 
 Use a common ordering: **identity → state → relevant timing/details → permitted action**. Preserve the location and visibility of information needed to act safely.

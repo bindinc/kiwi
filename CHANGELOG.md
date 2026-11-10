@@ -10,6 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
+- Align shared native controls, persistent labels and primary, outlined secondary, compact, icon and danger actions with the showcase while restoring keyboard-operable payment choices and preventing navigation keys from activating native button actions (`theme_audit` slice 02). [sc-206629]
 - Align shared theme foundations with the Light & Shadow showcase using explicit spacing, typography, tinted surfaces, flat panels, restrained overlay elevation and fully visible keyboard focus in short form overlays (`theme_audit` slice 01). [sc-206629]
 - Document the complete styleguide evaluation and code-adjacent implementation slices, marked `theme_audit`, without changing application styling or behavior. [sc-206629]
 - Apply the Light & Shadow palette as Kiwi's default light theme using semantic colors, accessible control borders and keyboard focus, while preserving operational states and feedback privacy; include a flat, responsive delivery date picker with keyboard navigation, the design showcase, contrast checks and browser smoke coverage. [sc-206629]

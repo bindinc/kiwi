@@ -20,6 +20,18 @@ Apply the [showcase](../../plans/kiwi-light-and-shadow-theme-palette-showcase.ht
 
 The audit captured local feedback settings, the actual feedback dialog, logout and access-denied views at 1440/390px. Because feedback was disabled by preference, the installed button handler was invoked directly for dialog inspection; the preference was not changed. Rendering inspection of a dialog is not proof of capture privacy, successful submission or permission behavior. See the index evidence table for exact gaps.
 
+### Confirmed short-height containment defect — 2026-11-10
+
+Slice 02 browser review confirmed that the feedback panel clips its close and submit controls at 390×320 in Chromium and Firefox. A controlled comparison used the same current feedback markup with the exact pre-02 CSS snapshot: both pre-02 and current panels extend above/below the viewport, with `overflow: visible` and no maximum height. Keyboard focus does not reveal the clipped controls. This is an existing overlay-containment failure that slice 08 must resolve before its acceptance; the state is recorded as a deviation deferred to 08, never as a passing short-height check.
+
+Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-02/short-feedback-comparison/report.json` and its four browser/comparison PNGs. The comparison is labeled **old-CSS application comparison**; it does not establish showcase parity or feedback-submission acceptance. Preserve the working Escape/draft behavior while making the header, form body and actions reachable.
+
+### Additional disposition containment gate — 2026-11-10
+
+The slice 02 actual component probe at `c12b7fe` confirms canonical caption/field/focus painting in the delivery, disposition and debug dialogs. It separately records partial focused disposition textareas at 390×320: Chromium follow-up bottom 340.75px; Firefox notes/follow-up bottoms 359.70px/343.87px, beyond the 320px viewport. These are current container-visibility failures owned by 08, not passing full-focus/containment states. Unlike the feedback comparison above, this finding does not claim a separately replayed historical CSS baseline. Existing rows, width/margins and modal scroll composition are preserved by 02; 08 must make every focused field and its full indicator reachable without losing values.
+
+Evidence is retained under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-02/c12b7fe/`; the standalone-field reports and screenshots distinguish the 260 passing type/geometry/draft/source checks per engine from these explicit containment observations. Do not mark this gate complete from those counts alone.
+
 ## Bounded implementation
 
 1. Establish shared dialog header/body/footer spacing, type, borders and control dimensions. Use restrained elevation to express the overlay layer; ordinary form sections inside the dialog remain flat.

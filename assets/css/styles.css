@@ -22,6 +22,7 @@
     /* Opaque workflow tints reproduce the showcase on every parent surface. */
     --surface-canvas: color-mix(in srgb, var(--palette-cloud-dancer) 72%, var(--surface));
     --surface-data: color-mix(in srgb, var(--palette-blue-fusion) 8%, var(--surface));
+    --surface-choice-selected: color-mix(in srgb, var(--palette-blue-fusion) 6%, var(--surface));
     --surface-label: color-mix(in srgb, var(--palette-golden-mist) 58%, var(--surface));
     --surface-calm: var(--palette-veiled-vista);
     --surface-selected: color-mix(in srgb, var(--palette-veiled-vista) 58%, var(--surface));
@@ -42,6 +43,8 @@
     --action-active: #2B3E4D;
     --action-secondary: var(--palette-hematite);
     --action-secondary-hover: #5D5855;
+    --surface-secondary-hover: rgba(117, 111, 107, 0.1);
+    --surface-quiet-hover: rgba(73, 98, 117, 0.1);
     --focus: var(--palette-blue-fusion);
     --focus-inverse: #ffffff;
     --surface-inverse: var(--action-hover);
@@ -122,13 +125,57 @@
     color: var(--action-hover);
 }
 
-input,
+/* Text-entry geometry never applies to native choices, hidden values or special inputs. */
+input:where(:not([type="radio"], [type="checkbox"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="range"], [type="color"], [type="image"])),
 select,
 textarea {
-    accent-color: var(--action);
-    border-color: var(--border-control);
+    min-width: 0;
+    max-width: 100%;
+    min-height: var(--control-height);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-sm);
     color: var(--text);
     background-color: var(--surface);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-body);
+    font-weight: var(--weight-regular);
+    line-height: var(--line-height-label);
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+textarea { resize: vertical; }
+
+:is(input, textarea)[readonly] {
+    background-color: var(--surface-subdued);
+    color: var(--text-muted);
+}
+
+:is(input, select, textarea):is([aria-invalid="true"], :user-invalid) {
+    border-color: var(--danger);
+}
+
+.control-field,
+.customer-form-field {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    min-width: 0;
+    flex: 1;
+}
+
+.control-field > label,
+.customer-form-field > label {
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-medium);
+    line-height: var(--line-height-label);
+    color: var(--text);
+}
+
+.control-field > :is(input, select),
+.customer-form-field > :is(input, select) {
+    width: 100%;
 }
 
 input::placeholder,
@@ -139,12 +186,26 @@ textarea::placeholder {
 
 input[type="checkbox"],
 input[type="radio"] {
-    outline: 1px solid var(--border-control);
-    outline-offset: 0;
+    appearance: auto;
+    accent-color: var(--action);
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    padding: 0;
+    margin: 0;
+    flex: 0 0 auto;
+    cursor: pointer;
 }
 
 input[type="radio"] {
     border-radius: 50%;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+    cursor: not-allowed;
 }
 
 :focus-visible {
@@ -910,7 +971,7 @@ body {
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     font-weight: 600;
     box-shadow: var(--elevation-flat);
 }
@@ -988,7 +1049,7 @@ body {
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     box-shadow: var(--elevation-flat);
 }
 
@@ -1044,7 +1105,7 @@ body {
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     font-weight: 600;
     box-shadow: var(--elevation-flat);
 }
@@ -1126,7 +1187,7 @@ body {
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 700;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     box-shadow: var(--elevation-flat);
 }
 
@@ -1290,36 +1351,22 @@ body {
 }
 
 .form-group label,
-.form-label {
+.form-label,
+.coupon-section label,
+.address-fields .customer-address-field label,
+.datepicker-label,
+.werfsleutel-fieldset label[for],
+.customer-editor label,
+.onepager-container .optin-label {
     font-size: var(--font-size-label);
     font-weight: var(--weight-medium);
     line-height: var(--line-height-label);
     color: var(--text);
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-    padding: 0.625rem 0.875rem;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-body);
-    transition: all 0.2s;
-    font-family: inherit;
-}
-
 .form-group textarea {
     resize: vertical;
     min-height: 80px;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .form-text {
@@ -1332,19 +1379,6 @@ body {
 
 .form-control {
     width: 100%;
-    padding: 0.625rem 0.875rem;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-body);
-    transition: all 0.2s;
-    font-family: inherit;
-}
-
-.form-control:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
 }
 
 /* Form hint text */
@@ -1379,13 +1413,19 @@ select option {
 }
 
 .additional-filters-toggle {
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
+    line-height: 1.2;
+    white-space: normal;
+    text-align: left;
+    gap: var(--space-2);
     width: 100%;
     background: none;
     border: none;
-    padding: 0.25rem 0;
+    padding: var(--space-2) 0;
     color: var(--text-muted);
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: var(--font-size-action);
+    font-weight: var(--weight-medium);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1393,6 +1433,7 @@ select option {
 }
 
 .additional-filters-toggle:hover {
+    background: var(--surface-quiet-hover);
     color: var(--text);
 }
 
@@ -1429,6 +1470,7 @@ select option {
     gap: 0.5rem;
 }
 
+/* White choice surfaces keep browser-drawn unchecked edges legible in both engines. */
 .checkbox-option {
     display: flex;
     align-items: center;
@@ -1436,55 +1478,74 @@ select option {
     padding: 0.5rem 0.625rem;
     border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    background: var(--surface-subdued);
+    background: var(--surface);
     color: var(--text);
     cursor: pointer;
+    min-height: var(--choice-height);
 }
 
 .checkbox-option input {
-    width: 1rem;
-    height: 1rem;
     margin: 0;
     flex: 0 0 auto;
 }
 
 /* Buttons */
 .btn {
-    padding: 0.75rem 1.25rem;
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: 0.95rem;
-    font-weight: 500;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-action);
+    font-weight: var(--weight-medium);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    min-height: var(--control-height);
+    max-width: 100%;
+    font-family: var(--font-ui);
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
 }
 
 .btn-primary {
     background-color: var(--action);
+    border-color: var(--action);
     color: var(--text-inverse);
 }
 
 .btn-primary:hover {
     background-color: var(--action-hover);
+    border-color: var(--action-hover);
     box-shadow: var(--elevation-flat);
 }
 
 .btn-primary:active {
     background-color: var(--action-active);
+    border-color: var(--action-active);
 }
 
 .btn-secondary {
-    background-color: var(--action-secondary);
-    color: var(--text-inverse);
+    background-color: var(--surface);
+    color: var(--action-secondary);
     border: 1px solid var(--action-secondary);
 }
 
 .btn-secondary:hover {
-    background-color: var(--action-secondary-hover);
+    /* The reference tint needs darker neutral ink to retain 4.5:1 text contrast. */
+    background-color: var(--surface-secondary-hover);
+    color: var(--action-secondary-hover);
+}
+
+.btn-danger {
+    background-color: var(--danger);
+    color: var(--text-inverse);
+}
+
+.btn-danger:hover {
+    background-color: var(--danger-hover);
 }
 
 .btn-success {
@@ -1513,8 +1574,8 @@ select option {
 }
 
 .btn-small {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-action);
 }
 
 /* End Session Button in Header */
@@ -1549,19 +1610,33 @@ select option {
     color: var(--text-muted);
     cursor: pointer;
     padding: 0;
-    width: 32px;
-    height: 32px;
+    width: var(--control-height);
+    height: var(--control-height);
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-sm);
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    flex: 0 0 auto;
 }
 
 .btn-close:hover {
     background-color: var(--surface-subdued);
     color: var(--text);
 }
+
+
+
+.modal-header .btn-close {
+    color: var(--text-inverse);
+}
+
+.modal-header .btn-close:hover {
+    background-color: var(--surface-inverse);
+    color: var(--text-inverse);
+}
+
+.btn[aria-busy="true"] { cursor: progress; }
 
 /* Actions Card */
 .actions-card {
@@ -1687,10 +1762,12 @@ select option {
     background: none;
     border: none;
     color: var(--action);
-    padding: 0.5rem;
+    padding: var(--space-2);
+    min-height: var(--control-height);
     text-align: left;
     cursor: pointer;
-    font-size: 0.875rem;
+    font-family: var(--font-ui);
+    font-size: var(--font-size-action);
     transition: opacity 0.2s;
 }
 
@@ -1748,9 +1825,10 @@ select option {
 }
 
 .sort-label {
-    font-size: 0.9rem;
+    font-size: var(--font-size-label);
+    line-height: var(--line-height-label);
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
 }
 
 .sort-select {
@@ -1758,9 +1836,9 @@ select option {
     border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     background: var(--surface);
-    font-size: 0.9rem;
+    font-size: var(--font-size-body);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .sort-select:hover {
@@ -1782,15 +1860,15 @@ select option {
     font-size: 1.2rem;
     line-height: 1;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     border-radius: var(--radius-sm);
     margin-left: 0.5rem;
 }
 
 .btn-close-results:hover {
-    background: var(--danger);
-    color: var(--text-inverse);
-    border-color: var(--danger);
+    background: var(--surface-quiet-hover);
+    color: var(--action);
+    border-color: var(--action);
 }
 
 .btn-close-customer {
@@ -1801,15 +1879,15 @@ select option {
     font-size: 1.2rem;
     line-height: 1;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     border-radius: var(--radius-sm);
     margin-left: 0.5rem;
 }
 
 .btn-close-customer:hover {
-    background: var(--danger);
-    color: var(--text-inverse);
-    border-color: var(--danger);
+    background: var(--surface-quiet-hover);
+    color: var(--action);
+    border-color: var(--action);
 }
 
 /* Results Table */
@@ -1948,15 +2026,19 @@ select option {
 }
 
 .page-btn {
-    padding: 0.5rem 0.75rem;
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
+    line-height: 1.2;
+    white-space: normal;
+    padding: var(--space-2) var(--space-3);
     min-width: 2.5rem;
     border: 1px solid var(--border-subtle);
     background: var(--surface);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.9rem;
-    font-weight: 500;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    font-size: var(--font-size-action);
+    font-weight: var(--weight-medium);
 }
 
 .page-btn:hover:not(:disabled) {
@@ -2012,7 +2094,7 @@ select option {
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     margin-bottom: 0.75rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -2270,17 +2352,26 @@ select option {
 }
 
 .icon-btn {
-    background: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: var(--control-height);
+    min-height: var(--control-height);
+    background: var(--surface);
+    color: var(--action);
     border: 1px solid var(--border-control);
-    padding: 0.5rem;
+    padding: var(--space-2);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.2s;
+    font-family: var(--font-ui);
+    font-size: var(--font-size-action);
+    line-height: 1.2;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .icon-btn:hover {
-    background-color: var(--surface-subdued);
+    background-color: var(--surface-quiet-hover);
     border-color: var(--action);
 }
 
@@ -2616,11 +2707,16 @@ dialog.form-lightbox::backdrop {
     border: 1px solid var(--border-control);
     background-color: var(--surface);
     color: var(--text);
-    padding: 0.4rem 0.75rem;
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
+    line-height: 1.2;
+    white-space: normal;
+    padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-sm);
+    font-weight: var(--weight-medium);
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s;
-    font-size: 0.85rem;
+    font-size: var(--font-size-action);
 }
 
 .timeline-nav-btn:hover:not(:disabled) {
@@ -2735,12 +2831,13 @@ dialog.form-lightbox::backdrop {
 .radio-option {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1rem;
+    gap: var(--space-2);
+    padding: var(--space-3);
     border: 1px solid var(--border-control);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background-color 0.2s;
+    min-height: var(--choice-height);
 }
 
 .radio-option:hover {
@@ -2748,26 +2845,14 @@ dialog.form-lightbox::backdrop {
     background-color: var(--surface-selected);
 }
 
-.radio-option input[type="radio"] {
-    width: 1.25rem;
-    height: 1.25rem;
-    cursor: pointer;
-}
-
-/* Checkbox Styling */
-.form-group input[type="checkbox"] {
-    width: 1.15rem;
-    height: 1.15rem;
-    cursor: pointer;
-    margin-right: 0.5rem;
-}
-
 .form-group label:has(input[type="checkbox"]) {
     display: flex;
     align-items: center;
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: var(--font-size-label);
     color: var(--text);
+    gap: var(--space-2);
+    min-height: var(--choice-height);
 }
 
 .offers-container {
@@ -2782,7 +2867,7 @@ dialog.form-lightbox::backdrop {
     border: 2px solid var(--border-control);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .offer-card:hover {
@@ -2984,13 +3069,6 @@ dialog.form-lightbox::backdrop {
     margin-bottom: 0;
 }
 
-.article-sale-container .form-row input,
-.article-sale-container .form-row select,
-.article-sale-container .form-row textarea {
-    padding: 7px 10px;
-    font-size: 0.9rem;
-}
-
 .article-sale-container .aanhef-row {
     margin-bottom: 0.625rem;
     gap: 1.25rem;
@@ -2998,11 +3076,6 @@ dialog.form-lightbox::backdrop {
 
 .article-sale-container .payment-option {
     margin-bottom: 0.4rem;
-}
-
-.article-sale-container .payment-option label {
-    padding: 8px 10px;
-    font-size: 0.9rem;
 }
 
 .article-sale-container .payment-option:last-child {
@@ -3014,25 +3087,13 @@ dialog.form-lightbox::backdrop {
     margin-bottom: 0.4rem;
 }
 
-.article-sale-container .remark-shortcut {
-    padding: 0.25rem 0.6rem;
-    font-size: 0.775rem;
-}
-
 .article-sale-container textarea {
-    padding: 7px 10px !important;
-    font-size: 0.9rem !important;
     min-height: 60px;
 }
 
 .article-sale-container .form-actions {
     margin-top: 1rem;
     padding-top: 0.75rem;
-}
-
-.article-sale-container .form-actions button {
-    padding: 0.625rem 1.25rem;
-    font-size: 0.9rem;
 }
 
 .onepager-container .form-section {
@@ -3107,10 +3168,8 @@ dialog.form-lightbox::backdrop {
     display: flex;
     align-items: center;
     cursor: pointer;
-}
-
-.onepager-container .aanhef-row input {
-    margin-right: 0.5rem;
+    gap: var(--space-2);
+    min-height: var(--choice-height);
 }
 
 .onepager-container .form-row {
@@ -3120,39 +3179,32 @@ dialog.form-lightbox::backdrop {
     position: relative;
 }
 
-.onepager-container .form-row input, 
-.onepager-container .form-row select {
+.onepager-container .form-row > input,
+.onepager-container .form-row > select {
     flex: 1;
-    padding: 10px;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    box-sizing: border-box;
-    font-size: 0.95rem;
-    background-color: var(--surface);
+    min-width: 0;
 }
 
 .onepager-container .form-row input::placeholder {
     color: var(--text-muted);
 }
 
-.onepager-container .form-row input:focus,
-.onepager-container .form-row select:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
-}
+.onepager-container .form-row > :is(.control-field, .customer-form-field):has(input[id*="Initials"]) { flex: 0.8; }
+
+.onepager-container .form-row > :is(.control-field, .customer-form-field):has(input[id*="MiddleName"]) { flex: 1; }
+
+.onepager-container .form-row > :is(.control-field, .customer-form-field):has(input[id*="LastName"]) { flex: 2; }
 
 /* Special input sizing for name fields */
-.onepager-container .form-row input[id*="Initials"] {
+.onepager-container .form-row > input[id*="Initials"] {
     flex: 0.8;
 }
 
-.onepager-container .form-row input[id*="MiddleName"] {
+.onepager-container .form-row > input[id*="MiddleName"] {
     flex: 1;
 }
 
-.onepager-container .form-row input[id*="LastName"] {
+.onepager-container .form-row > input[id*="LastName"] {
     flex: 2;
 }
 
@@ -3175,9 +3227,7 @@ dialog.form-lightbox::backdrop {
 
 .address-fields .customer-address-field label {
     display: block;
-    margin-bottom: 0.375rem;
-    font-size: 0.95rem;
-    color: var(--text);
+    margin-bottom: var(--space-2);
 }
 
 .address-fields .customer-address-field input,
@@ -3189,7 +3239,7 @@ dialog.form-lightbox::backdrop {
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     padding: 0.85rem;
-    background-color: var(--surface-subdued);
+    background-color: var(--surface);
     margin-bottom: 1rem;
 }
 
@@ -3203,9 +3253,10 @@ dialog.form-lightbox::backdrop {
 .onepager-container .party-mode-toggle label {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: 0.92rem;
+    gap: var(--space-2);
+    font-size: var(--font-size-label);
     margin: 0;
+    min-height: var(--choice-height);
 }
 
 .onepager-container .subscription-person-search {
@@ -3229,6 +3280,7 @@ dialog.form-lightbox::backdrop {
 .onepager-container .subscription-person-name-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
     gap: 0.6rem;
     margin-bottom: 0;
 }
@@ -3353,12 +3405,18 @@ dialog.form-lightbox::backdrop {
 }
 
 .onepager-container .subscription-duplicate-action {
-    border: 1px solid var(--border-control);
+    min-height: var(--control-height);
+    max-width: 100%;
+    font-family: var(--font-ui);
+    font-weight: var(--weight-medium);
+    line-height: 1.2;
+    white-space: normal;
+    border: 1px solid var(--action-secondary);
     border-radius: var(--radius-sm);
-    padding: 0.2rem 0.5rem;
-    font-size: 0.78rem;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-action);
     background-color: var(--surface);
-    color: var(--text);
+    color: var(--action-secondary);
     cursor: pointer;
 }
 
@@ -3367,8 +3425,12 @@ dialog.form-lightbox::backdrop {
     color: var(--warning);
 }
 
-.onepager-container .subscription-duplicate-action:hover {
-    background-color: var(--surface);
+.onepager-container .subscription-duplicate-action:hover:not(:disabled) {
+    background-color: var(--surface-secondary-hover);
+}
+
+.onepager-container .subscription-duplicate-action:hover:not(:disabled):not(.warning) {
+    color: var(--action-secondary-hover);
 }
 
 .onepager-container .subscription-duplicate-list {
@@ -3412,30 +3474,42 @@ dialog.form-lightbox::backdrop {
 
 .onepager-container .payment-option {
     margin-bottom: 0.5rem;
-    transition: all 0.3s ease-in-out;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    overflow: hidden;
+    transition: border-color 0.2s, background-color 0.2s;
+    border: 1px solid var(--border-panel);
+    border-radius: var(--radius-sm);
+
+    position: relative;
+}
+
+.onepager-container .payment-option:has(> input[type="radio"]:checked) {
+    border-color: var(--action);
 }
 
 .onepager-container .payment-option input[type="radio"] {
-    display: none;
+    display: block;
+    position: absolute;
+    inset-inline-start: var(--space-3);
+    top: var(--space-3);
+    z-index: 1;
 }
 
-.onepager-container .payment-option label {
+.onepager-container .payment-option > label {
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: var(--space-3) var(--space-3) var(--space-3) 44px;
     cursor: pointer;
     background: var(--surface);
-    transition: all 0.3s ease;
-    border-bottom: 1px solid transparent;
+    transition: background-color 0.2s;
+
+    min-height: var(--choice-height);
+    gap: var(--space-2);
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-medium);
+    line-height: var(--line-height-label);
 }
 
 .onepager-container .payment-option input[type="radio"]:checked + label {
-    border-bottom-color: var(--border-control);
-    background-color: var(--surface-subdued);
-    font-weight: 500;
+    background-color: var(--surface-choice-selected);
 }
 
 .onepager-container .payment-option input[type="radio"]:checked ~ .additional-input {
@@ -3444,9 +3518,9 @@ dialog.form-lightbox::backdrop {
 
 .onepager-container .additional-input {
     display: none;
-    padding: 10px;
+    padding: var(--space-3);
     background-color: var(--surface);
-    border-top: 1px solid var(--border-control);
+    border-top: 1px solid var(--border-subtle);
 }
 
 .onepager-container .additional-input.visible {
@@ -3455,30 +3529,15 @@ dialog.form-lightbox::backdrop {
 
 .onepager-container .additional-input input {
     width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    background-color: var(--surface);
-}
-
-.onepager-container .additional-input input:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .onepager-container .payment-icon {
     width: 24px;
     height: 24px;
-    margin-right: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.onepager-container .payment-text {
-    font-size: 16px;
+    flex: 0 0 auto;
 }
 
 /* Optin Rows */
@@ -3488,12 +3547,11 @@ dialog.form-lightbox::backdrop {
     gap: 1rem;
     margin-bottom: 0.75rem;
     padding: 0.625rem 0.75rem;
-    background-color: var(--surface-subdued);
+    background-color: var(--surface);
     border-radius: var(--radius-sm);
 }
 
 .onepager-container .optin-label {
-    font-weight: 500;
     min-width: 180px;
     margin: 0;
 }
@@ -3508,10 +3566,12 @@ dialog.form-lightbox::backdrop {
     align-items: center;
     cursor: pointer;
     margin: 0;
-}
-
-.onepager-container .optin-options input {
-    margin-right: 0.5rem;
+    gap: var(--space-2);
+    min-height: var(--choice-height);
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-regular);
+    line-height: var(--line-height-body);
+    color: var(--text-muted);
 }
 
 /* Form Actions */
@@ -3545,10 +3605,8 @@ dialog.form-lightbox::backdrop {
     display: flex;
     align-items: center;
     cursor: pointer;
-}
-
-.winback-step .aanhef-row input {
-    margin-right: 0.5rem;
+    gap: var(--space-2);
+    min-height: var(--choice-height);
 }
 
 .winback-step .form-row {
@@ -3558,38 +3616,26 @@ dialog.form-lightbox::backdrop {
     position: relative;
 }
 
-.winback-step .form-row input, 
-.winback-step .form-row select {
+.winback-step .form-row > input,
+.winback-step .form-row > select {
     flex: 1;
-    padding: 10px;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    box-sizing: border-box;
-    font-size: 0.95rem;
+    min-width: 0;
 }
 
 .winback-step .form-row input::placeholder {
     color: var(--text-muted);
 }
 
-.winback-step .form-row input:focus,
-.winback-step .form-row select:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
-}
-
 /* Special input sizing for name fields */
-.winback-step .form-row input[id*="Initials"] {
+.winback-step .form-row > input[id*="Initials"] {
     flex: 0.8;
 }
 
-.winback-step .form-row input[id*="MiddleName"] {
+.winback-step .form-row > input[id*="MiddleName"] {
     flex: 1;
 }
 
-.winback-step .form-row input[id*="LastName"] {
+.winback-step .form-row > input[id*="LastName"] {
     flex: 2;
 }
 
@@ -3619,18 +3665,11 @@ dialog.form-lightbox::backdrop {
     margin-bottom: 1rem;
 }
 
-.winback-step .form-group label {
+.winback-step .form-group label:has(input[type="checkbox"]) {
     display: flex;
     align-items: center;
     cursor: pointer;
     font-weight: normal;
-}
-
-.winback-step .form-group input[type="checkbox"] {
-    width: 1.15rem;
-    height: 1.15rem;
-    margin-right: 0.5rem;
-    cursor: pointer;
 }
 
 /* Mobile responsive for onepager forms */
@@ -3775,12 +3814,6 @@ dialog.form-lightbox::backdrop {
     font-weight: 500;
 }
 
-.checkbox-label input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-}
-
 .form-text {
     display: block;
     margin-top: 0.25rem;
@@ -3824,12 +3857,15 @@ dialog.form-lightbox::backdrop {
     font-size: 2rem;
     cursor: pointer;
     padding: 0;
-    width: 2rem;
-    height: 2rem;
+    flex: 0 0 auto;
+    min-width: var(--control-height);
+    min-height: var(--control-height);
+    width: var(--control-height);
+    height: var(--control-height);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
+    border-radius: var(--radius-sm);
     transition: background-color 0.2s;
 }
 
@@ -3850,22 +3886,10 @@ dialog.form-lightbox::backdrop {
 
 .modal-body textarea {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    resize: vertical;
     margin-bottom: 1rem;
 }
 
-.modal-body textarea:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
-}
+
 
 .modal-actions {
     display: flex;
@@ -3906,19 +3930,7 @@ dialog.form-lightbox::backdrop {
 }
 
 .debug-row select {
-    padding: 0.5rem;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    font-size: 0.95rem;
-    background: var(--surface);
     cursor: pointer;
-}
-
-.debug-row select:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .debug-actions {
@@ -3964,20 +3976,26 @@ dialog.form-lightbox::backdrop {
 }
 
 .remark-shortcut {
-    padding: 0.4rem 0.8rem;
-    border: 1px solid var(--border-subtle);
+    min-height: var(--control-height);
+    max-width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--action-secondary);
     background: var(--surface);
     border-radius: var(--radius-sm);
-    font-size: 0.85rem;
+    color: var(--action-secondary);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-action);
+    font-weight: var(--weight-medium);
+    line-height: 1.2;
     cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    white-space: normal;
 }
 
 .remark-shortcut:hover {
-    background: var(--action);
-    color: var(--text-inverse);
-    border-color: var(--action);
+    background: var(--surface-secondary-hover);
+    color: var(--action-secondary-hover);
+    border-color: var(--action-secondary);
     box-shadow: var(--elevation-flat);
 }
 
@@ -4014,7 +4032,7 @@ dialog.form-lightbox::backdrop {
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-subtle);
     font-size: 0.85rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .debug-queue-item:hover {
@@ -4049,28 +4067,13 @@ dialog.form-lightbox::backdrop {
     font-family: 'Courier New', monospace;
 }
 
-.debug-row input[type="number"] {
-    padding: 0.5rem;
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
-    font-size: 0.95rem;
-    background: var(--surface);
-}
-
-.debug-row input[type="number"]:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
-}
-
 .remark-shortcut:active {
     transform: translateY(0);
 }
 
 #articleNotes {
     min-height: 120px;
-    font-size: 0.95rem;
+    font-size: var(--font-size-body);
     line-height: 1.5;
     resize: vertical;
 }
@@ -4188,13 +4191,25 @@ dialog.form-lightbox::backdrop {
 
 .btn.ghost {
     background: transparent;
-    border: 1px dashed var(--border-control);
-    color: var(--text-muted);
+    border: 1px solid transparent;
+    color: var(--action);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
 }
 
-.btn.ghost:hover {
+.btn.ghost:hover:not(:disabled) {
+    background: var(--surface-quiet-hover);
+    border-color: transparent;
+    color: var(--action);
+}
+
+/* Disabled controls keep a readable boundary and never advertise an active hover. */
+.btn:disabled {
+    background: var(--surface-subdued);
     border-color: var(--border-control);
-    color: var(--text);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    text-decoration: none;
 }
 
 .werfsleutel-suggestions {
@@ -4210,8 +4225,10 @@ dialog.form-lightbox::backdrop {
 }
 
 .werfsleutel-suggestion {
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
     border: 1px solid var(--border-control);
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     padding: 9px 11px;
     background: var(--surface);
     display: grid;
@@ -4421,6 +4438,8 @@ dialog.form-lightbox::backdrop {
 }
 
 .subscription-offer-toggle {
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
@@ -4584,8 +4603,10 @@ dialog.form-lightbox::backdrop {
 }
 
 .channel-chip {
+    min-height: var(--control-height);
+    font-family: var(--font-ui);
     border: 1px solid var(--border-control);
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
     padding: 10px 12px;
     background: var(--surface);
     display: flex;
@@ -4822,7 +4843,7 @@ dialog.form-lightbox::backdrop {
 
 .address-fields .form-control {
     min-width: 0;
-    padding: 10px;
+    padding: var(--space-2) var(--space-3);
     background-color: var(--surface);
 }
 .customer-editor form > div { grid-column: 1 / -1; }
@@ -4834,8 +4855,8 @@ dialog.form-lightbox::backdrop {
 }
 .customer-create-form .customer-form-field label {
     display: block;
-    margin-bottom: 0.375rem;
-    font-size: 0.95rem;
+    margin-bottom: 0;
+    font-size: var(--font-size-label);
 }
 .customer-create-form .customer-form-field input {
     width: 100%;
@@ -4857,12 +4878,16 @@ dialog.form-lightbox::backdrop {
     outline-color: var(--focus-inverse);
 }
 
+.timeline-nav-btn:focus-visible {
+    outline-offset: -3px;
+}
+
 .agent-profile-menu :is(button, a, [tabindex]):focus-visible {
     outline-color: var(--focus);
     outline-offset: -3px;
 }
 
-:is(.btn-primary, .btn-secondary, .btn-success, .btn-end-call, .btn-accept-call, .btn-hold-call, .btn-finish-acw):focus-visible {
+:is(.btn-primary, .btn-danger, .btn-success, .btn-end-call, .btn-accept-call, .btn-hold-call, .btn-finish-acw):focus-visible {
     box-shadow: inset 0 0 0 3px var(--focus-inverse);
 }
 

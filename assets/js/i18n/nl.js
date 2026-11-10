@@ -632,6 +632,12 @@ const nl = {
         "registerFailed": "Redactie-item registreren via backend mislukt"
     },
     "forms": {
+        "customerNumberLabel": "Klantnummer",
+        "ibanLabel": "IBAN",
+        "recipientSearchLabel": "Naam ontvanger",
+        "requesterSearchLabel": "Naam aanvrager/betaler",
+        "followUpNotesLabel": "Follow-up notities",
+        "paymentMethodLabel": "Betaalmethode",
         "required": "Vul alle verplichte velden in",
         "invalidEmail": "Voer een geldig e-mailadres in",
         "newSubscriberRequired": "Vul alle verplichte velden in voor de nieuwe abonnee",
@@ -885,6 +891,10 @@ const nl = {
         }
     },
     "articleSearch": {
+        "removeOrderItem": "Artikel uit bestelling verwijderen",
+        "removeCoupon": "Kortingscode verwijderen",
+        "searchLabel": "Artikel zoeken",
+        "closeLabel": "Artikeloverzicht sluiten",
         "noResults": "Geen artikelen gevonden.",
         "browseAllCta": "Blader door alle artikelen →",
         "browseAll": "📚 Blader door alle artikelen",

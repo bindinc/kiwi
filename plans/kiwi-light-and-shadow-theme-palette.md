@@ -14,6 +14,12 @@ The spacing scale is 4/8/12/16/20/24/32/48px. Panel insets are 20px desktop and 
 
 The opaque sRGB workflow tints match the showcase: Cloud Dancer 72% for the canvas, Blue Fusion 8% for data, Veiled Vista 58% for selection, Golden Mist 58% for labels and 38% for attention, Baltic Sea 30% for information and Quiet Violet 26% for workflow grouping, each mixed with white. Operational success/warning/danger, availability, privacy and annotation colors keep their existing meanings. Decorative separators are distinct from contrast-tested control boundaries and focus indicators.
 
+### Shared controls and actions — theme_audit 02
+
+Text-entry fields, selects and ordinary actions use the shared 40px minimum height, with 15px field text and 14px action text. Native radios/checkboxes remain visible at 20px, with named groups, persistent associated labels, keyboard focus and 44px choice targets. Text-field selectors exclude native choices and hidden/special-purpose inputs. Existing payment values, conditional IBAN behavior, consent defaults and privacy metadata remain unchanged.
+
+Secondary actions are white and square, with Hematite text/borders; quiet utilities follow the transparent, underlined calm treatment. The showcase's 10% neutral secondary hover background is retained. Its Hematite hover text would yield only 4.370723:1 over white, so hover text uses the existing darker `--action-secondary-hover` neutral, yielding 6.196379:1. This is a narrow accessibility correction to the reference, not a change to the canonical palette or a relaxed contrast threshold.
+
 ### Approved delivery date picker refinement
 
 The delivery date picker uses plain numerals on a white surface, a compact Blue Fusion selection, an outline for today, and struck-through unavailable dates. Weekday names appear once; the footer names the server-provided earliest date. Seven columns fit at 320px, and the floating feedback button stays clear while the picker is open. Native buttons support arrow keys, Home/End, PageUp/PageDown, Escape and deliberate focus restoration. Delayed month responses cannot replace or refocus a newer interaction. Existing delivery availability remains server-owned.
@@ -151,8 +157,10 @@ Introduce a small, explicit set of roles covering surfaces, text, borders, actio
 | `--action` | `var(--palette-blue-fusion)` (`#496275`) | Primary action buttons, active navigation bar, links |
 | `--action-hover` | `#354C5E` | Darkened Blue Fusion (> 7:1 against white text) |
 | `--action-active` | `#2B3E4D` | Pressed primary action |
-| `--action-secondary` | `var(--palette-hematite)` (`#756F6B`) | Secondary dark control, border, and neutral button |
-| `--action-secondary-hover` | `#5D5855` | Darkened Hematite for secondary button hover |
+| `--action-secondary` | `var(--palette-hematite)` (`#756F6B`) | Outlined secondary action text and border |
+| `--action-secondary-hover` | `#5D5855` | Darker secondary hover text, preserving normal-text contrast |
+| `--surface-secondary-hover` | `rgba(117, 111, 107, 0.1)` | Showcase secondary hover tint, composited over its actual surface |
+| `--surface-quiet-hover` | `rgba(73, 98, 117, 0.1)` | Showcase calm/quiet hover tint with Blue Fusion text |
 | `--focus` | `var(--palette-blue-fusion)` (`#496275`) | 3px outline on light surfaces |
 | `--focus-inverse` | `#FFFFFF` | 3px outline on Blue Fusion header, navigation items, and dark buttons (6.39:1) |
 | `--elevation-flat` | `none` | Ordinary panels, headers, controls and information surfaces |

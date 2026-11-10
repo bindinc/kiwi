@@ -71,3 +71,25 @@ test('dismissed source edits retain input and version until a workspace reset', 
         assert.equal(document.body.children.at(-1).querySelectorAll('input')[0].value, 'Alex');
     } finally { globalThis.document = previousDocument; }
 });
+
+
+test('retained customer editors keep section labels bound to their own controls', async () => {
+    const previousDocument = globalThis.document;
+    globalThis.document = createEditorDocument();
+    const options = {
+        api: { async get() { return { capabilities: { operations: {} }, version: null, sections: {} }; } },
+        refresh() {}
+    };
+    try {
+        await openCustomerEditor({ id: 'first', credentialKey: 'test' }, options);
+        document.body.children[0].close();
+        await openCustomerEditor({ id: 'second', credentialKey: 'test' }, options);
+        for (const dialog of document.body.children) {
+            const labels = dialog.querySelectorAll('label');
+            for (const select of dialog.querySelectorAll('select')) {
+                assert.ok(labels.some(label => label.children.includes(select)), 'each label wraps its own section selector');
+                assert.equal(select.id, undefined, 'retained dialogs do not create shared global selector IDs');
+            }
+        }
+    } finally { globalThis.document = previousDocument; }
+});

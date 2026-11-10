@@ -632,6 +632,12 @@ const en = {
         "registerFailed": "Registering editorial item via backend failed"
     },
     "forms": {
+        "customerNumberLabel": "Customer number",
+        "ibanLabel": "IBAN",
+        "recipientSearchLabel": "Recipient name",
+        "requesterSearchLabel": "Requester/payer name",
+        "followUpNotesLabel": "Follow-up notes",
+        "paymentMethodLabel": "Payment method",
         "required": "Complete all required fields",
         "invalidEmail": "Please enter a valid email address",
         "newSubscriberRequired": "Complete all required fields for the new subscriber",
@@ -885,6 +891,10 @@ const en = {
         }
     },
     "articleSearch": {
+        "removeOrderItem": "Remove article from order",
+        "removeCoupon": "Remove coupon",
+        "searchLabel": "Search articles",
+        "closeLabel": "Close article catalog",
         "noResults": "No articles found.",
         "browseAllCta": "Browse all articles →",
         "browseAll": "📚 Browse all articles",

@@ -130,7 +130,8 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
         region.append(element('h3', config.title));
         const items = model.sections[section] || [];
         const select = element('select', '', 'form-control');
-        select.setAttribute('aria-label', `${config.title} kiezen`);
+        const selectionLabel = element('label', `${config.title} kiezen`, 'form-label');
+        selectionLabel.append(select);
         const placeholder = element('option', items.length ? 'Kies het te bekijken onderdeel' : 'Geen gegevens beschikbaar');
         placeholder.value = '';
         select.append(placeholder);
@@ -148,7 +149,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
         const form = element('form');
         const feedback = element('p');
         feedback.setAttribute('role', 'status');
-        region.append(select, form, feedback);
+        region.append(selectionLabel, form, feedback);
         content.append(region);
 
         let previousSelection = '';

@@ -1,19 +1,19 @@
 # theme_audit 01 — Shared visual foundations
 
-Status: implemented and independently reviewed; slice 01 acceptance passed. Ready for PR review, not merged or deployed. Audit date: 2026-11-09. Baseline: `c05973e` / merged PR #130. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629.
+Status: implemented and independently reviewed; slice 01 acceptance passed. PR #143 was merged into the planning branch of PR #142 on 2026-11-09; this does not establish a merge to main or deployment. Audit date: 2026-11-09. Baseline: `c05973e` / merged PR #130. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629.
 
 ## Implementation record
 
-- Branch: `codex/align-theme-foundations`.
-- Worktree: `/home/bartdeijkers/_worktrees/align-theme-foundations`.
+- Branch: `codex/align-theme-foundations` (local branch removed after the authorized cleanup; remote retained).
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-foundations` (removed after explicit cleanup authorization and fresh merge/ancestry/process/mount checks).
 - Base: PR #142 (`codex/plan-kiwi-styleguide-alignment-slices`).
-- Review and acceptance: independent source review and rendered comparison passed in Chromium/Firefox, including native 200% zoom and short-height keyboard focus. No merge or deployment is authorized.
+- Review and acceptance: independent source review and rendered comparison passed in Chromium/Firefox, including native 200% zoom and short-height keyboard focus. The user authorized the recorded planning-branch merge; further merges and deployment require separate authorization.
 - Slice 10 baseline: `/tmp/kiwi-theme-audit-implementation/baseline`; reference and application evidence are recorded separately. The baseline is evidence of the starting deviations, not acceptance.
 - Isolated Compose project: `kiwi-theme-audit-01`, port `9444`, public OIDC/address fixtures and separate database/cache/vendor volumes. It does not reuse the earlier palette preview's data.
 
 ### Implemented changes and review
 
-Application implementation: `f1f7c4e`. PR: [#143](https://github.com/bindinc/kiwi/pull/143), stacked on the audit plan. The implementation is pushed; merge and deployment have not occurred.
+Application implementation: `f1f7c4e`. PR: [#143](https://github.com/bindinc/kiwi/pull/143), merged into `codex/plan-kiwi-styleguide-alignment-slices` at `a627d2d`. Deployment has not occurred as part of this work.
 
 - Added one spacing/type/control-size contract and the showcase's opaque canvas, data, selection, label, information, attention and workflow tint recipes. Canonical palette and operational colors are unchanged.
 - Applied flat panels, 20px desktop/16px narrow insets, explicit record/form/section typography and separate flat/overlay elevation. Removed the duplicate information-box definition and incidental hover lift/scale.
@@ -28,6 +28,8 @@ Application implementation: `f1f7c4e`. PR: [#143](https://github.com/bindinc/kiw
 - [GitHub validation for `7bf6ea1`](https://github.com/bindinc/kiwi/actions/runs/42602606050) passed, including PHPUnit, frontend checks, guardrails and the production image build.
 
 ### Visual and executable evidence
+
+Evidence continuity, checked 2026-11-10: the temporary files below were available and reviewed on 2026-11-09 but no longer exist after the environment restart. Their paths are a historical record, not currently accessible attachments. Source commits and linked GitHub validation remain available. Fresh original-baseline and reference captures now live outside Git under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/{baseline,reference}`; subsequent slices and final slice 10 retain durable current-interface comparisons there. This limitation must remain visible in the final evidence register.
 
 Evidence root: `/tmp/kiwi-theme-audit-implementation/slice-01`.
 

@@ -12,13 +12,16 @@ PR #142 introduced this audit as documentation only. The authorized implementati
 
 ## Implementation progress
 
-Slice 10 started with a fresh baseline before slice 01 changes. Baseline provenance, screenshots and measurements are retained under `/tmp/kiwi-theme-audit-implementation/baseline`; implementation evidence is added per slice. Runtime browser coverage and source review are reported separately.
+Slice 10 started with a fresh baseline before slice 01 changes. Baseline provenance, screenshots and measurements are retained under `/tmp/kiwi-theme-audit-implementation/baseline`; implementation evidence is added per slice. Those temporary artifacts were subsequently lost; fresh, source-verified captures and current implementation evidence are retained in the durable directory described below. Runtime browser coverage and source review are reported separately.
 
 | Slice | Current status | Branch / PR | Acceptance |
 | --- | --- | --- | --- |
-| 01 | Implemented; ready for review | `codex/align-theme-foundations` / [#143](https://github.com/bindinc/kiwi/pull/143) | Independent source/rendered review; 76 theme assertions per browser, privacy checks, native 200% zoom and short-height keyboard regression passed |
-| 02–09 | Planned | Separate sequential branches after the preceding slice passes | Not accepted |
-| 10 | Baseline and reusable checks in progress | `codex/validate-theme-showcase-alignment` / [#144](https://github.com/bindinc/kiwi/pull/144) | Baseline and native zoom protocol established; final gate after 01–09 |
+| 01 | Accepted; merged into planning branch | [#143](https://github.com/bindinc/kiwi/pull/143), merge `a627d2d`; local worktree/branch cleaned after authorization | Independent source/rendered review passed on 2026-11-09; historical temporary images are no longer accessible, as recorded in the slice document |
+| 02 | Accepted; ready for PR review | `codex/align-theme-controls-and-actions` / [#145](https://github.com/bindinc/kiwi/pull/145), application `d39ed64` | Independent source/rendered review, 37-file suite, application CI, scoped broad/focused/keyboard/native-zoom checks and final Chromium/Firefox theme/privacy integration pass; test-only readiness correction `14eb8cc`, exact source boundaries in the slice document |
+| 03–09 | Planned | Separate sequential branches after the preceding slice passes | Not accepted |
+| 10 | Baseline and reusable checks in progress | `codex/validate-theme-showcase-alignment` / [#144](https://github.com/bindinc/kiwi/pull/144) | Baseline, source-bound comparison/controls runner and actual native zoom checks pushed at `62c7a8a`; final gate after 01–09 |
+
+On 2026-11-10 the `/tmp` evidence from the original audit was found missing after an environment restart. Fresh source-verified original-baseline and standalone-reference captures are retained outside Git under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10`, with per-slice reports and current comparisons added there. Historical results are distinguished from available current artifacts; lost screenshots are not presented as accessible links.
 
 ## Reference and baseline
 
