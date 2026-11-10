@@ -326,6 +326,13 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
         }
         status.replaceChildren();
         const label = documentRef.createElement('span');
+        label.id = `${prefix}AddressMessage`;
+        label.setAttribute('data-feedback-public', '');
+        for (const field of Object.values(fields)) {
+            if (!field) continue;
+            const describedBy = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+            field.setAttribute('aria-describedby', [...new Set([...describedBy, label.id])].join(' '));
+        }
         label.setAttribute('role', 'status');
         label.setAttribute('aria-live', 'polite');
         const retry = documentRef.createElement('button');
@@ -345,6 +352,7 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
         additionSelect.id = `${prefix}HouseExtChoices`;
         additionSelect.setAttribute('aria-label', text('additionLabel'));
         additionSelect.setAttribute('data-feedback-sensitive', 'address');
+        additionSelect.setAttribute('aria-describedby', fields.addition?.getAttribute('aria-describedby') || label.id);
         additionSelect.hidden = true;
         const additionLabels = Array.from(fields.addition?.labels || []);
         // Keep the existing field for copied addresses and submission readers; show one control at a time.
@@ -362,6 +370,7 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
                 if (!visible) return;
                 const prompt = documentRef.createElement('option');
                 prompt.textContent = text('chooseAddition');
+                prompt.setAttribute('data-feedback-public', '');
                 prompt.disabled = true;
                 prompt.value = '__choose__';
                 additionSelect.append(prompt);
@@ -375,6 +384,7 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
             },
             report(value, candidates = []) {
                 label.textContent = text(value);
+                status.setAttribute('data-state', value);
                 status.hidden = !value || value === 'matched';
                 retry.hidden = !['unavailable', 'unconfirmed'].includes(value);
                 choicesSelect.hidden = choicesLabel.hidden = !candidates.length;
@@ -382,6 +392,7 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
                 if (!candidates.length) return;
                 const prompt = documentRef.createElement('option');
                 prompt.textContent = text('choose');
+                prompt.setAttribute('data-feedback-public', '');
                 prompt.value = '';
                 prompt.disabled = true;
                 prompt.selected = true;
@@ -389,6 +400,7 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
                 candidates.forEach((candidate, index) => {
                     const option = documentRef.createElement('option');
                     option.value = String(index);
+                    option.setAttribute('data-feedback-sensitive', 'address');
                     const suffix = candidate.houseNumberAddition === null ? ` (${text('unknownAddition')})` : candidate.houseNumberAddition ? ` ${candidate.houseNumberAddition}` : '';
                     option.textContent = `${candidate.street} ${candidate.houseNumber}${suffix} — ${candidate.postalCode} ${candidate.city}`;
                     choicesSelect.append(option);

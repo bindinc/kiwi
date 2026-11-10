@@ -2027,7 +2027,7 @@ function renderSubscriptionRoleSearchResults(role) {
                         <span data-feedback-sensitive="id">${safeId}</span><span data-feedback-sensitive="address">${safeAddressLine}</span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-small" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}" data-arg-result-index="${resultIndex}">${selectLabel}</button>
+                <button type="button" class="btn btn-small btn-secondary" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}" data-arg-result-index="${resultIndex}">${selectLabel}</button>
             </div>
         `;
     }).join('');

@@ -1,6 +1,6 @@
 # theme_audit 04 — Customer search, records and data views
 
-Audit marker: `theme_audit`. Status: implementation started; acceptance pending. Baseline: `c05973e`, 2026-11-09.
+Audit marker: `theme_audit`. Status: implemented and independently source-reviewed; rendered acceptance pending. Baseline: `c05973e`, 2026-11-09.
 
 Coordination: [evaluation and slice index](../../../../plans/theme_audit.md), SC-206629. Depends on 01/02 and the workspace framing from 03; establish reusable person/address presentation before workflow slices 05–07.
 
@@ -8,11 +8,21 @@ Coordination: [evaluation and slice index](../../../../plans/theme_audit.md), SC
 
 - Worktree: `/home/bartdeijkers/_worktrees/align-theme-customer-and-data-views`.
 - Branch: `codex/align-theme-customer-and-data-views`.
-- Base: accepted slice 03 at `80c7cdd81fee820636883fd2278028107feb94dc`, [PR #146](https://github.com/bindinc/kiwi/pull/146), still unmerged at start. Its final GitHub validation passed at run `42841343497`.
-- PR: created immediately after the scaffold is pushed; English text, SC-206629 and one Unreleased changelog entry.
+- Base: accepted slice 03 at `80c7cdd81fee820636883fd2278028107feb94dc`, [PR #146](https://github.com/bindinc/kiwi/pull/146), unmerged at start and subsequently user-merged into the planning branch at `9f7c1f7d2e5a15e4f5d1a398f02802d46de585cf` on 2026-11-10. The merge tree is exactly identical to `80c7cdd` and contains that accepted head; no source rebase or baseline recapture is needed. PR #147 now targets the planning branch. Final slice 03 validation passed at run `42841343497`.
+- PR: draft [#147](https://github.com/bindinc/kiwi/pull/147), created immediately after scaffold `b81db31` was pushed; English text, SC-206629 and one Unreleased changelog entry.
 - Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-04/`, outside Git. Preserve actual application, reference and explicit fixture classifications.
 - Ownership: one application implementation agent; independent source review; slice 10 owner supplies focused Compose before/reference/after, keyboard and native-zoom checks. Parent owns this document, index, changelog and PR.
 - Additional retained-editor gate: both the fixed heading and `customerEditorAddress` input/label prefix collide across retained dialogs. Allocate a stable opaque identifier for each new dialog, without changing map keys, field names, source identity, address-session ownership or draft retention. Existing smoke selectors must follow the active dialog and its declared address prefix; closing intentionally retains a dialog.
+
+## Implemented changes and current verification
+
+The reviewed thirteen app/test/smoke files apply outlined customer/lookup actions, native table cells with inner flex groups, stable filter insets, distinct hover/current/focus treatments, compact sort/paging and flat record/subscription sections. Customer metadata has persistent labels. Shared editor/address help and error associations, readonly presentation and action groups use the same control grammar. Selected-row decoration compares normalized full source credentials rather than treating an unknown source as a wildcard.
+
+Each new retained editor receives opaque, stable heading/status/address identifiers; reopening retains its draft and prefix. Context and resource options carry explicit sensitive annotations, while fixed UI copy remains public. No redaction algorithm, masking palette, request payload, source field name, version/permission gate or session ownership is replaced. The existing shared-address smoke discovers active-dialog address prefixes and expects retained close behavior instead of requiring dialog removal.
+
+Independent source review: `source-review/review.json` and `review.md`, with exact thirteen-file hashes and the resolved identity/privacy findings. Implementer evidence: `implementation-static-checks/provenance.json`, `source-diff.patch` and logs for all 38 frontend files, six editor cases, 46 address cases, seven palette cases, eleven syntax checks, all guardrails and whitespace. All pass. Shared CSS hash at freeze is `ce75b9f50e3f48bb80ba3c2a8f2ba0acc39b3ce183a7610b1306adc141659937`.
+
+Actual Compose Twig, before/reference/after visual review, browser state/keyboard/draft/readonly/address checks, editor pseudonymization/restoration, unchanged-threshold privacy/theme integration and real 200% zoom remain acceptance gates. Source approval alone does not complete this slice.
 
 ## Findings
 
@@ -26,7 +36,7 @@ Follow-up source/browser review on 2026-11-10 also confirmed the pre-existing re
 
 ## Explicit user review backlog — 2026-11-10
 
-These three rendered findings were supplied during slice 03 review and remain unimplemented feature-presentation gates for slice 04. The existing broad action/table/filter requirements below do not count them as already resolved.
+These three rendered findings were supplied during slice 03 review. Their corrections are implemented in the source-reviewed slice 04 snapshot, but remain open until rendered acceptance proves the result. The existing broad action/table/filter requirements below do not count them as already resolved.
 
 | Finding | Current source and bounded correction | Required rendered acceptance |
 | --- | --- | --- |
@@ -41,7 +51,7 @@ Retain these findings as open until equivalent before/reference/after images and
 - [Customer search](customer-search-slice.js), [customer details](customer-detail-slice.js) and [base template](../../../../templates/base/index.html.twig): search/filter form, results, sorting/pagination, selected record, subscription summaries and customer actions.
 - [Customer editor](../customer-editor.js), [address fields](../address-fields.js), address completion and address-gate modules: generated labels, field rows, address candidates and correction messages.
 - [Shared CSS](../../../css/styles.css): search controls, `.results-table`, `.result-row`, customer-detail/header rules, `.subscription-item`, `.subscription-ended`, `.customer-editor`, `.address-fields` and relevant warning/empty states.
-- [Showcase](../../../../plans/kiwi-light-and-shadow-theme-palette-showcase.html#preview): `.search-input`, `.search-result`, `.customer-card`, `.customer-card-head`, `.customer-card-grid`, record actions and the restrained selected-person treatment.
+- [Showcase](../../../../plans/kiwi-light-and-shadow-theme-palette-showcase.html#preview): `.search-input`, `.sidebar-result`, `.customer-card`, `.customer-header`, `.customer-grid`, `.preview-actions` and the restrained selected-person treatment.
 
 Live local captures are in `/tmp/kiwi-styling-evaluation-2026-11-09/`: `1440-results.png`, `390-results.png`, `1440-customer.png`, `390-customer.png`, and corresponding `customer-edit` images. The address-warning state is a real application state in this local data set. No customer change was submitted by this audit.
 
