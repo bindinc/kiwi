@@ -1,12 +1,12 @@
 # theme_audit 02 — Shared controls, labels and actions
 
-Status: implementation, independent source/rendered review and slice 02 acceptance passed on 2026-11-10. Ready for PR review; not merged or deployed. Audit date: 2026-11-09; implementation validation: 2026-11-10. Baseline: `c05973e`. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629. Depends on [slice 01](theme_audit-01-foundations.md).
+Status: implementation, independent source/rendered review and slice 02 acceptance passed on 2026-11-10. PR #145 was merged by the user into the planning branch at `851dc77` on 2026-11-10; no merge to main or deployment is established. Audit date: 2026-11-09; implementation validation: 2026-11-10. Baseline: `c05973e`. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629. Depends on [slice 01](theme_audit-01-foundations.md).
 
 ## Implementation record
 
 - Branch: `codex/align-theme-controls-and-actions`.
 - Worktree: `/home/bartdeijkers/_worktrees/align-theme-controls-and-actions`.
-- Base: `a627d2d`, the merge of [slice 01 / PR #143](https://github.com/bindinc/kiwi/pull/143) into the PR #142 planning branch; accepted slice 01 application source `f1f7c4e`. PR #145 remains stacked on `codex/plan-kiwi-styleguide-alignment-slices`.
+- Base: `a627d2d`, the merge of [slice 01 / PR #143](https://github.com/bindinc/kiwi/pull/143) into the PR #142 planning branch; accepted slice 01 application source `f1f7c4e`. PR #145 was merged into `codex/plan-kiwi-styleguide-alignment-slices` at `851dc77`. Its worktree and branches are retained.
 - PR: [#145](https://github.com/bindinc/kiwi/pull/145); final application source `d39ed641cc8850c165f830f433902144b9308e41`. Source review, the expanded browser/native matrix, standalone modal-field checks and final payment/consent state checks pass with the source boundaries below. Final integration checks are being recorded on this frozen application source. Both browsers pass final theme integration and the corrected privacy readiness gate, with its cause, failed pairs and unchanged-threshold results retained below. The helper-only correction is `14eb8cc`; all product assets/templates remain byte-identical to `d39ed64`.
 - Evidence root: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-02`. Fresh original baseline and standalone reference captures are retained in sibling `baseline` and `reference` directories, with source snapshots and provenance outside Git. Historical `/tmp` images from 2026-11-09 were lost after the environment restart; they are not claimed as currently accessible evidence.
 - Scope: shared controls, labels and action states; feature composition remains with subsequent slices. No merge or deployment is authorized.

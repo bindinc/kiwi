@@ -38,25 +38,14 @@
         <header class="header">
             <div class="header-content">
                 <div class="header-top">
-                    <h1>KIWI <i id="kiwiVersion">{{ app_version }}</i></h1>
+                    <div class="header-brand">
+                        <img class="header-logo" src="{{ asset('img/Bindinc-Logo-RGB-WIT-2023.svg') }}" alt="Bindinc">
+                        <h1>KIWI <i id="kiwiVersion">{{ app_version }}</i></h1>
+                    </div>
+
                     <section id="customerWorkSessionBar" class="customer-work-session-bar" aria-live="polite">
                         <div class="customer-work-session-content">
-                            <div id="customerWorkSessionIdentity" class="customer-work-session-identity" hidden>
-                                <span class="customer-work-session-label" data-i18n="customerWorkSession.activeCustomer">Actieve klant</span>
-                                <strong id="customerWorkSessionName" data-feedback-sensitive="name"></strong>
-                                <span class="customer-work-session-reference">
-                                    <span data-i18n="customerWorkSession.personNumber">Persoonnr.</span>
-                                    <span id="customerWorkSessionPersonId" data-feedback-sensitive="id"></span>
-                                </span>
-                                <span class="customer-work-session-source">
-                                    <span data-i18n="customerWorkSession.source">Bron/mandant</span>
-                                    <span id="customerWorkSessionSource"></span>
-                                </span>
-                            </div>
                             <div class="customer-work-session-actions">
-                                <span id="customerWorkSessionPendingMutation" class="customer-work-session-warning" hidden data-i18n="customerWorkSession.pendingMutation">
-                                    Aanvraagstatus wordt vastgesteld; wisselen is tijdelijk geblokkeerd.
-                                </span>
                                 <button
                                     id="endCustomerWorkSessionButton"
                                     class="customer-work-session-end"
@@ -70,6 +59,25 @@
                                     <span class="customer-work-session-end-label" data-i18n="customerWorkSession.endCompactAction">Nieuwe sessie</span>
                                 </button>
                             </div>
+                            <div id="customerWorkSessionIdentity" class="customer-work-session-identity" hidden>
+                                <div class="customer-work-session-person">
+                                    <span class="customer-work-session-label" data-i18n="customerWorkSession.activeCustomer">Actieve klant</span>
+                                    <strong id="customerWorkSessionName" data-feedback-sensitive="name"></strong>
+                                </div>
+                                <div class="customer-work-session-details">
+                                    <span class="customer-work-session-reference">
+                                        <span data-i18n="customerWorkSession.personNumber">Persoonnr.</span>
+                                        <span id="customerWorkSessionPersonId" data-feedback-sensitive="id"></span>
+                                    </span>
+                                    <span class="customer-work-session-source">
+                                        <span data-i18n="customerWorkSession.source">Bron/mandant</span>
+                                        <span id="customerWorkSessionSource"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <span id="customerWorkSessionPendingMutation" class="customer-work-session-warning" hidden data-i18n="customerWorkSession.pendingMutation">
+                                Aanvraagstatus wordt vastgesteld; wisselen is tijdelijk geblokkeerd.
+                            </span>
                         </div>
                     </section>
                     <div class="header-right">
@@ -82,8 +90,8 @@
                                 data-action="agent-status.toggle-menu"
                                 data-action-event="click"
                                 aria-expanded="false"
-                                aria-haspopup="true"
                                 aria-controls="agentStatusMenu"
+                                aria-labelledby="agentName"
                                 title="Status: Beschikbaar" data-i18n-title="indexHtml.title.status_beschikbaar_7cd46110">
                                 <div class="agent-avatar" data-feedback-mask>
                                     {% if user_profile_image %}
@@ -95,7 +103,7 @@
                                 <span class="agent-status-badge" id="agentStatusDot" aria-hidden="true">✓</span>
                                 <span class="sr-only" id="agentName">{{ user_full_name }}</span>
                             </button>
-                            <div class="agent-profile-menu" id="agentStatusMenu" hidden>
+                            <div class="agent-profile-menu" id="agentStatusMenu" role="group" aria-label="Profiel en beschikbaarheid" data-i18n-aria-label="shell.profileLabel" hidden>
                                 <div class="profile-menu-section">
                                     <div class="profile-menu-user-name" data-feedback-sensitive="name">
                                         {% if user_first_name or user_last_name %}
@@ -153,7 +161,9 @@
                                 data-i18n-aria-label="contextualFeedback.button.settingsTitle"
                                 title="Feedbackinstellingen"
                                 data-i18n-title="contextualFeedback.button.settingsTitle">
-                                <span aria-hidden="true">⚙</span>
+                                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+                                    <path d="M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6"></path>
+                                </svg>
                             </button>
                         {% endif %}
                         <button
@@ -164,15 +174,19 @@
                             data-action-event="click"
                             aria-expanded="false"
                             aria-controls="subscriptionQueuePanel"
-                            title="Aanvraagqueue tonen of verbergen">
-                            <span class="workbox-toggle-icon" aria-hidden="true">📮</span>
+                            title="Outbox tonen of verbergen"
+                            data-i18n-title="shell.outboxToggleTitle">
+                            <svg class="workbox-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4h16l2 12v4H2v-4L4 4ZM2 16h6l2 3h4l2-3h6"></path>
+                            </svg>
                             <span id="subscriptionQueueToggleCount" class="workbox-toggle-count" style="display: none;">0</span>
-                            <span class="sr-only">Aanvraagqueue</span>
+                            <span class="sr-only" data-i18n="shell.outboxLabel">Outbox</span>
                         </button>
                         <div class="user-info">
                             <span class="time" id="currentTime"></span>
                         </div>
                     </div>
+
                 </div>
                 
                 <!-- Call Queue Info Bar -->
@@ -316,7 +330,7 @@
             <aside class="left-panel">
                 <!-- Quick Search -->
                 <section class="card search-card">
-                    <h2 data-i18n="indexHtml.text.klant_zoeken_8c2cfd01">🔍 Klant Zoeken</h2>
+                    <h2 data-i18n="indexHtml.text.klant_zoeken_8c2cfd01">Klant Zoeken</h2>
                     <div class="search-form">
                         <div class="form-row">
                             <div class="form-group">
@@ -407,12 +421,12 @@
 
                 <!-- Quick Actions -->
                 <section class="card actions-card">
-                    <h2 data-i18n="indexHtml.text.snelle_acties_b0debf12">⚡ Snelle Acties</h2>
+                    <h2 data-i18n="indexHtml.text.snelle_acties_b0debf12">Snelle Acties</h2>
                     <button class="btn btn-action" type="button" data-action="show-new-subscription">
-                        <span data-i18n="indexHtml.text.nieuw_abonnement_ed26c367">➕ Nieuw Abonnement</span>
+                        <span data-i18n="indexHtml.text.nieuw_abonnement_ed26c367">Nieuw Abonnement</span>
                     </button>
                     <button class="btn btn-action" data-action="open-article-sale-form">
-                        <span data-i18n="indexHtml.text.artikel_verkoop_89f9bcc6">🛒 Artikel verkoop</span>
+                        <span data-i18n="indexHtml.text.artikel_verkoop_89f9bcc6">Artikel verkoop</span>
                     </button>
                 </section>
             </aside>
@@ -422,7 +436,6 @@
                 <!-- Welcome Message -->
                 <div id="welcomeMessage" class="welcome-message">
                     <div class="empty-state">
-                        <span class="empty-icon">👤</span>
                         <h2 data-i18n="indexHtml.text.welkom_bij_kiwi_c2ee612a">Welkom bij KIWI!</h2>
                         <p data-i18n="indexHtml.text.waar_klanten_zich_gehoord_voelen_3bc04244">Waar klanten zich gehoord voelen.</p>
                     </div>
@@ -433,7 +446,7 @@
                     <div class="card">
                         <div class="results-header">
                             <div class="results-title-section">
-                                <h2 id="resultsTitle" data-i18n="indexHtml.text.zoekresultaten_b9b61881">🔍 Zoekresultaten</h2>
+                                <h2 id="resultsTitle" data-i18n="indexHtml.text.zoekresultaten_b9b61881">Zoekresultaten</h2>
                                 <span id="resultsRange" class="results-range" data-i18n="indexHtml.text.toont_1_20_van_153_f98909cb">Toont 1-20 van 153</span>
                             </div>
                             <div class="results-controls">
@@ -448,7 +461,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="results-table-wrapper">
+                        <div class="results-table-wrapper" role="group" tabindex="0" aria-labelledby="resultsTitle">
                             <table class="results-table">
                                 <thead>
                                     <tr>
@@ -538,7 +551,7 @@
                 <div id="newSubscriptionForm" class="form-container" style="display: none;">
                     <div class="card onepager-container">
                         <div class="form-header">
-                            <h2 data-i18n="indexHtml.text.nieuw_abonnement_aanmaken_a7bddc25">➕ Nieuw Abonnement Aanmaken</h2>
+                            <h2 data-i18n="indexHtml.text.nieuw_abonnement_aanmaken_a7bddc25">Nieuw Abonnement Aanmaken</h2>
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="newSubscriptionForm">✕</button>
                         </div>
                         <form id="subscriptionForm" class="form-section" data-action="create-subscription" data-action-event="submit" data-action-prevent-default="true">
@@ -1556,7 +1569,7 @@
             <!-- Right Panel: Contact History -->
             <aside class="right-panel">
                 <section class="card history-card">
-                    <h2 data-i18n="indexHtml.text.contact_geschiedenis_7d71e784">📋 Contact Geschiedenis</h2>
+                    <h2 data-i18n="indexHtml.text.contact_geschiedenis_7d71e784">Contact Geschiedenis</h2>
                     <div id="contactHistory" class="contact-history">
                         <div class="empty-state-small">
                             <p data-i18n="indexHtml.text.selecteer_een_klant_om_geschiedenis_te_zien_85c985bb">Selecteer een klant om geschiedenis te zien</p>
