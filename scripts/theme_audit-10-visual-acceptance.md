@@ -27,6 +27,20 @@ node scripts/compose-smoke-theme-audit.mjs
 
 Repeat with `KIWI_SMOKE_BROWSER=firefox`. Defaults include 1440×1000, 390×1000, 320×1000 and 390×320. `KIWI_THEME_AUDIT_VIEWPORTS` can specify additional comma-separated widths/heights such as `1440x1000,1024x1000,768x1000`. The runner allows local Compose hosts only and aborts API writes; it does not submit forms or persist feedback settings. Screenshots remain outside the repository.
 
+The versioned [controls companion](compose-smoke-theme-audit-controls.mjs) preserves additional actual renderer states used during slice 02. It shares the same reference measurements, source/served CSS guards, reports and local-host restriction with the main runner. Its CLI defaults to slice 02 and accepts the same application root, base URL, evidence directory, browser and viewport environment variables:
+
+```bash
+KIWI_THEME_APP_ROOT=/home/bartdeijkers/_worktrees/align-theme-controls-and-actions \
+KIWI_SMOKE_BASE_URL=https://bdc.rtvmedia.org.local:9444/kiwi/ \
+KIWI_THEME_EVIDENCE_DIR=/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-02/versioned-controls \
+KIWI_SMOKE_BROWSER=chromium \
+node scripts/compose-smoke-theme-audit-controls.mjs
+```
+
+Run Firefox after the first browser completes. The companion covers catalog tabs and inverse close, cart/coupon actions with localized meaningful remove names, actual composited focus pixels, controlled product suggestions/offer/channel choices, duplicate-person controls, delivery notes, disposition follow-up notes, development dialog fields and feedback/settings actions. It opens the installed application handlers with synthetic in-memory state; it does not select an identity match, acknowledge an identity warning, start a call, generate a queue, invoke the full-reset action, save settings or submit a business form.
+
+Only the exact same-origin read-only quote POST is fulfilled from the declared fixture. Controlled offer responses are same-origin GET-only; unmatched methods fall through to the context-wide API-write guard. Each report records the companion source hash and fixture kinds. Actual dialog reachability is measured after scrolling; an unreachable short state is explicitly deferred to 08, while the same failure outside a short viewport remains required in 02. These component fixtures do not prove backend price, coupon, duplicate matching or complete operational workflow behavior. Native zoom remains the separate main-runner gate; combining it with controls-only mode is rejected rather than silently omitting scenarios.
+
 The runner snapshots all five source stylesheets before navigation and requires their served bodies to match in every application context. Normalization is limited to quotes and the known seven-character Symfony fingerprint on URLs already present in that exact source file, resolved against the stylesheet directory. The complete source asset directory, origin, query and fragment must match; arbitrary CSS differences are not ignored. Missing stylesheet responses fail provenance checks, and Keycloak's unrelated `styles.css` is excluded. Foundation surface probes disable transitions only on their temporary measuring element, leaving the reference and application rules unchanged. Existing outbox 4px corners are explicitly deferred to slice 09 for reconciliation, rather than recorded as a reference match.
 
 Quiet actions use their own role contract rather than being mistaken for an outlined cancel button. The reference defines `.preview-shell .button-calm` rules without an actual quiet element in that workflow. The runner temporarily places a `.button.button-calm` span inside that real shell to measure those existing rules, labels the probe in provenance and removes it before reference screenshots. This is an isolated reference component measurement, not a captured production workflow or newly approved design.
@@ -53,7 +67,7 @@ The native path uses actual OS zoom shortcuts and keyboard activation, with auto
 
 ### Latest scoped slice 02 rendered evidence — 2026-11-10
 
-The independently reviewed comparison runner SHA-256 is `dcfbc3c1e1b40830b4ce514bead8f60c5e690aee5a46c1348182a19e728724fc`. The current reference remains SHA-256 `478a652ec6da827c7e15f839ba77352585bd53eb561bc2dd09535339665bd4c4`. The following runs are retained in `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-02`, with exact report hashes, source hashes, fixture classification and scope in `final-matrix-provenance.json`.
+These recorded runs used the independently reviewed comparison runner at [040d728](https://github.com/bindinc/kiwi/blob/040d728/scripts/compose-smoke-theme-audit.mjs), SHA-256 `dcfbc3c1e1b40830b4ce514bead8f60c5e690aee5a46c1348182a19e728724fc`. The subsequent controls companion dispatch retains those measurement functions; new reports record their own runner/companion hashes rather than relabeling earlier runs. The current reference remains SHA-256 `478a652ec6da827c7e15f839ba77352585bd53eb561bc2dd09535339665bd4c4`. The following runs are retained in `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-02`, with exact report hashes, source hashes, fixture classification and scope in `final-matrix-provenance.json`.
 
 | Scope / application source | Chromium | Firefox | Retained evidence |
 | --- | --- | --- | --- |
@@ -67,6 +81,10 @@ These completed runs have zero required deviations, unverified interactions, sce
 The 39 default deferrals are 32 outbox-corner observations (09), two populated-workspace overflows (03), three narrow article insets (06), and the known short feedback close plus unreachable primary hover (08). These remain deviations owned by later slices, not visual passes. The separate delivery-notes modal caption/textarea follow-up and parent-owned privacy/existing-theme gates are not included in these default-run counts. Complete slice 10 acceptance still requires every later workflow and state in the full matrix.
 
 Actual native zoom was re-proven with device ratio 1→2, halved CSS viewport, unchanged physical browser width, visual-viewport scale 1 and reset to 100%. Chromium measured 1050→525px and Firefox 1440→720px. Native payment focus and settings, actual narrow/desktop catalog close hover/focus, generated duplicate controls, cart focus and rich product choices were visually inspected alongside the reference. `matrix-visual-review.md` retains image-specific observations and boundaries.
+
+The versioned controls companion was subsequently exercised on application source `c12b7fec5d55d37c5dd6b36ec654a813574a08a9`: **3,094 verified checks, two explicit slice 08 deferrals, 80 captures and zero required deviations/errors/blocked business writes per browser**, at all four viewports. Reports are retained at `versioned-controls-attempt-02/{chromium,firefox}/report.json`. They require all nine conditional ordinary fields across delivery, disposition and development dialogs, with 36 field observations per browser; 16 read-only quote calculations remain explicitly intercepted. The deferrals concern the short disposition follow-up field's viewport bounds and unreachable short feedback hover. Correct canonical focus paint is not represented as complete viewport/ancestor containment.
+
+The same dispatcher retained the existing default path: a desktop regression recorded Chromium 3,738 and Firefox 3,739 verified checks, nine later-slice deferrals, 25 captures and no errors/deviations/writes (`versioned-default-dispatch`). Three offline CLI rejection checks passed for an unsupported pre-02 slice, controls/native combination and external application origin. The preserved default/measurement/native function bodies are byte-identical to checkpoint `040d728`; `versioned-controls-dispatch-provenance.json` records that comparison. Payment/consent descendant value typography and selected-wrapper counterparts identified afterward require their own focused source correction and verification; these earlier counters do not establish those properties.
 
 ### Intermediate scoped slice 02 diagnostics — 2026-11-10
 
