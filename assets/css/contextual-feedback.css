@@ -570,8 +570,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 
 .contextual-feedback-form label small {
     color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 500;
+    font: inherit;
 }
 
 .contextual-feedback-settings-form label {
