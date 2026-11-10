@@ -281,7 +281,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-tool,
 .contextual-feedback-actions button,
 .contextual-feedback-form button[type="submit"] {
-    min-height: 34px;
+    min-height: var(--control-height);
     padding-inline: 10px;
     border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
@@ -582,13 +582,16 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 
 .contextual-feedback-form textarea,
 .contextual-feedback-form select,
-.contextual-feedback-settings-form input {
+.contextual-feedback-settings-form input:where(:not([type="checkbox"], [type="radio"])) {
     width: 100%;
     border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
     padding: 8px 10px;
     background: var(--surface);
-    font: inherit;
+    font-family: var(--font-ui);
+    font-size: var(--font-size-body);
+    font-weight: var(--weight-regular);
+    line-height: var(--line-height-label);
 }
 
 .contextual-feedback-switch {
@@ -599,8 +602,8 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 }
 
 .contextual-feedback-switch input {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
 }
 
 .contextual-feedback-settings-status-row {

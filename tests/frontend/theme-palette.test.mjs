@@ -24,6 +24,12 @@ function color(name) {
         const proportion = Number(mix[2]) / 100;
         return first.map((channel, index) => channel * proportion + second[index] * (1 - proportion));
     }
+    const translucent = value.match(/^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/);
+    if (translucent) {
+        const surface = color('--surface');
+        const opacity = Number(translucent[4]);
+        return translucent.slice(1, 4).map((channel, index) => Number(channel) * opacity + surface[index] * (1 - opacity));
+    }
     assert.match(value, /^#[\da-f]{6}$/i, name);
     return value.slice(1).match(/../g).map(channel => parseInt(channel, 16));
 }
@@ -103,7 +109,8 @@ test('normal text meets unrounded WCAG AA contrast on its intended surfaces', ()
         ['--text-muted', '--surface-attention'],
         ['--text-palette', '--surface-selected'], ['--surface', '--action'],
         ['--surface', '--action-hover'], ['--surface', '--action-active'],
-        ['--surface', '--action-secondary'], ['--surface', '--action-secondary-hover'],
+        ['--action-secondary', '--surface'], ['--action-secondary-hover', '--surface-secondary-hover'],
+        ['--action', '--surface-quiet-hover'],
         ['--text', '--surface-info'], ['--text', '--surface-attention'],
         ['--text-muted', '--surface-info'], ['--text-muted', '--surface-data'],
         ['--text-muted', '--surface-group'], ['--text-muted', '--surface-canvas'],

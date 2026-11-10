@@ -8,9 +8,9 @@
 #articleSearch {
     width: 100%;
     padding: 0.75rem;
-    border: 2px solid var(--border-control);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    font-size: 0.95rem;
+    font-size: var(--font-size-body);
     transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
@@ -140,15 +140,17 @@
 }
 
 .article-search-in-modal {
+    display: grid;
+    gap: var(--space-2);
     margin-bottom: 1rem;
 }
 
 .article-search-in-modal input {
     width: 100%;
     padding: 0.75rem;
-    border: 2px solid var(--border-control);
+    border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    font-size: 0.95rem;
+    font-size: var(--font-size-body);
 }
 
 .article-search-in-modal input:focus {
@@ -400,7 +402,7 @@
     padding: 0.6rem;
     border: 1px solid var(--border-control);
     border-radius: var(--radius-sm);
-    font-size: 0.95rem;
+    font-size: var(--font-size-body);
     text-transform: uppercase;
 }
 
@@ -450,7 +452,7 @@
     display: flex;
     justify-content: space-between;
     padding: 0.5rem 0;
-    font-size: 0.95rem;
+    font-size: var(--font-size-body);
 }
 
 .order-summary-row.total-row {
@@ -581,7 +583,7 @@
     }
     
     .order-item-price {
-        font-size: 0.95rem;
+        font-size: var(--font-size-body);
     }
     
     .discount-description {

@@ -137,8 +137,13 @@ async function inspectPresentationFixture(page) {
             await page.mouse.up();
         }
         const secondary = `${root} .btn-secondary`;
+        await assertStyle(page, secondary, 'backgroundColor', 'rgb(255, 255, 255)');
+        await assertStyle(page, secondary, 'color', 'rgb(117, 111, 107)');
+        await assertStyle(page, secondary, 'borderTopColor', 'rgb(117, 111, 107)');
+        await assertStyle(page, secondary, 'borderTopLeftRadius', '0px');
         await page.locator(secondary).hover();
-        await waitForBackground(page, secondary, 'rgb(93, 88, 85)');
+        await waitForBackground(page, secondary, 'rgba(117, 111, 107, 0.1)');
+        await assertStyle(page, secondary, 'color', 'rgb(93, 88, 85)');
         await page.mouse.move(0, 0);
     }
     for (const component of ['.channel-chip', '.werfsleutel-suggestion']) {
@@ -167,6 +172,35 @@ async function inspectPresentationFixture(page) {
 async function waitForBackground(page, selector, color) {
     await page.waitForFunction(({ selector, color }) => getComputedStyle(document.querySelector(selector)).backgroundColor === color, { selector, color });
     report.assertions.push(`${selector} interaction background: ${color}`);
+}
+
+async function inspectPaymentChoices(page, firstSelector, secondSelector, expectedValues, ibanSelector) {
+    if (baselineDir) return;
+    const first = page.locator(firstSelector);
+    const second = page.locator(secondSelector);
+    assert.equal(await first.inputValue(), expectedValues[0]);
+    assert.equal(await second.inputValue(), expectedValues[1]);
+    await assertStyle(page, firstSelector, 'width', '20px');
+    await assertStyle(page, firstSelector, 'height', '20px');
+    await first.press('ArrowRight');
+    await page.waitForFunction(selector => document.querySelector(selector).checked, secondSelector);
+    assert.equal(await first.isChecked(), false, 'native radio choices remain mutually exclusive');
+    await assertKeyboardFocus(page, secondSelector, 'rgb(73, 98, 117)');
+    if (ibanSelector) {
+        assert.equal(await page.locator(ibanSelector).isVisible(), false, 'payment instruction hides IBAN');
+        assert.equal(await page.locator(ibanSelector).evaluate(input => input.required), false);
+    }
+    await second.press('ArrowLeft');
+    await page.waitForFunction(selector => document.querySelector(selector).checked, firstSelector);
+    await page.locator(`label[for="${secondSelector.slice(1)}"]`).click();
+    assert.equal(await second.isChecked(), true, 'pointer label selection agrees with native keyboard selection');
+    await page.locator(`label[for="${firstSelector.slice(1)}"]`).click();
+    assert.equal(await first.isChecked(), true);
+    if (ibanSelector) {
+        assert.equal(await page.locator(ibanSelector).isVisible(), true, 'direct debit reveals IBAN');
+        assert.equal(await page.locator(ibanSelector).evaluate(input => input.required), true);
+    }
+    report.assertions.push(`${firstSelector}/${secondSelector}: visible native payment choices preserve values, arrows, pointer selection and conditional fields`);
 }
 
 function shiftDate(isoDate, days) {
@@ -348,6 +382,7 @@ async function runWorkspace(width) {
         await assertStyle(page, '#articleInitials', 'borderTopColor', 'rgb(118, 136, 148)');
         await assertKeyboardFocus(page, '#articleInitials', 'rgb(73, 98, 117)');
         await capture(page, 'article-form');
+        await inspectPaymentChoices(page, '#articlePaymentIdeal', '#articlePaymentTransfer', ['iDEAL', 'Bankoverschrijving']);
         await inspectDatePicker(page);
         await page.locator('#articleSearch').fill('a');
         await page.locator('#articleDropdown').waitFor({ state: 'visible' });
@@ -423,6 +458,8 @@ async function inspectShortViewportFocus() {
         });
         report.assertions.push('390x320 subscription: native Tab reveals the complete focused clear action');
         await capture(page, 'subscription-keyboard-focus');
+        await inspectPaymentChoices(page, '#subPaymentAuto', '#subPaymentInstruction', ['B', 'AC'], '#subIBAN');
+        await capture(page, 'subscription-payment-choices');
     } finally {
         await page.context().close();
     }

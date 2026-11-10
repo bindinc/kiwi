@@ -1185,7 +1185,20 @@ async function testPayerHydrationCannotReplaceActiveCustomerFromAnotherSource() 
     assert.deepEqual(activeCustomerChanges, []);
 }
 
+function testGeneratedPersonFieldsHavePersistentLabels() {
+    const { runtime, elements } = createRuntimeContext();
+    runtime.renderCustomerForm('recipientCreateForm', 'subRecipient', { separatePhoneTypes: true });
+    const markup = elements.recipientCreateForm.innerHTML;
+    for (const suffix of ['Initials', 'MiddleName', 'LastName', 'BirthdayDay', 'BirthdayMonth', 'BirthdayYear', 'LandlinePhone', 'MobilePhone', 'Email']) {
+        assert.ok(markup.includes(`for="subRecipient${suffix}"`), `${suffix} needs a persistent associated label`);
+        assert.ok(markup.includes(`id="subRecipient${suffix}"`), `${suffix} keeps its existing control ID`);
+    }
+    assert.ok(markup.includes('role="radiogroup" aria-labelledby="subRecipientSalutationLabel"'));
+    assert.ok(markup.includes('role="group" aria-labelledby="subRecipientBirthdayLabel"'));
+}
+
 async function run() {
+    testGeneratedPersonFieldsHavePersistentLabels();
     testActiveCustomerIsRecipientWithoutLookup();
     await testActiveCustomerCanBeReusedWithIndependentPayer();
     testReuseRejectsIncompatibleMandant();

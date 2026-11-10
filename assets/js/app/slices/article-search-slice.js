@@ -375,6 +375,8 @@ function createAllArticlesModal() {
 
     const modalTitle = translateArticle('articleSearch.modalTitle', {}, '📚 Alle Artikelen');
     const searchPlaceholder = translateArticle('articleSearch.searchPlaceholder', {}, 'Zoek artikel...');
+    const searchLabel = translateArticle('articleSearch.searchLabel', {}, 'Artikel zoeken');
+    const closeLabel = translateArticle('articleSearch.closeLabel', {}, 'Artikeloverzicht sluiten');
     const tabAll = translateArticle('articleSearch.tabAll', {}, 'Alle');
     const tabPopular = translateArticle('articleSearch.tabPopular', {}, 'Populair');
     const tabAvrobode = translateArticle('articleSearch.tabAvrobode', {}, 'Avrobode');
@@ -386,10 +388,11 @@ function createAllArticlesModal() {
             <div class="modal-content modal-large">
                 <div class="modal-header">
                     <h3>${modalTitle}</h3>
-                    <button class="btn-close" type="button" data-action="close-all-articles-modal">✕</button>
+                    <button class="btn-close" type="button" data-action="close-all-articles-modal" aria-label="${closeLabel}">✕</button>
                 </div>
                 <div class="modal-body">
                     <div class="article-search-in-modal">
+                        <label for="modalArticleSearch" class="form-label">${searchLabel}</label>
                         <input type="text"
                                id="modalArticleSearch"
                                placeholder="${searchPlaceholder}"
