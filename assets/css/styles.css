@@ -22,6 +22,7 @@
     /* Opaque workflow tints reproduce the showcase on every parent surface. */
     --surface-canvas: color-mix(in srgb, var(--palette-cloud-dancer) 72%, var(--surface));
     --surface-data: color-mix(in srgb, var(--palette-blue-fusion) 8%, var(--surface));
+    --surface-choice-selected: color-mix(in srgb, var(--palette-blue-fusion) 6%, var(--surface));
     --surface-label: color-mix(in srgb, var(--palette-golden-mist) 58%, var(--surface));
     --surface-calm: var(--palette-veiled-vista);
     --surface-selected: color-mix(in srgb, var(--palette-veiled-vista) 58%, var(--surface));
@@ -3474,10 +3475,14 @@ dialog.form-lightbox::backdrop {
 .onepager-container .payment-option {
     margin-bottom: 0.5rem;
     transition: border-color 0.2s, background-color 0.2s;
-    border: 1px solid var(--border-control);
+    border: 1px solid var(--border-panel);
     border-radius: var(--radius-sm);
 
     position: relative;
+}
+
+.onepager-container .payment-option:has(> input[type="radio"]:checked) {
+    border-color: var(--action);
 }
 
 .onepager-container .payment-option input[type="radio"] {
@@ -3499,12 +3504,12 @@ dialog.form-lightbox::backdrop {
     min-height: var(--choice-height);
     gap: var(--space-2);
     font-size: var(--font-size-label);
+    font-weight: var(--weight-medium);
     line-height: var(--line-height-label);
 }
 
 .onepager-container .payment-option input[type="radio"]:checked + label {
-    background-color: var(--surface-data);
-    font-weight: var(--weight-medium);
+    background-color: var(--surface-choice-selected);
 }
 
 .onepager-container .payment-option input[type="radio"]:checked ~ .additional-input {
@@ -3535,10 +3540,6 @@ dialog.form-lightbox::backdrop {
     flex: 0 0 auto;
 }
 
-.onepager-container .payment-text {
-    font-size: var(--font-size-body);
-}
-
 /* Optin Rows */
 .onepager-container .optin-row {
     display: flex;
@@ -3567,6 +3568,10 @@ dialog.form-lightbox::backdrop {
     margin: 0;
     gap: var(--space-2);
     min-height: var(--choice-height);
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-regular);
+    line-height: var(--line-height-body);
+    color: var(--text-muted);
 }
 
 /* Form Actions */

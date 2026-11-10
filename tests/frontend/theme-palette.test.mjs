@@ -112,6 +112,7 @@ test('normal text meets unrounded WCAG AA contrast on its intended surfaces', ()
         ['--action-secondary', '--surface'], ['--action-secondary-hover', '--surface-secondary-hover'],
         ['--action', '--surface-quiet-hover'],
         ['--text', '--surface-info'], ['--text', '--surface-attention'],
+        ['--text', '--surface-choice-selected'],
         ['--text-muted', '--surface-info'], ['--text-muted', '--surface-data'],
         ['--text-muted', '--surface-group'], ['--text-muted', '--surface-canvas'],
         ['--text-palette', '--surface-selected'],
@@ -149,6 +150,7 @@ test('control boundaries and light/inverse focus indicators meet non-text contra
     for (const [foreground, background] of [
         ['--border-control', '--page'], ['--border-control', '--surface'],
         ['--focus', '--page'], ['--focus', '--surface'], ['--focus', '--surface-selected'],
+        ['--focus', '--surface-choice-selected'],
         ['--focus-inverse', '--action'], ['--focus-inverse', '--action-secondary']
     ]) assert.ok(contrast(foreground, background) >= 3, `${foreground} on ${background}`);
 });
