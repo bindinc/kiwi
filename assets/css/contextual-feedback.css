@@ -286,7 +286,8 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 
 .contextual-feedback-tool,
 .contextual-feedback-actions button,
-.contextual-feedback-form button[type="submit"] {
+.contextual-feedback-form button[type="submit"],
+.contextual-feedback-settings-form button[type="submit"] {
     min-height: var(--control-height);
     padding-inline: 10px;
     border: 1px solid var(--border-control);
@@ -686,14 +687,15 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     gap: 8px;
 }
 
-.contextual-feedback-form button[type="submit"] {
+.contextual-feedback-form button[type="submit"],
+.contextual-feedback-settings-form button[type="submit"] {
     background: var(--action);
     border-color: var(--action);
     color: var(--text-inverse);
-    padding-inline: 18px;
 }
 
-.contextual-feedback-form button[type="submit"]:hover:not(:disabled) {
+.contextual-feedback-form button[type="submit"]:hover:not(:disabled),
+.contextual-feedback-settings-form button[type="submit"]:hover:not(:disabled) {
     background: var(--action-hover);
     border-color: var(--action-hover);
 }
@@ -740,7 +742,8 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     }
 }
 
-.contextual-feedback-form button[type="submit"]:focus-visible {
+.contextual-feedback-form button[type="submit"]:focus-visible,
+.contextual-feedback-settings-form button[type="submit"]:focus-visible {
     outline: 3px solid var(--focus-inverse);
     outline-offset: -5px;
 }
