@@ -46,6 +46,10 @@ Changing an offer, edition or customer work-session invalidates pending results.
 Request generations prevent an older edition response from replacing a later
 choice. Saving is blocked while a guide date is missing, loading or unavailable.
 A restored outbox order retains its edition and fetches a fresh source date.
+If save-time validation rejects a changed or unavailable source date, the form
+clears that guide date and exposes the inline retry action without discarding
+the remaining inputs. Such explicit source failures do not create an outbox
+intent and are not treated as an ambiguous write.
 
 `SubscriptionQueueService::normalizeQueuePayload` rechecks the provider date
 before either queue persistence or `DeferredCustomerWrites::subscription`
@@ -71,6 +75,3 @@ browser overrides, immutable outbox source context, retry and stale-response
 handling. Provider transport/authentication is tested separately with synthetic
 HTTP responses. No live customer/provider acceptance or production deployment
 is implied by these tests.
-
-Shortcut updates and screenshot attachment are deferred under the explicit
-one-time exception for this PR because Shortcut access is unavailable.

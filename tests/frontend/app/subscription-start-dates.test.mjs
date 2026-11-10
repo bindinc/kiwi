@@ -116,6 +116,35 @@ test('provider errors expose an inline retry and never a fallback date', async (
     assert.equal(dates.read(offer).startDate, '2035-03-26');
 });
 
+test('save-time rejection clears only the rejected guide and makes its fresh date recoverable', async () => {
+    let nextDate = '2035-03-26';
+    const { dates, nodes } = fixture(async (_code, variantCode) => ({ variantCode, startDate: nextDate }));
+    const offer = guide();
+    const other = guide('GUIDE-B');
+    const membership = { salesCode: 'MEMBER', subscriptionKind: 'membership' };
+    nodes.subStartDate.value = '2035-03-25';
+    await dates.sync(selections(offer, other, membership));
+    dates.reject(offer, 'STANDARD');
+    assert.throws(() => dates.read(offer), /unavailable/);
+    assert.equal(dates.read(other).startDate, '2035-03-26');
+    assert.equal(dates.read(membership).startDate, '2035-03-25');
+    nextDate = '2035-03-27';
+    nodes.subscriptionStartDates.querySelectorAll('button')[0].emit('click');
+    await tick();
+    assert.equal(dates.read(offer).startDate, '2035-03-27');
+});
+
+test('a pending response cannot repopulate a date rejected at save time', async () => {
+    let resolve;
+    const { dates } = fixture(() => new Promise((done) => { resolve = done; }));
+    const offer = guide();
+    const loading = dates.sync(selections(offer));
+    dates.reject(offer, 'STANDARD');
+    resolve({ variantCode: 'STANDARD', startDate: '2035-03-26' });
+    await loading;
+    assert.throws(() => dates.read(offer), /unavailable/);
+});
+
 test('a past date, invalid calendar date or mismatched edition cannot be submitted', async () => {
     for (const [startDate, variantCode] of [['2000-01-01', 'STANDARD'], ['2035-02-30', 'STANDARD'], ['2035-03-26', 'OTHER']]) {
         const { dates } = fixture(async () => ({ startDate, variantCode }));
@@ -127,4 +156,15 @@ test('a past date, invalid calendar date or mismatched edition cannot be submitt
 
 test('membership defaults use local calendar components without a UTC date conversion', () => {
     assert.equal(localCalendarDate({ getFullYear: () => 2035, getMonth: () => 2, getDate: () => 26 }), '2035-03-26');
+});
+
+
+test('a rejection for an earlier submitted edition preserves the current edition date', async () => {
+    const { dates } = fixture(async (_code, variantCode) => ({ variantCode, startDate: '2035-03-26' }));
+    const offer = guide('GUIDE', ['NORTH', 'SOUTH']);
+    await dates.sync(selections(offer));
+    await dates.restore({ ...offer, variantCode: 'NORTH' });
+    await dates.restore({ ...offer, variantCode: 'SOUTH' });
+    dates.reject(offer, 'NORTH');
+    assert.equal(dates.read(offer).variantCode, 'SOUTH');
 });

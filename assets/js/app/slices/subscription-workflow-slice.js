@@ -973,7 +973,10 @@ export async function createSubscription(event) {
             }
             queuedSalesCodes.push(formData.werfsleutel);
         } catch (error) {
-            let ambiguous = mutationOutcomeIsAmbiguous(error);
+            const sourceError = error?.payload?.error?.code;
+            const dateRejected = ['start_date_changed', 'start_date_unavailable'].includes(sourceError);
+            if (dateRejected) startDates.reject(selectedWerfsleutelKey, delivery.variantCode);
+            let ambiguous = !dateRejected && mutationOutcomeIsAmbiguous(error);
             if (ambiguous) {
                 const reconciledStatus = await reconcileSubscriptionMutation(
                     apiClient,

@@ -151,6 +151,17 @@ export function createSubscriptionStartDates({ document, getContext, fetchDate, 
         return { startDate: entry.date, variantCode: entry.variantCode };
     }
 
+    function reject(offer, variantCode) {
+        const entry = entries.get(offer.salesCode);
+        const isCurrentOffer = entry && entry.identity === identity(offer);
+        const isSubmittedEdition = entry?.variantCode === variantCode;
+        if (!isCurrentOffer || !isSubmittedEdition || offer.subscriptionKind === 'membership') return;
+        entry.request = (entry.request || 0) + 1;
+        entry.date = '';
+        entry.status = 'unavailable';
+        render();
+    }
+
     async function restore(offer) {
         const entry = entries.get(offer.salesCode);
         if (!entry || entry.offer.subscriptionKind === 'membership') return;
@@ -159,5 +170,5 @@ export function createSubscriptionStartDates({ document, getContext, fetchDate, 
         await load(entry);
     }
 
-    return { sync, read, restore };
+    return { sync, read, reject, restore };
 }
