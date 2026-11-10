@@ -355,6 +355,25 @@ async function searchAndSelectJansen(page) {
             throw new Error(`Fixture did not expose expected real value before feedback capture: ${value}`);
         }
     }
+
+    await waitForCustomerCaptureReady(page);
+}
+
+async function waitForCustomerCaptureReady(page) {
+    // Selection renders the name before its smooth scroll finishes.
+    // The native baseline and later clone crop must use the same viewport coordinates.
+    await page.waitForFunction(async () => {
+        const header = document.querySelector('.customer-header');
+        if (!header || window.scrollY !== 0) return false;
+
+        const before = header.getBoundingClientRect();
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const after = header.getBoundingClientRect();
+        const headerIsStable = before.x === after.x && before.y === after.y
+            && before.width === after.width && before.height === after.height;
+
+        return window.scrollY === 0 && headerIsStable;
+    }, null, { polling: 'raf', timeout: 10000 });
 }
 
 async function captureCustomArea(page, targetBox) {
