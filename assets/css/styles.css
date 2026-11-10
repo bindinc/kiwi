@@ -138,6 +138,7 @@ textarea {
     background-color: var(--surface);
     font-family: var(--font-ui);
     font-size: var(--font-size-body);
+    font-weight: var(--weight-regular);
     line-height: var(--line-height-label);
     transition: border-color 0.2s, background-color 0.2s;
 }
@@ -1349,7 +1350,12 @@ body {
 }
 
 .form-group label,
-.form-label {
+.form-label,
+.address-fields .customer-address-field label,
+.datepicker-label,
+.werfsleutel-fieldset label[for],
+.customer-editor label,
+.onepager-container .optin-label {
     font-size: var(--font-size-label);
     font-weight: var(--weight-medium);
     line-height: var(--line-height-label);
@@ -3178,8 +3184,6 @@ dialog.form-lightbox::backdrop {
 .address-fields .customer-address-field label {
     display: block;
     margin-bottom: var(--space-2);
-    font-size: var(--font-size-label);
-    color: var(--text);
 }
 
 .address-fields .customer-address-field input,
@@ -3494,7 +3498,6 @@ dialog.form-lightbox::backdrop {
 }
 
 .onepager-container .optin-label {
-    font-weight: 500;
     min-width: 180px;
     margin: 0;
 }

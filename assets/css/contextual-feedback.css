@@ -563,8 +563,9 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-form label {
     display: grid;
     gap: 4px;
-    font-size: 13px;
-    font-weight: 700;
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-medium);
+    line-height: var(--line-height-label);
 }
 
 .contextual-feedback-form label small {
@@ -576,8 +577,9 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 .contextual-feedback-settings-form label {
     display: grid;
     gap: 4px;
-    font-size: 13px;
-    font-weight: 700;
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-medium);
+    line-height: var(--line-height-label);
 }
 
 .contextual-feedback-form textarea,
