@@ -12,6 +12,8 @@ Current customer details mix customer identity, compact icon actions, colored se
 
 The populated result table exposes a P1 responsive defect at desktop width: its intrinsic minimum width expands the middle workspace track, producing a 1542px document in a 1440px viewport and pushing the right rail 102px offscreen. `followup-measurements.json` and `1440-results-confirmed.png` reproduce it. Coordinate the grid correction with slice 03 rather than hiding all page overflow and clipping data.
 
+Follow-up source/browser review on 2026-11-10 also confirmed the pre-existing repeated `customer-editor-title` ID when multiple customer editors remain in the retained-dialog map. Slice 02 fixed its newly introduced selector-label collision with local wrapping labels; this older dialog-heading ID remains a slice 04 accessibility/context gate. Keep each retained dialog's heading association unambiguous without encoding private customer values into DOM IDs or changing draft/session ownership.
+
 ## Code and reference
 
 - [Customer search](customer-search-slice.js), [customer details](customer-detail-slice.js) and [base template](../../../../templates/base/index.html.twig): search/filter form, results, sorting/pagination, selected record, subscription summaries and customer actions.

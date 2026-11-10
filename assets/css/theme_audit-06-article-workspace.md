@@ -21,6 +21,10 @@ Source-confirmed deviations:
 - Several static recipient inputs use placeholders without persistent labels. Payment choices inherit the hidden-radio defect covered by slice 02.
 - The final order action currently sits in the recipient column, while the item list and totals are in the other column. The visual and reading order needs explicit review so the final action follows the complete order context at both wide and narrow widths.
 
+### Confirmed narrow containment gate — 2026-11-10
+
+Slice 02 comparison confirmed article fields extending past the right edge of the dialog at 320px in Firefox. The fresh actual original baseline reproduces this clipping (`baseline/firefox/320-article-top.png`), while the current source capture is `slice-02/contract-attempt-06/firefox/320x1000-article-top.png`, both under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/`. This is a slice 06 composition defect, beyond its separate narrow-inset mismatch; neither clipping nor inset is accepted by the controls slice. Constrain intrinsic field/column widths and keep all entry, quantity, price and order actions reachable without hiding overflow.
+
 ## Implementation targets
 
 | File | Sections and responsibilities |
