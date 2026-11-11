@@ -5331,6 +5331,10 @@ dialog.form-lightbox::backdrop {
     margin-bottom: var(--space-2);
 }
 
+#newSubscriptionForm #subscriptionStartDates {
+    display: flow-root;
+}
+
 #newSubscriptionForm .subscription-start-date {
     margin: 0 0 var(--space-4);
     padding: var(--space-3) 0;
