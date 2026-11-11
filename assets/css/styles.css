@@ -5748,6 +5748,21 @@ dialog.form-lightbox::backdrop {
     overflow-wrap: anywhere;
 }
 
+.service-form :is(.offer-card, .radio-option):hover:not(:has(input:checked)) {
+    border-color: var(--border-control);
+    background: var(--surface-quiet-hover);
+}
+
+.service-form .service-request-status {
+    font-size: var(--font-size-label);
+    line-height: var(--line-height-body);
+    color: var(--text-muted);
+}
+
+.service-form .service-request-status:not(:empty) {
+    margin-top: var(--space-4);
+}
+
 @media (max-width: 768px) {
     .service-form {
         padding: var(--space-4);

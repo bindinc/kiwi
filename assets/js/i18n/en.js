@@ -1,4 +1,12 @@
 const en = {
+    "serviceRequests": {
+        "saving": "Saving changes…",
+        "resending": "Requesting edition…",
+        "editorial": "Registering editorial item…",
+        "transfer": "Processing transfer…",
+        "deceased": "Processing subscriptions…",
+        "winback": "Processing outcome…"
+    },
     "subscriptionStartDates": {
         "missingEdition": "No edition available. Select another offer.",
         "edition": "Edition",

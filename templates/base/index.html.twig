@@ -1236,9 +1236,10 @@
                                 </select>
                             </div>
                             
+                            <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="editSubscriptionForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                                <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.wijzigingen_opslaan_22f167f8">Wijzigingen Opslaan</button>
+                                <button type="submit" data-service-commit class="btn btn-primary" data-i18n="indexHtml.text.wijzigingen_opslaan_22f167f8">Wijzigingen Opslaan</button>
                             </div>
                         </form>
                     </div>
@@ -1272,9 +1273,10 @@
                                     <option value="other" data-i18n="indexHtml.text.anders_ca587926">Anders</option>
                                 </select>
                             </div>
+                            <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="resendMagazineForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                                <button type="button" class="btn btn-primary" data-action="resend-magazine" data-i18n="indexHtml.text.editie_verzenden_ffa19d32">Editie Verzenden</button>
+                                <button type="button" class="btn btn-primary" data-service-commit data-action="resend-magazine" data-i18n="indexHtml.text.editie_verzenden_ffa19d32">Editie Verzenden</button>
                             </div>
                         </div>
                     </div>
@@ -1346,9 +1348,10 @@
                                 </span></label>
                             </div>
 
+                            <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="editorialComplaintForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                                <button type="button" class="btn btn-primary" data-action="submit-editorial-complaint" data-i18n="indexHtml.text.registreren_ad91cc03">Registreren</button>
+                                <button type="button" class="btn btn-primary" data-service-commit data-action="submit-editorial-complaint" data-i18n="indexHtml.text.registreren_ad91cc03">Registreren</button>
                             </div>
                         </div>
                     </div>
@@ -1415,9 +1418,10 @@
                                 <div data-address-fields="restitutionTransfer"></div>
                             </div>
                             
+                            <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="restitutionTransferForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                                <button type="submit" class="btn btn-success" data-i18n="indexHtml.text.abonnement_overzetten_51f8b366">Abonnement Overzetten</button>
+                                <button type="submit" data-service-commit class="btn btn-primary" data-i18n="indexHtml.text.abonnement_overzetten_51f8b366">Abonnement Overzetten</button>
                             </div>
                         </form>
                     </div>
@@ -1482,6 +1486,7 @@
                                         </label>
                                     </div>
                                 </div>
+                                <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                                 <div class="form-actions">
                                 <button class="btn btn-primary" type="button" data-action="winback-next-step" data-arg-step="2" data-i18n="indexHtml.text.volgende_88b8d391">Volgende →</button>
                                 </div>
@@ -1496,6 +1501,7 @@
                                 <div id="deceasedSubscriptionsList" class="deceased-subscriptions-list">
                                     <!-- Subscriptions will be dynamically inserted here -->
                                 </div>
+                                <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
                                     <button class="btn btn-primary" type="button" data-action="process-deceased-subscriptions" data-i18n="indexHtml.text.verwerken_781562ac">Verwerken →</button>
@@ -1517,9 +1523,10 @@
                                     <label for="refundNotes" data-i18n="indexHtml.text.notities_optioneel_aff41798">Notities (optioneel):</label>
                                     <textarea id="refundNotes" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc." data-feedback-sensitive="free-text" data-i18n-placeholder="indexHtml.placeholder.bijv_rekeningnummer_voor_restitutie_contactpersoon_etc_6544b433"></textarea>
                                 </div>
+                                <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1b" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-danger" type="button" data-action="complete-all-deceased-actions" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
+                                    <button class="btn btn-danger" type="button" data-service-commit data-action="complete-all-deceased-actions" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
                                 </div>
                             </div>
 
@@ -1533,9 +1540,10 @@
                                 <!-- Unified Customer Form -->
                                 <div id="transferCustomerForm"></div>
                                 
+                                <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1b" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-success" type="button" data-action="complete-all-deceased-actions" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
+                                    <button class="btn btn-primary" type="button" data-service-commit data-action="complete-all-deceased-actions" data-i18n="indexHtml.text.verwerken_916c9b12">Verwerken</button>
                                 </div>
                             </div>
                             
@@ -1567,9 +1575,10 @@
                                     <textarea id="refundNotes2" class="form-control" rows="3" placeholder="Bijv. rekeningnummer voor restitutie, contactpersoon, etc." data-feedback-sensitive="free-text" data-i18n-placeholder="indexHtml.placeholder.bijv_rekeningnummer_voor_restitutie_contactpersoon_etc_6544b433"></textarea>
                                 </div>
                                 
+                                <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1b" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-success" type="button" data-action="complete-all-deceased-actions" data-i18n="indexHtml.text.alles_verwerken_db8bc36d">Alles Verwerken</button>
+                                    <button class="btn btn-primary" type="button" data-service-commit data-action="complete-all-deceased-actions" data-i18n="indexHtml.text.alles_verwerken_db8bc36d">Alles Verwerken</button>
                                 </div>
                             </div>
 
@@ -1577,6 +1586,7 @@
                             <div id="winbackStep2" class="winback-step" style="display: none;">
                                 <h3 id="winbackOffersHeading" data-i18n="indexHtml.text.beschikbare_winback_aanbiedingen_28c6a25e">Beschikbare Winback Aanbiedingen</h3>
                                 <div id="winbackOffers" class="offers-container" role="radiogroup" aria-labelledby="winbackOffersHeading"></div>
+                                <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
                                     <button class="btn btn-primary" type="button" data-action="winback-next-step" data-arg-step="3" data-i18n="indexHtml.text.aanbod_presenteren_bf69df31">Aanbod Presenteren →</button>
@@ -1602,9 +1612,10 @@
                                         </label>
                                     </div>
                                 </div>
+                                <p class="service-request-status" data-service-status role="status" aria-live="polite"></p>
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="2" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
-                                    <button class="btn btn-success" type="button" data-action="complete-winback" data-i18n="indexHtml.text.afronden_88a9738c">Afronden</button>
+                                    <button class="btn btn-primary" type="button" data-service-commit data-action="complete-winback" data-i18n="indexHtml.text.afronden_88a9738c">Afronden</button>
                                 </div>
                             </div>
                         </div>

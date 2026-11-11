@@ -1,4 +1,12 @@
 const nl = {
+    "serviceRequests": {
+        "saving": "Wijzigingen opslaan…",
+        "resending": "Editie aanvragen…",
+        "editorial": "Redactie-item registreren…",
+        "transfer": "Overdracht verwerken…",
+        "deceased": "Abonnementen verwerken…",
+        "winback": "Resultaat verwerken…"
+    },
     "subscriptionStartDates": {
         "missingEdition": "Geen editie beschikbaar. Selecteer een andere aanbieding.",
         "edition": "Editie",

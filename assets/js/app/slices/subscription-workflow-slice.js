@@ -6,6 +6,7 @@ import { selectCustomer as reloadSourceCustomer } from './customer-detail-slice.
 import { openCustomerEditor } from '../customer-editor.js';
 import { getGlobalScope } from '../services.js';
 import { renderServiceFormContext } from '../service-form-context.js';
+import { beginServiceFormRequest, finishServiceFormRequest, resetServiceFormFeedback } from '../service-form-feedback.js';
 import { sameSubscriptionPerson } from '../subscription-shared-helpers.js';
 import {
     buildSubscriptionPaymentDetails,
@@ -1268,6 +1269,7 @@ export function showResendMagazine() {
 
     renderServiceFormContext(getElementById('resendMagazineForm'), currentCustomer);
     if (resumeFormDraft(getElementById('resendMagazineForm'), String(currentCustomer.id))) return;
+    resetServiceFormFeedback(getElementById('resendMagazineForm'));
 
     const subscriptionSelect = getElementById('resendSubscription');
     if (!subscriptionSelect) {
@@ -1310,43 +1312,56 @@ export async function resendMagazine() {
         return;
     }
 
-    const { subscriptionsApiUrl } = getApiEndpoints();
-    const apiClient = getApiClient();
-    if (apiClient && typeof apiClient.post === 'function') {
-        try {
-            await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}/complaint`, { reason });
-            closeForm('resendMagazineForm');
-            showToast(
-                translateKey('resend.editionResent', { magazine: subscription.magazine }, `Editie van ${subscription.magazine} wordt opnieuw verzonden!`),
-                'success'
-            );
-            await selectCustomer(currentCustomer.id);
-        } catch (error) {
-            showToast(error.message || translateKey('resend.failed', {}, 'Opnieuw verzenden via backend mislukt'), 'error');
-        }
-        return;
-    }
-
-    const reasonTextByKey = {
-        not_received: 'niet ontvangen',
-        damaged: 'beschadigd',
-        lost: 'kwijt',
-        other: 'anders'
-    };
-
-    pushContactHistory(currentCustomer, {
-        type: 'Editie verzonden',
-        description: `Laatste editie van ${subscription.magazine} opnieuw verzonden. Reden: ${reasonTextByKey[reason]}.`
-    });
-
-    saveCustomers();
-    closeForm('resendMagazineForm');
-    showToast(
-        translateKey('resend.editionResent', { magazine: subscription.magazine }, `Editie van ${subscription.magazine} wordt opnieuw verzonden!`),
-        'success'
+    const request = beginServiceFormRequest(
+        getElementById('resendMagazineForm'), translateKey('serviceRequests.resending', {}, 'Editie aanvragen…')
     );
+    if (!request) return;
 
-    refreshContactHistory();
+    try {
+        const { subscriptionsApiUrl } = getApiEndpoints();
+        const apiClient = getApiClient();
+        if (apiClient && typeof apiClient.post === 'function') {
+            try {
+                await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}/complaint`, { reason });
+                if (!request.isCurrent()) return;
+                closeForm('resendMagazineForm');
+                showToast(
+                    translateKey('resend.editionResent', { magazine: subscription.magazine }, `Editie van ${subscription.magazine} wordt opnieuw verzonden!`),
+                    'success'
+                );
+                await selectCustomer(currentCustomer.id);
+                if (!request.isCurrent()) return;
+            } catch (error) {
+                if (!request.isCurrent()) return;
+                showToast(error.message || translateKey('resend.failed', {}, 'Opnieuw verzenden via backend mislukt'), 'error');
+            }
+            return;
+        }
+
+        const reasonTextByKey = {
+            not_received: 'niet ontvangen',
+            damaged: 'beschadigd',
+            lost: 'kwijt',
+            other: 'anders'
+        };
+
+        pushContactHistory(currentCustomer, {
+            type: 'Editie verzonden',
+            description: `Laatste editie van ${subscription.magazine} opnieuw verzonden. Reden: ${reasonTextByKey[reason]}.`
+        });
+
+        saveCustomers();
+        if (!request.isCurrent()) return;
+        closeForm('resendMagazineForm');
+        showToast(
+            translateKey('resend.editionResent', { magazine: subscription.magazine }, `Editie van ${subscription.magazine} wordt opnieuw verzonden!`),
+            'success'
+        );
+
+        refreshContactHistory();
+    } finally {
+        finishServiceFormRequest(request);
+    }
 }
 
 export function showEditorialComplaintForm() {
@@ -1362,6 +1377,7 @@ export function showEditorialComplaintForm() {
 
     renderServiceFormContext(getElementById('editorialComplaintForm'), currentCustomer);
     if (resumeFormDraft(getElementById('editorialComplaintForm'), String(currentCustomer.id))) return;
+    resetServiceFormFeedback(getElementById('editorialComplaintForm'));
 
     const magazineSelect = getElementById('editorialComplaintMagazine');
     if (!magazineSelect) {
@@ -1421,69 +1437,83 @@ export async function submitEditorialComplaint() {
         return;
     }
 
-    const typeLabels = {
-        klacht: 'Klacht',
-        opmerking: 'Opmerking',
-        suggestie: 'Suggestie',
-        compliment: 'Compliment'
-    };
-
-    const categoryLabels = {
-        inhoud: 'Inhoud artikel',
-        foto: 'Foto/afbeelding',
-        fout: 'Fout in tekst',
-        programma: 'TV/Radio programma',
-        puzzel: 'Puzzel',
-        advertentie: 'Advertentie',
-        overig: 'Overig'
-    };
-
-    const { personsApiUrl } = getApiEndpoints();
-    const apiClient = getApiClient();
-    if (apiClient && typeof apiClient.post === 'function') {
-        try {
-            await apiClient.post(`${personsApiUrl}/${currentCustomer.id}/editorial-complaints`, {
-                magazine,
-                type: complaintType,
-                category: complaintCategory,
-                description,
-                edition,
-                followup
-            });
-
-            closeForm('editorialComplaintForm');
-            showToast(
-                translateKey('editorial.registered', { typeLabel: typeLabels[complaintType] }, `${typeLabels[complaintType]} voor redactie geregistreerd!`),
-                'success'
-            );
-            await selectCustomer(currentCustomer.id);
-        } catch (error) {
-            showToast(error.message || translateKey('editorial.registerFailed', {}, 'Redactie-item registreren via backend mislukt'), 'error');
-        }
-        return;
-    }
-
-    let historyDescription = `${typeLabels[complaintType]} voor redactie ${magazine} - ${categoryLabels[complaintCategory]}. ${description}`;
-    if (edition) {
-        historyDescription += ` Editie: ${edition}.`;
-    }
-    if (followup) {
-        historyDescription += ' Klant verwacht terugkoppeling.';
-    }
-
-    pushContactHistory(currentCustomer, {
-        type: `Redactie ${typeLabels[complaintType]}`,
-        description: historyDescription
-    });
-
-    saveCustomers();
-    closeForm('editorialComplaintForm');
-    showToast(
-        translateKey('editorial.registered', { typeLabel: typeLabels[complaintType] }, `${typeLabels[complaintType]} voor redactie geregistreerd!`),
-        'success'
+    const request = beginServiceFormRequest(
+        getElementById('editorialComplaintForm'), translateKey('serviceRequests.editorial', {}, 'Redactie-item registreren…')
     );
+    if (!request) return;
 
-    refreshContactHistory();
+    try {
+        const typeLabels = {
+            klacht: 'Klacht',
+            opmerking: 'Opmerking',
+            suggestie: 'Suggestie',
+            compliment: 'Compliment'
+        };
+
+        const categoryLabels = {
+            inhoud: 'Inhoud artikel',
+            foto: 'Foto/afbeelding',
+            fout: 'Fout in tekst',
+            programma: 'TV/Radio programma',
+            puzzel: 'Puzzel',
+            advertentie: 'Advertentie',
+            overig: 'Overig'
+        };
+
+        const { personsApiUrl } = getApiEndpoints();
+        const apiClient = getApiClient();
+        if (apiClient && typeof apiClient.post === 'function') {
+            try {
+                await apiClient.post(`${personsApiUrl}/${currentCustomer.id}/editorial-complaints`, {
+                    magazine,
+                    type: complaintType,
+                    category: complaintCategory,
+                    description,
+                    edition,
+                    followup
+                });
+
+                if (!request.isCurrent()) return;
+
+                closeForm('editorialComplaintForm');
+                showToast(
+                    translateKey('editorial.registered', { typeLabel: typeLabels[complaintType] }, `${typeLabels[complaintType]} voor redactie geregistreerd!`),
+                    'success'
+                );
+                await selectCustomer(currentCustomer.id);
+                if (!request.isCurrent()) return;
+            } catch (error) {
+                if (!request.isCurrent()) return;
+                showToast(error.message || translateKey('editorial.registerFailed', {}, 'Redactie-item registreren via backend mislukt'), 'error');
+            }
+            return;
+        }
+
+        let historyDescription = `${typeLabels[complaintType]} voor redactie ${magazine} - ${categoryLabels[complaintCategory]}. ${description}`;
+        if (edition) {
+            historyDescription += ` Editie: ${edition}.`;
+        }
+        if (followup) {
+            historyDescription += ' Klant verwacht terugkoppeling.';
+        }
+
+        pushContactHistory(currentCustomer, {
+            type: `Redactie ${typeLabels[complaintType]}`,
+            description: historyDescription
+        });
+
+        saveCustomers();
+        if (!request.isCurrent()) return;
+        closeForm('editorialComplaintForm');
+        showToast(
+            translateKey('editorial.registered', { typeLabel: typeLabels[complaintType] }, `${typeLabels[complaintType]} voor redactie geregistreerd!`),
+            'success'
+        );
+
+        refreshContactHistory();
+    } finally {
+        finishServiceFormRequest(request);
+    }
 }
 
 export function editSubscription(subscriptionId) {
@@ -1501,6 +1531,7 @@ export function editSubscription(subscriptionId) {
 
     renderServiceFormContext(getElementById('editSubscriptionForm'), currentCustomer, subscription);
     if (resumeFormDraft(getElementById('editSubscriptionForm'), String(subscriptionId))) return;
+    resetServiceFormFeedback(getElementById('editSubscriptionForm'));
 
     setInputValue('editSubId', subscriptionId);
     setInputValue('editSubMagazine', subscription.magazine);
@@ -1549,39 +1580,54 @@ export async function saveSubscriptionEdit(event) {
     const changeDescriptions = getSubscriptionChanges(previousValues, updates);
     const descriptionText = changeDescriptions.length > 0 ? changeDescriptions.join('. ') : 'Geen wijzigingen gedetecteerd';
 
-    const { personsApiUrl, subscriptionsApiUrl } = getApiEndpoints();
-    const apiClient = getApiClient();
-    if (apiClient && typeof apiClient.patch === 'function' && typeof apiClient.post === 'function') {
-        try {
-            const saved = await apiClient.patch(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, updates);
-            if (!saved.provisional) await apiClient.post(`${personsApiUrl}/${currentCustomer.id}/contact-history`, {
-                type: 'Abonnement gewijzigd',
-                description: `Abonnement bewerkt. ${descriptionText}.`
-            });
+    const request = beginServiceFormRequest(
+        getElementById('editSubscriptionForm'), translateKey('serviceRequests.saving', {}, 'Wijzigingen opslaan…')
+    );
+    if (!request) return;
 
-            closeForm('editSubscriptionForm');
-            showToast(translateKey('subscription.updated', {}, 'Abonnement succesvol bijgewerkt!'), 'success');
-            await selectCustomer(currentCustomer.id);
-        } catch (error) {
-            showToast(error.message || translateKey('subscription.updateFailed', {}, 'Abonnement bijwerken via backend mislukt'), 'error');
+    try {
+        const { personsApiUrl, subscriptionsApiUrl } = getApiEndpoints();
+        const apiClient = getApiClient();
+        if (apiClient && typeof apiClient.patch === 'function' && typeof apiClient.post === 'function') {
+            try {
+                const saved = await apiClient.patch(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, updates);
+                if (!saved.provisional) await apiClient.post(`${personsApiUrl}/${currentCustomer.id}/contact-history`, {
+                    type: 'Abonnement gewijzigd',
+                    description: `Abonnement bewerkt. ${descriptionText}.`
+                });
+
+                if (!request.isCurrent()) return;
+
+                closeForm('editSubscriptionForm');
+                showToast(translateKey('subscription.updated', {}, 'Abonnement succesvol bijgewerkt!'), 'success');
+                await selectCustomer(currentCustomer.id);
+                if (!request.isCurrent()) return;
+            } catch (error) {
+                if (!request.isCurrent()) return;
+                showToast(error.message || translateKey('subscription.updateFailed', {}, 'Abonnement bijwerken via backend mislukt'), 'error');
+            }
+            return;
         }
-        return;
+
+        subscription.magazine = updates.magazine;
+        subscription.duration = updates.duration;
+        subscription.startDate = updates.startDate;
+        subscription.status = updates.status;
+
+        pushContactHistory(currentCustomer, {
+            type: 'Abonnement gewijzigd',
+            description: `Abonnement bewerkt. ${descriptionText}.`
+        });
+
+        saveCustomers();
+        if (!request.isCurrent()) return;
+        closeForm('editSubscriptionForm');
+        showToast(translateKey('subscription.updated', {}, 'Abonnement succesvol bijgewerkt!'), 'success');
+        await selectCustomer(currentCustomer.id);
+        if (!request.isCurrent()) return;
+    } finally {
+        finishServiceFormRequest(request);
     }
-
-    subscription.magazine = updates.magazine;
-    subscription.duration = updates.duration;
-    subscription.startDate = updates.startDate;
-    subscription.status = updates.status;
-
-    pushContactHistory(currentCustomer, {
-        type: 'Abonnement gewijzigd',
-        description: `Abonnement bewerkt. ${descriptionText}.`
-    });
-
-    saveCustomers();
-    closeForm('editSubscriptionForm');
-    showToast(translateKey('subscription.updated', {}, 'Abonnement succesvol bijgewerkt!'), 'success');
-    await selectCustomer(currentCustomer.id);
 }
 
 function installLegacyCompatibilityExports() {
