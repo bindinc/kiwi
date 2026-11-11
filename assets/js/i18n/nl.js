@@ -31,6 +31,11 @@ const nl = {
         "userRolesHeading": "Jouw rollen",
         "noRolesFound": "Geen rollen gevonden in het token."
     },
+    "customerRecord": {
+        "addressLabel": "Adres",
+        "emailLabel": "E-mail",
+        "phoneLabel": "Telefoon"
+    },
     "indexHtml": {
         "text": {
             "1_jaar_4_50_per_maand_54_00_totaal_de4286b1": "1 jaar - €4,50 per maand (€54,00 totaal)",
@@ -59,7 +64,7 @@ const nl = {
             "abonnement_overzetten_04a00045": "🔄 Abonnement Overzetten",
             "abonnement_overzetten_51f8b366": "Abonnement Overzetten",
             "abonnementen_b91a0645": "Abonnementen",
-            "abonnementen_ba5e4d7c": "📰 Abonnementen",
+            "abonnementen_ba5e4d7c": "Abonnementen",
             "abonnementen_bij_overlijden_3e1b91b0": "Abonnementen bij Overlijden",
             "abonnementsgegevens_dc22841d": "Abonnementsgegevens",
             "subStartDate_ce0234ea": "Start datum",
@@ -91,10 +96,10 @@ const nl = {
             "anonieme_beller_0c3daeaf": "Anonieme Beller",
             "artikel_286630a5": "Artikel *",
             "artikel_toevoegen_aan_bestelling_d23832ab": "➕ Artikel Toevoegen aan Bestelling",
-            "artikel_verkoop_89f9bcc6": "🛒 Artikel verkoop",
+            "artikel_verkoop_89f9bcc6": "Artikel verkoop",
             "artikel_verkoop_baa29866": "🛒 Artikel Verkoop",
             "artikel_verkoop_d7a4b513": "Artikel Verkoop",
-            "artikelen_170a4739": "🛒 Artikelen",
+            "artikelen_170a4739": "Artikelen",
             "artikelgegevens_7dec9fbd": "Artikelgegevens",
             "automatisch_incasso_fd971b7d": "Automatische incasso",
             "avrobode_3f526f55": "Avrobode",
@@ -133,7 +138,7 @@ const nl = {
             "categorie_6c59dc2c": "Categorie",
             "categorie_add0d64a": "Categorie *",
             "compliment_b18f9c89": "Compliment",
-            "contact_geschiedenis_7d71e784": "📋 Contact Geschiedenis",
+            "contact_geschiedenis_7d71e784": "Contact Geschiedenis",
             "dag_4b5425c3": "Dag",
             "de_gegevens_hieronder_zijn_automatisch_ingevuld_op_basis_van_de_acties_t_d0fef57c": "De gegevens hieronder zijn automatisch ingevuld op basis van de acties tijdens het gesprek",
             "de_opzegbevestiging_en_restitutie_informatie_wordt_naar_dit_adres_gestuu_3a20ffcd": "De opzegbevestiging en restitutie-informatie wordt naar dit adres gestuurd",
@@ -192,7 +197,7 @@ const nl = {
             "klant_e504253b": "Klant:",
             "klant_verwacht_terugkoppeling_van_redactie_9b1357a7": "Klant verwacht terugkoppeling van redactie",
             "klant_wijst_af_opzeggen_e84bae32": "❌ Klant wijst af, opzeggen",
-            "klant_zoeken_8c2cfd01": "🔍 Klant Zoeken",
+            "klant_zoeken_8c2cfd01": "Klant Zoeken",
             "klanten_gevonden_a7066e8e": "klanten gevonden",
             "klantenservice_portal_magazine_abonnementen_21dfa5e2": "Klantenservice Portal - Magazine Abonnementen",
             "klantgegevens_bewerken_de8f3786": "✏️ Klantgegevens Bewerken",
@@ -216,8 +221,8 @@ const nl = {
             "nee_992443bb": "Nee",
             "niet_ontvangen_1d136f53": "Niet ontvangen",
             "niet_storen_7f6c03ee": "Niet storen",
-            "nieuw_abonnement_aanmaken_a7bddc25": "➕ Nieuw Abonnement Aanmaken",
-            "nieuw_abonnement_ed26c367": "➕ Nieuw Abonnement",
+            "nieuw_abonnement_aanmaken_a7bddc25": "Nieuw Abonnement Aanmaken",
+            "nieuw_abonnement_ed26c367": "Nieuw Abonnement",
             "nieuwe_abonnee_gegevens_39e1f2ce": "Nieuwe abonnee gegevens",
             "nieuwe_persoon_c574b0f2": "Nieuwe persoon",
             "notities_8284cfda": "Notities",
@@ -260,7 +265,7 @@ const nl = {
             "selecteer_reden_24d8f787": "Selecteer reden:",
             "service_nummer_2a497cde": "Service Nummer:",
             "service_nummer_ad4a39bf": "📞 Service nummer:",
-            "snelle_acties_b0debf12": "⚡ Snelle Acties",
+            "snelle_acties_b0debf12": "Snelle Acties",
             "sorteren_0388b769": "Sorteren:",
             "standaard_bezorginstructies_f4fae7a1": "Standaard bezorginstructies",
             "start_gesprek_simulatie_b219f5d2": "� Start Gesprek Simulatie",
@@ -313,7 +318,7 @@ const nl = {
             "zelfde_persoon_als_ontvanger_52ac9149": "Zelfde persoon als ontvanger",
             "zoek_op_salescode_of_titel_en_kies_het_kanaal_83ec4db3": "Zoek op salescode of titel, voeg een of meer producten toe en kies per product het kanaal",
             "zoeken_23d150c5": "Zoeken",
-            "zoekresultaten_b9b61881": "🔍 Zoekresultaten"
+            "zoekresultaten_b9b61881": "Zoekresultaten"
         },
         "placeholder": {
             "1234ab_7d777582": "1234AB",
@@ -644,6 +649,12 @@ const nl = {
         "registerFailed": "Redactie-item registreren via backend mislukt"
     },
     "forms": {
+        "customerNumberLabel": "Klantnummer",
+        "ibanLabel": "IBAN",
+        "recipientSearchLabel": "Naam ontvanger",
+        "requesterSearchLabel": "Naam aanvrager/betaler",
+        "followUpNotesLabel": "Follow-up notities",
+        "paymentMethodLabel": "Betaalmethode",
         "required": "Vul alle verplichte velden in",
         "invalidEmail": "Voer een geldig e-mailadres in",
         "newSubscriberRequired": "Vul alle verplichte velden in voor de nieuwe abonnee",
@@ -896,7 +907,16 @@ const nl = {
             "feedback_forbidden": "Contextuele feedback is niet beschikbaar voor deze rol."
         }
     },
+    "shell": {
+        "profileLabel": "Profiel en beschikbaarheid",
+        "outboxToggleTitle": "Outbox tonen of verbergen",
+        "outboxLabel": "Outbox"
+    },
     "articleSearch": {
+        "removeOrderItem": "Artikel uit bestelling verwijderen",
+        "removeCoupon": "Kortingscode verwijderen",
+        "searchLabel": "Artikel zoeken",
+        "closeLabel": "Artikeloverzicht sluiten",
         "noResults": "Geen artikelen gevonden.",
         "browseAllCta": "Blader door alle artikelen →",
         "browseAll": "📚 Blader door alle artikelen",
@@ -947,7 +967,7 @@ const nl = {
         "viewAction": "Bekijken",
         "noneFoundTitle": "Geen klanten gevonden",
         "noneFoundDescription": "Pas je zoekcriteria aan en probeer opnieuw",
-        "resultsTitle": '🔍 Zoekresultaten: "{query}"',
+        "resultsTitle": 'Zoekresultaten: "{query}"',
         "resultsRange": "Toont {start}-{end} van {total}",
         "subscriptionStatusLoading": "Abonnementstatus laden…",
         "subscriptionStatusUnavailable": "Status niet beschikbaar",

@@ -505,7 +505,32 @@ function testBuildSearchQueryLabelIncludesEmailAndPhone() {
     }
 }
 
+function testSelectedCustomerKeepsSourceIdentity() {
+    const previousBridge = globalThis.kiwiLegacyCustomerSearchBridge;
+    const customer = { id: 'same-person', personId: 'provider-reference', credentialKey: 'source-one', lastName: 'Sentinel', subscriptions: [] };
+    let current = { ...customer };
+    globalThis.kiwiLegacyCustomerSearchBridge = { getCurrentCustomer: () => current };
+    try {
+        assert.match(__customerSearchTestUtils.renderCustomerRow(customer), /aria-current="true"/);
+        current = { ...customer, credentialKey: 'source-two' };
+        assert.doesNotMatch(__customerSearchTestUtils.renderCustomerRow(customer), /aria-current="true"/);
+        current = { ...customer, credentialKey: '' };
+        assert.doesNotMatch(__customerSearchTestUtils.renderCustomerRow(customer), /aria-current="true"/);
+        current = { ...customer };
+        assert.doesNotMatch(__customerSearchTestUtils.renderCustomerRow({ ...customer, credentialKey: '' }), /aria-current="true"/);
+        current = { ...customer, credentialKey: '' };
+        assert.match(__customerSearchTestUtils.renderCustomerRow({ ...customer, credentialKey: '' }), /aria-current="true"/);
+        current = { ...customer, credentialKey: '  source-one  ' };
+        assert.match(__customerSearchTestUtils.renderCustomerRow(customer), /aria-current="true"/);
+        current = { ...customer, id: 'another-person' };
+        assert.doesNotMatch(__customerSearchTestUtils.renderCustomerRow(customer), /aria-current="true"/);
+        current = null;
+        assert.doesNotMatch(__customerSearchTestUtils.renderCustomerRow(customer), /aria-current="true"/);
+    } finally { globalThis.kiwiLegacyCustomerSearchBridge = previousBridge; }
+}
+
 async function run() {
+    testSelectedCustomerKeepsSourceIdentity();
     testRegistersItemFiveActions();
     testInstallsLegacyCompatibilityExports();
     testPageNumbersAndNormalizationHelpers();

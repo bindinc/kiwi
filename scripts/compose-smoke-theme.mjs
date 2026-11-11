@@ -67,6 +67,10 @@ async function assertKeyboardFocus(page, selector, expectedColor) {
     if (baselineDir) return;
     await page.keyboard.press('Tab');
     await page.locator(selector).first().focus();
+    await page.waitForFunction(({ selector, expectedColor }) => {
+        const element = document.querySelector(selector);
+        return element.matches(':focus-visible') && getComputedStyle(element).outlineColor === expectedColor;
+    }, { selector, expectedColor });
     const focus = await page.locator(selector).first().evaluate(element => ({
         visible: element.matches(':focus-visible'),
         width: getComputedStyle(element).outlineWidth,
@@ -83,9 +87,12 @@ async function assertContrast(page, foregroundSelector, backgroundSelector, mini
     const foreground = await page.locator(foregroundSelector).evaluate((element, name) => getComputedStyle(element)[name], property);
     const background = await page.locator(backgroundSelector).evaluate(element => getComputedStyle(element).backgroundColor);
     function luminance(rgb) {
-        const values = rgb.match(/[\d.]+/g).map(Number);
+        const normalizedSrgb = rgb.startsWith('color(srgb ');
+        const channels = rgb.replace(/^color\(srgb\s*|^rgba?\(|\)$/g, '');
+        const values = channels.split(/[\s,/]+/).filter(Boolean).map(Number);
         assert.ok(values.length === 3 || values[3] === 1, `Contrast needs an opaque color: ${rgb}`);
-        const linear = values.slice(0, 3).map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+        const linear = values.slice(0, 3).map(value => normalizedSrgb ? value : value / 255)
+            .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
         return linear.reduce((total, value, index) => total + value * [0.2126, 0.7152, 0.0722][index], 0);
     }
     const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
@@ -105,11 +112,11 @@ async function inspectPresentationFixture(page) {
             <h2>Theme diagnostic fixture — synthetic presentation states</h2>
             <p>No active call or queued customer change is represented here.</p>
             <button type="button" class="btn btn-primary">Example primary action</button>
-            <button type="button" class="btn btn-secondary">Example secondary action</button>
+            <button type="button" class="btn btn-secondary" data-theme-example="secondary">Example secondary action</button>
             <button type="button" class="channel-chip"><span class="channel-code">TEST</span><span class="channel-label">Example channel</span></button>
             <button type="button" class="werfsleutel-suggestion"><span class="code">TEST</span><span class="title">Example offer</span></button>
             <div class="subscription-item subscription-ended"><div class="subscription-info"><div class="subscription-name">Example ended subscription</div><div class="subscription-details">Ended — diagnostic state</div></div></div>
-            <button type="button" class="btn-winback">Example winback action</button>
+            <button type="button" class="btn btn-small btn-secondary btn-winback">Example winback action</button>
             <div class="search-summary"><div class="summary-badge">✓ Example search summary</div></div>
             <div class="header" style="position:static;height:auto;padding:0;background-image:none">
                 <div class="session-info"><div class="session-info-content"><span class="session-caller">Example active call</span><span class="recording-indicator"><span class="rec-text">REC — example</span></span><button type="button" class="btn-hold-call">Hold example</button><button type="button" class="btn-end-call">End example</button></div></div>
@@ -129,9 +136,14 @@ async function inspectPresentationFixture(page) {
         } finally {
             await page.mouse.up();
         }
-        const secondary = `${root} .btn-secondary`;
+        const secondary = `${root} [data-theme-example="secondary"]`;
+        await assertStyle(page, secondary, 'backgroundColor', 'rgb(255, 255, 255)');
+        await assertStyle(page, secondary, 'color', 'rgb(117, 111, 107)');
+        await assertStyle(page, secondary, 'borderTopColor', 'rgb(117, 111, 107)');
+        await assertStyle(page, secondary, 'borderTopLeftRadius', '0px');
         await page.locator(secondary).hover();
-        await waitForBackground(page, secondary, 'rgb(93, 88, 85)');
+        await waitForBackground(page, secondary, 'rgba(117, 111, 107, 0.1)');
+        await assertStyle(page, secondary, 'color', 'rgb(93, 88, 85)');
         await page.mouse.move(0, 0);
     }
     for (const component of ['.channel-chip', '.werfsleutel-suggestion']) {
@@ -141,7 +153,7 @@ async function inspectPresentationFixture(page) {
     }
     await assertStyle(page, `${root} .subscription-ended`, 'opacity', '1');
     await assertContrast(page, `${root} .subscription-details`, `${root} .subscription-ended`);
-    await assertStyle(page, `${root} .btn-winback`, 'borderTopColor', 'rgb(15, 23, 42)');
+    await assertStyle(page, `${root} .btn-winback`, 'borderTopColor', 'rgb(117, 111, 107)');
     await assertContrast(page, `${root} .btn-winback`, `${root} .btn-winback`);
     await assertContrast(page, `${root} .btn-winback`, `${root} .btn-winback`, 3, 'borderTopColor');
     await assertStyle(page, `${root} .summary-badge`, 'color', 'rgb(22, 101, 52)');
@@ -160,6 +172,35 @@ async function inspectPresentationFixture(page) {
 async function waitForBackground(page, selector, color) {
     await page.waitForFunction(({ selector, color }) => getComputedStyle(document.querySelector(selector)).backgroundColor === color, { selector, color });
     report.assertions.push(`${selector} interaction background: ${color}`);
+}
+
+async function inspectPaymentChoices(page, firstSelector, secondSelector, expectedValues, ibanSelector) {
+    if (baselineDir) return;
+    const first = page.locator(firstSelector);
+    const second = page.locator(secondSelector);
+    assert.equal(await first.inputValue(), expectedValues[0]);
+    assert.equal(await second.inputValue(), expectedValues[1]);
+    await assertStyle(page, firstSelector, 'width', '20px');
+    await assertStyle(page, firstSelector, 'height', '20px');
+    await first.press('ArrowRight');
+    await page.waitForFunction(selector => document.querySelector(selector).checked, secondSelector);
+    assert.equal(await first.isChecked(), false, 'native radio choices remain mutually exclusive');
+    await assertKeyboardFocus(page, secondSelector, 'rgb(73, 98, 117)');
+    if (ibanSelector) {
+        assert.equal(await page.locator(ibanSelector).isVisible(), false, 'payment instruction hides IBAN');
+        assert.equal(await page.locator(ibanSelector).evaluate(input => input.required), false);
+    }
+    await second.press('ArrowLeft');
+    await page.waitForFunction(selector => document.querySelector(selector).checked, firstSelector);
+    await page.locator(`label[for="${secondSelector.slice(1)}"]`).click();
+    assert.equal(await second.isChecked(), true, 'pointer label selection agrees with native keyboard selection');
+    await page.locator(`label[for="${firstSelector.slice(1)}"]`).click();
+    assert.equal(await first.isChecked(), true);
+    if (ibanSelector) {
+        assert.equal(await page.locator(ibanSelector).isVisible(), true, 'direct debit reveals IBAN');
+        assert.equal(await page.locator(ibanSelector).evaluate(input => input.required), true);
+    }
+    report.assertions.push(`${firstSelector}/${secondSelector}: visible native payment choices preserve values, arrows, pointer selection and conditional fields`);
 }
 
 function shiftDate(isoDate, days) {
@@ -326,6 +367,10 @@ async function runWorkspace(width) {
         await assertStyle(page, 'body', 'backgroundColor', 'rgb(240, 238, 233)');
         await assertStyle(page, '.header', 'backgroundColor', 'rgb(73, 98, 117)');
         await assertStyle(page, '.card', 'backgroundColor', 'rgb(255, 255, 255)');
+        await assertStyle(page, 'body', 'fontSize', '15px');
+        await assertStyle(page, '.card', 'borderTopLeftRadius', '0px');
+        await assertStyle(page, '.card', 'boxShadow', 'none');
+        await assertStyle(page, '.card', 'paddingLeft', width <= 768 ? '16px' : '20px');
         await assertKeyboardFocus(page, '#agentProfileTrigger', 'rgb(255, 255, 255)');
         await capture(page, 'shell');
         await page.locator('#agentProfileTrigger').click();
@@ -337,6 +382,7 @@ async function runWorkspace(width) {
         await assertStyle(page, '#articleInitials', 'borderTopColor', 'rgb(118, 136, 148)');
         await assertKeyboardFocus(page, '#articleInitials', 'rgb(73, 98, 117)');
         await capture(page, 'article-form');
+        await inspectPaymentChoices(page, '#articlePaymentIdeal', '#articlePaymentTransfer', ['iDEAL', 'Bankoverschrijving']);
         await inspectDatePicker(page);
         await page.locator('#articleSearch').fill('a');
         await page.locator('#articleDropdown').waitFor({ state: 'visible' });
@@ -346,9 +392,13 @@ async function runWorkspace(width) {
         await page.locator('#endCustomerWorkSessionButton').click();
 
         if (!await page.locator('#searchName').isVisible()) await page.locator('#additionalFiltersToggle').click();
+        await assertStyle(page, '.checkbox-option', 'backgroundColor', 'rgb(255, 255, 255)');
+        await assertStyle(page, '.checkbox-option', 'minHeight', '44px');
         await page.locator('#searchName').fill('Jansen');
         await page.locator('button[data-action="search-customer"]').click();
         await page.locator('#paginatedResults .result-row').first().waitFor();
+        await assertStyle(page, '#sortBy', 'fontSize', '15px');
+        await assertStyle(page, '#sortBy', 'minHeight', '40px');
         await capture(page, 'customer-results');
         await page.locator('#paginatedResults .result-row').first().click();
         await page.locator('#customerDetail').waitFor({ state: 'visible' });
@@ -388,13 +438,46 @@ async function runWorkspace(width) {
     }
 }
 
+async function inspectShortViewportFocus() {
+    const page = await newPage(390);
+    try {
+        await login(page);
+        await page.waitForFunction(() => window.kiwiCustomerWorkSession && window.kiwiCustomerDetailSlice);
+        await page.locator('#agentProfileTrigger').click();
+        await page.locator('[data-locale-option="nl"]').click();
+        await page.waitForFunction(() => document.documentElement.lang === 'nl');
+        await page.setViewportSize({ width: 390, height: 320 });
+        await page.locator('[data-action="show-new-subscription"]').first().click();
+        await page.locator('#newSubscriptionForm').waitFor({ state: 'visible' });
+        await page.keyboard.press('Tab');
+        await page.locator('#werfsleutelInput').focus();
+        await page.locator('#werfsleutelInput').scrollIntoViewIfNeeded();
+        await page.keyboard.press('Tab');
+        // Observe native Tab scrolling; manually scrolling the button would hide this regression.
+        await page.waitForFunction(() => {
+            const button = document.getElementById('werfsleutelClear');
+            const bounds = button.getBoundingClientRect();
+            return document.activeElement === button && bounds.top >= 0 && bounds.bottom <= innerHeight
+                && bounds.left >= 0 && bounds.right <= innerWidth;
+        });
+        report.assertions.push('390x320 subscription: native Tab reveals the complete focused clear action');
+        await capture(page, 'subscription-keyboard-focus');
+        await inspectPaymentChoices(page, '#subPaymentAuto', '#subPaymentInstruction', ['B', 'AC'], '#subIBAN');
+        await capture(page, 'subscription-payment-choices');
+    } finally {
+        await page.context().close();
+    }
+}
+
 try {
     if (process.env.KIWI_THEME_DATEPICKER_ONLY === '1') {
         for (const width of [1440, 390, 320]) await runDatePickerOnly(width);
         await runDatePickerOnly(390, 320);
     } else {
         for (const width of [1440, 390]) await runWorkspace(width);
+        await inspectShortViewportFocus();
         await runDatePickerOnly(320);
+        await runDatePickerOnly(390, 320);
     }
     console.log(`[compose-smoke-theme] ${browserName} ${mode}: ${report.screenshots.length} screenshots; ${report.assertions.length} assertions passed.`);
 } finally {

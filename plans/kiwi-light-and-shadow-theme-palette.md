@@ -4,6 +4,22 @@
 
 Implementation is tracked in [SC-206629](https://app.shortcut.com/bindincit/story/206629) and [PR #130](https://github.com/bindinc/kiwi/pull/130). This document records the design contract; the PR contains the application changes and validation results.
 
+### Shared foundation alignment — theme_audit 01
+
+The original palette migration below is historical scope. The [theme_audit index](theme_audit.md) broadens the contract to the reviewed showcase's layout, typography, spacing, component geometry and state hierarchy. Slice 01 establishes shared foundations; subsequent slices consume them, and slice 10 records rendered acceptance. Palette checks alone do not establish visual agreement.
+
+Shared work surfaces are flat, with square workflow/control corners and a restrained 4px corner for small layered components. The existing 6px trigger / 8px popover geometry of the separately approved delivery picker remains local to that component; circular radios, avatars and meaningful indicators retain their shape. Elevation is reserved for actual menus, dialogs, dropdowns and toasts; controls, ordinary cards and information sections have none.
+
+The spacing scale is 4/8/12/16/20/24/32/48px. Panel insets are 20px desktop and 16px narrow; workspace insets are 16px. Shared roles define 15px body text, 13px labels/metadata, 14px actions, 22px primary record/form titles, 400/600/700 weights, 40px controls and 44px choice targets. Feature composition and action/control migration follow their own slices.
+
+The opaque sRGB workflow tints match the showcase: Cloud Dancer 72% for the canvas, Blue Fusion 8% for data, Veiled Vista 58% for selection, Golden Mist 58% for labels and 38% for attention, Baltic Sea 30% for information and Quiet Violet 26% for workflow grouping, each mixed with white. Operational success/warning/danger, availability, privacy and annotation colors keep their existing meanings. Decorative separators are distinct from contrast-tested control boundaries and focus indicators.
+
+### Shared controls and actions — theme_audit 02
+
+Text-entry fields, selects and ordinary actions use the shared 40px minimum height, with 15px field text and 14px action text. Native radios/checkboxes remain visible at 20px, with named groups, persistent associated labels, keyboard focus and 44px choice targets. Text-field selectors exclude native choices and hidden/special-purpose inputs. Existing payment values, conditional IBAN behavior, consent defaults and privacy metadata remain unchanged.
+
+Secondary actions are white and square, with Hematite text/borders; quiet utilities follow the transparent, underlined calm treatment. The showcase's 10% neutral secondary hover background is retained. Its Hematite hover text would yield only 4.370723:1 over white, so hover text uses the existing darker `--action-secondary-hover` neutral, yielding 6.196379:1. This is a narrow accessibility correction to the reference, not a change to the canonical palette or a relaxed contrast threshold.
+
 ### Approved delivery date picker refinement
 
 The delivery date picker uses plain numerals on a white surface, a compact Blue Fusion selection, an outline for today, and struck-through unavailable dates. Weekday names appear once; the footer names the server-provided earliest date. Seven columns fit at 320px, and the floating feedback button stays clear while the picker is open. Native buttons support arrow keys, Home/End, PageUp/PageDown, Escape and deliberate focus restoration. Delayed month responses cannot replace or refocus a newer interaction. Existing delivery availability remains server-owned.
@@ -125,13 +141,13 @@ Introduce a small, explicit set of roles covering surfaces, text, borders, actio
 | Semantic token | Value / Raw Token | Contrast / Role |
 | --- | --- | --- |
 | `--page` | `var(--palette-cloud-dancer)` (`#F0EEE9`) | Default document background |
-| `--surface` | `#FFFFFF` | Elevated cards, menus, modals, and form inputs |
+| `--surface` | `#FFFFFF` | Flat work surfaces, menus, modals and form inputs |
 | `--surface-subdued` | `var(--palette-cloud-dancer)` (`#F0EEE9`) | Subdued secondary containers, input groupings |
 | `--surface-calm` | `var(--palette-veiled-vista)` (`#C7E2C8`) | Soft secondary surface, selected table row highlight |
-| `--surface-selected` | `var(--palette-veiled-vista)` (`#C7E2C8`) | Active/selected row and entity highlight |
-| `--surface-info` | `var(--palette-baltic-sea)` (`#7AB6D9`) | Informational badges and decorative accent with dark ink |
-| `--surface-attention` | `var(--palette-golden-mist)` (`#D5CD94`) | Warm non-critical warning/attention surface with dark ink |
-| `--surface-group` | `var(--palette-quiet-violet)` (`#A693AC`) | Grouped workflow sections with dark ink |
+| `--surface-selected` | `color-mix(in srgb, var(--palette-veiled-vista) 58%, var(--surface))` | Restrained selected row/entity surface |
+| `--surface-info` | `color-mix(in srgb, var(--palette-baltic-sea) 30%, var(--surface))` | Information surface, distinct from operational status |
+| `--surface-attention` | `color-mix(in srgb, var(--palette-golden-mist) 38%, var(--surface))` | Non-critical attention surface |
+| `--surface-group` | `color-mix(in srgb, var(--palette-quiet-violet) 26%, var(--surface))` | Grouped-workflow surface |
 | `--surface-disabled` | `var(--palette-cloud-cover)` (`#999393`) | Inactive / disabled background elements |
 | `--text` | `#0F172A` | Primary ink for body copy and headings (8.09:1 to 14.5:1) |
 | `--text-muted` | `#475569` | Secondary metadata, captions, and hint text (meets 4.5:1) |
@@ -141,13 +157,13 @@ Introduce a small, explicit set of roles covering surfaces, text, borders, actio
 | `--action` | `var(--palette-blue-fusion)` (`#496275`) | Primary action buttons, active navigation bar, links |
 | `--action-hover` | `#354C5E` | Darkened Blue Fusion (> 7:1 against white text) |
 | `--action-active` | `#2B3E4D` | Pressed primary action |
-| `--action-secondary` | `var(--palette-hematite)` (`#756F6B`) | Secondary dark control, border, and neutral button |
-| `--action-secondary-hover` | `#5D5855` | Darkened Hematite for secondary button hover |
+| `--action-secondary` | `var(--palette-hematite)` (`#756F6B`) | Outlined secondary action text and border |
+| `--action-secondary-hover` | `#5D5855` | Darker secondary hover text, preserving normal-text contrast |
+| `--surface-secondary-hover` | `rgba(117, 111, 107, 0.1)` | Showcase secondary hover tint, composited over its actual surface |
+| `--surface-quiet-hover` | `rgba(73, 98, 117, 0.1)` | Showcase calm/quiet hover tint with Blue Fusion text |
 | `--focus` | `var(--palette-blue-fusion)` (`#496275`) | 3px outline on light surfaces |
 | `--focus-inverse` | `#FFFFFF` | 3px outline on Blue Fusion header, navigation items, and dark buttons (6.39:1) |
-| `--shadow-sm` | `0 1px 2px 0 rgba(117, 111, 107, 0.08)` | Subtle card elevation on Cloud Dancer |
-| `--shadow-md` | `0 4px 6px -1px rgba(117, 111, 107, 0.12)` | Popovers, dropdown menus, sticky header shadow |
-| `--shadow-lg` | `0 10px 15px -3px rgba(117, 111, 107, 0.16)` | Modals, dialog overlays |
+| `--elevation-flat` | `none` | Ordinary panels, headers, controls and information surfaces |
 | `--elevation-overlay` | `0 8px 24px rgba(15, 23, 42, 0.14)` | Outbox and drawer overlays |
 
 Hover, active, and pressed states are explicitly declared above and tested. Do not scatter ad hoc opacity or darkening formulas through component rules.
@@ -228,7 +244,7 @@ Cover article search, delivery-date picker, session outbox, call and ACW bars, c
 ## Boundaries
 
 - This document records the palette design; application assets implement it.
-- It does not introduce dark mode, a selectable alternative theme, user preference storage, typography changes, layout redesign, or animation changes.
+- The original palette PR did not introduce typography/layout/motion changes. The later theme_audit slices explicitly align these with the showcase; dark mode, alternative themes and preference storage remain excluded.
 - It does not recolor publication/customer logos or the Bindinc logo asset.
 - It does not make Pantone accent colors substitutes for semantic danger, warning, success, or privacy colors.
 - It does not modify `public/vendor/swagger-ui-dist/swagger-ui.css`.

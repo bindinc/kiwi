@@ -375,6 +375,8 @@ function createAllArticlesModal() {
 
     const modalTitle = translateArticle('articleSearch.modalTitle', {}, '📚 Alle Artikelen');
     const searchPlaceholder = translateArticle('articleSearch.searchPlaceholder', {}, 'Zoek artikel...');
+    const searchLabel = translateArticle('articleSearch.searchLabel', {}, 'Artikel zoeken');
+    const closeLabel = translateArticle('articleSearch.closeLabel', {}, 'Artikeloverzicht sluiten');
     const tabAll = translateArticle('articleSearch.tabAll', {}, 'Alle');
     const tabPopular = translateArticle('articleSearch.tabPopular', {}, 'Populair');
     const tabAvrobode = translateArticle('articleSearch.tabAvrobode', {}, 'Avrobode');
@@ -386,10 +388,11 @@ function createAllArticlesModal() {
             <div class="modal-content modal-large">
                 <div class="modal-header">
                     <h3>${modalTitle}</h3>
-                    <button class="btn-close" type="button" data-action="close-all-articles-modal">✕</button>
+                    <button class="btn-close" type="button" data-action="close-all-articles-modal" aria-label="${closeLabel}">✕</button>
                 </div>
                 <div class="modal-body">
                     <div class="article-search-in-modal">
+                        <label for="modalArticleSearch" class="form-label">${searchLabel}</label>
                         <input type="text"
                                id="modalArticleSearch"
                                placeholder="${searchPlaceholder}"
@@ -775,6 +778,8 @@ export async function renderOrderItems() {
     }
 
     section.style.display = 'block';
+    const removeOrderItemLabel = translateArticle('articleSearch.removeOrderItem', {}, 'Artikel uit bestelling verwijderen');
+    const removeCouponLabel = translateArticle('articleSearch.removeCoupon', {}, 'Kortingscode verwijderen');
 
     try {
         const quote = await requestOrderQuote();
@@ -795,6 +800,7 @@ export async function renderOrderItems() {
                     <div class="order-item-quantity">${item.quantity}x</div>
                     <div class="order-item-price">${asCurrency(itemTotal)}</div>
                     <button class="order-item-remove"
+                            aria-label="${removeOrderItemLabel}" title="${removeOrderItemLabel}"
                             data-action="remove-article-from-order"
                             data-arg-article-id="${item.articleId}"
                             type="button">🗑️</button>
@@ -822,7 +828,7 @@ export async function renderOrderItems() {
                         </div>
                         <div class="discount-item-amount">
                             -${asCurrency(discount.amount)}
-                            ${isCoupon ? '<button data-action="remove-coupon" type="button" class="coupon-remove" title="Verwijder kortingscode">✕</button>' : ''}
+                            ${isCoupon ? `<button data-action="remove-coupon" type="button" class="coupon-remove" aria-label="${removeCouponLabel}" title="${removeCouponLabel}">✕</button>` : ''}
                         </div>
                     </div>
                 `;

@@ -732,33 +732,38 @@ function renderCustomerRow(customer) {
     const subscriptionBadges = buildSubscriptionBadges(customer);
     const customerReference = buildCustomerSearchReference(customer);
     const showIdentifyButton = shouldShowIdentifyButton();
+    const currentCustomer = readLegacyCurrentCustomer();
+    const sameSource = String(currentCustomer?.credentialKey || '').trim() === String(customer.credentialKey || '').trim();
+    const selected = currentCustomer && String(currentCustomer.id) === String(customer.id) && sameSource;
     const viewActionLabel = translateKey('search.viewAction', {}, 'Bekijken');
 
     return `
-        <tr class="result-row" data-action="select-customer" data-arg-customer-id="${customer.id}">
+        <tr class="result-row${selected ? ' is-selected' : ''}"${selected ? ' aria-current="true"' : ''} data-action="select-customer" data-arg-customer-id="${customer.id}">
             <td class="result-row-lastname" data-feedback-sensitive="name">${lastNameSection}${mandantBadgeMarkup}</td>
             <td class="result-row-initials">
-                <span class="initials-value" data-feedback-sensitive="name">${initials}</span>
+                <div class="result-initials-content"><span class="initials-value" data-feedback-sensitive="name">${initials}</span></div>
             </td>
             <td class="result-row-address" data-feedback-sensitive="address">
                 <span>${customer.address}</span><br>
                 <span>${customer.postalCode} ${customer.city}</span>
             </td>
-            <td class="result-row-subscriptions">${subscriptionBadges}</td>
+            <td class="result-row-subscriptions"><div class="result-subscriptions-content">${subscriptionBadges}</div></td>
             <td class="result-row-subscriber-number" data-feedback-sensitive="id">${customerReference}</td>
             <td class="result-row-actions">
-                <button class="btn btn-small" type="button" data-action="select-customer" data-arg-customer-id="${customer.id}" data-action-stop-propagation="true">
-                    ${viewActionLabel}
-                </button>
-                ${showIdentifyButton ? `
-                    <button class="btn btn-small btn-primary btn-identify-caller"
-                            type="button"
-                            data-action="call-session.identify-caller"
-                            data-arg-customer-id="${customer.id}"
-                            data-action-stop-propagation="true">
-                        👤 Identificeer
+                <div class="result-actions-content">
+                    <button class="btn btn-small btn-secondary" type="button" data-action="select-customer" data-arg-customer-id="${customer.id}" data-action-stop-propagation="true">
+                        ${viewActionLabel}
                     </button>
-                ` : ''}
+                    ${showIdentifyButton ? `
+                        <button class="btn btn-small btn-primary btn-identify-caller"
+                                type="button"
+                                data-action="call-session.identify-caller"
+                                data-arg-customer-id="${customer.id}"
+                                data-action-stop-propagation="true">
+                            👤 Identificeer
+                        </button>
+                    ` : ''}
+                </div>
             </td>
         </tr>
     `;
@@ -834,7 +839,7 @@ function renderPagination() {
         }
 
         const activeClass = pageNumber === currentPage ? 'active' : '';
-        html += `<button class="page-btn ${activeClass}" type="button" data-action="go-to-page" data-arg-page="${pageNumber}">${pageNumber}</button>`;
+        html += `<button class="page-btn ${activeClass}"${pageNumber === currentPage ? ' aria-current="page"' : ''} type="button" data-action="go-to-page" data-arg-page="${pageNumber}">${pageNumber}</button>`;
     });
 
     html += `<button class="page-btn" type="button" data-action="go-to-page" data-arg-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>
@@ -892,7 +897,7 @@ export function displayPaginatedResults() {
     resultsTitle.textContent = translateKey(
         'search.resultsTitle',
         { query: searchQueryLabel },
-        `🔍 Zoekresultaten: "${searchQueryLabel}"`
+        `Zoekresultaten: "${searchQueryLabel}"`
     );
     resultsRange.textContent = translateKey(
         'search.resultsRange',

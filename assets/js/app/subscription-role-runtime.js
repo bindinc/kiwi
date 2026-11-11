@@ -306,39 +306,39 @@ function renderCustomerForm(containerId, prefix, config = {}) {
 
     if (cfg.includePhone && cfg.separatePhoneTypes) {
         phoneFieldsMarkup = `
-            <input type="tel" id="${prefix}LandlinePhone" placeholder="${landlinePhonePlaceholder}" data-feedback-sensitive="phone">
-            <input type="tel" id="${prefix}MobilePhone" placeholder="${mobilePhonePlaceholder}" data-feedback-sensitive="phone">
+            <div class="customer-form-field"><label for="${prefix}LandlinePhone">${landlinePhonePlaceholder}</label><input type="tel" id="${prefix}LandlinePhone" placeholder="${landlinePhonePlaceholder}" data-feedback-sensitive="phone"></div>
+            <div class="customer-form-field"><label for="${prefix}MobilePhone">${mobilePhonePlaceholder}</label><input type="tel" id="${prefix}MobilePhone" placeholder="${mobilePhonePlaceholder}" data-feedback-sensitive="phone"></div>
         `;
     } else if (cfg.includePhone) {
-        phoneFieldsMarkup = `<input type="tel" id="${prefix}Phone" placeholder="${phonePlaceholder}" data-feedback-sensitive="phone" ${cfg.phoneRequired ? 'required' : ''}>`;
+        phoneFieldsMarkup = `<div class="customer-form-field"><label for="${prefix}Phone">${phonePlaceholder}</label><input type="tel" id="${prefix}Phone" placeholder="${phonePlaceholder}" data-feedback-sensitive="phone" ${cfg.phoneRequired ? 'required' : ''}></div>`;
     }
 
     const html = `
-        <h3 class="form-subtitle">${translate('forms.salutationLabel', {}, 'Aanhef *')}</h3>
-        <div class="aanhef-row">
+        <h3 id="${prefix}SalutationLabel" class="form-subtitle">${translate('forms.salutationLabel', {}, 'Aanhef *')}</h3>
+        <div class="aanhef-row" role="radiogroup" aria-labelledby="${prefix}SalutationLabel">
             <label><input type="radio" name="${prefix}Salutation" value="Dhr." required checked> ${translate('forms.salutationMr', {}, 'Dhr.')}</label>
             <label><input type="radio" name="${prefix}Salutation" value="Mevr."> ${translate('forms.salutationMrs', {}, 'Mevr.')}</label>
             <label><input type="radio" name="${prefix}Salutation" value="Anders"> ${translate('forms.salutationOther', {}, 'Anders')}</label>
         </div>
         
         <div class="form-row">
-            <input type="text" id="${prefix}Initials" placeholder="${translate('forms.initialsPlaceholder', {}, 'Voorletters*')}" data-feedback-sensitive="name" required>
-            <input type="text" id="${prefix}MiddleName" placeholder="${translate('forms.middleNamePlaceholder', {}, 'Tussenvoegsel')}" data-feedback-sensitive="name">
-            <input type="text" id="${prefix}LastName" placeholder="${translate('forms.lastNamePlaceholder', {}, 'Achternaam*')}" data-feedback-sensitive="name" required>
+            <div class="customer-form-field"><label for="${prefix}Initials">${translate('forms.initialsPlaceholder', {}, 'Voorletters*')}</label><input type="text" id="${prefix}Initials" placeholder="${translate('forms.initialsPlaceholder', {}, 'Voorletters*')}" data-feedback-sensitive="name" required></div>
+            <div class="customer-form-field"><label for="${prefix}MiddleName">${translate('forms.middleNamePlaceholder', {}, 'Tussenvoegsel')}</label><input type="text" id="${prefix}MiddleName" placeholder="${translate('forms.middleNamePlaceholder', {}, 'Tussenvoegsel')}" data-feedback-sensitive="name"></div>
+            <div class="customer-form-field"><label for="${prefix}LastName">${translate('forms.lastNamePlaceholder', {}, 'Achternaam*')}</label><input type="text" id="${prefix}LastName" placeholder="${translate('forms.lastNamePlaceholder', {}, 'Achternaam*')}" data-feedback-sensitive="name" required></div>
         </div>
 
         <div class="form-group">
-            <label>${translate('forms.birthdayLabel', {}, 'Geboortedatum*')}</label>
-            <div class="form-row">
-                <select id="${prefix}BirthdayDay">
+            <span id="${prefix}BirthdayLabel" class="form-label">${translate('forms.birthdayLabel', {}, 'Geboortedatum*')}</span>
+            <div class="form-row" role="group" aria-labelledby="${prefix}BirthdayLabel">
+                <div class="customer-form-field"><label for="${prefix}BirthdayDay">${translate('forms.birthdayDayPlaceholder', {}, 'Dag')}</label><select id="${prefix}BirthdayDay">
                     <option value="">${translate('forms.birthdayDayPlaceholder', {}, 'Dag')}</option>
-                </select>
-                <select id="${prefix}BirthdayMonth">
+                </select></div>
+                <div class="customer-form-field"><label for="${prefix}BirthdayMonth">${translate('forms.birthdayMonthPlaceholder', {}, 'Maand')}</label><select id="${prefix}BirthdayMonth">
                     <option value="">${translate('forms.birthdayMonthPlaceholder', {}, 'Maand')}</option>
-                </select>
-                <select id="${prefix}BirthdayYear">
+                </select></div>
+                <div class="customer-form-field"><label for="${prefix}BirthdayYear">${translate('forms.birthdayYearPlaceholder', {}, 'Jaar')}</label><select id="${prefix}BirthdayYear">
                     <option value="">${translate('forms.birthdayYearPlaceholder', {}, 'Jaar')}</option>
-                </select>
+                </select></div>
             </div>
         </div>
 
@@ -347,7 +347,7 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         ${cfg.includePhone || cfg.includeEmail ? `
         <div class="form-row">
             ${phoneFieldsMarkup}
-            ${cfg.includeEmail ? `<input type="email" id="${prefix}Email" placeholder="${emailPlaceholder}" data-feedback-sensitive="email" ${cfg.emailRequired ? 'required' : ''}>` : ''}
+            ${cfg.includeEmail ? `<div class="customer-form-field"><label for="${prefix}Email">${emailPlaceholder}</label><input type="email" id="${prefix}Email" placeholder="${emailPlaceholder}" data-feedback-sensitive="email" ${cfg.emailRequired ? 'required' : ''}></div>` : ''}
         </div>
         ` : ''}
         
@@ -364,18 +364,6 @@ function renderCustomerForm(containerId, prefix, config = {}) {
     const container = document.getElementById(containerId);
     container.classList.add('customer-create-form');
     container.innerHTML = html;
-    if (cfg.showFieldLabels) {
-        for (const input of container.querySelectorAll('input[placeholder]')) {
-            if (input.labels.length) continue;
-            const field = document.createElement('div');
-            field.className = 'customer-form-field';
-            const label = document.createElement('label');
-            label.htmlFor = input.id;
-            label.textContent = input.placeholder;
-            input.before(field);
-            field.append(label, input);
-        }
-    }
     populateBirthdayFields(prefix);
 }
 
@@ -1071,7 +1059,6 @@ function ensureSubscriptionRoleCreateForm(role) {
         renderCustomerForm(cfg.createFormContainerId, cfg.prefix, {
             includePhone: true,
             separatePhoneTypes: true,
-            showFieldLabels: true,
             includeEmail: true,
             phoneRequired: false,
             emailRequired: true
@@ -2040,7 +2027,7 @@ function renderSubscriptionRoleSearchResults(role) {
                         <span data-feedback-sensitive="id">${safeId}</span><span data-feedback-sensitive="address">${safeAddressLine}</span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-small" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}" data-arg-result-index="${resultIndex}">${selectLabel}</button>
+                <button type="button" class="btn btn-small btn-secondary" data-action="select-subscription-role-person" data-arg-role="${role}" data-arg-person-id="${Number(person.id)}" data-arg-result-index="${resultIndex}">${selectLabel}</button>
             </div>
         `;
     }).join('');

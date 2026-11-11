@@ -396,7 +396,53 @@ function testCustomerWorkspaceResetDoesNotEndTheCallSession() {
     });
 }
 
+function testEscapeDismissesDebugThenProfileWithoutClosingRetainedForm() {
+    withGlobalState(() => {
+        let debugOpen = true;
+        let profileClosed = 0;
+        const draftForm = { style: { display: 'flex' } };
+        const statusMenu = { hidden: false };
+        const debugModal = { classList: { contains: name => name === 'show' && debugOpen } };
+        const profileTrigger = {
+            focusCount: 0,
+            focus() { this.focusCount += 1; documentStub.activeElement = this; }
+        };
+        const documentStub = createDocumentStub({ elementsById: {
+            debugModal, agentStatusMenu: statusMenu, agentProfileTrigger: profileTrigger
+        } });
+        documentStub.activeElement = {};
+        documentStub.querySelectorAll = () => [draftForm];
+        globalThis.document = documentStub;
+        globalThis.featureFlags = { isEnabled: flag => flag === 'debugModal' };
+        configureAppShellSliceDependencies(() => ({
+            closeDebugModal() { debugOpen = false; },
+            closeStatusMenu() { statusMenu.hidden = true; profileClosed += 1; }
+        }));
+        registerAppShellSlice(createRouter(documentStub));
+
+        documentStub.listeners.keydown({ key: 'Escape' });
+        assert.equal(debugOpen, false);
+        assert.equal(statusMenu.hidden, false);
+        assert.equal(profileTrigger.focusCount, 0);
+        assert.equal(draftForm.style.display, 'flex');
+
+        let prevented = false;
+        documentStub.listeners.keydown({ key: 'Escape', preventDefault() { prevented = true; } });
+        assert.equal(profileClosed, 1);
+        assert.equal(statusMenu.hidden, true);
+        assert.equal(documentStub.activeElement, profileTrigger);
+        assert.equal(profileTrigger.focusCount, 1);
+        assert.equal(prevented, true);
+        assert.equal(draftForm.style.display, 'flex');
+
+        // Existing form dismissal remains the next layer after both disclosures close.
+        documentStub.listeners.keydown({ key: 'Escape' });
+        assert.equal(draftForm.style.display, 'none');
+    });
+}
+
 function run() {
+    testEscapeDismissesDebugThenProfileWithoutClosingRetainedForm();
     testRegistersItemTwelveActionAndNamespace();
     testCloseFormPreservesDuplicateStateForNewSubscriptionForm();
     testShowToastUsesContactHistoryAndDeduplicatesRecentSuccessToast();

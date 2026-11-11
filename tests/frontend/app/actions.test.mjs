@@ -103,6 +103,70 @@ function createDelegatedEvent(actionElement, eventType, options = {}) {
     };
 }
 
+function testNativeButtonsDispatchOnlyClick() {
+    const router = createActionRouter();
+    const receivedEvents = [];
+    router.register('go-to-page', (_payload, context) => {
+        receivedEvents.push(context.event.type);
+    });
+    const button = { tagName: 'BUTTON', dataset: { action: 'go-to-page' } };
+    const nonActivationKeys = [
+        { key: 'Tab' },
+        { key: 'Tab', shiftKey: true },
+        { key: 'Escape' },
+        { key: 'ArrowRight' }
+    ];
+
+    for (const options of nonActivationKeys) {
+        const event = { ...createDelegatedEvent(button, 'keydown'), ...options };
+        assert.equal(router.dispatch(event), false);
+    }
+    assert.deepEqual(receivedEvents, []);
+
+    // Model the browser sequence; real keyboard-generated clicks are checked in Compose.
+    for (const key of ['Enter', ' ']) {
+        assert.equal(router.dispatch({ ...createDelegatedEvent(button, 'keydown'), key }), false);
+        assert.equal(router.dispatch(createDelegatedEvent(button, 'click')), true);
+    }
+    assert.deepEqual(receivedEvents, ['click', 'click']);
+
+    for (const eventType of ['change', 'submit']) {
+        assert.equal(router.dispatch(createDelegatedEvent(button, eventType)), false);
+    }
+    assert.deepEqual(receivedEvents, ['click', 'click']);
+}
+
+function testExplicitButtonKeyboardEventsRemainSupported() {
+    const router = createActionRouter();
+    const receivedEvents = [];
+    router.register('calendar-day', (_payload, context) => {
+        receivedEvents.push(context.event.type);
+    });
+    const button = {
+        tagName: 'BUTTON',
+        dataset: { action: 'calendar-day', actionEvent: ' click, keydown ' }
+    };
+
+    assert.equal(router.dispatch(createDelegatedEvent(button, 'keydown')), true);
+    assert.equal(router.dispatch(createDelegatedEvent(button, 'click')), true);
+    assert.equal(router.dispatch(createDelegatedEvent(button, 'change')), false);
+    assert.deepEqual(receivedEvents, ['keydown', 'click']);
+}
+
+function testNonButtonDefaultEventsRemainSupported() {
+    const router = createActionRouter();
+    const receivedEvents = [];
+    router.register('search', (_payload, context) => {
+        receivedEvents.push(context.event.type);
+    });
+    const input = { tagName: 'INPUT', dataset: { action: 'search' } };
+
+    for (const eventType of ['click', 'change', 'submit', 'keydown']) {
+        assert.equal(router.dispatch(createDelegatedEvent(input, eventType)), true);
+    }
+    assert.deepEqual(receivedEvents, ['click', 'change', 'submit', 'keydown']);
+}
+
 function createToggleClassList(initialValues = []) {
     const classes = new Set(initialValues);
     return {
@@ -1022,6 +1086,9 @@ async function run() {
     testCoerceActionValue();
     testExtractActionPayload();
     testRouterDispatch();
+    testNativeButtonsDispatchOnlyClick();
+    testExplicitButtonKeyboardEventsRemainSupported();
+    testNonButtonDefaultEventsRemainSupported();
     testCallQueueAgentStatusSlices();
     testLocalizationSlice();
     testContactHistorySlice();

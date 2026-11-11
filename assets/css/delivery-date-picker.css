@@ -13,7 +13,7 @@
     width: 100%;
     padding: 11px 13px;
     border: 1px solid var(--border-control);
-    border-radius: var(--radius-sm);
+    border-radius: 6px; /* Approved picker geometry is independent of flat form controls. */
     background: var(--surface);
     color: var(--text);
     font: inherit;
@@ -51,7 +51,7 @@
     background: var(--surface);
     color: var(--text);
     border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
+    border-radius: 8px; /* Preserve the separately approved calendar popover. */
     box-shadow: var(--elevation-overlay);
 }
 
