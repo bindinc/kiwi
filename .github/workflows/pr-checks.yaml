@@ -38,6 +38,19 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Setup Go syntax checker
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.4'
+          cache: false
+
+      - name: Run sensitive-data hook tests with the real Go parser
+        run: |
+          export GOROOT="$(go env GOROOT)"
+          test -x "$GOROOT/bin/gofmt"
+          go version
+          node --test tests/codex-hooks/secret-guard.test.mjs
+
       - name: Install PHP dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 

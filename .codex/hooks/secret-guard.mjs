@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { closeSync, existsSync, openSync, readSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const MAX_INPUT_BYTES = 8 * 1024 * 1024;
 const MAX_FINDINGS = 5;
-const MAX_JAVASCRIPT_CHECKS = 12;
+const MAX_SYNTAX_CHECKS = 12;
 const JAVASCRIPT_CHECK_TIMEOUT_MS = 300;
+const GO_CHECK_TIMEOUT_MS = 300;
+const GO_CHECK_OUTPUT_BYTES = 64 * 1024;
 const PRIVATE_KEY_PATTERN = new RegExp([
   "-----BEGIN ",
   "(?:(?:OPENSSH|RSA|EC|DSA) )?",
@@ -119,12 +122,111 @@ function uniqueFindings(findings) {
   return result;
 }
 
-function javascriptContext(text, filePath, budget) {
-  if (!/\.(?:js|mjs|cjs)$/.test(filePath)) {
+function sourceContext(text, filePath, budget) {
+  const language = /\.go$/.test(filePath) ? "go" : "javascript";
+  if (language === "javascript" && !/\.(?:js|mjs|cjs)$/.test(filePath)) {
     return null;
   }
 
-  return { text, budget, valid: null };
+  return { text, budget, language, valid: null };
+}
+
+export function goFormatterCandidates() {
+  const candidates = ["/usr/local/go/bin/gofmt", "/usr/bin/gofmt"];
+  if (process.env.GOROOT && path.isAbsolute(process.env.GOROOT)) {
+    candidates.unshift(path.join(process.env.GOROOT, "bin/gofmt"));
+  }
+  return candidates;
+}
+
+export function resolveGoFormatter(candidates = goFormatterCandidates()) {
+  for (const candidate of candidates) {
+    let descriptor;
+    try {
+      const executable = realpathSync(candidate);
+      const metadata = statSync(executable);
+      if (!metadata.isFile() || (metadata.mode & 0o111) === 0) continue;
+      // Never resolve a project-provided executable or wrapper from PATH.
+      let directory = path.dirname(executable);
+      let inRepository = false;
+      while (directory !== path.dirname(directory)) {
+        if (existsSync(path.join(directory, ".git"))) inRepository = true;
+        directory = path.dirname(directory);
+      }
+      if (inRepository) continue;
+      descriptor = openSync(executable, "r");
+      const magic = Buffer.alloc(4);
+      if (readSync(descriptor, magic, 0, 4, 0) === 4 && magic.equals(Buffer.from([0x7f, 0x45, 0x4c, 0x46]))) {
+        return executable;
+      }
+    } catch {
+      // Missing, inaccessible or unsupported toolchains retain the finding.
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
+    }
+  }
+  return null;
+}
+
+export function hasGoPackageClause(text) {
+  let offset = text.startsWith("\uFEFF") ? 1 : 0;
+  while (offset < text.length) {
+    const character = text[offset];
+    if (" \t\r\n".includes(character)) {
+      offset += 1;
+      continue;
+    }
+    if (text.startsWith("//", offset)) {
+      const end = text.indexOf("\n", offset + 2);
+      if (end === -1) return false;
+      offset = end + 1;
+      continue;
+    }
+    if (text.startsWith("/*", offset)) {
+      const end = text.indexOf("*/", offset + 2);
+      if (end === -1) return false;
+      offset = end + 2;
+      continue;
+    }
+    // Only skip the language's leading trivia. The real parser validates the
+    // remainder; explicit separators also reject identifiers like packageπ.
+    const separator = text[offset + "package".length];
+    return text.startsWith("package", offset)
+      && separator !== undefined && " \t\r\n/".includes(separator);
+  }
+  return false;
+}
+
+export function checkGoSyntax(text, budget, run = spawnSync, executable = resolveGoFormatter()) {
+  if (!executable || budget.remaining === 0 || Buffer.byteLength(text, "utf8") > MAX_INPUT_BYTES || !hasGoPackageClause(text)) return null;
+  budget.remaining -= 1;
+  // The package precondition excludes gofmt's statement/declaration fallback.
+  const result = run(executable, [], {
+    input: text,
+    encoding: "utf8",
+    env: {},
+    stdio: ["pipe", "ignore", "pipe"],
+    timeout: GO_CHECK_TIMEOUT_MS,
+    killSignal: "SIGKILL",
+    maxBuffer: GO_CHECK_OUTPUT_BYTES,
+    cwd: path.dirname(fileURLToPath(import.meta.url)),
+  });
+  if (result.error || result.signal) return null;
+  if (result.status === 0 && result.stderr === "") return true;
+  // Only the native parser's invalid-sentinel diagnostic proves rejection.
+  // Other exit-2 failures, warnings and uncertain output do not prove syntax.
+  const diagnostics = String(result.stderr).trim().split(/\r?\n/);
+  const onlyParserDiagnostics = diagnostics.every((line) => /^<standard input>:\d+:\d+: /.test(line));
+  const invalidSentinel = diagnostics.some((line) => /: illegal character U\+0040 '@'$/.test(line));
+  return result.status === 2 && onlyParserDiagnostics && invalidSentinel ? false : null;
+}
+
+function checkSourceSyntax(text, context) {
+  if (context.language === "go") {
+    const checker = context.budget.checkGoSyntax ?? checkGoSyntax;
+    return checker(text, context.budget);
+  }
+  return checkJavaScript(text, context.budget);
 }
 
 function checkJavaScript(text, budget) {
@@ -155,27 +257,29 @@ function checkJavaScript(text, budget) {
 function isRuntimeReference(match, text, context, offset) {
   const [assignment, quote, value] = match;
   const isEnvironmentReference = /^(?:process\.env|source|env)\.[A-Z][A-Z0-9_]+$/.test(value);
+  const isGoSelector = context?.language === "go"
+    && /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+$/.test(value);
   const hasExpressionBoundary = /^(?:\s*[,;})]|\s*$)/.test(text.slice(match.index + assignment.length));
-  if (quote || !isEnvironmentReference || !hasExpressionBoundary || !context) {
+  if (quote || (!isEnvironmentReference && !isGoSelector) || !hasExpressionBoundary || !context) {
     return false;
   }
   if (context.text.slice(offset, offset + text.length) !== text) {
     return false;
   }
   if (context.valid === null) {
-    context.valid = checkJavaScript(context.text, context.budget);
+    context.valid = checkSourceSyntax(context.text, context);
   }
   if (context.valid !== true) {
     return false;
   }
 
   // A filename or a matching spelling cannot prove that a reference is code.
-  // Replacing it with @ breaks JavaScript syntax, but stays ordinary text in
-  // strings, templates, comments and regex literals. Ambiguity fails closed.
+  // Replacing it with @ must break the language's syntax, while remaining
+  // ordinary data inside strings/comments. Ambiguity fails closed.
   const valueStart = offset + match.index + assignment.length - value.length;
   const modified = context.text.slice(0, valueStart)
     + "@" + context.text.slice(valueStart + value.length);
-  return checkJavaScript(modified, context.budget) === false;
+  return checkSourceSyntax(modified, context) === false;
 }
 
 export function findSensitiveData(text, source = "<input>", context = null, offset = 0) {
@@ -253,7 +357,7 @@ function pathFromPatchHeader(line) {
 
 function scanAddedSource(lines, filePath, complete, budget) {
   const text = lines.map((line) => line.text).join("\n");
-  const context = complete ? javascriptContext(text, filePath, budget) : null;
+  const context = complete ? sourceContext(text, filePath, budget) : null;
   const findings = [];
   let offset = 0;
 
@@ -403,7 +507,7 @@ function findComparisonRef(repositoryRoot) {
   return originMain ? "origin/main" : null;
 }
 
-export function scanRepository(cwd, budget = { remaining: MAX_JAVASCRIPT_CHECKS }) {
+export function scanRepository(cwd, budget = { remaining: MAX_SYNTAX_CHECKS }) {
   const repositoryRoot = findRepositoryRoot(cwd);
   const diffArguments = ["diff", "--no-ext-diff", "--unified=2147483647", "--diff-filter=ACMR"];
   const findings = scanUntrackedPaths(repositoryRoot);
@@ -569,13 +673,14 @@ function blockedOutput(event, findings) {
   return { decision: "block", reason };
 }
 
-export function evaluateHook(event) {
+export function evaluateHook(event, goSyntaxChecker = checkGoSyntax) {
   if (!event || typeof event !== "object" || typeof event.hook_event_name !== "string") {
     throw new Error("Invalid hook input");
   }
 
   let findings;
-  const budget = { remaining: MAX_JAVASCRIPT_CHECKS };
+  // The optional checker is an in-process test seam, never read from hook JSON.
+  const budget = { remaining: MAX_SYNTAX_CHECKS, checkGoSyntax: goSyntaxChecker };
 
   switch (event.hook_event_name) {
     case "UserPromptSubmit":
