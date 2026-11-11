@@ -2,7 +2,19 @@
 
 Audit marker: theme_audit
 
-Status: planned; documentation only. See the [audit index](../../../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries. Deliver the coherent service-form alignment as one future implementation PR with its own worktree and changelog entry.
+Status: implementation preparation; source inventory and actual BEFORE acceptance are required before application changes. See the [audit index](../../../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries. Deliver the coherent service-form alignment as one implementation PR with its own worktree and changelog entry.
+
+## Implementation record
+
+- Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629).
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-service-workflows`.
+- Branch: `codex/align-theme-service-workflows`.
+- Base: accepted slice06 `0bb8182652dc93edae9cf06e3af340b232cb0c30`, final [CI43045613680](https://github.com/bindinc/kiwi/actions/runs/43045613680) passed. Stack on `codex/align-theme-article-workspace` while PR150 remains unmerged.
+- PR: immediate draft creation follows the preparation commit.
+- Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-11/slice-07/`, outside Git.
+- Ownership: one application writer; independent source/actual-image reviewer; one browser/slice10 tooling owner. Root owns audit/index/changelog/PR/runtime.
+- Direction: calm, compact flat service forms; customer/subscription identity first, conditional choices next and one explicit current-step action. Use shared20/16px insets,12px gaps,13px labels/15px text/40px controls. Preserve warnings, native choices, every existing branch and draft/request ownership; no business simplification.
+- No rendered acceptance is claimed by this preparation record. No merge, deployment or cleanup is authorized.
 
 ## Purpose and dependencies
 
