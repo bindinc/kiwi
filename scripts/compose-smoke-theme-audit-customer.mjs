@@ -9,9 +9,12 @@ import { normalizeKnownJsImports } from './compose-smoke-theme-audit-shell-accep
 const modulePath = fileURLToPath(import.meta.url);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const phase = process.env.KIWI_THEME_AUDIT_CUSTOMER_PHASE || 'before';
-const files = ['js/app/slices/customer-search-slice.js', 'js/app/slices/customer-detail-slice.js',
+const lookupOnly = process.env.KIWI_THEME_AUDIT_CUSTOMER_LOOKUP_ONLY === '1';
+const lookupFiles = ['js/app/subscription-role-runtime.js'];
+if (phase === 'after') lookupFiles.push('js/app/slices/subscription-role-slice.js');
+const files = lookupOnly ? lookupFiles : ['js/app/slices/customer-search-slice.js', 'js/app/slices/customer-detail-slice.js',
     'js/app/customer-editor.js', 'js/app/address-fields.js', 'js/app/address-completion.js', 'js/app/lightbox-drafts.js',
-    ...(phase === 'after' ? ['js/app/subscription-role-runtime.js', 'js/app/contextual-feedback/screenshot-redaction.js', 'js/app/contextual-feedback/screenshot.js'] : [])];
+    ...(phase === 'after' ? ['js/app/subscription-role-runtime.js', 'js/app/slices/subscription-role-slice.js', 'js/app/contextual-feedback/screenshot-redaction.js', 'js/app/contextual-feedback/screenshot.js', 'js/app/contextual-feedback/screenshot-form-state.js'] : [])];
 
 export async function trackCustomerBehavior(page, driver, context) {
     await prepareCustomerEvidence(driver.report);
@@ -140,6 +143,7 @@ async function sourceEditorFixtures(page, driver, meta, fixtures) {
     await address.locator('select').first().selectOption('0');
     if (phase === 'after') await expandSourceSections(dialog());
     await observe(page, driver, { ...meta, kind }, 'source-editor-fields', '.customer-editor[open]');
+    if (phase === 'after' && meta.native) await inspectLiveNativeDate(page, driver, meta);
     if (phase === 'after') await observe(page, driver, { ...meta, kind }, 'source-editor-lower-fields');
     const prefix = await address.locator('[data-address-prefix]').getAttribute('data-address-prefix');
     if (phase === 'after' && !compact) fixtures.lookupMode = 'loading';
@@ -167,6 +171,7 @@ async function sourceEditorFixtures(page, driver, meta, fixtures) {
             fixtures.lookupMode = 'not_found';
             await address.locator(`[id="${prefix}PostalCode"]`).fill('9999ZZ');
             await page.waitForFunction(prefix => document.getElementById(prefix + 'AddressStatus')?.dataset.state === 'not_found', prefix);
+            await observe(page, driver, { ...meta, kind }, 'source-address-no-results', '.customer-editor[open]');
             const invalid = await address.evaluate(node => window.kiwiAddressCompletion.validate(node));
             driver.check('actual address validator rejects unconfirmed input without a person save', invalid, false, { ...meta, kind }, 4);
             await observe(page, driver, { ...meta, kind }, 'source-address-invalid', '.customer-editor[open]');
@@ -263,7 +268,11 @@ export async function installCustomerFixtures(page, driver) {
     await page.route('**/*', async route => {
         const request = route.request(), url = new URL(request.url());
         if (url.origin !== driver.baseUrl.origin) return route.fallback();
-        if (fixtures.rows && request.method() === 'GET' && url.pathname === apiPath + 'persons') return route.fulfill({ json: { items: fixtures.rows } });
+        if (fixtures.personDetails && request.method() === 'GET' && url.pathname === apiPath + 'persons/' + fixtures.personDetails.id) return route.fulfill({ json: fixtures.personDetails });
+        if (fixtures.rows && request.method() === 'GET' && url.pathname === apiPath + 'persons') {
+            fixtures.personSearchRequests = (fixtures.personSearchRequests || 0) + 1;
+            return route.fulfill({ json: { items: fixtures.rows } });
+        }
         const isLookup = fixtures.addresses && request.method() === 'POST' && ['addresses/search', 'addresses/validate'].some(suffix => url.pathname === apiPath + suffix);
         const isCleanup = fixtures.addresses && request.method() === 'DELETE' && new RegExp('^' + apiPath + 'addresses/sessions/[a-zA-Z0-9-]+$').test(url.pathname);
         if (!isLookup && !isCleanup) return route.fallback();
@@ -316,11 +325,14 @@ export async function runCustomerScenarios(page, driver, meta, fixtures) {
         await sort.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
         await observe(page, driver, meta, 'sort-keyboard-focus');
     }
-    await view.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
+    if (phase === 'after') await focusViewThroughTable(page, driver, meta, view);
+    else { await view.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab'); }
     await observe(page, driver, meta, 'actual-view-keyboard-focus');
     await view.press('Enter'); await page.locator('#customerDetail').waitFor({ state: 'visible' });
     await stableCustomerView(page, '#customerDetail');
     await observe(page, driver, meta, 'actual-record', '#customerDetail');
+    if (phase === 'after' && meta.native) await inspectNativeRecordFrames(page, driver, meta);
+    else if (phase === 'after' && meta.viewport.width <= 768) await revealRecordHeading(page, driver, meta);
     if (phase === 'after' && !meta.sentinel) await inspectSubscriptionStates(page, driver, meta);
     if (phase === 'after') {
         await page.locator('button[data-action="search-customer"]').press('Enter');
@@ -353,6 +365,73 @@ export async function runCustomerScenarios(page, driver, meta, fixtures) {
     fixtures.addresses = true;
     if (phase === 'after') await inspectTableInteractions(page, driver, meta, fixtures);
     if (!meta.sentinel) await sourceEditorFixtures(page, driver, meta, fixtures);
+    if (phase === 'after' && !meta.native && !meta.sentinel && !meta.compact) await inspectReusablePersonLookup(page, driver, meta, fixtures);
+}
+
+async function focusViewThroughTable(page, driver, meta, view) {
+    const path = [];
+    const read = async step => path.push({ step, ...await page.evaluate(() => ({ tag: document.activeElement.tagName,
+        className: document.activeElement.className, focusVisible: document.activeElement.matches(':focus-visible') })) });
+    await page.locator('.results-table-wrapper').focus(); await read('named table group focused');
+    await page.keyboard.press('Tab'); await read('actual forward Tab');
+    const reached = await view.evaluate(node => document.activeElement === node && node.matches(':focus-visible'));
+    driver.check('actual forward Tab from the named table group reaches VIEW with visible focus', reached, true, { ...meta, path }, 4);
+    driver.report.customerEvidence.keyboard ||= [];
+    driver.report.customerEvidence.keyboard.push({ ...meta, kind: 'Actual native forward Tab from named table group to VIEW; no selection yet.', path });
+}
+
+async function inspectNativeRecordFrames(page, driver, meta) {
+    for (const [selector, name] of [['.customer-heading', 'heading-actions'], ['.customer-meta', 'contact-band']]) {
+        const target = page.locator(selector); await target.scrollIntoViewIfNeeded(); await driver.painted(page);
+        const bounds = () => target.evaluate(node => {
+            const rect = node.getBoundingClientRect(), header = document.querySelector('.header');
+            const clipTop = getComputedStyle(header).position === 'sticky' ? header.getBoundingClientRect().bottom : 0;
+            return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: innerWidth, height: innerHeight, clipTop };
+        });
+        let visible = await bounds();
+        for (let step = 0; visible.top < visible.clipTop && step < 4; step++) {
+            await page.keyboard.press('ArrowUp'); await driver.painted(page); visible = await bounds();
+        }
+        driver.check('native record ' + name + ' is visible in the actual uncropped viewport after scrolling', visible.top >= visible.clipTop - 1
+            && visible.bottom <= visible.height + 1 && visible.left >= 0 && visible.right <= visible.width + 1, true, { ...meta, visible }, 4);
+        await driver.capture(page, meta.prefix + 'record-revealed-' + name, undefined,
+            'Actual native OS200% record region after explicit browser scrolling; natural record frame retained separately; uncropped X11 desktop.');
+    }
+}
+
+async function inspectLiveNativeDate(page, driver, meta) {
+    const date = page.locator('.customer-editor[open] input[type="date"]').first();
+    const state = await date.evaluateHandle(node => ({ node, value: node.value }));
+    try {
+        await date.focus(); await date.scrollIntoViewIfNeeded(); await driver.painted(page);
+        const result = await state.evaluate(({ node, value }) => {
+            const rect = node.getBoundingClientRect();
+            return { valuePresent: /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value), valueRetained: node.value === value,
+                actualType: node.type, focused: document.activeElement === node, labeled: Boolean(node.labels?.length),
+                top: rect.top, bottom: rect.bottom, height: innerHeight };
+        });
+        driver.check('live native DATE remains populated and unchanged independently of SVG capture rendering', result.valuePresent && result.valueRetained
+            && result.actualType === 'date' && result.focused && result.labeled && result.top >= 0 && result.bottom <= result.height + 1,
+            true, { ...meta, result }, 4);
+        await driver.capture(page, meta.prefix + 'live-native-date', undefined,
+            'Actual live native DATE control at OS200%; synthetic value retained, no edit/save, uncropped desktop. This is separate from Firefox SVG date-renderer limitations.');
+    } finally { await state.dispose(); }
+}
+
+async function revealRecordHeading(page, driver, meta) {
+    const before = await page.evaluate(() => ({ title: document.querySelector('.customer-info h2').getBoundingClientRect().top,
+        header: document.querySelector('.header').getBoundingClientRect().bottom, scroll: scrollY }));
+    const delta = before.title - before.header - 12;
+    await page.mouse.wheel(0, delta);
+    await driver.painted(page);
+    await stableCustomerView(page, '#customerDetail');
+    const after = await page.evaluate(() => ({ title: document.querySelector('.customer-info h2').getBoundingClientRect().top,
+        titleBottom: document.querySelector('.customer-info h2').getBoundingClientRect().bottom,
+        header: document.querySelector('.header').getBoundingClientRect().bottom, height: innerHeight, scroll: scrollY }));
+    driver.check('record heading is reachable below the current header through actual scrolling', after.title >= after.header - 1
+        && after.titleBottom <= after.height + 1, true, { ...meta, before, after, kind: 'Additional manually revealed heading after preserving natural app/element capture; actual wheel only.' }, 4);
+    await driver.capture(page, meta.prefix + 'record-heading-manually-revealed', undefined,
+        'Actual narrow record heading/actions after a bounded real scroll; original natural-state capture is retained separately.');
 }
 
 async function inspectSubscriptionStates(page, driver, meta) {
@@ -420,29 +499,49 @@ async function inspectTableSurfaces(page, driver, meta) {
     if (meta.native || meta.viewport.width < 1440) return;
     await page.mouse.move(0, 0); await page.locator('.results-table-wrapper').scrollIntoViewIfNeeded(); await driver.painted(page);
     const points = await page.locator('.result-row').evaluateAll(rows => rows.slice(0, -1).flatMap((row, rowIndex) => [...row.cells].map((cell, column) => {
-        const rect = cell.getBoundingClientRect(); return { row: rowIndex, column, x: Math.floor(rect.x + rect.width / 2), y: Math.floor(rect.bottom - 0.5), expected: getComputedStyle(cell).borderBottomColor };
+        const rect = cell.getBoundingClientRect(); return { row: rowIndex, column, x: Math.floor(rect.x + rect.width / 2), bottom: rect.bottom, originalY: Math.floor(rect.bottom - 0.5), y: Math.floor(rect.bottom), expected: getComputedStyle(cell).borderBottomColor };
     })));
     const image = await page.screenshot();
     const pixels = await page.evaluate(async ({ image, points }) => {
         const bitmap = new Image(); bitmap.src = image; await bitmap.decode();
         const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
         const context = canvas.getContext('2d'); context.drawImage(bitmap, 0, 0);
-        return points.map(point => ({ ...point, visible: point.x >= 0 && point.x < bitmap.width && point.y >= 2 && point.y < bitmap.height, pixel: [...context.getImageData(point.x, point.y, 1, 1).data], above: [...context.getImageData(point.x, point.y - 2, 1, 1).data] }));
+        return points.map(point => ({ ...point, visible: point.x >= 0 && point.x < bitmap.width && point.y >= 3 && point.y + 3 < bitmap.height,
+            samples: [-1, 0, 1].map(offset => ({ y: point.y + offset, color: [...context.getImageData(point.x, point.y + offset, 1, 1).data] })),
+            above: [...context.getImageData(point.x, point.y - 3, 1, 1).data], below: [...context.getImageData(point.x, point.y + 3, 1, 1).data] }));
     }, { image: 'data:image/png;base64,' + image.toString('base64'), points });
-    const consistent = pixels.length === 12 && pixels.every(point => point.visible && point.pixel[3] === 255
-        && point.pixel.join(',') === pixels.find(other => other.row === point.row).pixel.join(',')
-        && point.pixel.join(',') !== point.above.join(','));
-    driver.check('actual screenshot separator pixels continue across all six columns of mixed-height rows', consistent, true, { ...meta, pixels, kind: 'Unmodified browser screenshot pixels at actual native table-cell boundaries; geometry assertions run separately.' }, 4);
+    const rowLines = [0, 1].map(row => {
+        const points = pixels.filter(point => point.row === row);
+        const candidates = points[0].samples.map(sample => sample.y);
+        const chosenY = candidates.find(y => {
+            const color = points[0].samples.find(sample => sample.y === y).color.join(',');
+            return points.every(point => {
+                const sample = point.samples.find(sample => sample.y === y);
+                return point.visible && sample?.color[3] === 255 && sample.color.join(',') === color
+                    && color !== point.above.join(',') && color !== point.below.join(',');
+            });
+        });
+        return { row, candidates, chosenY: chosenY ?? null };
+    });
+    const consistent = pixels.length === 12 && rowLines.every(line => line.chosenY !== null);
+    driver.check('actual screenshot separator pixels continue across all six columns of mixed-height rows', consistent, true,
+        { ...meta, pixels, rowLines, kind: 'Unmodified screenshot pixels: one common raster Y within1px of each native border must form the same opaque line across all six columns, distinct from both adjacent row backgrounds. Original single-pixel coordinates remain recorded.' }, 4);
 }
 
 async function inspectTableInteractions(page, driver, meta, fixtures) {
     const kind = 'Actual results keyboard sorting, paging and local table scrolling; synthetic GET rows only for deterministic pagination.';
     const wrapper = page.locator('.results-table-wrapper');
     await wrapper.scrollIntoViewIfNeeded(); await wrapper.focus();
-    const initial = await wrapper.evaluate(node => ({ x: node.scrollLeft, overflow: node.scrollWidth > node.clientWidth, documentX: scrollX }));
-    await page.keyboard.press('ArrowRight'); await driver.painted(page);
+    const initial = await wrapper.evaluate(node => ({ x: node.scrollLeft, maxScroll: node.scrollWidth - node.clientWidth, overflow: node.scrollWidth > node.clientWidth, documentX: scrollX }));
+    const key = initial.x > 0 ? 'ArrowLeft' : 'ArrowRight';
+    await page.keyboard.press(key); await driver.painted(page);
+    if (initial.overflow) await page.waitForFunction(({ x, key }) => {
+        const current = document.querySelector('.results-table-wrapper').scrollLeft;
+        return key === 'ArrowLeft' ? current < x : current > x;
+    }, { x: initial.x, key }, { timeout: 5000 });
     const scrolled = await wrapper.evaluate(node => ({ x: node.scrollLeft, documentX: scrollX, focused: document.activeElement === node }));
-    driver.check('results table supports local keyboard scrolling without page drift', scrolled.focused && scrolled.documentX === initial.documentX && (!initial.overflow || scrolled.x > initial.x), true, { ...meta, kind, initial, scrolled }, 4);
+    driver.check('results table supports local keyboard scrolling without page drift', scrolled.focused && scrolled.documentX === initial.documentX
+        && (!initial.overflow || (key === 'ArrowLeft' ? scrolled.x < initial.x : scrolled.x > initial.x)), true, { ...meta, kind, key, initial, scrolled }, 4);
     await page.keyboard.press('Home');
     const sort = page.locator('#sortBy'); await sort.focus(); await sort.press('s'); await sort.press('Enter');
     await sort.selectOption('postal');
@@ -469,6 +568,123 @@ async function inspectTableInteractions(page, driver, meta, fixtures) {
     } finally { fixtures.rows = null; }
 }
 
+export async function inspectReusablePersonLookup(page, driver, meta, fixtures) {
+    const check = phase === 'after' ? driver.check : () => {};
+    const kind = 'Bounded actual reusable-person lookup renderer inside subscription shell; synthetic selected-product getter and GET fixtures only, no select-person action or workflow submission.';
+    const person = { id: 990499, personId: '990499', firstName: 'Synthetic', initials: 'S.',
+        lastName: 'Long lookup family name with several visible components', address: 'Synthetic long street name and additional address context 123',
+        postalCode: '1234AB', houseNumber: '123', city: 'SYNTHETIC CITY', email: 'lookup@example.invalid',
+        credentialKey: 'theme-audit-lookup', mandant: 'HMC', divisionId: '14', sourceSystem: 'subscription-api' };
+    fixtures.personDetails = person;
+    const original = await page.evaluateHandle(person => {
+        const state = { customer: currentCustomer, getSelections: window.kiwiWerfsleutelSlice.getSelections,
+            role: structuredClone(subscriptionRoleState) };
+        currentCustomer = person;
+        window.kiwiWerfsleutelSlice.getSelections = () => [{ selectedKey: { salesCode: 'THEME-AUDIT-FIXTURE', mandant: 'HMC', divisionId: '14' }, selectedChannel: 'OL', selectedChannelMeta: { key: 'OL' } }];
+        window.showNewSubscription();
+        return state;
+    }, person);
+    try {
+        await page.locator('#newSubscriptionForm').waitFor({ state: 'visible' });
+        const search = page.locator('#recipientPersonSearch');
+        if (!await search.evaluate(node => node.open)) {
+            const summary = search.locator(':scope > summary');
+            if (phase === 'after') await summary.press('Enter'); else await summary.click();
+        }
+        const more = search.locator('details').first();
+        if (!await more.evaluate(node => node.open)) {
+            const summary = more.locator(':scope > summary');
+            if (phase === 'after') await summary.press('Enter'); else await summary.click();
+        }
+        await page.locator('#recipientSearchQuery').fill('Synthetic');
+        await more.waitFor({ state: 'visible' });
+        await page.waitForFunction(() => document.querySelector('#recipientPersonSearch details')?.open === true);
+        await search.locator('.subscription-person-search').scrollIntoViewIfNeeded();
+        await driver.capture(page, meta.prefix + 'reusable-person-lookup-expanded-fields', undefined, kind + (phase === 'after' ? ' Actual native Enter disclosure; search keyboard uses its action control.' : ' Actual pointer disclosure; no keyboard acceptance claim.'));
+        fixtures.rows = [person, { ...person, id: 990498, personId: '990498', lastName: 'Second lookup result' }];
+        await page.locator('#recipientSearchButton').press('Enter');
+        await page.locator('#recipientSearchResults .party-search-result').first().waitFor();
+        await page.locator('#recipientSearchResults').scrollIntoViewIfNeeded(); await driver.painted(page);
+        const data = await page.locator('#recipientRolePanel').evaluate(panel => {
+            const style = node => { const bounds = node.getBoundingClientRect(), css = getComputedStyle(node); return { x: bounds.x, right: bounds.right, width: bounds.width, height: bounds.height,
+                background: css.backgroundColor, border: css.borderTopColor, radius: css.borderRadius, shadow: css.boxShadow,
+                fontSize: css.fontSize, fontWeight: css.fontWeight, lineHeight: css.lineHeight }; };
+            const search = panel.querySelector('.subscription-person-search');
+            return { panel: style(panel), expanded: panel.querySelector('#recipientPersonSearch details').open, gap: getComputedStyle(search).gap,
+                fields: [...search.querySelectorAll('input')].map(field => ({ ...style(field), label: Boolean(field.labels?.length) })),
+                rows: [...panel.querySelectorAll('.party-search-result')].map(row => ({ ...style(row),
+                    ownPrivateName: Boolean(row.querySelector('[data-feedback-sensitive="name"]')),
+                    ownPrivateId: Boolean(row.querySelector('[data-feedback-sensitive="id"]')),
+                    ownPrivateAddress: Boolean(row.querySelector('[data-feedback-sensitive="address"]')),
+                    action: style(row.querySelector('[data-action="select-subscription-role-person"]')) })) };
+        });
+        check('actual reusable lookup preserves expanded labeled fields and deliberate spacing', data.expanded && data.gap === '12px'
+            && data.fields.every(field => field.label && field.height >= 40 && field.x >= data.panel.x - 1 && field.right <= data.panel.right + 1), true, { ...meta, kind, data }, 4);
+        check('actual reusable lookup results remain flat with private identity and outlined Select actions', data.rows.length === 2 && data.rows.every(row => row.radius === '0px' && row.shadow === 'none'
+            && row.ownPrivateName && row.ownPrivateId && row.ownPrivateAddress && row.action.height >= 40 && row.action.radius === '0px'
+            && row.action.background === driver.contract.secondary.backgroundColor && row.action.border === driver.contract.secondary.borderTopColor), true, { ...meta, kind, data }, 4);
+        driver.report.customerEvidence.observations.push({ ...meta, state: 'reusable-person-lookup-expanded-results', phase, kind, data });
+        await driver.capture(page, meta.prefix + 'reusable-person-lookup-expanded-results', undefined, kind);
+        fixtures.rows = [];
+        await page.locator('#recipientSearchButton').press('Enter');
+        await page.waitForFunction(() => !document.querySelector('#recipientSearchResults .party-search-result') && Boolean(document.querySelector('#recipientSearchResults')?.textContent.trim()));
+        await page.locator('#recipientSearchResults').scrollIntoViewIfNeeded();
+        check('actual reusable lookup no-results status preserves query and recovery controls', await page.locator('#recipientSearchQuery').inputValue() === 'Synthetic'
+            && await page.locator('#recipientSearchButton').isEnabled(), true, { ...meta, kind }, 4);
+        await driver.capture(page, meta.prefix + 'reusable-person-lookup-no-results', undefined, kind);
+        await page.evaluate(person => { subscriptionRoleState.recipient.selectedPerson = person; window.kiwiSubscriptionRoleRuntime.renderSubscriptionRoleSelectedPerson('recipient'); }, person);
+        await page.locator('#recipientSelectedPerson').scrollIntoViewIfNeeded();
+        const selected = await page.locator('#recipientSelectedPerson').evaluate(node => ({ populated: !node.classList.contains('empty'), width: node.getBoundingClientRect().width,
+            fits: node.scrollWidth <= node.clientWidth + 1, privateRegions: node.querySelectorAll('[data-feedback-sensitive]').length, border: getComputedStyle(node).borderInlineStartWidth }));
+        check('actual selected-person summary preserves wrapped private identity and its selection marker', selected.populated && selected.fits && selected.privateRegions === 3 && selected.border === '2px', true, { ...meta, kind, selected }, 4);
+        await driver.capture(page, meta.prefix + 'reusable-person-selected-summary', undefined, kind + ' Selected summary is a local renderer fixture, not a selection or order acceptance claim.');
+        if (phase === 'after') await inspectLookupKeyboard(page, driver, meta, fixtures, person, more);
+    } finally {
+        fixtures.rows = null; fixtures.personDetails = null;
+        if (await page.locator('#newSubscriptionForm').isVisible()) await page.locator('#newSubscriptionForm [data-action="close-form"]').first().press('Enter');
+        await original.evaluate(state => { currentCustomer = state.customer; window.kiwiWerfsleutelSlice.getSelections = state.getSelections; Object.assign(subscriptionRoleState, state.role); });
+        await original.dispose();
+    }
+}
+
+async function inspectLookupKeyboard(page, driver, meta, fixtures, person, more) {
+    const listener = await page.evaluateHandle(() => {
+        const events = [];
+        const listener = event => {
+            if (event.target.closest?.('#recipientPersonSearch')) events.push({ key: event.key, tag: event.target.tagName, defaultPrevented: event.defaultPrevented });
+        };
+        document.addEventListener('keydown', listener);
+        return { events, listener };
+    });
+    const outcomes = [];
+    fixtures.rows = [person];
+    try {
+        for (const key of ['Enter', 'Space']) {
+            const before = await more.evaluate(node => node.open), requestsBefore = fixtures.personSearchRequests || 0;
+            await more.locator(':scope > summary').press(key); await driver.painted(page);
+            const after = await more.evaluate(node => node.open), events = await listener.evaluate(state => state.events.splice(0));
+            const outcome = { target: 'native disclosure summary', key, before, after, requests: (fixtures.personSearchRequests || 0) - requestsBefore, events };
+            outcomes.push(outcome);
+            driver.check('reusable lookup native summary ' + key + ' toggles without searching or preventing its default', before !== after && outcome.requests === 0
+                && events.length > 0 && events.every(event => !event.defaultPrevented), true, { ...meta, outcome }, 4);
+        }
+        for (const [selector, target, prevented] of [['#recipientSearchQuery', 'search input', true], ['#recipientSearchButton', 'search button', false]]) {
+            const requestsBefore = fixtures.personSearchRequests || 0;
+            await page.locator(selector).press('Enter'); await driver.painted(page);
+            const events = await listener.evaluate(state => state.events.splice(0));
+            const outcome = { target, key: 'Enter', requests: (fixtures.personSearchRequests || 0) - requestsBefore, events };
+            outcomes.push(outcome);
+            driver.check('reusable lookup ' + target + ' Enter performs one intended search with native semantics', outcome.requests === 1
+                && events.length > 0 && events.every(event => event.defaultPrevented === prevented), true, { ...meta, outcome }, 4);
+        }
+        driver.report.customerEvidence.keyboard ||= [];
+        driver.report.customerEvidence.keyboard.push({ ...meta, outcomes, kind: 'Actual summary Enter/Space and input/button Enter; all searches intercepted, no person selection or form submission.' });
+        await driver.capture(page, meta.prefix + 'reusable-person-keyboard', undefined, 'Actual native disclosure and search keyboard outcomes; report records default prevention and exact intercepted search counts.');
+    } finally {
+        await listener.evaluate(state => document.removeEventListener('keydown', state.listener)); await listener.dispose();
+    }
+}
+
 export async function inspectCustomerShellSentinel(page, driver, meta) {
     await page.locator('#agentProfileTrigger').press('Enter'); await page.keyboard.press('Escape');
     const shell = await page.evaluate(() => {
@@ -490,7 +706,7 @@ export async function inspectCustomer(driver, viewport, contract) {
     if (phase === 'after') await (await import('./compose-smoke-theme-audit-customer-acceptance.mjs')).registerCustomerAcceptance(driver.report);
     const report = driver.report;
     await prepareCustomerEvidence(report);
-    const locales = viewport.width === 390 && viewport.height > 540 ? ['nl', 'en'] : ['nl'];
+    const locales = !lookupOnly && viewport.width === 390 && viewport.height > 540 ? ['nl', 'en'] : ['nl'];
     for (const locale of locales) {
         const context = await driver.newContext(viewport), page = await context.newPage();
         const meta = { viewport, locale, prefix: phase + '-' + locale + '-customer-',
@@ -504,8 +720,9 @@ export async function inspectCustomer(driver, viewport, contract) {
             await driver.login(page);
             if (locale === 'en') { await page.locator('#agentProfileTrigger').press('Enter'); await page.locator('[data-locale-option="en"]').press('Enter'); }
             driver.check('actual requested customer locale', await page.locator('html').getAttribute('lang'), locale, meta, 4);
-            await runCustomerScenarios(page, driver, meta, fixtures);
-            if (phase === 'after') await inspectCustomerShellSentinel(page, driver, meta);
+            if (lookupOnly) await inspectReusablePersonLookup(page, driver, meta, fixtures);
+            else await runCustomerScenarios(page, driver, meta, fixtures);
+            if (phase === 'after' && !lookupOnly) await inspectCustomerShellSentinel(page, driver, meta);
         } catch (error) {
             report.errors.push({ scenario: 'customer ' + phase + ' setup', viewport, locale, message: error.message });
             await driver.capture(page, meta.prefix + 'failure', undefined, 'Incomplete actual customer ' + phase + ' scenario').catch(() => {});

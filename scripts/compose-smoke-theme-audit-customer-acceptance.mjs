@@ -254,11 +254,27 @@ async function inspectProductionEditorCapture(page, driver, meta) {
         const snapshot = () => ({ html: element.outerHTML, fields: [...element.querySelectorAll('input,select,textarea')].map(field => ({ value: field.value,
             selectedIndex: field.selectedIndex, checked: field.checked, readonly: field.readOnly, disabled: field.disabled })) });
         const before = snapshot(), rootBounds = element.getBoundingClientRect();
+        const dateFields = [...element.querySelectorAll('input[type="date"]')];
+        const originalDates = dateFields.map(field => field.value);
         const sensitiveFields = [...element.querySelectorAll('input[data-feedback-sensitive],textarea[data-feedback-sensitive]')]
             .filter(field => field.value.length >= 5 && field.getBoundingClientRect().width > 0)
-            .map((field, index) => { const bounds = field.getBoundingClientRect(); return { index, tag: field.tagName, type: field.type,
+            .map((field, index) => { const bounds = field.getBoundingClientRect(); return { index, tag: field.tagName, type: field.type, dateOrdinal: dateFields.indexOf(field),
                 x: bounds.x - rootBounds.x, y: bounds.y - rootBounds.y, width: bounds.width, height: bounds.height }; });
-        const capture = await captureElementScreenshot({ element });
+        const domToImage = (await import('https://cdn.jsdelivr.net/npm/dom-to-image-more@3.10.1/+esm')).default;
+        const originalToBlob = domToImage.toBlob, dateCloneStates = [];
+        domToImage.toBlob = (node, options) => originalToBlob.call(domToImage, node, { ...options, onclone(clone) {
+            const result = options.onclone(clone);
+            dateCloneStates.push([...clone.querySelectorAll('input[type="date"]')].map((field, index) => ({
+                liveIso: /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(originalDates[index] || ''),
+                valueMatchesOriginal: field.value === originalDates[index], attributeMatchesOriginal: field.getAttribute('value') === originalDates[index],
+                attributeMatchesCurrent: field.getAttribute('value') === field.value, valuePresent: Boolean(field.value)
+            })));
+            return result;
+        } });
+        let capture;
+        try { capture = await captureElementScreenshot({ element }); }
+        finally { domToImage.toBlob = originalToBlob; }
+        const captureObserverRestored = domToImage.toBlob === originalToBlob;
         const toPixels = async variant => {
             const bitmap = await createImageBitmap(variant.blob), canvas = document.createElement('canvas');
             canvas.width = bitmap.width; canvas.height = bitmap.height;
@@ -274,14 +290,16 @@ async function inspectProductionEditorCapture(page, driver, meta) {
             if (width <= 0 || height <= 0) return { index: field.index, type: field.type, covered: false, changedPixels: 0 };
             const original = originalPixels.context.getImageData(x, y, width, height).data;
             const pseudo = pseudoPixels.context.getImageData(x, y, width, height).data;
-            let changedPixels = 0;
+            let changedPixels = 0, originalUniform = true;
+            const originalColor = [...original.slice(0, 4)];
             for (let offset = 0; offset < original.length; offset += 4) {
+                if (originalColor.some((value, index) => original[offset + index] !== value)) originalUniform = false;
                 if (original[offset] !== pseudo[offset] || original[offset + 1] !== pseudo[offset + 1] || original[offset + 2] !== pseudo[offset + 2]) changedPixels++;
             }
-            return { index: field.index, type: field.type, covered: true, width, height, changedPixels };
+            return { index: field.index, type: field.type, dateOrdinal: field.dateOrdinal, covered: true, width, height, changedPixels, originalUniform, originalColor };
         });
         const png = await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.readAsDataURL(capture.pseudonymized.blob); });
-        return { png, fieldPixels, width: capture.pseudonymized.width, height: capture.pseudonymized.height, privacy: capture.privacySummary,
+        return { png, fieldPixels, dateCloneStates, captureObserverRestored, width: capture.pseudonymized.width, height: capture.pseudonymized.height, privacy: capture.privacySummary,
             originalProduced: capture.original.blob.size > 0, originalWidth: capture.original.width, originalHeight: capture.original.height,
             liveEditorExactlyUnchanged: JSON.stringify(snapshot()) === JSON.stringify(before),
             kind: 'Actual production captureElementScreenshot clone/onclone pipeline on synthetic retained editor; pseudonymized PNG only retained, no feedback submission/upload.' };
@@ -289,12 +307,34 @@ async function inspectProductionEditorCapture(page, driver, meta) {
     const { png, ...details } = result;
     driver.check('production editor capture creates a verified pseudonymized clone without changing live draft state', result.liveEditorExactlyUnchanged
         && result.originalProduced && result.width > 0 && result.height > 0 && result.privacy.verified && result.privacy.unresolvedValues === 0
-        && result.privacy.resourceFailures === 0, true, { ...meta, ...details }, 4);
-    driver.check('production pseudonymized PNG changes every populated sensitive input region', result.originalWidth === result.width && result.originalHeight === result.height && result.fieldPixels.length >= 4
-        && result.fieldPixels.every(region => region.covered && region.changedPixels > 0), true, { ...meta, fieldPixels: result.fieldPixels, kind: 'Unmodified production original/pseudonymized PNG pixels compared inside actual input bounds; independent visual review still checks pseudonym content.' }, 4);
+        && result.privacy.resourceFailures === 0 && result.captureObserverRestored && result.dateCloneStates.length === 2, true, { ...meta, ...details }, 4);
+    const pixelProof = productionInputPixelProof(result, driver.report.environment.browser);
+    driver.check('production sensitive inputs have changed pixels or proven sanitized originally unpainted Firefox dates', pixelProof.passed, true,
+        { ...meta, pixelProof, fieldPixels: result.fieldPixels, dateCloneStates: result.dateCloneStates,
+            kind: 'Unmodified original/pseudonymized PNG pixels; unchanged nondate or painted-date regions fail. Only originally uniform opaque Firefox DATE regions require separate actual clone property/attribute proof.' }, 4);
+    if (pixelProof.unpaintedDateRegions.length) driver.report.limitations.push('Firefox SVG foreignObject renders the original native DATE region as a uniform opaque background despite a valid serialized value. That capture-only blank-date limitation is explicit; sanitized clone property/attribute proof and unchanged live date state pass separately.');
     const filename = `${meta.viewport.width}x${meta.viewport.height}-${meta.prefix}editor-production-pseudonymized.png`;
     await writeFile(path.join(driver.evidenceDir, filename), Buffer.from(png.split(',')[1], 'base64'));
     driver.report.captures.push({ name: meta.prefix + 'editor-production-pseudonymized', filename, viewport: meta.viewport,
         kind: result.kind, captureMethod: 'Actual production dom-to-image clone pipeline pseudonymized PNG', geometry: { width: result.width, height: result.height } });
     driver.report.customerAcceptance.privacy.push({ ...meta, productionCapture: details });
+}
+
+export function productionInputPixelProof(result, browser) {
+    const dimensionsMatch = result.originalWidth === result.width && result.originalHeight === result.height;
+    const observedActualClones = result.captureObserverRestored && result.dateCloneStates?.length === 2;
+    const statePreserved = result.liveEditorExactlyUnchanged;
+    const unpaintedDateRegions = [];
+    if (!dimensionsMatch || !observedActualClones || !statePreserved || result.fieldPixels.length < 4) return { passed: false, unpaintedDateRegions };
+    for (const region of result.fieldPixels) {
+        if (!region.covered) return { passed: false, unpaintedDateRegions };
+        if (region.changedPixels > 0) continue;
+        const originalDate = result.dateCloneStates[0][region.dateOrdinal], privateDate = result.dateCloneStates[1][region.dateOrdinal];
+        const originallyBlankDate = browser === 'firefox' && region.type === 'date' && region.originalUniform && region.originalColor?.[3] === 255;
+        const originalDatePreserved = originalDate?.liveIso && originalDate.valuePresent && originalDate.valueMatchesOriginal && originalDate.attributeMatchesOriginal && originalDate.attributeMatchesCurrent;
+        const privateDateRemoved = privateDate && !privateDate.valueMatchesOriginal && !privateDate.attributeMatchesOriginal && privateDate.attributeMatchesCurrent;
+        if (!originallyBlankDate || !originalDatePreserved || !privateDateRemoved) return { passed: false, unpaintedDateRegions };
+        unpaintedDateRegions.push(region.index);
+    }
+    return { passed: true, unpaintedDateRegions };
 }
