@@ -20,6 +20,7 @@ const controlsOnly = process.env.KIWI_THEME_AUDIT_CONTROLS_ONLY === '1';
 const shellOnly = process.env.KIWI_THEME_AUDIT_SHELL_ONLY === '1';
 const customerOnly = process.env.KIWI_THEME_AUDIT_CUSTOMER_ONLY === '1';
 const customerPhase = process.env.KIWI_THEME_AUDIT_CUSTOMER_PHASE || 'before';
+const customerLookupOnly = process.env.KIWI_THEME_AUDIT_CUSTOMER_LOOKUP_ONLY === '1';
 const nativeCustomer = nativeZoom && slice === 4 && customerPhase === 'after';
 const shellPhase = process.env.KIWI_THEME_AUDIT_SHELL_PHASE || 'before';
 const shellSuite = process.env.KIWI_THEME_AUDIT_SHELL_SUITE || 'matrix';
@@ -63,6 +64,7 @@ if (shellOnly && !['matrix', 'boundaries', 'roles', 'interactions', 'profile'].i
 if (shellOnly && slice < 3) throw new Error('Shell scenarios start at slice 03.');
 if (controlsOnly && nativeZoom) throw new Error('Run native zoom separately with the main theme audit runner.');
 if (customerOnly && (shellOnly || controlsOnly || nativeZoom)) throw new Error('Run customer, shell, controls and native modes separately.');
+if (customerLookupOnly && !customerOnly) throw new Error('Lookup-only requires the dedicated customer mode.');
 if (customerOnly && slice < 4) throw new Error('Customer scenarios start at slice 04.');
 if (customerOnly && !['before', 'after'].includes(customerPhase)) throw new Error('Customer phase must be before or after.');
 if (!['bdc.rtvmedia.org.local', 'localhost', '127.0.0.1'].includes(baseUrl.hostname)) {
@@ -144,8 +146,8 @@ const report = {
         browser: browserName, browserVersion: browser.version(), playwrightVersion: require(path.join(playwrightPath, 'package.json')).version,
         locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', role: shellOnly && shellSuite === 'roles' ? 'Actual per-context fallback roles; see shellAcceptance.roles' : 'kiwi-admin', deviceScaleFactor: 1,
         reducedMotion: 'reduce', nativeZoom: nativeZoom ? 'Actual OS Ctrl+plus/0; measured per capture' : '100% default; 200% native zoom is a separate, unverified gate',
-        scenarioSet: customerOnly ? (customerPhase === 'before' ? 'Observed customer BEFORE states; no parity acceptance' : 'Required focused customer AFTER presentation and interaction gates') : shellOnly ? (shellPhase === 'before' ? 'Observed shell states; no parity verdict' : 'Required shell AFTER acceptance: ' + shellSuite) : controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
-        input: 'Pointer flows plus keyboard focus and Escape checks', requestedViewports: viewports
+        scenarioSet: customerLookupOnly ? 'Bounded actual reusable-person lookup ' + customerPhase + '; not global subscription workflow acceptance' : nativeCustomer ? 'Required focused customer native OS200% gates and small shell sentinel' : customerOnly ? (customerPhase === 'before' ? 'Observed customer BEFORE states; no parity acceptance' : 'Required focused customer AFTER presentation and interaction gates') : shellOnly ? (shellPhase === 'before' ? 'Observed shell states; no parity verdict' : 'Required shell AFTER acceptance: ' + shellSuite) : controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
+        input: customerLookupOnly ? (customerPhase === 'before' ? 'Actual pointer disclosure and native search-action Enter; no selection or submission' : 'Actual native summary Enter/Space and input/button Enter; no selection or submission') : 'Pointer flows plus keyboard focus and Escape checks', requestedViewports: viewports
     },
     checks: [], captures: [], controlContainers: [], blockedWrites: [], errors: [], loadedStylesheets: [],
     limitations: [
