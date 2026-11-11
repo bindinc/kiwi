@@ -1,6 +1,7 @@
 import { resumeFormDraft, clearFormDraft, registerDraftCleanup } from '../lightbox-drafts.js';
 import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
+import { renderServiceFormContext } from '../service-form-context.js';
 
 const WINBACK_SLICE_NAMESPACE = 'kiwiWinbackSlice';
 
@@ -250,6 +251,10 @@ function showWinbackStep(stepNumber) {
     if (targetStep && targetStep.style) {
         targetStep.style.display = 'block';
     }
+
+    const indicators = querySelector('#winbackFlow .steps-indicator');
+    const isDeceasedStep = ['1b', '1c', '1d', '1e'].includes(String(stepNumber));
+    if (indicators) indicators.hidden = isDeceasedStep;
 }
 
 function setActiveStepIndicator(stepNumber) {
@@ -257,12 +262,14 @@ function setActiveStepIndicator(stepNumber) {
     for (const indicator of allIndicators) {
         if (indicator.classList) {
             indicator.classList.remove('active');
+            indicator.removeAttribute?.('aria-current');
         }
     }
 
     const activeIndicator = querySelector(`[data-step="${stepNumber}"]`);
     if (activeIndicator && activeIndicator.classList) {
         activeIndicator.classList.add('active');
+        activeIndicator.setAttribute?.('aria-current', 'step');
     }
 }
 
@@ -485,6 +492,10 @@ export function showWinbackFlow() {
     }
 
     const draftContext = `${winbackState.cancellingSubscriptionId}:${winbackState.isWinbackForEndedSub}`;
+    renderServiceFormContext(
+        getElementById('winbackFlow'), currentCustomer,
+        findSubscription(currentCustomer, winbackState.cancellingSubscriptionId)
+    );
     if (resumeFormDraft(getElementById('winbackFlow'), draftContext)) return;
     registerDraftCleanup(getDocumentRef(), resetWinbackDraftState);
 
@@ -571,7 +582,9 @@ export async function generateWinbackOffers(reason) {
     }
 
     const offersMarkup = relevantOffers.map((offer) => {
-        const safeOfferId = escapeHtml(String(offer.offerId ?? offer.salesCode ?? ''));
+        const offerId = String(offer.offerId ?? offer.salesCode ?? '');
+        const safeOfferId = escapeHtml(offerId);
+        const isSelected = winbackState.selectedOffer && String(winbackState.selectedOffer.id) === offerId;
         const safeTitle = escapeHtml(String(offer.title || ''));
         const safeDescription = escapeHtml(String(offer.description || offer.webDescription || offer.additionalDescription || ''));
         const safeDiscount = offer.price !== undefined && offer.price !== null
@@ -579,11 +592,14 @@ export async function generateWinbackOffers(reason) {
             : '';
 
         return `
-        <div class="offer-card" data-action="select-offer" data-arg-offer-id="${safeOfferId}" data-arg-title="${safeTitle}" data-arg-description="${safeDescription}">
-            <div class="offer-title">${safeTitle}</div>
-            <div class="offer-description">${safeDescription}</div>
-            <div class="offer-discount">${safeDiscount}</div>
-        </div>
+        <label class="offer-card${isSelected ? ' selected' : ''}">
+            <input type="radio" name="winbackOffer" value="${safeOfferId}" ${isSelected ? 'checked' : ''} data-action="select-offer" data-action-event="change" data-arg-offer-id="${safeOfferId}" data-arg-title="${safeTitle}" data-arg-description="${safeDescription}">
+            <span class="offer-copy">
+                <span class="offer-title">${safeTitle}</span>
+                <span class="offer-description">${safeDescription}</span>
+                <span class="offer-discount">${safeDiscount}</span>
+            </span>
+        </label>
     `;
     }).join('');
 
@@ -597,15 +613,15 @@ export function selectOffer(offerId, title, description, selectedElement = null)
         description
     };
 
+    const selectedCard = selectedElement?.closest?.('.offer-card') || selectedElement;
     const offerCards = querySelectorAll('.offer-card');
     for (const offerCard of offerCards) {
+        const radio = offerCard.querySelector?.('input[name="winbackOffer"]');
+        const isSelected = radio ? radio.value === String(offerId) : offerCard === selectedCard;
+        if (radio) radio.checked = isSelected;
         if (offerCard.classList) {
-            offerCard.classList.remove('selected');
+            offerCard.classList.toggle('selected', isSelected);
         }
-    }
-
-    if (selectedElement && selectedElement.classList) {
-        selectedElement.classList.add('selected');
     }
 }
 
@@ -649,8 +665,8 @@ export function winbackHandleDeceased() {
                 <h4>📰 ${escapeHtml(subscription.magazine)}</h4>
                 <span class="sub-start-date">Start: ${formatDate(subscription.startDate)}</span>
             </div>
-            <div class="form-group">
-                <label>Actie voor dit abonnement:</label>
+            <fieldset class="form-group deceased-action-group">
+                <legend>Actie voor dit abonnement:</legend>
                 <div class="radio-group">
                     <label class="radio-option">
                         <input type="radio" name="action_${subscription.id}" value="cancel_refund" required>
@@ -661,7 +677,7 @@ export function winbackHandleDeceased() {
                         <span>${translateKey('subscription.actionTransferToOther', {}, 'Overzetten op andere persoon')}</span>
                     </label>
                 </div>
-            </div>
+            </fieldset>
         </div>
     `).join('');
 
@@ -844,6 +860,7 @@ export function revertRestitution(subscriptionId) {
 }
 
 export function showRestitutionTransferForm(subscription) {
+    renderServiceFormContext(getElementById('restitutionTransferForm'), readCurrentCustomer(), subscription);
     if (resumeFormDraft(getElementById('restitutionTransferForm'), String(subscription.id))) return;
     registerDraftCleanup(getDocumentRef(), resetWinbackDraftState);
     winbackState.restitutionAddressSessionId = globalThis.crypto.randomUUID();

@@ -5,6 +5,7 @@ import { getAddressSubmission } from '../address-completion.js';
 import { selectCustomer as reloadSourceCustomer } from './customer-detail-slice.js';
 import { openCustomerEditor } from '../customer-editor.js';
 import { getGlobalScope } from '../services.js';
+import { renderServiceFormContext } from '../service-form-context.js';
 import { sameSubscriptionPerson } from '../subscription-shared-helpers.js';
 import {
     buildSubscriptionPaymentDetails,
@@ -1265,6 +1266,7 @@ export function showResendMagazine() {
         return;
     }
 
+    renderServiceFormContext(getElementById('resendMagazineForm'), currentCustomer);
     if (resumeFormDraft(getElementById('resendMagazineForm'), String(currentCustomer.id))) return;
 
     const subscriptionSelect = getElementById('resendSubscription');
@@ -1358,6 +1360,7 @@ export function showEditorialComplaintForm() {
         return;
     }
 
+    renderServiceFormContext(getElementById('editorialComplaintForm'), currentCustomer);
     if (resumeFormDraft(getElementById('editorialComplaintForm'), String(currentCustomer.id))) return;
 
     const magazineSelect = getElementById('editorialComplaintMagazine');
@@ -1496,6 +1499,7 @@ export function editSubscription(subscriptionId) {
         return;
     }
 
+    renderServiceFormContext(getElementById('editSubscriptionForm'), currentCustomer, subscription);
     if (resumeFormDraft(getElementById('editSubscriptionForm'), String(subscriptionId))) return;
 
     setInputValue('editSubId', subscriptionId);

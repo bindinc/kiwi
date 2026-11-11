@@ -1177,11 +1177,15 @@
                 </div>
 
                 <!-- Edit Subscription Form -->
-                <div id="editSubscriptionForm" class="form-container" style="display: none;">
+                <div id="editSubscriptionForm" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.abonnement_bewerken_b16c21e3">✏️ Abonnement Bewerken</h2>
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="editSubscriptionForm">✕</button>
+                        </div>
+                        <div class="service-context">
+                            <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
+                            <div class="service-context-subscription" hidden><span data-i18n="indexHtml.text.abonnement_66200f36">Abonnement</span>: <span data-service-subscription data-feedback-sensitive="free-text"></span></div>
                         </div>
                         <form id="subscriptionEditForm" data-action="save-subscription-edit" data-action-event="submit" data-action-prevent-default="true">
                             <input type="hidden" id="editSubId">
@@ -1241,11 +1245,15 @@
                 </div>
 
                 <!-- Resend Magazine Form -->
-                <div id="resendMagazineForm" class="form-container" style="display: none;">
+                <div id="resendMagazineForm" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.editie_opnieuw_verzenden_3bd3bf34">📮 Editie Opnieuw Verzenden</h2>
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="resendMagazineForm">✕</button>
+                        </div>
+                        <div class="service-context">
+                            <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
+                            <div class="service-context-subscription" hidden><span data-i18n="indexHtml.text.abonnement_66200f36">Abonnement</span>: <span data-service-subscription data-feedback-sensitive="free-text"></span></div>
                         </div>
                         <div class="resend-form">
                             <p class="info-text" data-i18n="indexHtml.text.selecteer_het_abonnement_waarvoor_de_laatste_editie_opnieuw_moet_worden__616e90bb">Selecteer het abonnement waarvoor de laatste editie opnieuw moet worden verzonden.</p>
@@ -1273,11 +1281,15 @@
                 </div>
 
                 <!-- Editorial Complaint Form -->
-                <div id="editorialComplaintForm" class="form-container" style="display: none;">
+                <div id="editorialComplaintForm" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.klacht_opmerking_voor_redactie_40e9bc48">✍️ Klacht/Opmerking voor Redactie</h2>
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="editorialComplaintForm">✕</button>
+                        </div>
+                        <div class="service-context">
+                            <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
+                            <div class="service-context-subscription" hidden><span data-i18n="indexHtml.text.abonnement_66200f36">Abonnement</span>: <span data-service-subscription data-feedback-sensitive="free-text"></span></div>
                         </div>
                         <div class="editorial-complaint-form">
                             <p class="info-text" data-i18n="indexHtml.text.registreer_klachten_of_opmerkingen_die_bestemd_zijn_voor_de_redactie_van_8e5ea830">Registreer klachten of opmerkingen die bestemd zijn voor de redactie van het magazine.</p>
@@ -1343,11 +1355,15 @@
                 </div>
 
                 <!-- Restitution Transfer Form -->
-                <div id="restitutionTransferForm" class="form-container" style="display: none;">
+                <div id="restitutionTransferForm" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
                             <h2 id="restitutionTransferTitle" data-i18n="indexHtml.text.abonnement_overzetten_04a00045">🔄 Abonnement Overzetten</h2>
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="restitutionTransferForm">✕</button>
+                        </div>
+                        <div class="service-context">
+                            <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
+                            <div class="service-context-subscription" hidden><span data-i18n="indexHtml.text.abonnement_66200f36">Abonnement</span>: <span data-service-subscription data-feedback-sensitive="free-text"></span></div>
                         </div>
                         <form id="restitutionTransferFormElement" data-action="complete-restitution-transfer" data-action-event="submit" data-action-prevent-default="true">
                             <div class="info-box info-box--danger">
@@ -1408,16 +1424,20 @@
                 </div>
 
                 <!-- Winback Flow -->
-                <div id="winbackFlow" class="form-container" style="display: none;">
+                <div id="winbackFlow" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.winback_opzegging_flow_41075f12">🎯 Winback/Opzegging Flow</h2>
                             <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="winbackFlow">✕</button>
                         </div>
+                        <div class="service-context">
+                            <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
+                            <div class="service-context-subscription" hidden><span data-i18n="indexHtml.text.abonnement_66200f36">Abonnement</span>: <span data-service-subscription data-feedback-sensitive="free-text"></span></div>
+                        </div>
                         <div class="winback-container">
                             <!-- Step Indicator -->
                             <div class="steps-indicator">
-                                <div class="step active" data-step="1">
+                                <div class="step active" data-step="1" aria-current="step">
                                     <span class="step-number">1</span>
                                     <span class="step-label" data-i18n="indexHtml.text.reden_60ce906f">Reden</span>
                                 </div>
@@ -1462,7 +1482,9 @@
                                         </label>
                                     </div>
                                 </div>
+                                <div class="form-actions">
                                 <button class="btn btn-primary" type="button" data-action="winback-next-step" data-arg-step="2" data-i18n="indexHtml.text.volgende_88b8d391">Volgende →</button>
+                                </div>
                             </div>
 
                             <!-- Step 1b: Deceased - Select Subscriptions -->
@@ -1530,7 +1552,7 @@
                                 <!-- Unified Customer Form -->
                                 <div id="transfer2CustomerForm"></div>
                                 
-                                <div id="combinedRefundList" class="info-box" style="margin-top: 2rem;">
+                                <div id="combinedRefundList" class="info-box">
                                     <!-- Refund subscriptions -->
                                 </div>
                                 
@@ -1553,8 +1575,8 @@
 
                             <!-- Step 2: Offer -->
                             <div id="winbackStep2" class="winback-step" style="display: none;">
-                                <h3 data-i18n="indexHtml.text.beschikbare_winback_aanbiedingen_28c6a25e">Beschikbare Winback Aanbiedingen</h3>
-                                <div id="winbackOffers" class="offers-container"></div>
+                                <h3 id="winbackOffersHeading" data-i18n="indexHtml.text.beschikbare_winback_aanbiedingen_28c6a25e">Beschikbare Winback Aanbiedingen</h3>
+                                <div id="winbackOffers" class="offers-container" role="radiogroup" aria-labelledby="winbackOffersHeading"></div>
                                 <div class="form-actions">
                                     <button class="btn btn-secondary" type="button" data-action="winback-prev-step" data-arg-step="1" data-i18n="indexHtml.text.terug_e2903ea0">← Terug</button>
                                     <button class="btn btn-primary" type="button" data-action="winback-next-step" data-arg-step="3" data-i18n="indexHtml.text.aanbod_presenteren_bf69df31">Aanbod Presenteren →</button>
