@@ -1,6 +1,6 @@
 # theme_audit 04 — Customer search, records and data views
 
-Audit marker: `theme_audit`. Status: accepted after independent source, visual and interaction review; final-head CI is verified separately before PR readiness. Baseline: `c05973e`, 2026-11-09.
+Audit marker: `theme_audit`. Status: accepted after independent source, visual and interaction review; PR #147 merged into the planning branch under explicit user authorization. Baseline: `c05973e`, 2026-11-09.
 
 Coordination: [evaluation and slice index](../../../../plans/theme_audit.md), SC-206629. Depends on 01/02 and the workspace framing from 03; establish reusable person/address presentation before workflow slices 05–07.
 
@@ -9,7 +9,7 @@ Coordination: [evaluation and slice index](../../../../plans/theme_audit.md), SC
 - Worktree: `/home/bartdeijkers/_worktrees/align-theme-customer-and-data-views`.
 - Branch: `codex/align-theme-customer-and-data-views`.
 - Base: accepted slice 03 at `80c7cdd81fee820636883fd2278028107feb94dc`, [PR #146](https://github.com/bindinc/kiwi/pull/146), unmerged at start and subsequently user-merged into the planning branch at `9f7c1f7d2e5a15e4f5d1a398f02802d46de585cf` on 2026-11-10. The merge tree is exactly identical to `80c7cdd` and contains that accepted head; no source rebase or baseline recapture is needed. PR #147 now targets the planning branch. Final slice 03 validation passed at run `42841343497`.
-- PR: [#147](https://github.com/bindinc/kiwi/pull/147), created immediately after scaffold `b81db31` was pushed; English text, SC-206629 and one Unreleased changelog entry. Readiness follows final closure-head CI; no merge or deployment is authorized.
+- PR: [#147](https://github.com/bindinc/kiwi/pull/147), created immediately after scaffold `b81db31` was pushed; English text, SC-206629 and one Unreleased changelog entry. Accepted closure `1c76db9` passed CI `43005522519` and merged at `13419fdfd51528b63fc281bab027303db96bebcb`. The user subsequently authorized #142's integration to main before slice 05; its separate combined-source checks are recorded in the central index. No deployment is authorized.
 - Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-{10,11}/slice-04/`, outside Git. Preserve actual application, reference and explicit fixture classifications.
 - Ownership: one application implementation agent; independent source review; slice 10 owner supplies focused Compose before/reference/after, keyboard and native-zoom checks. Parent owns this document, index, changelog and PR.
 - Additional retained-editor gate: both the fixed heading and `customerEditorAddress` input/label prefix collide across retained dialogs. Allocate a stable opaque identifier for each new dialog, without changing map keys, field names, source identity, address-session ownership or draft retention. Existing smoke selectors must follow the active dialog and its declared address prefix; closing intentionally retains a dialog.

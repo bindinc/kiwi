@@ -31,7 +31,18 @@ The user explicitly authorized merging #142 and #147 before continuing slice 05,
 
 Current `main` at `5931f33` includes #140's guide-delivery-date selection and source-rejection recovery. The integration preserves those current business rules instead of treating the older theme worktree as authoritative for date behavior. The two localized conflicts retain the main subscription-date containers/requiredness logic and date fieldset styles alongside accepted theme rules; the date separator uses the existing `--border-subtle` token instead of undefined `--line`. Other main business modules remain byte-identical.
 
-Independent source review and all 39 frontend files, guardrails and focused syntax checks pass. Actual Docker Compose integration checks and exact-head CI remain required before merging #142 to `main`. Historical slice acceptance is retained at its own source boundary and is not relabeled as a full run on the combined source. Integration evidence is retained outside Git under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-11/integration-through-04/`.
+Independent source review and all 39 frontend files, guardrails and focused syntax checks pass. Combined application source `f5505b2ed76af5977bb7b4027ba4e6005c3d94c0` passes [CI 43008065616](https://github.com/bindinc/kiwi/actions/runs/43008065616), including full PHPUnit and the production build. Actual Compose Twig lint passes; the local runtime omits `vendor/bin/phpunit`, so its unavailable focused attempt is not reported as a passing local test.
+
+Bounded combined-source browser acceptance and independent image review pass in Chromium and Firefox at 1440px and 390px. These checks preserve separate guide/membership dates, explicit edition selection, provider loading/unavailable/retry, locally intercepted 422 date-rejection recovery, identities/channels/consent, retained independent editors and actual production screenshot anonymization. No request was sent upstream to create or change a subscription. This is merge-compatibility acceptance, not full slice 05 parity or a new 200% claim.
+
+| Integration evidence | Scope and result |
+| --- | --- |
+| Chromium `attempt-02/chromium` | 109 verified observations/checks include both-width date/rejection recovery. The whole report remains failed because its later sentinel setup lacked reference metadata and two synthetic address-session cleanup DELETEs were blocked. No app defect or upstream write occurred. |
+| Chromium `sentinel-followup/chromium` | 126 verified checks, zero deviations/errors/unexpected writes, 17 captures. The reviewed reference initialization and exact local cleanup intercept resolve the prior sentinel setup. Passing date checks were not replayed. |
+| Firefox `attempt-03/firefox` | 179 verified checks, zero deviations/errors/unexpected writes, 36 captures. Complete bounded date/recovery gate at both widths plus the one-desktop customer/editor/privacy sentinel. |
+| Independent review | `independent-review/source-review.md`, `helper-review.md` and `runtime-review.md`: PASS. Preserve failed attempts and exact successful supplements; do not treat green counters as visual proof. |
+
+Historical slice acceptance remains at its own source boundary and is not relabeled as a full run on the combined source. The Firefox SVG DATE limitation remains precisely scoped, with clone sanitation and unchanged live state proven separately. Integration evidence is retained outside Git under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-11/integration-through-04/`. A documentation-only closure commit and exact-head CI precede the normal authorized merge; merge status and commit are recorded in the PR and local closure provenance. No deployment or branch-protection change is authorized by this gate.
 
 ## Reference and baseline
 
