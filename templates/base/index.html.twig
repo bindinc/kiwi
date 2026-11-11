@@ -558,7 +558,7 @@
                         </div>
                         <form id="subscriptionForm" class="form-section" data-action="create-subscription" data-action-event="submit" data-action-prevent-default="true">
                             <input type="hidden" id="subscriptionSubmissionId" data-feedback-sensitive="id">
-                            <div class="werfsleutel-fieldset">
+                            <div class="werfsleutel-fieldset subscription-form-block">
                                 <div class="fieldset-heading">
                                     <label for="werfsleutelInput" data-i18n="indexHtml.text.werfsleutel_c5732867">Werfsleutel *</label>
                                     <p class="helper-text" id="werfsleutelInputHint" data-i18n="indexHtml.text.zoek_op_salescode_of_titel_en_kies_het_kanaal_83ec4db3">Zoek op salescode of titel, voeg een of meer producten toe en kies per product het kanaal</p>
@@ -590,8 +590,8 @@
                                 <p class="helper-text" data-i18n="werfsleutel.mandantHint">De werfsleutel bepaalt de mandant. Klantgegevens worden per mandant apart verwerkt. Voor een andere mandant maken we een aparte klant aan met de ingevulde gegevens, ook voor een aparte betaler.</p>
                             </div>
                             
-                            <h3 id="recipientRoleTitle" class="form-subtitle" data-i18n="indexHtml.text.ontvanger_abonnement_2faa4a44">Ontvanger abonnement</h3>
-                            <div class="party-role-panel" id="recipientRolePanel">
+                            <section class="party-role-panel subscription-form-block" id="recipientRolePanel" aria-labelledby="recipientRoleTitle">
+                                <h3 id="recipientRoleTitle" class="form-subtitle" data-i18n="indexHtml.text.ontvanger_abonnement_2faa4a44">Ontvanger abonnement</h3>
                                 <div class="party-mode-toggle" role="radiogroup" aria-labelledby="recipientRoleTitle">
                                     <label><input type="radio" name="recipientMode" value="existing" checked data-action="set-subscription-role-mode" data-action-event="change" data-arg-role="recipient"> <span data-i18n="indexHtml.text.bestaande_persoon_4fee1022">Bestaande persoon</span></label>
                                     <label><input type="radio" name="recipientMode" value="create" data-action="set-subscription-role-mode" data-action-event="change" data-arg-role="recipient"> <span data-i18n="indexHtml.text.nieuwe_persoon_c574b0f2">Nieuwe persoon</span></label>
@@ -654,10 +654,10 @@
                                     <div id="recipientCreateForm"></div>
                                     <div id="recipientDuplicateCheck" class="subscription-duplicate-check hidden" aria-live="polite"></div>
                                 </div>
-                            </div>
+                            </section>
 
-                            <h3 id="requesterRoleTitle" class="form-subtitle" data-i18n="indexHtml.text.aanvrager_betaler_71728254">Aanvrager / betaler</h3>
-                            <div class="party-role-panel" id="requesterRolePanel">
+                            <section class="party-role-panel subscription-form-block" id="requesterRolePanel" aria-labelledby="requesterRoleTitle">
+                                <h3 id="requesterRoleTitle" class="form-subtitle" data-i18n="indexHtml.text.aanvrager_betaler_71728254">Aanvrager / betaler</h3>
                                 <div class="form-group">
                                     <label>
                                         <input type="checkbox" id="requesterSameAsRecipient" checked data-action="toggle-requester-same-as-recipient" data-action-event="change">
@@ -731,44 +731,45 @@
                                         <div id="requesterDuplicateCheck" class="subscription-duplicate-check hidden" aria-live="polite"></div>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
                             
-                            <h3 class="form-subtitle" data-i18n="indexHtml.text.betaalmethode_5e503508">Betaalmethode *</h3>
-                            <div class="form-row">
-                                <div class="payment-methods" role="radiogroup" aria-label="Betaalmethode" data-i18n-aria-label="forms.paymentMethodLabel">
-                                    <div class="payment-option">
-                                        <input type="radio" id="subPaymentAuto" name="subPayment" value="B" checked>
-                                        <label for="subPaymentAuto">
-                                            <span class="payment-icon">
-                                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none">
-                                                    <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="2"/>
-                                                    <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
-                                                </svg>
-                                            </span>
-                                            <span class="payment-text" data-i18n="indexHtml.text.automatisch_incasso_fd971b7d">Automatische incasso</span>
-                                        </label>
-                                        <div class="additional-input">
-                                            <div class="control-field">
-                                                <label for="subIBAN" data-i18n="forms.ibanLabel">IBAN</label>
-                                                <input type="text" id="subIBAN" placeholder="IBAN rekeningnummer"
-                                                data-feedback-sensitive="iban"
-                                                required
-                                                pattern="^(NL[0-9]{2}[A-Z]{4}[0-9]{10}|BE[0-9]{2}[0-9]{12})$" 
-                                                title="Vul hier een geldig IBAN nummer in. Alleen Nederlandse (NL) en Belgische (BE) rekeningen worden ondersteund." data-i18n-placeholder="indexHtml.placeholder.iban_rekeningnummer_f6244ddc" data-i18n-title="indexHtml.title.vul_hier_een_geldig_iban_nummer_in_alleen_nederlandse_nl_en_belgische_be_5e253df9">
+                            <section class="subscription-form-block subscription-payment-block">
+                                <h3 class="form-subtitle" data-i18n="indexHtml.text.betaalmethode_5e503508">Betaalmethode *</h3>
+                                <div class="form-row">
+                                    <div class="payment-methods" role="radiogroup" aria-label="Betaalmethode" data-i18n-aria-label="forms.paymentMethodLabel">
+                                        <div class="payment-option">
+                                            <input type="radio" id="subPaymentAuto" name="subPayment" value="B" checked>
+                                            <label for="subPaymentAuto">
+                                                <span class="payment-icon">
+                                                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none">
+                                                        <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="2"/>
+                                                        <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                                                    </svg>
+                                                </span>
+                                                <span class="payment-text" data-i18n="indexHtml.text.automatisch_incasso_fd971b7d">Automatische incasso</span>
+                                            </label>
+                                            <div class="additional-input">
+                                                <div class="control-field">
+                                                    <label for="subIBAN" data-i18n="forms.ibanLabel">IBAN</label>
+                                                    <input type="text" id="subIBAN" placeholder="IBAN rekeningnummer"
+                                                    data-feedback-sensitive="iban"
+                                                    required
+                                                    pattern="^(NL[0-9]{2}[A-Z]{4}[0-9]{10}|BE[0-9]{2}[0-9]{12})$"
+                                                    title="Vul hier een geldig IBAN nummer in. Alleen Nederlandse (NL) en Belgische (BE) rekeningen worden ondersteund." data-i18n-placeholder="indexHtml.placeholder.iban_rekeningnummer_f6244ddc" data-i18n-title="indexHtml.title.vul_hier_een_geldig_iban_nummer_in_alleen_nederlandse_nl_en_belgische_be_5e253df9">
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="payment-option">
-                                        <input type="radio" id="subPaymentInstruction" name="subPayment" value="AC">
-                                        <label for="subPaymentInstruction">
-                                            <span class="payment-icon" aria-hidden="true">🧾</span>
-                                            <span class="payment-text" data-i18n="indexHtml.text.betaalinstructie_7fb08411">Factuur</span>
-                                        </label>
+                                        <div class="payment-option">
+                                            <input type="radio" id="subPaymentInstruction" name="subPayment" value="AC">
+                                            <label for="subPaymentInstruction">
+                                                <span class="payment-icon" aria-hidden="true">🧾</span>
+                                                <span class="payment-text" data-i18n="indexHtml.text.betaalinstructie_7fb08411">Factuur</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <h3 class="form-subtitle" data-i18n="indexHtml.text.abonnementsgegevens_dc22841d">Abonnementsgegevens</h3>
+                                <h3 class="form-subtitle" data-i18n="indexHtml.text.abonnementsgegevens_dc22841d">Abonnementsgegevens</h3>
                                 <div id="subscriptionStartDates"></div>
                                 <div id="membershipStartDate" hidden>
                                     <label for="subStartDate" class="datepicker-label" data-i18n="subscriptionStartDates.membershipDate">Startdatum lidmaatschap</label>
@@ -776,30 +777,34 @@
                                         <input type="date" id="subStartDate" data-feedback-sensitive="date">
                                     </div>
                                 </div>
+                            </section>
 
-                            <h3 class="form-subtitle" data-i18n="indexHtml.text.marketing_voorkeuren_e341a1e3">Marketing voorkeuren</h3>
-                            <div class="optin-row">
-                                <span id="subOptinEmailLabel" class="optin-label" data-i18n="indexHtml.text.e_mail_contact_760c3822">E-mail contact:</span>
-                                <div class="optin-options" role="radiogroup" aria-labelledby="subOptinEmailLabel">
-                                    <label><input type="radio" name="subOptinEmail" value="yes"> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
-                                    <label><input type="radio" name="subOptinEmail" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
+                            <section class="subscription-form-block subscription-consent-block">
+                                <h3 class="form-subtitle" data-i18n="indexHtml.text.marketing_voorkeuren_e341a1e3">Marketing voorkeuren</h3>
+                                <div class="optin-row">
+                                    <span id="subOptinEmailLabel" class="optin-label" data-i18n="indexHtml.text.e_mail_contact_760c3822">E-mail contact:</span>
+                                    <div class="optin-options" role="radiogroup" aria-labelledby="subOptinEmailLabel">
+                                        <label><input type="radio" name="subOptinEmail" value="yes"> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
+                                        <label><input type="radio" name="subOptinEmail" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="optin-row">
-                                <span id="subOptinPhoneLabel" class="optin-label" data-i18n="indexHtml.text.telefonisch_contact_ef863bbb">Telefonisch contact:</span>
-                                <div class="optin-options" role="radiogroup" aria-labelledby="subOptinPhoneLabel">
-                                    <label><input type="radio" name="subOptinPhone" value="yes"> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
-                                    <label><input type="radio" name="subOptinPhone" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
+                                <div class="optin-row">
+                                    <span id="subOptinPhoneLabel" class="optin-label" data-i18n="indexHtml.text.telefonisch_contact_ef863bbb">Telefonisch contact:</span>
+                                    <div class="optin-options" role="radiogroup" aria-labelledby="subOptinPhoneLabel">
+                                        <label><input type="radio" name="subOptinPhone" value="yes"> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
+                                        <label><input type="radio" name="subOptinPhone" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="optin-row">
-                                <span id="subOptinPostLabel" class="optin-label" data-i18n="indexHtml.text.direct_marketing_ce0294ea">Direct marketing:</span>
-                                <div class="optin-options" role="radiogroup" aria-labelledby="subOptinPostLabel">
-                                    <label><input type="radio" name="subOptinPost" value="yes"> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
-                                    <label><input type="radio" name="subOptinPost" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
+                                <div class="optin-row">
+                                    <span id="subOptinPostLabel" class="optin-label" data-i18n="indexHtml.text.direct_marketing_ce0294ea">Direct marketing:</span>
+                                    <div class="optin-options" role="radiogroup" aria-labelledby="subOptinPostLabel">
+                                        <label><input type="radio" name="subOptinPost" value="yes"> <span data-i18n="indexHtml.text.ja_6bf15b34">Ja</span></label>
+                                        <label><input type="radio" name="subOptinPost" value="no"> <span data-i18n="indexHtml.text.nee_992443bb">Nee</span></label>
+                                    </div>
                                 </div>
-                            </div>
                             
+                            </section>
+
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" data-action="close-form" data-arg-form-id="newSubscriptionForm" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
                                 <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.abonnement_aanmaken_6f3d7e12">Abonnement Aanmaken</button>

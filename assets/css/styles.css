@@ -5120,6 +5120,305 @@ dialog.form-lightbox::backdrop {
 }
 
 .customer-search-secondary { color: var(--text-muted); font-size: .875rem; }
+
+/* Subscription composition stays local; article and service forms keep their own layout. */
+#newSubscriptionForm .onepager-container {
+    max-width: 1080px;
+    padding: 0;
+}
+
+#newSubscriptionForm .form-header {
+    margin: 0;
+    padding: var(--panel-padding);
+    align-items: flex-start;
+    gap: var(--space-4);
+}
+
+#newSubscriptionForm .form-header h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#newSubscriptionForm #subscriptionForm {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+#newSubscriptionForm .subscription-form-block {
+    min-width: 0;
+    margin: 0;
+    padding: var(--panel-padding);
+    border: 0;
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: 0;
+    background: var(--surface);
+}
+
+#newSubscriptionForm .werfsleutel-fieldset,
+#newSubscriptionForm .form-actions {
+    grid-column: 1 / -1;
+}
+
+#newSubscriptionForm .form-subtitle {
+    margin: var(--space-5) 0 var(--space-3);
+    font-size: var(--font-size-body);
+    font-weight: var(--weight-medium);
+    line-height: 1.25;
+}
+
+#newSubscriptionForm .subscription-form-block > .form-subtitle:first-child {
+    margin-top: 0;
+}
+
+#newSubscriptionForm .form-subtitle::after {
+    content: none;
+}
+
+#newSubscriptionForm .fieldset-heading {
+    display: grid;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+#newSubscriptionForm .helper-text {
+    font-size: var(--font-size-label);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+#newSubscriptionForm .werfsleutel-search-row {
+    gap: var(--space-2);
+}
+
+#newSubscriptionForm .werfsleutel-search-row input {
+    min-width: 0;
+}
+
+#newSubscriptionForm .werfsleutel-summary {
+    margin-top: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 0;
+    border-inline-start: 2px solid var(--action);
+    border-radius: 0;
+    background: var(--surface-data);
+}
+
+#newSubscriptionForm .subscription-offer-list {
+    margin-block: var(--space-3);
+    gap: 0;
+}
+
+#newSubscriptionForm .subscription-offer-card {
+    padding: var(--space-4);
+    gap: var(--space-3);
+    border: 0;
+    border-inline-start: 2px solid var(--action);
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: 0;
+    background: var(--surface-selected);
+}
+
+#newSubscriptionForm .subscription-offer-title {
+    font-size: var(--font-size-body);
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
+}
+
+#newSubscriptionForm .subscription-offer-price {
+    font-size: var(--font-size-body);
+}
+
+#newSubscriptionForm :is(.werfsleutel-summary-badge, .subscription-offer-code, .subscription-offer-channel-code, .subscription-offer-meta-badge, .subscription-offer-warning, .subscription-offer-chevron, .status-pill, .mandant-logo-badge) {
+    border-radius: 0;
+}
+
+#newSubscriptionForm .subscription-offer-meta-badge {
+    padding-inline: 0;
+    border: 0;
+    background: transparent;
+}
+
+#newSubscriptionForm .channel-options {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+#newSubscriptionForm .channel-chip {
+    min-width: 0;
+    min-height: var(--choice-height);
+    padding: var(--space-3);
+    gap: var(--space-1);
+    overflow-wrap: anywhere;
+}
+
+#newSubscriptionForm .channel-options .empty-state-small {
+    border: 0;
+    border-radius: 0;
+}
+
+#newSubscriptionForm .party-mode-toggle {
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-3);
+}
+
+#newSubscriptionForm :is(.form-row, .customer-address-row) {
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+#newSubscriptionForm :is(.subscription-person-address-row, .subscription-person-name-row) {
+    margin-bottom: 0;
+}
+
+#newSubscriptionForm .customer-create-form > .form-group {
+    margin-bottom: var(--space-3);
+}
+
+#newSubscriptionForm .aanhef-row {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-3);
+}
+
+#newSubscriptionForm .party-selected-person {
+    padding: var(--space-3) var(--space-4);
+}
+
+#newSubscriptionForm :is(#recipientReuseCustomer, #requesterReuseCustomer) {
+    margin-block: var(--space-3);
+}
+
+#newSubscriptionForm #requesterRolePanel > .form-group > label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--choice-height);
+    margin-bottom: var(--space-3);
+}
+
+#newSubscriptionForm .subscription-person-search-more {
+    margin-top: var(--space-3);
+    border: 0;
+}
+
+#newSubscriptionForm .subscription-person-search-more summary {
+    padding: var(--space-3) var(--space-2);
+    color: var(--action);
+}
+
+#newSubscriptionForm .subscription-person-search-more summary:hover {
+    background: var(--surface-quiet-hover);
+}
+
+#newSubscriptionForm .subscription-person-search {
+    padding-inline: var(--space-2);
+}
+
+#newSubscriptionForm .subscription-person-search-grid {
+    padding: 0 0 var(--space-3);
+}
+
+#newSubscriptionForm .party-search-result,
+#newSubscriptionForm .subscription-duplicate-item,
+#newSubscriptionForm .subscription-duplicate-header {
+    flex-wrap: wrap;
+}
+
+#newSubscriptionForm :is(.payment-option, .additional-input) {
+    border-radius: 0;
+}
+
+#newSubscriptionForm .payment-option {
+    margin-bottom: var(--space-2);
+}
+
+#newSubscriptionForm .subscription-start-date {
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3) 0;
+    overflow-wrap: anywhere;
+}
+
+#newSubscriptionForm .subscription-start-date legend {
+    font-size: var(--font-size-body);
+    font-weight: var(--weight-medium);
+    line-height: 1.3;
+}
+
+#newSubscriptionForm .subscription-start-date label {
+    margin-block: var(--space-2);
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-medium);
+    line-height: var(--line-height-label);
+}
+
+#newSubscriptionForm .subscription-start-date :is(input, select) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+#newSubscriptionForm .subscription-start-date input:read-only {
+    background: var(--surface-subdued);
+}
+
+#newSubscriptionForm .subscription-start-date p {
+    margin: var(--space-2) 0;
+    font-size: var(--font-size-label);
+    line-height: 1.4;
+}
+
+#newSubscriptionForm .optin-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-3);
+    min-height: var(--choice-height);
+    margin: 0;
+    padding: var(--space-2) 0;
+    border-top: 1px solid var(--border-subtle);
+    border-radius: 0;
+}
+
+#newSubscriptionForm .optin-row:last-child {
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+#newSubscriptionForm .optin-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#newSubscriptionForm .optin-options {
+    gap: var(--space-4);
+}
+
+#newSubscriptionForm .form-actions {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-4) var(--panel-padding);
+    border-top: 0;
+}
+
+#newSubscriptionForm .form-actions .btn {
+    max-width: 100%;
+    white-space: normal;
+}
+
+@media (min-width: 960px) {
+    #newSubscriptionForm #subscriptionForm {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #newSubscriptionForm #requesterRolePanel,
+    #newSubscriptionForm .subscription-consent-block {
+        border-inline-start: 1px solid var(--border-subtle);
+    }
+}
+
+@media (max-width: 768px) {
+    #newSubscriptionForm {
+        padding: var(--space-4);
+    }
+}
+
 /* Keep each guide and its edition/date together when ordering several products. */
 .subscription-start-date {
     min-width: 0;
