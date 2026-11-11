@@ -3214,12 +3214,19 @@ dialog.form-lightbox::backdrop {
     margin-bottom: var(--space-3);
 }
 
+/* Contain the address row margin so screenshot clones retain the native contact gap. */
+#articleSaleForm .address-fields {
+    display: flow-root;
+}
+
 #articleSaleForm .form-row > .form-group {
     flex: 1;
     margin-bottom: 0;
 }
 
-#articleSaleForm .article-form-block > .form-row:last-child {
+#articleSaleForm .article-form-block > .form-row:last-child,
+#articleSaleForm .article-form-block > .form-group:last-child,
+#articleSaleForm .article-form-block > .form-group:last-child > .form-row:last-child {
     margin-bottom: 0;
 }
 
