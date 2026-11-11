@@ -3219,7 +3219,7 @@ dialog.form-lightbox::backdrop {
     margin-bottom: 0;
 }
 
-#articleSaleForm .form-row:last-child {
+#articleSaleForm .article-form-block > .form-row:last-child {
     margin-bottom: 0;
 }
 
@@ -3253,6 +3253,24 @@ dialog.form-lightbox::backdrop {
 
 #articleSaleForm .payment-option > label {
     overflow-wrap: anywhere;
+}
+
+#articleSaleForm .article-inline-status {
+    margin: var(--space-2) 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-label);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+#articleSaleForm .article-inline-status:empty {
+    margin: 0;
+}
+
+#articleSaleForm #articleSubmitStatus:not(:empty) {
+    margin: 0;
+    padding: var(--space-3) var(--panel-padding);
+    border-top: 1px solid var(--border-subtle);
 }
 
 #articleSaleForm .form-actions {

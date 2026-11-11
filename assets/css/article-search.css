@@ -472,13 +472,17 @@
 }
 
 #articleSaleForm .coupon-message {
-    margin-top: var(--space-2);
     font-size: var(--font-size-label);
     line-height: 1.4;
-    padding: var(--space-3);
     border-radius: 0;
     overflow-wrap: anywhere;
-    display: none !important;
+    margin: 0;
+    padding: 0;
+}
+
+#articleSaleForm .coupon-message:not(:empty) {
+    margin-top: var(--space-2);
+    padding: var(--space-3);
 }
 
 #articleSaleForm .coupon-message.success {

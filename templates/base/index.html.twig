@@ -867,7 +867,7 @@
                             </div>
 
                             <div class="form-group">
-                                <span id="articleBirthdayLabel" class="form-label" data-i18n="indexHtml.text.geboortedatum_58b9b177">Geboortedatum</span>
+                                <span id="articleBirthdayLabel" class="form-label" data-feedback-public data-i18n="indexHtml.text.geboortedatum_58b9b177">Geboortedatum</span>
                                 <div class="form-row" role="group" aria-labelledby="articleBirthdayLabel">
                                     <div class="control-field">
                                         <label for="articleBirthdayDay" data-i18n="forms.birthdayDayPlaceholder">Dag</label>
@@ -894,7 +894,7 @@
                                     <div class="article-form-block">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label id="deliveryDateLabel" for="deliveryDateDisplay" data-i18n="indexHtml.text.gewenste_leverdatum_5bace022">Gewenste leverdatum *</label>
+                                    <label id="deliveryDateLabel" for="deliveryDateDisplay" data-feedback-public data-i18n="indexHtml.text.gewenste_leverdatum_5bace022">Gewenste leverdatum *</label>
                                     <div id="deliveryDatePickerContainer" class="delivery-date-picker-container">
                                         <input type="hidden" id="articleDesiredDelivery" data-feedback-sensitive="date" required>
                                         <button type="button" class="delivery-date-display" id="deliveryDateDisplay" aria-labelledby="deliveryDateLabel deliveryDateValue" aria-haspopup="dialog" aria-expanded="false" aria-controls="deliveryCalendar">
@@ -984,12 +984,13 @@
                 <label for="articleSearch" data-i18n="indexHtml.text.artikel_286630a5">Artikel *</label>
                 <div class="article-selector">
                     <input type="text" 
-                           id="articleSearch" 
+                           id="articleSearch" aria-describedby="articleSearchStatus"
                            placeholder="Type artikel naam of code..." 
                            autocomplete="off"
                            data-action="filter-articles"
                            data-action-event="input"
                            data-i18n-placeholder="indexHtml.placeholder.type_artikel_naam_of_code_47ce6be0">
+                    <p id="articleSearchStatus" class="article-inline-status" role="status" aria-live="polite" aria-atomic="true" data-feedback-public></p>
                     <input type="hidden" id="articleName">
                     <div class="article-dropdown" id="articleDropdown" style="display: none;">
                         <!-- Dropdown populated by JavaScript -->
@@ -1032,7 +1033,7 @@
                                     <label for="couponCode" data-i18n="indexHtml.text.kortingscode_fb890f19">Kortingscode</label>
                                     <div class="coupon-input-group">
                                         <input type="text" 
-                                               id="couponCode" 
+                                               id="couponCode" aria-describedby="couponMessage"
                                                placeholder="Voer kortingscode in..." 
                                                maxlength="20"
                                                data-action="apply-coupon-on-enter"
@@ -1045,7 +1046,7 @@
                                             Toepassen
                                         </button>
                                     </div>
-                                    <div id="couponMessage" class="coupon-message"></div>
+                                    <div id="couponMessage" class="coupon-message" role="status" aria-live="polite" aria-atomic="true"></div>
                                 </div>
                                 
                                 <div class="order-summary">
@@ -1065,6 +1066,7 @@
                                 </div>
                             </div>
                             
+                            <p id="articleSubmitStatus" class="article-inline-status" role="status" aria-live="polite" aria-atomic="true" data-feedback-public></p>
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" data-action="close-article-sale-form" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
                                 <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.bestelling_plaatsen_07d072ea">Bestelling Plaatsen</button>

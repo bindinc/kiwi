@@ -2,9 +2,11 @@ import { resumeFormDraft, clearFormDraft, registerDraftCleanup } from '../lightb
 import { splitAddressHouseNumber } from '../address-fields.js';
 import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
+import { resetArticleSearchFeedback } from './article-search-slice.js';
 
 const ORDER_SLICE_NAMESPACE = 'kiwiOrderSlice';
 let orderDependenciesResolver = null;
+const articleSubmissionOwners = new WeakMap();
 
 export function configureOrderSliceDependencies(dependenciesResolver) {
     orderDependenciesResolver = typeof dependenciesResolver === 'function'
@@ -117,6 +119,53 @@ function translateLabel(dependencies, key, params = {}, fallback = key) {
     }
 
     return fallback;
+}
+
+function setArticleSubmissionPhase(owner, dependencies, key, fallback) {
+    if (owner.form && articleSubmissionOwners.get(owner.form) !== owner) return;
+    if (owner.status) owner.status.textContent = translateLabel(dependencies, key, {}, fallback);
+}
+
+function beginArticleSubmission(dependencies) {
+    const form = getElementById('articleForm');
+    if (form && articleSubmissionOwners.has(form)) return null;
+    const button = form && typeof form.querySelector === 'function'
+        ? form.querySelector('button[type="submit"]')
+        : null;
+    const owner = {
+        form,
+        button,
+        status: getElementById('articleSubmitStatus'),
+        disabled: button ? button.disabled : false,
+        busy: button && typeof button.getAttribute === 'function' ? button.getAttribute('aria-busy') : null
+    };
+    if (form) articleSubmissionOwners.set(form, owner);
+    if (button) {
+        button.disabled = true;
+        if (typeof button.setAttribute === 'function') button.setAttribute('aria-busy', 'true');
+    }
+    setArticleSubmissionPhase(owner, dependencies, 'articleOrders.calculating', 'Bestelling wordt berekend…');
+    return owner;
+}
+
+function finishArticleSubmission(owner) {
+    if (owner.form && articleSubmissionOwners.get(owner.form) !== owner) return;
+    if (owner.form) articleSubmissionOwners.delete(owner.form);
+    if (owner.button) {
+        owner.button.disabled = owner.disabled;
+        if (owner.busy === null && typeof owner.button.removeAttribute === 'function') {
+            owner.button.removeAttribute('aria-busy');
+        } else if (typeof owner.button.setAttribute === 'function') {
+            owner.button.setAttribute('aria-busy', owner.busy);
+        }
+    }
+    if (owner.status) owner.status.textContent = '';
+}
+
+function resetArticleSubmissionFeedback() {
+    const form = getElementById('articleForm');
+    const owner = form ? articleSubmissionOwners.get(form) : null;
+    if (owner) finishArticleSubmission(owner);
 }
 
 function isSubscriptionApiCustomer(customer) {
@@ -424,7 +473,13 @@ export function showArticleSale() {
     }
 
     if (resumeFormDraft(getElementById('articleSaleForm'))) return;
-    registerDraftCleanup(getDocumentRef(), () => resetOrderItems(dependencies));
+    resetArticleSubmissionFeedback();
+    resetArticleSearchFeedback();
+    registerDraftCleanup(getDocumentRef(), () => {
+        resetArticleSubmissionFeedback();
+        resetArticleSearchFeedback();
+        resetOrderItems(dependencies);
+    });
 
     if (currentCustomer) {
         prefillArticleSaleForm(currentCustomer, dependencies);
@@ -820,6 +875,9 @@ export async function createArticleSale(event) {
         return;
     }
 
+    const form = getElementById('articleForm');
+    if (form && articleSubmissionOwners.has(form)) return;
+
     const orderItems = getOrderItems(dependencies);
     if (orderItems.length === 0) {
         showToast(
@@ -835,57 +893,64 @@ export async function createArticleSale(event) {
         return;
     }
 
-    let orderData;
+    const owner = beginArticleSubmission(dependencies);
+    if (!owner) return;
     try {
-        orderData = await getOrderData(dependencies);
-    } catch (error) {
-        showToast(
-            dependencies,
-            error.message || translateLabel(dependencies, 'articleOrders.calculationFailed', {}, 'Bestelberekening via backend mislukt'),
-            'error'
-        );
-        return;
+        let orderData;
+        try {
+            orderData = await getOrderData(dependencies);
+        } catch (error) {
+            showToast(
+                dependencies,
+                error.message || translateLabel(dependencies, 'articleOrders.calculationFailed', {}, 'Bestelberekening via backend mislukt'),
+                'error'
+            );
+            return;
+        }
+
+        const hasValidOrderData = orderData && Array.isArray(orderData.items);
+        if (!hasValidOrderData) {
+            showToast(
+                dependencies,
+                translateLabel(dependencies, 'articleOrders.calculationFailed', {}, 'Bestelberekening via backend mislukt'),
+                'error'
+            );
+            return;
+        }
+
+        const trackingNumber = createTrackingNumber();
+        const returnDeadlineStr = buildReturnDeadlineIsoDate(formData.desiredDeliveryDate);
+        const contactDescription = buildContactDescription(orderData, formData, dependencies);
+        const fullLastName = formData.middleName
+            ? `${formData.middleName} ${formData.lastName}`
+            : formData.lastName;
+
+        setArticleSubmissionPhase(owner, dependencies, 'articleOrders.creating', 'Bestelling wordt aangemaakt…');
+        const apiPathHandled = await submitArticleOrderViaApi(dependencies, {
+            currentCustomer,
+            formData,
+            orderData,
+            trackingNumber,
+            returnDeadlineStr,
+            contactDescription,
+            fullLastName
+        });
+        if (apiPathHandled) {
+            return;
+        }
+
+        await submitArticleOrderLocally(dependencies, {
+            currentCustomer,
+            formData,
+            orderData,
+            trackingNumber,
+            returnDeadlineStr,
+            contactDescription,
+            fullLastName
+        });
+    } finally {
+        finishArticleSubmission(owner);
     }
-
-    const hasValidOrderData = orderData && Array.isArray(orderData.items);
-    if (!hasValidOrderData) {
-        showToast(
-            dependencies,
-            translateLabel(dependencies, 'articleOrders.calculationFailed', {}, 'Bestelberekening via backend mislukt'),
-            'error'
-        );
-        return;
-    }
-
-    const trackingNumber = createTrackingNumber();
-    const returnDeadlineStr = buildReturnDeadlineIsoDate(formData.desiredDeliveryDate);
-    const contactDescription = buildContactDescription(orderData, formData, dependencies);
-    const fullLastName = formData.middleName
-        ? `${formData.middleName} ${formData.lastName}`
-        : formData.lastName;
-
-    const apiPathHandled = await submitArticleOrderViaApi(dependencies, {
-        currentCustomer,
-        formData,
-        orderData,
-        trackingNumber,
-        returnDeadlineStr,
-        contactDescription,
-        fullLastName
-    });
-    if (apiPathHandled) {
-        return;
-    }
-
-    await submitArticleOrderLocally(dependencies, {
-        currentCustomer,
-        formData,
-        orderData,
-        trackingNumber,
-        returnDeadlineStr,
-        contactDescription,
-        fullLastName
-    });
 }
 
 function exposeOrderSliceApi() {
