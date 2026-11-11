@@ -262,6 +262,7 @@ async function openChangeEditor(item, change) {
         }
         try {
             await window.kiwiWerfsleutelSlice.restoreOutboxOffer(payload.offer);
+            await window.kiwiSubscriptionStartDates?.restore({ ...payload.offer, variantCode: subscription.variantCode });
         } finally {
             window.kiwiSubscriptionRoleRuntime.restoreOutboxSubscriptionRoles(payload);
         }

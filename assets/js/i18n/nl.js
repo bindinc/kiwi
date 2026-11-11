@@ -1,4 +1,16 @@
 const nl = {
+    "subscriptionStartDates": {
+        "missingEdition": "Geen editie beschikbaar. Selecteer een andere aanbieding.",
+        "edition": "Editie",
+        "chooseEdition": "Kies een editie",
+        "deliveryDate": "Eerste bezorgdatum",
+        "membershipDate": "Startdatum lidmaatschap",
+        "loading": "Bezorgdatum ophalen…",
+        "ready": "Eerstvolgende bezorgdatum volgens Abel.",
+        "unavailable": "Geen bezorgdatum beschikbaar. Probeer opnieuw; opslaan kan zodra de datum bekend is.",
+        "retry": "Datum opnieuw ophalen",
+        "changed": "De aanbieding of klantsessie is gewijzigd. Haal de bezorgdatum opnieuw op."
+},
     "meta": {
         "locale": "nl",
         "name": "Nederlands"

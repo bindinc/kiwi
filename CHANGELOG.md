@@ -8,6 +8,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+- Use Abel’s next delivery date per guide and selected edition during subscription signup, revalidate before staging an order, and keep ATV/ATL/ATM/STKN memberships independent of delivery dates. [sc-203456]
+
 ### Changed
 
 - Align customer search, result rows, record sections and shared editor/address presentation with the Light & Shadow showcase, including clear secondary actions, continuous table separators and stable filter insets; serialize pseudonymized screenshot form values while preserving identities, permissions and drafts (`theme_audit` slice 04). [sc-206629]
@@ -16,7 +18,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 - Align shared native controls, persistent labels and primary, outlined secondary, compact, icon and danger actions with the showcase while restoring keyboard-operable payment choices and preventing navigation keys from activating native button actions (`theme_audit` slice 02). [sc-206629]
 - Align shared theme foundations with the Light & Shadow showcase using explicit spacing, typography, tinted surfaces, flat panels, restrained overlay elevation and fully visible keyboard focus in short form overlays (`theme_audit` slice 01). [sc-206629]
-- Document the complete styleguide evaluation and code-adjacent implementation slices, marked `theme_audit`, without changing application styling or behavior. [sc-206629]
+- Record the complete styleguide evaluation and code-adjacent `theme_audit` plans, integrate accepted slices 01–04, and retain the current guide-delivery-date behavior when combining them with main. [sc-206629]
 - Apply the Light & Shadow palette as Kiwi's default light theme using semantic colors, accessible control borders and keyboard focus, while preserving operational states and feedback privacy; include a flat, responsive delivery date picker with keyboard navigation, the design showcase, contrast checks and browser smoke coverage. [sc-206629]
 
 ### Fixed

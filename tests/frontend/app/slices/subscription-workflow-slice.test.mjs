@@ -543,7 +543,7 @@ async function testSubmissionPreservesIndependentPayerIdentity() {
                 querySelector: selector => selector === 'input[name="subPayment"]:checked' ? { value: 'AC' } : null
             };
             globalThis.kiwiWerfsleutelSlice = { getSelections: () => [{
-                selectedKey: { salesCode: 'TEST1', mandant: 'HMC' }, selectedChannel: 'OL'
+                selectedKey: { salesCode: 'TEST1', mandant: 'HMC', subscriptionKind: 'membership', productCode: 'ATV' }, selectedChannel: 'OL'
             }] };
             globalThis.kiwiCustomerWorkSession = {};
             globalThis.buildSubscriptionRolePayload = role => role === 'recipient' ? recipient : requester;
