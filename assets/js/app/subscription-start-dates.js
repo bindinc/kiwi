@@ -64,6 +64,7 @@ export function createSubscriptionStartDates({ document, getContext, fetchDate, 
             const status = element('p', text(entry.status));
             status.id = `${input.id}-status`;
             status.setAttribute('role', 'status');
+            status.setAttribute('data-feedback-public', '');
             input.setAttribute('aria-describedby', status.id);
             const row = element('div');
             row.className = 'form-row';

@@ -168,3 +168,38 @@ test('a rejection for an earlier submitted edition preserves the current edition
     dates.reject(offer, 'NORTH');
     assert.equal(dates.read(offer).variantCode, 'SOUTH');
 });
+
+
+test('fixed guide status stays public while source dates, editions and product context stay private', async () => {
+    const requests = [];
+    const { dates, document, nodes } = fixture(() => new Promise((resolve, reject) => requests.push({ resolve, reject })));
+    const offer = guide('PRIVATE-CONTEXT', ['NORTH', 'SOUTH']);
+    await dates.sync(selections(offer));
+    const assertBoundary = (state) => {
+        const status = document.getElementById('subscription-date-PRIVATE-CONTEXT-status');
+        assert.equal(status.textContent, `subscriptionStartDates.${state}`);
+        assert.equal(status.getAttribute('data-feedback-public'), '');
+        assert.equal(status.children.length, 0, 'the public leaf contains only fixed translated status');
+        const privateNodes = ['input', 'select', 'option', 'legend'].flatMap(tag => nodes.subscriptionStartDates.querySelectorAll(tag));
+        assert.ok(privateNodes.length > 4);
+        for (const field of privateNodes) {
+            for (let node = field; node; node = node.parentElement) {
+                assert.equal(node.getAttribute('data-feedback-public'), null, 'source values, edition choices and product context stay private');
+            }
+        }
+    };
+    assertBoundary('chooseEdition');
+    let select = document.getElementById('subscription-edition-PRIVATE-CONTEXT');
+    select.value = 'SOUTH';
+    select.emit('change');
+    assertBoundary('loading');
+    requests[0].reject(Error('Synthetic provider failure'));
+    await tick();
+    assertBoundary('unavailable');
+    nodes.subscriptionStartDates.querySelectorAll('button')[0].emit('click');
+    assertBoundary('loading');
+    requests[1].resolve({ variantCode: 'SOUTH', startDate: '2035-03-27' });
+    await tick();
+    assertBoundary('ready');
+    assert.deepEqual(dates.read(offer), { variantCode: 'SOUTH', startDate: '2035-03-27' });
+});

@@ -5390,6 +5390,8 @@ dialog.form-lightbox::backdrop {
 }
 
 #newSubscriptionForm .form-actions {
+    min-width: 0;
+    flex-direction: row;
     flex-wrap: wrap;
     gap: var(--space-2);
     margin: 0;
@@ -5433,6 +5435,17 @@ dialog.form-lightbox::backdrop {
 @media (max-width: 768px) {
     #newSubscriptionForm {
         padding: var(--space-4);
+    }
+
+    #newSubscriptionForm .form-actions {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: stretch;
+    }
+
+    #newSubscriptionForm .form-actions .subscription-inline-status {
+        flex: none;
+        min-width: 0;
     }
 }
 

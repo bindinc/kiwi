@@ -295,6 +295,8 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         showSameAddressCheckbox: false
     };
     const cfg = { ...defaults, ...config };
+    const isSubscriptionRole = prefix === 'subRecipient' || prefix === 'subRequester';
+    const birthdayCaptionPublicAttribute = isSubscriptionRole ? ' data-feedback-public=""' : '';
     const phonePlaceholderBase = translate('forms.phonePlaceholder', {}, 'Telefoonnummer');
     const landlinePhonePlaceholderBase = translate('forms.landlinePhonePlaceholder', {}, 'Vast telefoonnummer');
     const mobilePhonePlaceholderBase = translate('forms.mobilePhonePlaceholder', {}, 'Mobiel telefoonnummer');
@@ -329,7 +331,7 @@ function renderCustomerForm(containerId, prefix, config = {}) {
         </div>
 
         <div class="form-group">
-            <span id="${prefix}BirthdayLabel" class="form-label">${translate('forms.birthdayLabel', {}, 'Geboortedatum*')}</span>
+            <span id="${prefix}BirthdayLabel" class="form-label"${birthdayCaptionPublicAttribute}>${translate('forms.birthdayLabel', {}, 'Geboortedatum*')}</span>
             <div class="form-row" role="group" aria-labelledby="${prefix}BirthdayLabel">
                 <div class="customer-form-field"><label for="${prefix}BirthdayDay">${translate('forms.birthdayDayPlaceholder', {}, 'Dag')}</label><select id="${prefix}BirthdayDay">
                     <option value="">${translate('forms.birthdayDayPlaceholder', {}, 'Dag')}</option>

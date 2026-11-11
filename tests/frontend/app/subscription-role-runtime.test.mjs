@@ -1,3 +1,4 @@
+import { createEditorDocument } from '../support/editor-dom.mjs';
 import { renderAddressFields } from '../../../assets/js/app/address-fields.js';
 import { sameSubscriptionPerson } from '../../../assets/js/app/subscription-shared-helpers.js';
 import { createBootstrapSlice } from '../../../assets/js/app/slices/bootstrap-slice.js';
@@ -1206,6 +1207,7 @@ function testGeneratedPersonFieldsHavePersistentLabels() {
 }
 
 async function run() {
+    testSubscriptionBirthdayCaptionKeepsPrivateFieldBoundary();
     testGeneratedPersonFieldsHavePersistentLabels();
     testActiveCustomerIsRecipientWithoutLookup();
     await testActiveCustomerCanBeReusedWithIndependentPayer();
@@ -1391,6 +1393,31 @@ async function testRoleSearchDiscardsStaleResponses() {
     }
 }
 
+
+
+function testSubscriptionBirthdayCaptionKeepsPrivateFieldBoundary() {
+    for (const dictionary of [nl, en]) {
+        for (const prefix of ['subRecipient', 'subRequester', 'article', 'transfer']) {
+            const { context, elements, runtime } = createRuntimeContext();
+            context.translate = (key, _params, fallback) => key.split('.').reduce((value, part) => value?.[part], dictionary) ?? fallback;
+            runtime.renderCustomerForm('recipientCreateForm', prefix);
+            const document = createEditorDocument();
+            document.body.innerHTML = elements.recipientCreateForm.innerHTML;
+            const caption = document.body.querySelector(`#${prefix}BirthdayLabel`);
+            const isSubscriptionRole = ['subRecipient', 'subRequester'].includes(prefix);
+            assert.equal(caption.textContent, dictionary.forms.birthdayLabel);
+            assert.equal(caption.getAttribute('data-feedback-public'), isSubscriptionRole ? '' : null);
+            assert.equal(caption.children.length, 0, 'only fixed caption text is public');
+            const privateFields = ['input', 'select', 'option'].flatMap(tag => document.body.querySelectorAll(tag));
+            assert.ok(privateFields.length > 10, 'the real generated person and address fields were rendered');
+            for (const field of privateFields) {
+                for (let node = field; node; node = node.parentElement) {
+                    assert.equal(node.getAttribute('data-feedback-public'), null, `${prefix}: values and choices stay outside public scope`);
+                }
+            }
+        }
+    }
+}
 
 async function testRoleSearchPendingFeedbackTracksItsOwnRequest() {
     for (const role of ['recipient', 'requester']) {
