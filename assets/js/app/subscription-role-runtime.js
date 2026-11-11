@@ -9,6 +9,7 @@
 const LEGACY_SUBSCRIPTION_HELPERS_NAMESPACE = 'kiwiSubscriptionIdentityPricingHelpers';
 const WERFSLEUTEL_SELECTIONS_UPDATED_EVENT = 'kiwi:werfsleutel-selections-updated';
 const subscriptionRoleSearchVersions = { recipient: 0, requester: 0 };
+const subscriptionRolePendingSearches = { recipient: null, requester: null };
 const MANDANT_BADGE_CONFIG_BY_KEY = {
     AVROTROS: {
         brandLabel: 'AVROTROS',
@@ -1019,6 +1020,7 @@ function updateSubscriptionRoleSearchAvailability() {
             }
         }
         renderSubscriptionRoleReuse(role);
+        renderSubscriptionRoleSearchPending(role);
 
         if (shouldDisableControls) {
             subscriptionRoleState[role].searchResults = [];
@@ -1996,7 +1998,29 @@ function searchPersonsLocallyForRole(query) {
     }).slice(0, 10);
 }
 
+function renderSubscriptionRoleSearchPending(role) {
+    const cfg = getSubscriptionRoleConfig(role);
+    if (!cfg) return;
+
+    let pending = subscriptionRolePendingSearches[role];
+    if (pending && !pending.isCurrent()) {
+        subscriptionRolePendingSearches[role] = null;
+        pending = null;
+    }
+
+    const button = document.getElementById(cfg.searchButtonId);
+    button?.setAttribute('aria-busy', pending ? 'true' : 'false');
+    const status = document.getElementById(`${role}SearchStatus`);
+    if (status) {
+        status.hidden = !pending;
+        status.textContent = pending
+            ? translate('subscription.duplicateCheck.checking', {}, 'Zoeken naar bestaande personen...')
+            : '';
+    }
+}
+
 function renderSubscriptionRoleSearchResults(role) {
+    renderSubscriptionRoleSearchPending(role);
     const cfg = getSubscriptionRoleConfig(role);
     if (!cfg) return;
 
@@ -2147,39 +2171,48 @@ async function searchSubscriptionRolePerson(role) {
     const filterFingerprint = JSON.stringify(filters);
     const isCurrent = () => contextIsCurrent()
         && JSON.stringify(readSubscriptionRoleSearchFilters(cfg)) === filterFingerprint;
+    const pending = { isCurrent: contextIsCurrent };
+    subscriptionRolePendingSearches[role] = pending;
     subscriptionRoleState[role].searchResults = [];
     renderSubscriptionRoleSearchResults(role);
-    let results = [];
-    if (window.kiwiApi) {
-        const params = new URLSearchParams({
-            page: '1',
-            pageSize: '10',
-            sortBy: 'name'
-        });
+    try {
+        let results = [];
+        if (window.kiwiApi) {
+            const params = new URLSearchParams({
+                page: '1',
+                pageSize: '10',
+                sortBy: 'name'
+            });
 
-        appendSubscriptionRolePersonSearchFilters(params, filters);
-        appendSubscriptionRoleSearchScope(params, searchScope);
+            appendSubscriptionRolePersonSearchFilters(params, filters);
+            appendSubscriptionRoleSearchScope(params, searchScope);
 
-        try {
-            const payload = await window.kiwiApi.get(`${personsApiUrl}?${params.toString()}`);
-            results = Array.isArray(payload && payload.items) ? payload.items : [];
-        } catch (error) {
-            if (!isCurrent()) return;
-            showToast(error.message || translate('subscription.search.failed', {}, 'Zoeken van personen mislukt'), 'error');
-            return;
+            try {
+                const payload = await window.kiwiApi.get(`${personsApiUrl}?${params.toString()}`);
+                results = Array.isArray(payload && payload.items) ? payload.items : [];
+            } catch (error) {
+                if (!isCurrent()) return;
+                showToast(error.message || translate('subscription.search.failed', {}, 'Zoeken van personen mislukt'), 'error');
+                return;
+            }
+        } else {
+            results = customers
+                .filter((person) => personMatchesSubscriptionRoleFilters(person, filters))
+                .slice(0, 10);
         }
-    } else {
-        results = customers
-            .filter((person) => personMatchesSubscriptionRoleFilters(person, filters))
-            .slice(0, 10);
-    }
 
-    if (!isCurrent()) return;
-    subscriptionRoleState[role].searchResults = results.filter((person) => reusableCustomerMatchesSubscriptionScope(person));
-    renderSubscriptionRoleSearchResults(role);
-    if (subscriptionRoleState[role].searchResults.length === 0) {
-        const node = document.getElementById(cfg.searchResultsId);
-        if (node) node.textContent = translate('subscription.search.noResults', {}, 'Geen personen gevonden. Pas de zoekvelden aan.');
+        if (!isCurrent()) return;
+        subscriptionRoleState[role].searchResults = results.filter((person) => reusableCustomerMatchesSubscriptionScope(person));
+        renderSubscriptionRoleSearchResults(role);
+        if (subscriptionRoleState[role].searchResults.length === 0) {
+            const node = document.getElementById(cfg.searchResultsId);
+            if (node) node.textContent = translate('subscription.search.noResults', {}, 'Geen personen gevonden. Pas de zoekvelden aan.');
+        }
+    } finally {
+        if (subscriptionRolePendingSearches[role] === pending) {
+            subscriptionRolePendingSearches[role] = null;
+            renderSubscriptionRoleSearchPending(role);
+        }
     }
 }
 
@@ -2234,6 +2267,7 @@ function resetSubscriptionRoleState() {
     subscriptionRoleState.requester.searchResults = [];
     subscriptionRoleState.requesterSameAsRecipient = true;
     resetAllSubscriptionDuplicateStates();
+    for (const role of ['recipient', 'requester']) renderSubscriptionRoleSearchPending(role);
 }
 
 function configureSubscriptionRuntimeTiming(overrides = {}) {

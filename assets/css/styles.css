@@ -5397,6 +5397,23 @@ dialog.form-lightbox::backdrop {
     border-top: 0;
 }
 
+#newSubscriptionForm .subscription-inline-status {
+    margin: var(--space-2) 0;
+    color: var(--action);
+    font-size: var(--font-size-label);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+#newSubscriptionForm .subscription-inline-status[hidden] {
+    display: none;
+}
+
+#newSubscriptionForm .form-actions .subscription-inline-status {
+    flex: 1 1 100%;
+    margin: 0;
+}
+
 #newSubscriptionForm .form-actions .btn {
     max-width: 100%;
     white-space: normal;

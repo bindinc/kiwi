@@ -28,6 +28,8 @@ function createDuplicateRoleState() {
 function createElementStub() {
     return {
         style: {},
+        hidden: false,
+        attributes: {},
         textContent: '',
         innerHTML: '',
         value: '',
@@ -41,8 +43,12 @@ function createElementStub() {
             remove() {},
             toggle() {}
         },
-        setAttribute(attribute) {
+        setAttribute(attribute, value) {
+            this.attributes[attribute] = value;
             this[attribute] = true;
+        },
+        getAttribute(attribute) {
+            return this.attributes[attribute] ?? null;
         },
         removeAttribute(attribute) {
             this[attribute] = false;
@@ -90,6 +96,7 @@ function createRuntimeContext(options = {}) {
         recipientSearchBirthDate: createElementStub(),
         recipientSearchPhone: createElementStub(),
         recipientSearchButton: createElementStub(),
+        recipientSearchStatus: createElementStub(),
         requesterSearchPostalCode: createElementStub(),
         requesterSearchHouseNumber: createElementStub(),
         requesterSearchQuery: createElementStub(),
@@ -99,6 +106,7 @@ function createRuntimeContext(options = {}) {
         requesterSearchBirthDate: createElementStub(),
         requesterSearchPhone: createElementStub(),
         requesterSearchButton: createElementStub(),
+        requesterSearchStatus: createElementStub(),
         requesterRoleDetails,
         requesterSameSummary,
         subIBAN: createElementStub(),
@@ -1205,6 +1213,8 @@ async function run() {
     testSameNumericIdDoesNotMergeSources();
     await testRoleSearchUsesLocalCustomersAndReportsNoResults();
     await testRoleSearchDiscardsStaleResponses();
+    await testRoleSearchPendingFeedbackTracksItsOwnRequest();
+    await testRoleSearchPendingFeedbackClearsOnInvalidation();
     await testRoleSearchFailureKeepsSelectionAndEdits();
     await testHydrationDiscardsObsoleteCustomerContext();
     testMarketingPreferencesFollowOnlyTheRecipient();
@@ -1378,6 +1388,88 @@ async function testRoleSearchDiscardsStaleResponses() {
         assert.equal(results.length, change === 'new-search' ? 1 : 0, change);
         if (change === 'new-search') assert.equal(results[0].id, 202);
         assert.equal(context.__toasts.length, 0, change);
+    }
+}
+
+
+async function testRoleSearchPendingFeedbackTracksItsOwnRequest() {
+    for (const role of ['recipient', 'requester']) {
+        const requests = [];
+        const { context, elements, runtime } = createRuntimeContext({
+            werfsleutelSelections: [{ selectedKey: { mandant: 'HMC' } }],
+            kiwiApi: { get: () => new Promise((resolve, reject) => requests.push({ resolve, reject })) }
+        });
+        const status = elements[`${role}SearchStatus`];
+        const button = elements[`${role}SearchButton`];
+        elements[`${role}SearchPostalCode`].value = '1234AB';
+        const first = runtime.searchSubscriptionRolePerson(role);
+        assert.equal(status.hidden, false);
+        assert.match(status.textContent, /Zoeken naar bestaande personen/);
+        assert.equal(button.getAttribute('aria-busy'), 'true');
+        assert.equal(button.disabled, false, 'another query remains possible');
+
+        elements[`${role}SearchPostalCode`].value = '2345BC';
+        const second = runtime.searchSubscriptionRolePerson(role);
+        assert.equal(requests.length, 2);
+        requests[0].reject(Error('Obsolete lookup failure'));
+        await first;
+        assert.equal(status.hidden, false, 'old completion cannot clear a newer pending cue');
+        assert.equal(button.getAttribute('aria-busy'), 'true');
+        assert.equal(context.__toasts.length, 0);
+        requests[1].resolve({ items: [{ ...signupCustomer, id: 202 }] });
+        await second;
+        assert.equal(status.hidden, true);
+        assert.equal(status.textContent, '');
+        assert.equal(button.getAttribute('aria-busy'), 'false');
+        assert.equal(context.subscriptionRoleState[role].searchResults[0].id, 202);
+
+        const edited = runtime.searchSubscriptionRolePerson(role);
+        elements[`${role}SearchPostalCode`].value = '3456CD';
+        requests[2].resolve({ items: [signupCustomer] });
+        await edited;
+        assert.equal(status.hidden, true, 'editing filters without another search still finishes the old cue');
+        assert.equal(button.getAttribute('aria-busy'), 'false');
+        assert.equal(context.subscriptionRoleState[role].searchResults.length, 0);
+
+        const failed = runtime.searchSubscriptionRolePerson(role);
+        requests[3].reject(Error('Current lookup failure'));
+        await failed;
+        assert.equal(status.hidden, true);
+        assert.equal(button.getAttribute('aria-busy'), 'false');
+        assert.equal(button.disabled, false);
+        assert.equal(context.__toasts.at(-1).message, 'Current lookup failure');
+    }
+}
+
+async function testRoleSearchPendingFeedbackClearsOnInvalidation() {
+    for (const change of ['reset', 'mode', 'scope', 'reuse', 'same-payer']) {
+        let complete;
+        const role = change === 'same-payer' ? 'requester' : 'recipient';
+        const selections = [{ selectedKey: { mandant: 'HMC' } }];
+        const { context, elements, runtime } = createRuntimeContext({
+            werfsleutelSelections: selections,
+            kiwiApi: { get: () => new Promise(resolve => { complete = resolve; }) }
+        });
+        context.currentCustomer = { ...signupCustomer };
+        elements[`${role}SearchPostalCode`].value = '1234AB';
+        const request = runtime.searchSubscriptionRolePerson(role);
+        assert.equal(elements[`${role}SearchStatus`].hidden, false);
+        if (change === 'reset') runtime.resetSubscriptionRoleState();
+        if (change === 'mode') runtime.setSubscriptionRoleMode(role, 'create');
+        if (change === 'scope') {
+            selections[0].selectedKey.mandant = 'KRONCRV';
+            context.dispatchEvent(new context.CustomEvent('kiwi:werfsleutel-selections-updated'));
+        }
+        if (change === 'reuse') runtime.useActiveCustomerForSubscriptionRole(role);
+        if (change === 'same-payer') {
+            elements.requesterSameAsRecipient.checked = true;
+            runtime.toggleRequesterSameAsRecipient();
+        }
+        assert.equal(elements[`${role}SearchStatus`].hidden, true, change);
+        assert.equal(elements[`${role}SearchButton`].getAttribute('aria-busy'), 'false', change);
+        complete({ items: [signupCustomer] });
+        await request;
+        assert.equal(elements[`${role}SearchStatus`].hidden, true, change);
     }
 }
 

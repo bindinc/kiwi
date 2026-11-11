@@ -587,6 +587,7 @@ const en = {
         "selectRecipientOrCreate": 'Select a recipient or choose "New person".',
         "selectRequesterOrCreate": 'Select an applicant/payer or choose "New person".',
         "createRequiresBackend": "Creating subscription requires backend API",
+        "submitting": "Adding request to the queue…",
         "createFailed": "Creating subscription via backend failed",
         "partiallyQueued": "{queued} request(s) queued, {failed} failed ({salesCodes}).",
         "multipleQueued": "{count} requests queued!",
