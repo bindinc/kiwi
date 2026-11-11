@@ -110,7 +110,15 @@ If a false positive is suspected, review the rule identifier and the sanitized p
 
 ## Validate changes to the guard
 
-Run the dependency-free hook tests:
+The complete hook suite requires Node.js, Git and trusted native `gofmt`.
+The Go-positive tests deliberately fail rather than skip when the formatter is
+missing. Check availability without executing candidate source:
+
+```bash
+node --input-type=module -e 'import { resolveGoFormatter } from "./.codex/hooks/secret-guard.mjs"; if (!resolveGoFormatter()) { console.error("Trusted native gofmt is required for the full hook suite"); process.exit(1); }'
+```
+
+Then run the complete hook tests:
 
 ```bash
 node --test tests/codex-hooks/secret-guard.test.mjs
