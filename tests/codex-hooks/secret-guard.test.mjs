@@ -4,6 +4,7 @@ import {
   mkdtempSync,
   mkdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -13,6 +14,10 @@ import test from "node:test";
 
 import {
   evaluateHook,
+  checkGoSyntax,
+  goFormatterCandidates,
+  resolveGoFormatter,
+  hasGoPackageClause,
   scanRepository,
   isForbiddenPath,
 } from "../../.codex/hooks/secret-guard.mjs";
@@ -318,6 +323,221 @@ function checkNewSource(source, filePath) {
 }
 
 const runtimeReference = ["source", "INTEGRATIONS_API_KEY"].join(".");
+const goReference = ["app", "config", "ClientSecret"].join(".");
+
+function goSource(value = goReference) {
+  return [
+    "package fixture",
+    'import "module-that-must-not-be-loaded"',
+    "func build() any {",
+    `return Config{ClientSecret: ${value},}`,
+    "}",
+  ].join("\n");
+}
+
+test("Go configuration selectors require real parser proof through hook JSON and patches", () => {
+  const source = goSource();
+  assert.deepEqual(checkNewSource(source, "auth.go"), {});
+  const result = runHookCli(preToolEvent(repositoryRoot, "apply_patch", {
+    command: newSourcePatch(source, "auth.go"),
+  }));
+  assert.equal(result.status, 0);
+  assert.deepEqual(JSON.parse(result.stdout), {});
+});
+
+test("Go selector proof retains exact position with Unicode and CRLF prefixes", () => {
+  for (const newline of ["\n", "\r\n"]) {
+    const source = "// Café 🙂" + newline + goSource().replaceAll("\n", newline);
+    assert.deepEqual(checkNewSource(source, "auth.go"), {});
+  }
+});
+
+test("Go literals, comments, raw strings and tags remain data", () => {
+  const assignment = `ClientSecret: ${goReference},`;
+  const sources = [
+    `package fixture\n// ${assignment}`,
+    `package fixture\n/*\n${assignment}\n*/`,
+    `package fixture\nvar text = "${assignment}"`,
+    `package fixture\nvar text = \`\n${assignment}\n\``,
+    `package fixture\ntype row struct { Value string \`${assignment}\` }`,
+    goSource(`"${goReference}"`),
+    goSource("\"" + "A".repeat(24) + "\""),
+  ];
+  for (const source of sources) assertAssignmentBlocked(checkNewSource(source, "auth.go"));
+});
+
+test("Go selector calls, indexing, concatenation and malformed source fail closed", () => {
+  for (const suffix of ["()", "[0]", ' + "suffix"', "...", ".(string)"]) {
+    assertAssignmentBlocked(checkNewSource(goSource(goReference + suffix), "auth.go"));
+  }
+  assertAssignmentBlocked(checkNewSource(goSource().slice(0, -2), "auth.go"));
+  assertAssignmentBlocked(checkNewSource(goSource(), "auth.txt"));
+  // Parenthesized values are outside the existing assignment matcher; this
+  // change must not pretend to reject them or invoke a syntax exception.
+  let checks = 0;
+  evaluateHook(preToolEvent(repositoryRoot, "apply_patch", {
+    command: newSourcePatch(goSource(`(${goReference})`), "auth.go"),
+  }), () => { checks += 1; return true; });
+  assert.equal(checks, 0);
+});
+
+test("Go shell, prompt, generic input and incomplete update transport remain strict", () => {
+  const source = goSource();
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "Bash", { command: source })));
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "unknown", { path: "auth.go", content: source })));
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "apply_patch", { command: [
+    "*** Begin Patch", "*** Update File: auth.go", "@@", ...source.split("\n").map((line) => "+" + line), "*** End Patch",
+  ].join("\n") })));
+  assert.equal(evaluateHook({ hook_event_name: "UserPromptSubmit", cwd: repositoryRoot, prompt: source }).decision, "block");
+});
+
+test("Go parser missing, timeout, crash, output errors and unknown diagnostics are uncertain", () => {
+  const failures = [
+    { error: new Error("ENOENT") }, { error: new Error("ETIMEDOUT"), signal: "SIGTERM" },
+    { signal: "SIGKILL" }, { error: new Error("ENOBUFS") },
+    { status: 2, stderr: "unexpected operational failure" },
+    { status: 0, stderr: "unexpected warning" }, { status: 1, stderr: "" },
+  ];
+  assert.equal(checkGoSyntax(goSource(), { remaining: 12 }, () => { throw new Error("must not run"); }, null), null);
+  for (const result of failures) {
+    assert.equal(checkGoSyntax(goSource(), { remaining: 12 }, () => result, "/trusted/gofmt"), null);
+    assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "apply_patch", {
+      command: newSourcePatch(goSource(), "auth.go"),
+    }), (source, budget) => checkGoSyntax(source, budget, () => result, "/trusted/gofmt")));
+  }
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "apply_patch", {
+    command: newSourcePatch(goSource(), "auth.go"),
+  }), (source, budget) => checkGoSyntax(source, budget, () => {}, null)));
+  assert.equal(checkGoSyntax(goSource(), { remaining: 0 }, () => { throw new Error("must not run"); }, "/trusted/gofmt"), null);
+});
+
+test("Go parser budget exhaustion retains SG007 and source contexts reset per file", () => {
+  const many = Array.from({ length: 15 }, (_, index) =>
+    `var config${index} = Config{ClientSecret: ${goReference},}`,
+  ).join("\n");
+  assertAssignmentBlocked(checkNewSource("package fixture\n" + many, "auth.go"));
+  const patch = [
+    "*** Begin Patch", "*** Add File: first.go",
+    ...goSource().split("\n").map((line) => "+" + line),
+    "*** Add File: second.go", "+package fixture", "+/*",
+    `+ClientSecret: ${goReference},`, "+*/", "*** End Patch",
+  ].join("\n");
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "apply_patch", { command: patch })));
+  const mixed = [
+    "*** Begin Patch", "*** Add File: first.mjs",
+    ...Array.from({ length: 6 }, (_, index) => `+const config${index} = { apiKey: ${runtimeReference} };`),
+    "*** Add File: second.go", "+package fixture",
+    ...Array.from({ length: 6 }, (_, index) => `+var config${index} = Config{ClientSecret: ${goReference},}`),
+    "*** End Patch",
+  ].join("\n");
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "apply_patch", { command: mixed })));
+});
+
+test("Go fragments without a package and multi-hunk update patches retain SG007", () => {
+  const assignment = `ClientSecret: ${goReference},`;
+  for (const fragment of [`var config = Config{${assignment}}`, `return Config{${assignment}}`, `config := Config{${assignment}}`]) {
+    assertAssignmentBlocked(checkNewSource(fragment, "auth.go"));
+  }
+  const command = ["*** Begin Patch", "*** Update File: auth.go", "@@", "+package fixture", "@@", `+var config = Config{${assignment}}`, "*** End Patch"].join("\n");
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "apply_patch", { command })));
+});
+
+test("Go process syntax classification is strict and subprocess boundaries are explicit", () => {
+  const result = checkGoSyntax("package fixture", { remaining: 1 }, (executable, args, options) => {
+    assert.equal(executable, "/trusted/gofmt");
+    assert.deepEqual(args, []);
+    assert.deepEqual(options.env, {});
+    assert.deepEqual(options.stdio, ["pipe", "ignore", "pipe"]);
+    assert.equal(options.timeout, 300);
+    assert.equal(options.killSignal, "SIGKILL");
+    assert.equal(options.maxBuffer, 65536);
+    return { status: 0, stderr: "" };
+  }, "/trusted/gofmt");
+  assert.equal(result, true);
+  const diagnostic = "<standard input>:4:30: illegal character U+0040 '@'\n";
+  assert.equal(checkGoSyntax("package fixture\nvar x = @", { remaining: 1 }, () => ({ status: 2, stderr: diagnostic }), "/trusted/gofmt"), false);
+});
+
+test("Go package precondition skips only leading BOM, whitespace and comments", () => {
+  const prefixes = ["", "\uFEFF", " \t\r\n", "// license\n", "/* license */\n//go:build linux\n\n"];
+  for (const prefix of prefixes) {
+    assert.equal(hasGoPackageClause(prefix + goSource()), true);
+    assert.deepEqual(checkNewSource(prefix + goSource(), "auth.go"), {});
+  }
+  for (const source of ['"package fixture"', '`package fixture`', "// package fixture", "/* package fixture */", "/* unterminated package fixture", "packageπ := Config{}", "var packageπ = Config{}"] ) {
+    assert.equal(hasGoPackageClause(source), false);
+  }
+  assertAssignmentBlocked(checkNewSource(`packageπ := Config{ClientSecret: ${goReference},}`, "auth.go"));
+});
+
+test("Go formatter resolution rejects wrappers, repository binaries and missing paths", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "kiwi-parser-resolution-"));
+  const native = path.join(directory, "gofmt");
+  const wrapper = path.join(directory, "wrapper");
+  const repository = path.join(directory, "repository");
+  mkdirSync(repository);
+  mkdirSync(path.join(repository, ".git"));
+  const local = path.join(repository, "gofmt");
+  const link = path.join(directory, "repository-link");
+  try {
+    const magic = Buffer.from([0x7f, 0x45, 0x4c, 0x46]);
+    writeFileSync(native, magic, { mode: 0o755 });
+    writeFileSync(local, magic, { mode: 0o755 });
+    writeFileSync(wrapper, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    symlinkSync(local, link);
+    assert.equal(resolveGoFormatter([native]), native);
+    assert.equal(resolveGoFormatter([wrapper, local, link, path.join(directory, "missing")]), null);
+    const previous = process.env.GOROOT;
+    try {
+      process.env.GOROOT = "relative-toolchain";
+      assert.deepEqual(goFormatterCandidates(), ["/usr/local/go/bin/gofmt", "/usr/bin/gofmt"]);
+      process.env.GOROOT = directory;
+      assert.equal(goFormatterCandidates()[0], path.join(directory, "bin/gofmt"));
+    } finally {
+      if (previous === undefined) delete process.env.GOROOT;
+      else process.env.GOROOT = previous;
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("unknown modified Go syntax and oversized input cannot grant a transport exception", () => {
+  let checks = 0;
+  assertAssignmentBlocked(evaluateHook(preToolEvent(repositoryRoot, "apply_patch", {
+    command: newSourcePatch(goSource(), "auth.go"),
+  }), () => ++checks === 1 ? true : null));
+  assert.equal(checks, 2);
+  assert.equal(checkGoSyntax("x".repeat(8 * 1024 * 1024 + 1), { remaining: 12 }, () => { throw new Error("must not run"); }, "/trusted/gofmt"), null);
+});
+
+test("unknown Go parser outcomes retain SG007 through repository scan policy", () => {
+  const fixture = createRepository();
+  try {
+    writeFileSync(path.join(fixture.repository, "auth.go"), goSource());
+    runGit(fixture.repository, ["add", "auth.go"]);
+    for (const initialValid of [false, true]) {
+      let checks = 0;
+      const findings = scanRepository(fixture.repository, {
+        remaining: 12,
+        checkGoSyntax() { return initialValid && ++checks === 1 ? true : null; },
+      });
+      assert.equal(findings.some((item) => item.ruleId === "SG007-credential-assignment"), true);
+    }
+  } finally { fixture.cleanup(); }
+});
+
+test("Go repository scans prove complete staged, committed and unstaged source", () => {
+  const fixture = createRepository();
+  try {
+    writeFileSync(path.join(fixture.repository, "auth.go"), goSource());
+    runGit(fixture.repository, ["add", "auth.go"]);
+    assert.deepEqual(scanRepository(fixture.repository), []);
+    runGit(fixture.repository, ["commit", "-m", "Add Go configuration reference"]);
+    assert.deepEqual(scanRepository(fixture.repository), []);
+    runGit(fixture.repository, ["push"]);
+    writeFileSync(path.join(fixture.repository, "auth.go"), "// Café 🙂\n" + goSource());
+    assert.deepEqual(scanRepository(fixture.repository), []);
+  } finally { fixture.cleanup(); }
+});
 
 function assertAssignmentBlocked(result) {
   assert.equal(result.hookSpecificOutput.permissionDecision, "deny");

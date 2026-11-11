@@ -1,7 +1,7 @@
 # Go reference recognition in the secret guard
 
 Story: [SC-206963](https://app.shortcut.com/bindincit/story/206963).
-Status: draft implementation scope; no hook activation or merge is authorized.
+Status: implemented for review; no hook activation or merge is authorized.
 
 The targeted change extends SG007's existing syntax-proof approach to complete
 Go source. A candidate must be an unquoted pure selector expression with an
@@ -11,17 +11,19 @@ replaced by an invalid token. Matching a dotted spelling or a .go filename is
 insufficient. This proves source-code position, not a configuration field's type
 or ownership. It does not execute candidate code, load its imports or type-check.
 
-The proposed checker is the Go toolchain's standalone gofmt executable, with
+The checker is the Go toolchain's standalone gofmt executable, with
 bounded input, output, time and per-hook checks. Missing checker, parse failure,
 process errors, signals, exhausted budget or uncertain outcomes retain SG007.
 Prompts, Bash, generic tool input and incomplete update patches remain strict.
 Other secret rules retain their independent findings.
 
-Tests will exercise actual hook JSON/CLI and patch processing, complete
+Tests exercise actual hook JSON/CLI and patch processing, complete
 repository diffs and negative literal/comment/raw-string/ambiguous cases. CI
 must explicitly install/check the public parser toolchain and execute the hook
 tests; Go-positive tests must not silently skip when the parser is missing.
-Missing/error/timeout behavior requires deterministic tests too.
+Missing/error/timeout behavior has deterministic policy tests too. See the
+[operating guide](../how-to/use-codex-secret-guard.md#runtime-references-in-go)
+for trusted executable resolution, limits and the separate adoption gate.
 
 Implementation occurs only in this dedicated feature worktree. The loaded main
 checkout, its hook/configuration and trust state remain unchanged. Review,
