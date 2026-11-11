@@ -12,6 +12,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
+- Align article ordering with the Light & Shadow workspace hierarchy while preserving catalog, cart, pricing, coupon, payment, delivery and draft behavior (`theme_audit` slice 06). [sc-206629]
+
 - Align subscription creation with the Light & Shadow workflow hierarchy and clear request progress, while preserving product, recipient, payer, payment, consent and draft behavior (`theme_audit` slice 05). [sc-206629]
 
 - Align customer search, result rows, record sections and shared editor/address presentation with the Light & Shadow showcase, including clear secondary actions, continuous table separators and stable filter insets; serialize pseudonymized screenshot form values while preserving identities, permissions and drafts (`theme_audit` slice 04). [sc-206629]

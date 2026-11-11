@@ -2,7 +2,21 @@
 
 Audit marker: theme_audit
 
-Status: planned; documentation only. See the [audit index](../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries. Deliver this slice as one future implementation PR with its own worktree and changelog entry.
+Status: started; application unchanged, fresh source-bound before captures and implementation orientation pending. See the [audit index](../../plans/theme_audit.md) for baseline, sequencing and evidence boundaries.
+
+## Implementation record
+
+- Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629).
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-article-workspace`.
+- Branch: `codex/align-theme-article-workspace`.
+- Base: accepted slice 05 `ad68a3145ce242c77e35fe66f74e65e4f062f587`; final CI `43028159036` and independent completion pass. Stack on `codex/align-theme-subscription-workflow` while draft #148 remains unmerged, as permitted by the sequential workflow.
+- PR: initialized immediately after the documentation scaffold is pushed; English title/text and one Unreleased entry. No merge, deployment or cleanup is authorized.
+- Evidence root: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-11/slice-06/`, outside Git.
+- Ownership: one application writer for article-only styles/template/generated markup; independent read-only review; slice 10 owner for Compose/browser evidence and reusable tooling. Root owns this document, index, changelog and PR.
+- Direction: make the complete recipient/catalog/cart/total context clear before committing an order, using compact flat sections and stable action placement. Preserve actual pricing, coupons, delivery calendar, identities, payment, drafts and validation.
+- Existing inherited primitives and historical findings require current-source confirmation. Shared payment radios and recipient labels may already be fixed; do not reapply old defects without verifying the actual current source.
+
+
 
 ## Purpose and dependencies
 
