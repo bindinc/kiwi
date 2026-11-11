@@ -2,7 +2,19 @@
 
 Audit marker: theme_audit
 
-Status: planned; documentation only. See the [audit index](../../../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries. This slice is one future implementation PR, with its own worktree and changelog entry.
+Status: started; application unchanged pending actual before captures and focused orientation. See the [audit index](../../../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries.
+
+## Implementation record
+
+- Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629).
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-subscription-workflow`.
+- Branch: `codex/align-theme-subscription-workflow`.
+- Base: accepted slice 04 `1c76db9661b177eef6363f365d9d04d68421ded6`, [PR #147](https://github.com/bindinc/kiwi/pull/147), still open at start. This PR stacks on its branch; no merge or deployment is performed.
+- Slice 04 source, visual, interaction and completion reviews passed; final Actions [43005522519](https://github.com/bindinc/kiwi/actions/runs/43005522519) succeeded.
+- PR: created after this scaffold is pushed; English text and one Unreleased changelog entry.
+- Evidence root: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-11/slice-05/`, outside Git. Actual application, intercepted fixtures and reference captures must remain distinguishable.
+- Ownership: one application writer; independent review; slice 10 owner supplies Compose before/reference/after, keyboard and native-zoom validation. Parent owns this document, index, changelog and PR.
+- Inherited fixes are retained: keyboard-operable payment choices from 02, shared person/address and safe screenshot serialization from 04. Historical findings below require current-source confirmation rather than reapplying already completed fixes.
 
 ## Purpose and dependencies
 
