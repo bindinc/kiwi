@@ -32,6 +32,19 @@ The slice 02 actual component probe at `c12b7fe` confirms canonical caption/fiel
 
 Evidence is retained under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-02/c12b7fe/`; the standalone-field reports and screenshots distinguish the 260 passing type/geometry/draft/source checks per engine from these explicit containment observations. Do not mark this gate complete from those counts alone.
 
+## Explicit backdrop decision — 2026-11-11
+
+The user requires the background used by **New subscription** to become the shared backdrop for ordinary overlays. Opening contextual feedback currently looks substantially less transparent than opening New subscription or feedback settings. This is an explicit slice 08 acceptance requirement; implementation remains sequential after slices 04–07.
+
+The current application source shows the chosen live New subscription form/lightbox reference and generic modal using `--overlay-backdrop` (`rgba(15, 23, 42, 0.5)`). Contextual feedback instead uses alpha `0.86` plus `blur(14px)`, and feedback settings uses alpha `0.72`. The feedback dialog also currently activates `body.contextual-feedback-reviewing` as soon as it opens, adding another blur/opacity reduction before any screenshot exists. The user-selected live component establishes alpha `0.5` as the explicit application target when comparing the showcase's separate dialog specimen (alpha `0.4`).
+
+- Use the existing shared New subscription backdrop token for ordinary forms, dialogs, feedback without a screenshot, feedback settings and other modal surfaces. Avoid stacking an additional native-dialog veil; the form lightbox's existing transparent `::backdrop` remains relevant.
+- Ordinary opening must show the same background transparency and sharpness. Replacing the RGBA declaration alone is insufficient while an extra body filter, opacity or backdrop blur still makes feedback appear darker.
+- Preserve the separately required screenshot-review privacy shield when an image is actually under review. Scope that state to actual review, clear it on close/removal/suspension as appropriate, and restore it when returning to a retained image. Capture redaction, pseudonymization, selected-element privacy and original/restricted routing remain protected.
+- The element picker's selection veil, menus and popovers have distinct interaction roles; inspect them in context rather than adding the modal backdrop to ordinary floating content.
+
+Required proof: compare equivalent New subscription, feedback initial form, feedback settings and representative generic/native dialogs against the same actual underlying screen in Chromium and Firefox at desktop/narrow widths. Check the shared computed token and actual unobscured background pixels/blur, then independently verify image-review shielding, capture suspension, close/reopen/draft retention and unchanged-threshold privacy. Keep the `theme_audit` marker and record resulting PR/evidence here before acceptance.
+
 ## Bounded implementation
 
 1. Establish shared dialog header/body/footer spacing, type, borders and control dimensions. Use restrained elevation to express the overlay layer; ordinary form sections inside the dialog remain flat.

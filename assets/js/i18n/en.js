@@ -19,6 +19,11 @@ const en = {
         "userRolesHeading": "Your roles",
         "noRolesFound": "No roles found in the token."
     },
+    "customerRecord": {
+        "addressLabel": "Address",
+        "emailLabel": "Email",
+        "phoneLabel": "Phone"
+    },
     "indexHtml": {
         "text": {
             "1_jaar_4_50_per_maand_54_00_totaal_de4286b1": "1 year - €4.50 per month (€54.00 total)",
@@ -47,7 +52,7 @@ const en = {
             "abonnement_overzetten_04a00045": "🔄 Transfer Subscription",
             "abonnement_overzetten_51f8b366": "Transfer Subscription",
             "abonnementen_b91a0645": "Subscriptions",
-            "abonnementen_ba5e4d7c": "📰 Subscriptions",
+            "abonnementen_ba5e4d7c": "Subscriptions",
             "abonnementen_bij_overlijden_3e1b91b0": "Subscriptions upon Death",
             "abonnementsgegevens_dc22841d": "Subscription information",
             "subStartDate_ce0234ea": "Start date",
@@ -82,7 +87,7 @@ const en = {
             "artikel_verkoop_89f9bcc6": "Item sales",
             "artikel_verkoop_baa29866": "🛒 Item Sales",
             "artikel_verkoop_d7a4b513": "Item Sales",
-            "artikelen_170a4739": "🛒 Articles",
+            "artikelen_170a4739": "Articles",
             "artikelgegevens_7dec9fbd": "Item details",
             "automatisch_incasso_fd971b7d": "Direct debit",
             "avrobode_3f526f55": "Avrobode",

@@ -7,7 +7,9 @@ function createDelegatedEvent(actionElement, eventType, overrides = {}) {
     return {
         type: eventType,
         key: overrides.key,
+        keyCode: overrides.keyCode,
         target: {
+            tagName: overrides.targetTagName,
             closest(selector) {
                 if (selector === '[data-action]') {
                     return actionElement;
@@ -118,7 +120,7 @@ function testSubscriptionRoleSliceDispatchesRuntimeMethods() {
                 action: 'search-subscription-role-person-keypress',
                 argRole: 'recipient'
             }
-        }, 'keydown', { key: 'Enter' }));
+        }, 'keydown', { key: 'Enter', targetTagName: 'INPUT' }));
 
         listeners.click(createDelegatedEvent({
             dataset: {
@@ -204,9 +206,77 @@ function testSubscriptionRoleSliceDispatchesRuntimeMethods() {
     }
 }
 
+function testSearchShortcutOnlyHandlesEnterFromInputs() {
+    const previousRuntime = globalThis.kiwiSubscriptionRoleRuntime;
+    const searchedRoles = [];
+    globalThis.kiwiSubscriptionRoleRuntime = {
+        searchSubscriptionRolePerson: role => searchedRoles.push(role)
+    };
+
+    try {
+        const { listeners } = createActionRouterHarness();
+        for (const role of ['recipient', 'requester']) {
+            const wrapper = { tagName: 'DIV', dataset: {
+                action: 'search-subscription-role-person-keypress', actionEvent: 'keydown', argRole: role
+            } };
+            for (const key of [{ key: 'Enter' }, { keyCode: 13 }]) {
+                let prevented = 0;
+                const callsBefore = searchedRoles.length;
+                listeners.keydown(createDelegatedEvent(wrapper, 'keydown', {
+                    ...key, targetTagName: 'INPUT', preventDefault: () => prevented++
+                }));
+                assert.deepEqual(searchedRoles.slice(callsBefore), [role]);
+                assert.equal(prevented, 1);
+            }
+
+            for (const tagName of ['SUMMARY', 'BUTTON', 'SELECT', 'TEXTAREA', 'DIV']) {
+                for (const key of ['Enter', ' ']) {
+                    let prevented = 0;
+                    const callsBefore = searchedRoles.length;
+                    listeners.keydown(createDelegatedEvent(wrapper, 'keydown', {
+                        key, targetTagName: tagName, preventDefault: () => prevented++
+                    }));
+                    assert.equal(prevented, 0, `${role} ${tagName} ${key} retains native behavior`);
+                    assert.equal(searchedRoles.length, callsBefore);
+                }
+            }
+
+            const searchButton = { tagName: 'BUTTON', dataset: {
+                action: 'search-subscription-role-person', argRole: role
+            } };
+            let buttonPrevented = 0;
+            const callsBeforeButton = searchedRoles.length;
+            listeners.keydown(createDelegatedEvent(searchButton, 'keydown', {
+                key: 'Enter', targetTagName: 'BUTTON', preventDefault: () => buttonPrevented++
+            }));
+            assert.equal(buttonPrevented, 0);
+            assert.equal(searchedRoles.length, callsBeforeButton);
+            listeners.click(createDelegatedEvent(searchButton, 'click', { targetTagName: 'BUTTON' }));
+            assert.deepEqual(searchedRoles.slice(callsBeforeButton), [role]);
+
+            for (const key of ['Tab', ' ', 'Escape']) {
+                let prevented = 0;
+                const callsBefore = searchedRoles.length;
+                listeners.keydown(createDelegatedEvent(wrapper, 'keydown', {
+                    key, targetTagName: 'INPUT', preventDefault: () => prevented++
+                }));
+                assert.equal(prevented, 0);
+                assert.equal(searchedRoles.length, callsBefore);
+            }
+        }
+    } finally {
+        if (previousRuntime === undefined) {
+            delete globalThis.kiwiSubscriptionRoleRuntime;
+        } else {
+            globalThis.kiwiSubscriptionRoleRuntime = previousRuntime;
+        }
+    }
+}
+
 function run() {
     testSubscriptionRoleSliceRegistersExpectedActions();
     testSubscriptionRoleSliceDispatchesRuntimeMethods();
+    testSearchShortcutOnlyHandlesEnterFromInputs();
     console.log('subscription role slice tests passed');
 }
 

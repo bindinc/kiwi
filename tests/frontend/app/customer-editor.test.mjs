@@ -93,3 +93,94 @@ test('retained customer editors keep section labels bound to their own controls'
         }
     } finally { globalThis.document = previousDocument; }
 });
+
+test('retained editors isolate heading, feedback and address IDs across credentials without losing drafts', async () => {
+    const previousDocument = globalThis.document;
+    globalThis.document = createEditorDocument();
+    let reads = 0;
+    const customer = { personId: 'private/person', credentialKey: 'private-source-one', lastName: 'Sentinel Name' };
+    const options = {
+        api: { async get() {
+            reads++;
+            return {
+                version: 'retained-version',
+                capabilities: { roleCanWrite: true, operations: { 'address.update': { enabled: true } } },
+                sections: { address: [{ id: 'opaque-address', fields: { postCode: '1234AB', housenumber: '7', street: 'First street', city: 'City', isoCountryCode: 'NL' } }] }
+            };
+        } }, refresh() {}
+    };
+    function addressSelector(dialog) { return dialog.querySelectorAll('select')[1]; }
+    function ids(dialog) {
+        return ['h2', 'p', 'input'].flatMap(tag => dialog.querySelectorAll(tag).map(node => node.id).filter(Boolean));
+    }
+    try {
+        await openCustomerEditor(customer, options);
+        const first = document.body.children[0];
+        addressSelector(first).value = '0'; addressSelector(first).emit('change');
+        const firstIds = ids(first);
+        const address = first.querySelector('[data-address-prefix]');
+        const firstPrefix = address.getAttribute('data-address-prefix');
+        assert.match(firstPrefix, /^[A-Za-z][A-Za-z0-9]*$/);
+        const postalCode = first.querySelector(`#${firstPrefix}PostalCode`);
+        assert.equal(postalCode.value, '1234AB', 'the editor queries its own rendered address prefix');
+        postalCode.value = '9876ZY';
+        first.close();
+        await openCustomerEditor({ ...customer, credentialKey: 'private-source-two' }, options);
+        const second = document.body.children[1];
+        addressSelector(second).value = '0'; addressSelector(second).emit('change');
+        const secondIds = ids(second);
+        assert.equal(new Set([...firstIds, ...secondIds]).size, firstIds.length + secondIds.length);
+        for (const dialog of [first, second]) {
+            assert.equal(dialog.querySelector(`#${dialog.getAttribute('aria-labelledby')}`).tag, 'h2');
+            for (const label of dialog.querySelectorAll('label')) {
+                const target = label.getAttribute('for');
+                if (target) assert.equal(dialog.querySelector(`#${target}`).tag, 'input', 'address labels resolve inside their own dialog');
+            }
+            for (const input of dialog.querySelectorAll('input')) {
+                const feedbackId = input.getAttribute('aria-describedby');
+                assert.ok(dialog.querySelector(`#${feedbackId}`), 'feedback resolves in the same dialog');
+            }
+            assert.ok(ids(dialog).every(id => !id.includes('private')));
+        }
+        second.close();
+        await openCustomerEditor(customer, options);
+        assert.equal(first.open, true);
+        assert.deepEqual(ids(first), firstIds);
+        assert.equal(postalCode.value, '9876ZY');
+        assert.equal(reads, 2, 'reopening a retained editor must not issue another read');
+        assert.equal(first.querySelector('[data-address-prefix]').getAttribute('data-address-prefix'), firstPrefix);
+        addressSelector(first).value = ''; addressSelector(first).emit('change');
+        addressSelector(first).value = '0'; addressSelector(first).emit('change');
+        assert.equal(first.querySelector('[data-address-prefix]').getAttribute('data-address-prefix'), firstPrefix, 'section changes retain address session ownership');
+        const { resetLightboxDrafts } = await import('../../../assets/js/app/lightbox-drafts.js');
+        resetLightboxDrafts(document);
+        await openCustomerEditor(customer, options);
+        const fresh = document.body.children[0];
+        addressSelector(fresh).value = '0'; addressSelector(fresh).emit('change');
+        assert.notEqual(fresh.querySelector('[data-address-prefix]').getAttribute('data-address-prefix'), firstPrefix);
+        assert.equal(reads, 3, 'reset starts a fresh model with a new address ownership key');
+    } finally { globalThis.document = previousDocument; }
+});
+
+test('editor marks data-bearing context and options while retaining public source and selection prompts', async () => {
+    const previousDocument = globalThis.document;
+    globalThis.document = createEditorDocument();
+    try {
+        await openCustomerEditor({ id: 'private-reference', credentialKey: 'test', lastName: 'Sentinel Name', mandant: 'Public source' }, {
+            api: { async get() { return { capabilities: { operations: {} }, version: null, sections: {
+                phone: [{ id: 'phone', fields: { areaCode: '020', number: '1234567' } }],
+                person: [{ id: 'person', fields: { firstName: 'Sentinel Name' } }]
+            } }; } }, refresh() {}
+        });
+        const dialog = document.body.children[0];
+        assert.equal(dialog.querySelectorAll('h2')[0].getAttribute('data-feedback-public'), '');
+        const spans = dialog.querySelectorAll('span');
+        assert.equal(spans.find(node => node.textContent === 'Sentinel Name').getAttribute('data-feedback-sensitive'), 'name');
+        assert.equal(spans.find(node => node.textContent === 'private-reference').getAttribute('data-feedback-sensitive'), 'id');
+        assert.equal(spans.find(node => node.textContent === 'Public source').getAttribute('data-feedback-public'), '');
+        const options = dialog.querySelectorAll('option');
+        assert.equal(options.find(node => node.textContent === '020 · 1234567').getAttribute('data-feedback-sensitive'), 'phone');
+        assert.ok(options.filter(node => node.value === '').every(node => node.getAttribute('data-feedback-sensitive') === null && node.getAttribute('data-feedback-public') === ''));
+        assert.ok(dialog.querySelectorAll('p').filter(node => node.getAttribute('role') === 'status').every(node => node.getAttribute('data-feedback-public') === ''), 'fixed status copy remains public during pseudonymization');
+    } finally { globalThis.document = previousDocument; }
+});

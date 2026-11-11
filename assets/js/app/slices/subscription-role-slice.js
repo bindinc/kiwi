@@ -54,7 +54,8 @@ export function registerSubscriptionRoleSlice(actionRouter, options = {}) {
 
             const event = context && context.event ? context.event : null;
             const pressedEnter = event && (event.key === 'Enter' || event.keyCode === 13);
-            if (!pressedEnter) {
+            const isSearchInput = event?.target?.tagName === 'INPUT';
+            if (!pressedEnter || !isSearchInput) {
                 return;
             }
 

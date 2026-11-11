@@ -1,6 +1,7 @@
 import domToImage from 'https://cdn.jsdelivr.net/npm/dom-to-image-more@3.10.1/+esm';
 import { createPseudonymContext, pseudonymizeScreenshotClone, pseudonymizeSelectedElement } from './screenshot-redaction.js';
 import { calculateCanvasCrop } from './screenshot-crop.js';
+import { copyScreenshotFormState, serializeScreenshotFormState } from './screenshot-form-state.js';
 import { feedbackText } from './i18n.js';
 
 export async function captureElementScreenshot({
@@ -278,7 +279,12 @@ function createRenderOptions({
             resources.addFailure();
         },
         adjustClonedNode(originalNode, clonedNode, after) {
-            if (after || originalNode?.nodeType !== 1 || clonedNode?.nodeType !== 1) {
+            if (originalNode?.nodeType !== 1 || clonedNode?.nodeType !== 1) {
+                return clonedNode;
+            }
+
+            if (after) {
+                copyScreenshotFormState(originalNode, clonedNode);
                 return clonedNode;
             }
 
@@ -298,6 +304,7 @@ function createRenderOptions({
             if (pseudonymizeText) {
                 pseudonymizeScreenshotClone(clonedRoot, context);
             }
+            serializeScreenshotFormState(clonedRoot);
         }
     };
 }

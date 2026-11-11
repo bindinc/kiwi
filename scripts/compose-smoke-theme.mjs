@@ -112,11 +112,11 @@ async function inspectPresentationFixture(page) {
             <h2>Theme diagnostic fixture — synthetic presentation states</h2>
             <p>No active call or queued customer change is represented here.</p>
             <button type="button" class="btn btn-primary">Example primary action</button>
-            <button type="button" class="btn btn-secondary">Example secondary action</button>
+            <button type="button" class="btn btn-secondary" data-theme-example="secondary">Example secondary action</button>
             <button type="button" class="channel-chip"><span class="channel-code">TEST</span><span class="channel-label">Example channel</span></button>
             <button type="button" class="werfsleutel-suggestion"><span class="code">TEST</span><span class="title">Example offer</span></button>
             <div class="subscription-item subscription-ended"><div class="subscription-info"><div class="subscription-name">Example ended subscription</div><div class="subscription-details">Ended — diagnostic state</div></div></div>
-            <button type="button" class="btn-winback">Example winback action</button>
+            <button type="button" class="btn btn-small btn-secondary btn-winback">Example winback action</button>
             <div class="search-summary"><div class="summary-badge">✓ Example search summary</div></div>
             <div class="header" style="position:static;height:auto;padding:0;background-image:none">
                 <div class="session-info"><div class="session-info-content"><span class="session-caller">Example active call</span><span class="recording-indicator"><span class="rec-text">REC — example</span></span><button type="button" class="btn-hold-call">Hold example</button><button type="button" class="btn-end-call">End example</button></div></div>
@@ -136,7 +136,7 @@ async function inspectPresentationFixture(page) {
         } finally {
             await page.mouse.up();
         }
-        const secondary = `${root} .btn-secondary`;
+        const secondary = `${root} [data-theme-example="secondary"]`;
         await assertStyle(page, secondary, 'backgroundColor', 'rgb(255, 255, 255)');
         await assertStyle(page, secondary, 'color', 'rgb(117, 111, 107)');
         await assertStyle(page, secondary, 'borderTopColor', 'rgb(117, 111, 107)');
@@ -153,7 +153,7 @@ async function inspectPresentationFixture(page) {
     }
     await assertStyle(page, `${root} .subscription-ended`, 'opacity', '1');
     await assertContrast(page, `${root} .subscription-details`, `${root} .subscription-ended`);
-    await assertStyle(page, `${root} .btn-winback`, 'borderTopColor', 'rgb(15, 23, 42)');
+    await assertStyle(page, `${root} .btn-winback`, 'borderTopColor', 'rgb(117, 111, 107)');
     await assertContrast(page, `${root} .btn-winback`, `${root} .btn-winback`);
     await assertContrast(page, `${root} .btn-winback`, `${root} .btn-winback`, 3, 'borderTopColor');
     await assertStyle(page, `${root} .summary-badge`, 'color', 'rgb(22, 101, 52)');

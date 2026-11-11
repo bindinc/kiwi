@@ -19,6 +19,11 @@ const nl = {
         "userRolesHeading": "Jouw rollen",
         "noRolesFound": "Geen rollen gevonden in het token."
     },
+    "customerRecord": {
+        "addressLabel": "Adres",
+        "emailLabel": "E-mail",
+        "phoneLabel": "Telefoon"
+    },
     "indexHtml": {
         "text": {
             "1_jaar_4_50_per_maand_54_00_totaal_de4286b1": "1 jaar - €4,50 per maand (€54,00 totaal)",
@@ -47,7 +52,7 @@ const nl = {
             "abonnement_overzetten_04a00045": "🔄 Abonnement Overzetten",
             "abonnement_overzetten_51f8b366": "Abonnement Overzetten",
             "abonnementen_b91a0645": "Abonnementen",
-            "abonnementen_ba5e4d7c": "📰 Abonnementen",
+            "abonnementen_ba5e4d7c": "Abonnementen",
             "abonnementen_bij_overlijden_3e1b91b0": "Abonnementen bij Overlijden",
             "abonnementsgegevens_dc22841d": "Abonnementsgegevens",
             "subStartDate_ce0234ea": "Start datum",
@@ -82,7 +87,7 @@ const nl = {
             "artikel_verkoop_89f9bcc6": "Artikel verkoop",
             "artikel_verkoop_baa29866": "🛒 Artikel Verkoop",
             "artikel_verkoop_d7a4b513": "Artikel Verkoop",
-            "artikelen_170a4739": "🛒 Artikelen",
+            "artikelen_170a4739": "Artikelen",
             "artikelgegevens_7dec9fbd": "Artikelgegevens",
             "automatisch_incasso_fd971b7d": "Automatische incasso",
             "avrobode_3f526f55": "Avrobode",

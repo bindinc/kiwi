@@ -97,7 +97,8 @@ async function runSmokeScenario(page) {
     await page.click('[data-feedback-add-screenshot]');
     await page.waitForSelector('.contextual-feedback-picker-overlay', { timeout: 10000 });
     await assertDialogIsSuspendedDuringCapture(page);
-    await page.mouse.click(targetBox.x + 4, targetBox.y + targetBox.height - 4);
+    const pickerPoint = await findExactPickerTargetPoint(target);
+    await page.mouse.click(pickerPoint.x, pickerPoint.y);
     await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
 
     const retainedComment = await page.inputValue('textarea[name="comment"]');
@@ -382,6 +383,34 @@ async function waitForCustomerCaptureReady(page) {
         state.previousBounds = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
         return state.stableFrames >= 2;
     }, { previousBounds: null, stableFrames: 0 }, { polling: 'raf', timeout: 10000 });
+}
+
+async function findExactPickerTargetPoint(target) {
+    const proof = await target.evaluate(async (element) => {
+        const resource = performance.getEntriesByType('resource').find((entry) => {
+            const url = new URL(entry.name);
+            return url.origin === location.origin
+                && /\/contextual-feedback\/element-picker(?:-[^/]+)?\.js$/.test(url.pathname);
+        });
+        if (!resource) throw new Error('The loaded production element picker was not found.');
+        const { findPickableElement } = await import(resource.name);
+        const bounds = element.getBoundingClientRect();
+        if (bounds.width <= 0 || bounds.height <= 0) throw new Error('The requested capture target is not rendered.');
+        // Nested data regions can fill the interior; select the requested element's own edge.
+        const candidates = [
+            { x: bounds.x + bounds.width / 2, y: bounds.bottom - 0.5 },
+            { x: bounds.x + bounds.width / 2, y: bounds.y + 0.5 },
+            { x: bounds.x + 0.5, y: bounds.y + bounds.height / 2 },
+            { x: bounds.right - 0.5, y: bounds.y + bounds.height / 2 }
+        ];
+        const point = candidates.find(({ x, y }) => x >= 0 && y >= 0
+            && x < innerWidth && y < innerHeight && findPickableElement(document, x, y) === element);
+        if (!point) throw new Error('No pointer point selects the exact requested capture target.');
+        return { point, tag: element.tagName, className: element.className,
+            width: bounds.width, height: bounds.height, pickerPath: new URL(resource.name).pathname };
+    });
+    console.log(`[compose-smoke-feedback-privacy] Exact picker target: ${JSON.stringify(proof)}`);
+    return proof.point;
 }
 
 async function captureCustomArea(page, targetBox) {

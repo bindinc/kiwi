@@ -10,6 +10,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
+- Align customer search, result rows, record sections and shared editor/address presentation with the Light & Shadow showcase, including clear secondary actions, continuous table separators and stable filter insets; serialize pseudonymized screenshot form values while preserving identities, permissions and drafts (`theme_audit` slice 04). [sc-206629]
+
 - Align the application shell, workspace rails, session context and profile navigation with the Light & Shadow showcase while preserving customer identity, permissions and operational behavior (`theme_audit` slice 03). [sc-206629]
 
 - Align shared native controls, persistent labels and primary, outlined secondary, compact, icon and danger actions with the showcase while restoring keyboard-operable payment choices and preventing navigation keys from activating native button actions (`theme_audit` slice 02). [sc-206629]

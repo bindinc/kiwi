@@ -7,9 +7,11 @@ import {
 import {
     auditPseudonymizedClone,
     createPseudonymContext,
+    pseudonymizeScreenshotClone,
     pseudonymizeSelectedElement,
     redactScreenshotDom
 } from '../../../../assets/js/app/contextual-feedback/screenshot-redaction.js';
+import { copyScreenshotFormState, serializeScreenshotFormState } from '../../../../assets/js/app/contextual-feedback/screenshot-form-state.js';
 
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
@@ -54,6 +56,22 @@ class FakeElement {
 
     getAttribute(name) {
         return Object.hasOwn(this.attributes, name) ? this.attributes[name] : null;
+    }
+
+    setAttribute(name, value) {
+        this.attributes[name] = String(value);
+    }
+
+    toggleAttribute(name, enabled) {
+        if (enabled) {
+            this.attributes[name] = '';
+        } else {
+            delete this.attributes[name];
+        }
+    }
+
+    get options() {
+        return this.querySelectorAll('*').filter(element => element.tagName === 'OPTION');
     }
 
     querySelectorAll(selector) {
@@ -128,6 +146,88 @@ function testSensitiveTextIsPseudonymizedAndRestored() {
 
     assert.equal(customerName.nodeValue, 'Jane Sensitive');
 }
+
+function serializeFormMarkup(element) {
+    if (element.nodeType === TEXT_NODE) {
+        return element.nodeValue;
+    }
+
+    const attributes = Object.entries(element.attributes).map(([name, value]) => ` ${name}="${value}"`).join('');
+    return `<${element.tagName}${attributes}>${element.childNodes.map(serializeFormMarkup).join('')}</${element.tagName}>`;
+}
+
+function testCloneFormStateSurvivesSerializationWithoutChangingLiveDraft() {
+    const input = new FakeElement('input', { value: 'Saved Synthetic', 'data-feedback-sensitive': 'name' }, { value: 'Current Synthetic' });
+    const textarea = new FakeElement('textarea', { 'data-feedback-sensitive': 'free-text' }, {
+        value: 'Current private draft', children: [new FakeText('Saved private note')]
+    });
+    const checkbox = new FakeElement('input', { type: 'checkbox', checked: '' }, { checked: true });
+    const select = new FakeElement('select', { 'data-feedback-sensitive': 'name' }, { children: [
+        new FakeElement('option', { value: '' }, { selected: false, children: [new FakeText('Choose')] }),
+        new FakeElement('option', { value: 'resource-1' }, { selected: true, children: [new FakeText('Current Synthetic')] })
+    ] });
+    const publicCopy = new FakeElement('span', { 'data-feedback-public': '' }, { children: [new FakeText('Publication title')] });
+    const live = new FakeElement('section', {}, { children: [input, textarea, checkbox, select, publicCopy] });
+    const state = root => [root, ...root.querySelectorAll('*')].map(element => ({
+        markup: serializeFormMarkup(element), value: element.value, checked: element.checked,
+        selected: element.selected, indeterminate: element.indeterminate
+    }));
+    const before = state(live);
+    const cloneTree = element => element.nodeType === TEXT_NODE ? new FakeText(element.nodeValue)
+        : new FakeElement(element.tagName, { ...element.attributes }, { children: element.childNodes.map(cloneTree) });
+    const clone = cloneTree(live);
+    clone.ownerDocument = {};
+    const liveFields = live.querySelectorAll('*');
+    const cloneFields = clone.querySelectorAll('*');
+    liveFields.forEach((element, index) => copyScreenshotFormState(element, cloneFields[index]));
+
+    serializeScreenshotFormState(clone);
+    const originalMarkup = serializeFormMarkup(clone);
+    assert.match(originalMarkup, /value="Current Synthetic"/);
+    assert.doesNotMatch(originalMarkup, /Saved Synthetic|Saved private note/);
+    assert.match(originalMarkup, /<TEXTAREA[^>]*>Current private draft<\/TEXTAREA>/);
+    assert.match(originalMarkup, /value="resource-1" selected=""/);
+    assert.match(originalMarkup, /type="checkbox" checked=""/);
+
+    const context = createPseudonymContext();
+    pseudonymizeScreenshotClone(clone, context);
+    // A property-only redaction leaves the old input attribute in serialized output.
+    assert.match(serializeFormMarkup(clone), /value="Current Synthetic"/);
+    serializeScreenshotFormState(clone);
+    const pseudoMarkup = serializeFormMarkup(clone);
+    assert.doesNotMatch(pseudoMarkup, /Current Synthetic|Saved Synthetic|Current private draft|Saved private note/);
+    assert.match(pseudoMarkup, /value="Sophie de Vries"/);
+    assert.match(pseudoMarkup, /value="resource-1" selected=""/);
+    assert.doesNotMatch(pseudoMarkup, /checked=""/);
+    assert.match(pseudoMarkup, /Publication title/);
+    assert.equal(context.privacySummary.verified, true);
+    assert.deepEqual(state(live), before);
+}
+
+function testCloneSerializesUncheckedAndMultipleSelectedOptions() {
+    const original = new FakeElement('select', { multiple: '' }, { children: [
+        new FakeElement('option', { selected: '' }, { selected: false }),
+        new FakeElement('option', {}, { selected: true }),
+        new FakeElement('option', {}, { selected: true })
+    ] });
+    const clone = new FakeElement('select', { multiple: '' }, { children: [
+        new FakeElement('option', { selected: '' }, { selected: true }),
+        new FakeElement('option'), new FakeElement('option')
+    ] });
+    copyScreenshotFormState(original, clone);
+    serializeScreenshotFormState(clone);
+    assert.deepEqual(clone.options.map(option => option.getAttribute('selected')), [null, '', '']);
+
+    const unchecked = new FakeElement('input', { type: 'radio', checked: '' }, { checked: false });
+    const file = new FakeElement('input', { type: 'file' }, { value: 'C:\\fakepath\\synthetic.txt' });
+    const root = new FakeElement('section', {}, { children: [unchecked, file] });
+    serializeScreenshotFormState(root);
+    assert.equal(unchecked.getAttribute('checked'), null);
+    assert.equal(file.getAttribute('value'), null);
+}
+
+testCloneFormStateSurvivesSerializationWithoutChangingLiveDraft();
+testCloneSerializesUncheckedAndMultipleSelectedOptions();
 
 function testRenderedPublicationTitlesStayPublicWhileCustomerIdentityIsRedacted() {
     const previousDocument = globalThis.document;
