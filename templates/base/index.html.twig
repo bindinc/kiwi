@@ -830,6 +830,7 @@
                               data-action-prevent-default="true">
                             <div class="article-sale-columns">
                                 <div class="article-sale-left">
+                                    <section class="article-form-block">
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.klantgegevens_ed3d8cb3">Klantgegevens *</h3>
                             <div class="aanhef-row" role="radiogroup" aria-label="Aanhef" data-i18n-aria-label="forms.salutationLabel">
                                 <label><input type="radio" name="articleSalutation" value="Dhr." required checked> <span data-i18n="indexHtml.text.dhr_d809be05">Dhr.</span></label>
@@ -889,6 +890,8 @@
                                 </div>
                             </div>
                             
+                                    </section>
+                                    <div class="article-form-block">
                             <div class="form-row">
                                 <div class="form-group">
                                     <label id="deliveryDateLabel" for="deliveryDateDisplay" data-i18n="indexHtml.text.gewenste_leverdatum_5bace022">Gewenste leverdatum *</label>
@@ -950,6 +953,8 @@
                                 </div>
                             </div>
                             
+                                    </div>
+                                    <section class="article-form-block">
                             <h3 class="form-subtitle" data-i18n="indexHtml.text.betaalmethode_5e503508">Betaalmethode *</h3>
                             <div class="form-row">
                                 <div class="payment-methods" role="radiogroup" aria-label="Betaalmethode" data-i18n-aria-label="forms.paymentMethodLabel">
@@ -969,12 +974,11 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" data-action="close-article-sale-form" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                                <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.bestelling_plaatsen_07d072ea">Bestelling Plaatsen</button>
-                            </div>                            
+                                    </section>
+
                                 </div>
                                 <div class="article-sale-right">
+                                    <section class="article-form-block">
             <h3 class="form-subtitle" data-i18n="indexHtml.text.artikelgegevens_7dec9fbd">Artikelgegevens</h3>
             <div class="form-group">
                 <label for="articleSearch" data-i18n="indexHtml.text.artikel_286630a5">Artikel *</label>
@@ -1009,13 +1013,15 @@
                             </div>
                             
                             <div class="form-row">
-                                <button type="button" class="btn btn-success btn-block" data-action="add-article-to-order" data-i18n="indexHtml.text.artikel_toevoegen_aan_bestelling_d23832ab">
+                                <button type="button" class="btn btn-secondary btn-block" data-action="add-article-to-order" data-i18n="indexHtml.text.artikel_toevoegen_aan_bestelling_d23832ab">
                                     ➕ Artikel Toevoegen aan Bestelling
                                 </button>
                             </div>
                             
+                                    </section>
+
                             <!-- Order Items List -->
-                            <div id="orderItemsSection" class="order-items-section" style="display: none;">
+                            <div id="orderItemsSection" class="order-items-section article-form-block" style="display: none;">
                                 <h3 class="form-subtitle" data-i18n="indexHtml.text.bestelling_overzicht_7d5a38f4">📋 Bestelling Overzicht</h3>
                                 <div id="orderItemsList" class="order-items-list">
                                     <!-- Items will be added dynamically -->
@@ -1059,6 +1065,10 @@
                                 </div>
                             </div>
                             
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" data-action="close-article-sale-form" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                                <button type="submit" class="btn btn-primary" data-i18n="indexHtml.text.bestelling_plaatsen_07d072ea">Bestelling Plaatsen</button>
+                            </div>
                         </form>
                     </div>
                 </div>
