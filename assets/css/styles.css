@@ -1923,7 +1923,6 @@ select option {
     outline: 3px solid var(--focus);
     outline-offset: 3px;
     border-color: var(--action);
-    box-shadow: 0 0 0 3px var(--focus);
 }
 
 .btn-close-results {
@@ -2097,6 +2096,17 @@ select option {
     flex-wrap: wrap;
     gap: var(--space-2);
     justify-content: flex-end;
+}
+/* Keep outlined actions distinct from tinted data rows during pointer interaction. */
+.result-actions-content .btn-secondary:hover:not(:disabled),
+.result-actions-content .btn-secondary:active:not(:disabled) {
+    background: var(--surface);
+    border-color: var(--action);
+    color: var(--action-hover);
+}
+.result-actions-content .btn-secondary:active:not(:disabled) {
+    border-color: var(--action-active);
+    color: var(--action-active);
 }
 .results-table tbody tr.is-selected {
     background: var(--surface-selected);
