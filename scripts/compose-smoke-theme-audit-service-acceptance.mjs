@@ -133,7 +133,7 @@ function containsProjection(actual, expected) {
 }
 
 async function exerciseActualAction(page, driver, meta, controls, test) {
-    await settleToasts(page);
+    if (!meta.overlayInlineErrors) await settleToasts(page);
     const outcome = test.outcome || 'queued';
     if (outcome === 'queued' && !controls.ackFixtures) throw new Error('Explicit reviewed source-derived queued fixtures are required for successful callback checks.');
     const before = await fieldsSnapshot(page, '#' + test.id), count = controls.mutations.length;
@@ -189,7 +189,9 @@ async function exerciseActualAction(page, driver, meta, controls, test) {
         }
         controls.heldMutations.splice(0).forEach(resolve => resolve());
     }
-    await page.locator('.toast.show').waitFor({ state: 'visible' });
+    const rejectedInline = meta.overlayInlineErrors && outcome === 'reject';
+    const noticeSelector = rejectedInline ? '#' + test.id + ' .overlay-notification.error' : '.toast.show';
+    await page.locator(noticeSelector).waitFor({ state: 'visible' });
     await driver.painted(page);
     driver.check('actual service controller sends the declared existing branch payload once', controls.mutations.length === count + 1
         && test.validate(entry.payload), true, { ...meta, case: test.case, entry }, 7);
@@ -217,7 +219,7 @@ async function exerciseActualAction(page, driver, meta, controls, test) {
         && await page.locator('#' + test.id).isVisible(), true, { ...meta, case: test.case }, 7);
     driver.report.serviceAcceptance.interactions.push({ ...meta, case: test.case, state: 'rejected', entry });
     if (meta.viewport.width < 1000) {
-        const errorNotice = await page.locator('.toast.show').evaluate(node => {
+        const errorNotice = await page.locator(noticeSelector).evaluate(node => {
             const box = node.getBoundingClientRect();
             return { text: node.textContent, error: node.classList.contains('error'),
                 contained: box.x >= 0 && box.right <= innerWidth && box.y >= 0 && box.bottom <= innerHeight,
@@ -230,7 +232,26 @@ async function exerciseActualAction(page, driver, meta, controls, test) {
             && retry.statuses.every(status => !status.text), true, { ...meta, case: test.case, errorNotice, retry }, 7);
         await driver.capture(page, 'service-' + test.case + '-visible-error', undefined, 'Actual320px rejected complaint with visible error; locally fulfilled422, no business persistence.');
     }
-    await settleToasts(page);
+    if (meta.overlayInlineErrors) {
+        const action = page.locator('#' + test.id + ' [data-service-commit]:visible').first();
+        await action.scrollIntoViewIfNeeded();
+        const layout = await action.evaluate(button => {
+            const root = button.closest('.form-container'), error = root.querySelector('.overlay-notification.error');
+            const b = button.getBoundingClientRect(), e = error.getBoundingClientRect();
+            const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
+            return { errorVisible: error.getClientRects().length > 0 && getComputedStyle(error).visibility !== 'hidden',
+                message: error.textContent, role: error.getAttribute('role'), privateType: error.getAttribute('data-feedback-sensitive'),
+                publicAncestor: Boolean(error.closest('[data-feedback-public]')),
+                overlap: Math.max(0, Math.min(b.right, e.right) - Math.max(b.x, e.x)) * Math.max(0, Math.min(b.bottom, e.bottom) - Math.max(b.y, e.y)),
+                actionContained: b.x >= 0 && b.right <= innerWidth && b.y >= 0 && b.bottom <= innerHeight,
+                hitAction: hit === button || button.contains(hit), point: { x: b.x + b.width / 2, y: b.y + b.height / 2 } };
+        });
+        driver.check('overlay08 rejected complaint keeps its private complete inline error and unobscured retry action together', layout.errorVisible
+            && layout.message === 'Synthetic service request was rejected; retain this draft.' && layout.role === 'alert'
+            && layout.privateType === 'opaque-text' && !layout.publicAncestor && layout.overlap === 0 && layout.actionContained && layout.hitAction,
+        true, { ...meta, case: test.case, layout }, 8);
+        await driver.capture(page, 'overlay08-complaint-error-with-retry', undefined, 'Actual320px local422 with full persistent inline error and unobscured retry; no toast-expiry wait.');
+    } else await settleToasts(page);
     await observeService(page, driver, meta, test.case + '-rejected', test.id, test.target);
     controls.expectedMutation = null;
     return entry.payload;
@@ -322,7 +343,27 @@ export async function inspectComplaintCallbacks(page, driver, meta, controls) {
         validate: payload => objectEqual(payload, complaintExpected), action: () => page.locator('[data-action=submit-editorial-complaint]').press('Enter'), target: '#editorialComplaintForm .form-actions' };
     await exerciseActualAction(page, driver, meta, controls, { ...complaintTest, outcome: 'reject' });
     const firstComplaint = controls.mutations.at(-1).payload;
-    const retryComplaint = await exerciseActualAction(page, driver, meta, controls, { ...complaintTest, case: 'complaint-retry', projectionCase: 'complaint', held: false });
+    if (meta.overlayInlineErrors) {
+        driver.check('overlay08 pointer retry starts while the complete rejected error is still visible',
+            await page.locator('#editorialComplaintForm .overlay-notification.error').isVisible(), true, meta, 8);
+    }
+    const retryAction = meta.overlayInlineErrors ? async () => {
+        const button = page.locator('#editorialComplaintForm [data-service-commit]:visible').first();
+        await button.scrollIntoViewIfNeeded();
+        const actual = await button.evaluate(node => {
+            const b = node.getBoundingClientRect(), error = node.closest('.form-container').querySelector('.overlay-notification.error');
+            const e = error.getBoundingClientRect(), x = b.x + b.width / 2, y = b.y + b.height / 2;
+            const hit = document.elementFromPoint(x, y);
+            return { x, y, errorVisible: e.y >= 0 && e.bottom <= innerHeight && error.textContent === 'Synthetic service request was rejected; retain this draft.',
+                actionVisible: b.x >= 0 && b.right <= innerWidth && b.y >= 0 && b.bottom <= innerHeight,
+                hitAction: hit === node || node.contains(hit) };
+        });
+        driver.check('overlay08 real pointer retry remains unobscured while the full error is still visible',
+            actual.errorVisible && actual.actionVisible && actual.hitAction, true, { ...meta, actual }, 8);
+        if (!actual.errorVisible || !actual.actionVisible || !actual.hitAction) throw new Error('Actual error-state retry is obscured; no forced click permitted.');
+        await page.mouse.click(actual.x, actual.y);
+    } : complaintTest.action;
+    const retryComplaint = await exerciseActualAction(page, driver, meta, controls, { ...complaintTest, case: 'complaint-retry', projectionCase: 'complaint', held: false, action: retryAction });
     driver.check('explicit complaint retry preserves the complete rejected payload', objectEqual(firstComplaint, retryComplaint), true, meta, 7);
 }
 

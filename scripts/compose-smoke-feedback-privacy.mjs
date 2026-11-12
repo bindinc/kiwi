@@ -14,6 +14,11 @@ const browserName = process.env.KIWI_SMOKE_BROWSER || 'chromium';
 const pixelChannelTolerance = 64;
 const realSensitiveValues = ['Jansen', 'maria.jansen@email.nl', 'Wijnhaven', '3011BD', '06-87654321'];
 
+const overlayPrivacy = process.env.KIWI_THEME_AUDIT_OVERLAY_PRIVACY === '1';
+const overlayPrivacySetup = overlayPrivacy
+    ? await (await import('./compose-smoke-theme-audit-overlays-acceptance.mjs')).prepareLegacyOverlayPrivacy({ baseUrl, evidenceDir })
+    : null;
+
 const playwright = loadPlaywright();
 await mkdir(evidenceDir, { recursive: true });
 
@@ -27,9 +32,11 @@ const browser = await browserType.launch(browserLaunchOptions());
 try {
     const page = await browser.newPage({
         ignoreHTTPSErrors: true,
+        ...(overlayPrivacy ? { serviceWorkers: 'block' } : {}),
         viewport: { width: 1693, height: 1209 }
     });
 
+    if (overlayPrivacySetup) await overlayPrivacySetup.attach(page);
     await runSmokeScenario(page);
     console.log(`[compose-smoke-feedback-privacy] Contextual feedback privacy smoke checks passed in ${browserName}.`);
 } catch (error) {
@@ -37,6 +44,7 @@ try {
     throw error;
 } finally {
     await browser.close();
+    if (overlayPrivacySetup) await overlayPrivacySetup.finish();
 }
 
 function browserLaunchOptions() {
@@ -71,6 +79,15 @@ async function runSmokeScenario(page) {
     await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await loginIfNeeded(page);
     await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
+    if (overlayPrivacySetup) {
+        await page.waitForFunction(() => typeof window.kiwiAddressCompletion?.getSubmission === 'function'
+            && typeof window.kiwiAddressCompletion?.validate === 'function');
+        await setKiwiLocale(page, 'nl', 'Contextuele feedback');
+        await page.reload();
+        await page.waitForFunction(() => document.documentElement.lang === 'nl'
+            && typeof window.kiwiAddressCompletion?.getSubmission === 'function'
+            && typeof window.kiwiAddressCompletion?.validate === 'function');
+    }
     await enableFeedbackIfNeeded(page);
     await assertFeedbackBadgeLayout(page);
     await searchAndSelectJansen(page);
@@ -97,7 +114,8 @@ async function runSmokeScenario(page) {
     await page.click('[data-feedback-add-screenshot]');
     await page.waitForSelector('.contextual-feedback-picker-overlay', { timeout: 10000 });
     await assertDialogIsSuspendedDuringCapture(page);
-    await page.mouse.click(targetBox.x + 4, targetBox.y + targetBox.height - 4);
+    if (overlayPrivacySetup) await selectGuardedCustomerHeader(page, target, targetBox);
+    else await page.mouse.click(targetBox.x + 4, targetBox.y + targetBox.height - 4);
     await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
 
     const retainedComment = await page.inputValue('textarea[name="comment"]');
@@ -119,11 +137,66 @@ async function runSmokeScenario(page) {
     // A retained draft keeps its creation-time labels; start the English scenario in a fresh document.
     await page.reload();
     await page.waitForFunction(() => window.kiwiCustomerWorkSession && window.kiwiCustomerDetailSlice);
+    if (overlayPrivacySetup) {
+        await page.waitForFunction(() => typeof window.kiwiAddressCompletion?.getSubmission === 'function'
+            && typeof window.kiwiAddressCompletion?.validate === 'function');
+        await enableFeedbackIfNeeded(page);
+    }
     await searchAndSelectJansen(page);
     await alignElementCaptureToPixels(page.locator('.customer-header'));
     await captureCustomArea(page, await page.locator('.customer-header').boundingBox());
     await clearScreenshotAndClose(page);
     await captureDeterministicFidelityFixture(page);
+}
+
+async function selectGuardedCustomerHeader(page, target, referenceBox) {
+    const proof = await target.evaluate(async (element, reference) => {
+        const imports = Object.assign({}, ...[...document.querySelectorAll('script[type=importmap]')]
+            .map(script => JSON.parse(script.textContent).imports));
+        const moduleKey = Object.keys(imports).find(key => key.endsWith('/contextual-feedback/element-picker.js'));
+        if (!moduleKey) throw new Error('The actual application picker import is unavailable.');
+        const { findPickableElement } = await import(imports[moduleKey]);
+        const rect = element.getBoundingClientRect();
+        const fresh = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+        const dimensionsMatch = Math.round(fresh.width) === Math.round(reference.width)
+            && Math.round(fresh.height) === Math.round(reference.height);
+        if (!dimensionsMatch) throw new Error('The intended customer header changed dimensions before selection.');
+        const candidates = [
+            { x: rect.left + 1, y: rect.top + 1 },
+            { x: rect.right - 1, y: rect.top + 1 },
+            { x: rect.left + 1, y: rect.bottom - 1 },
+            { x: rect.right - 1, y: rect.bottom - 1 },
+            { x: rect.left + rect.width / 2, y: rect.bottom - 1 },
+            { x: rect.left + rect.width / 2, y: rect.bottom - 0.5 },
+            { x: rect.left + 0.5, y: rect.top + rect.height / 2 },
+            { x: rect.right - 0.5, y: rect.top + rect.height / 2 }
+        ];
+        const observed = candidates.map(point => {
+            const visible = point.x >= 0 && point.y >= 0 && point.x < innerWidth && point.y < innerHeight;
+            const picked = visible ? findPickableElement(document, point.x, point.y) : null;
+            return { ...point, visible, exactTarget: picked === element, tag: picked?.tagName ?? null,
+                className: typeof picked?.className === 'string' ? picked.className : null };
+        });
+        const point = observed.find(candidate => candidate.exactTarget);
+        return { reference, fresh, dimensionsMatch, candidates: observed, point: point ?? null,
+            moduleUrl: imports[moduleKey], sourceFunction: findPickableElement.toString(),
+            expectedSummarySuffix: element.tagName.toLowerCase() + '.customer-header' };
+    }, referenceBox);
+    const filename = path.join(evidenceDir, 'customer-header-picker-proof.json');
+    await writeFile(filename, JSON.stringify(proof, null, 2) + '\n');
+    if (!proof.point) throw new Error('No finite visible real picker point selects the exact customer header.');
+    await page.mouse.click(proof.point.x, proof.point.y);
+    await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
+    const actual = await page.locator('.contextual-feedback-modal').evaluate(modal => ({
+        summary: modal.querySelector('[data-feedback-selection-summary]')?.textContent.trim(),
+        width: modal.querySelector('canvas')?.width, height: modal.querySelector('canvas')?.height
+    }));
+    proof.actual = actual;
+    proof.actualTargetMatches = actual.summary?.endsWith(proof.expectedSummarySuffix)
+        && actual.width === Math.round(referenceBox.width) && actual.height === Math.round(referenceBox.height);
+    await writeFile(filename, JSON.stringify(proof, null, 2) + '\n');
+    await page.screenshot({ path: path.join(evidenceDir, 'customer-header-picker-result.png'), fullPage: true });
+    if (!proof.actualTargetMatches) throw new Error('Actual picker result differs from the intended customer header; pointer rounding remains unverified.');
 }
 
 async function alignElementCaptureToPixels(target) {
@@ -391,7 +464,10 @@ async function captureCustomArea(page, targetBox) {
     await page.mouse.up({ button: 'left' });
     await page.waitForSelector('.contextual-feedback-modal canvas', { timeout: 30000 });
 
-    const selectionSummary = await page.locator('.contextual-feedback-panel-header p').innerText();
+    const summarySelector = overlayPrivacySetup
+        ? '.contextual-feedback-modal [data-feedback-selection-summary]'
+        : '.contextual-feedback-panel-header p';
+    const selectionSummary = await page.locator(summarySelector).innerText();
     const expectedSummary = `Custom screenshot area ${Math.round(end.x - start.x)} × ${Math.round(end.y - start.y)} px`;
     if (!selectionSummary.includes(expectedSummary)) {
         await saveFailureEvidence(page, 'custom-area-summary');
