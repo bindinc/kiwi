@@ -587,6 +587,7 @@ const nl = {
         "selectRecipientOrCreate": 'Selecteer een ontvanger of kies "Nieuwe persoon".',
         "selectRequesterOrCreate": 'Selecteer een aanvrager/betaler of kies "Nieuwe persoon".',
         "createRequiresBackend": "Abonnement aanmaken vereist backend API",
+        "submitting": "Aanvraag wordt in de wachtrij geplaatst…",
         "createFailed": "Abonnement aanmaken via backend mislukt",
         "partiallyQueued": "{queued} aanvraag(en) in wachtrij geplaatst, {failed} mislukt ({salesCodes}).",
         "multipleQueued": "{count} aanvragen in wachtrij geplaatst!",

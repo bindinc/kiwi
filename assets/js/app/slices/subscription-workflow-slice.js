@@ -34,6 +34,7 @@ const STATUS_NAME_BY_KEY = {
 };
 
 const startDatesByDocument = new WeakMap();
+const pendingSubscriptionPosts = new WeakMap();
 
 function getSubscriptionStartDates() {
     const documentRef = getDocumentRef();
@@ -757,9 +758,48 @@ function getSubscriptionChanges(previousSubscription, nextSubscription) {
     return changes;
 }
 
+function startSubscriptionPost(form) {
+    if (pendingSubscriptionPosts.has(form)) return null;
+
+    const button = form.querySelector?.('button[type="submit"]');
+    const status = getElementById('subscriptionSubmitStatus');
+    const pending = {
+        button,
+        status,
+        previousDisabled: button?.disabled,
+        previousBusy: button?.getAttribute?.('aria-busy') ?? null
+    };
+    pendingSubscriptionPosts.set(form, pending);
+    if (button) {
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+    }
+    if (status) {
+        status.textContent = translateKey('subscription.submitting', {}, 'Aanvraag wordt in de wachtrij geplaatst…');
+        status.hidden = false;
+    }
+    return pending;
+}
+
+function finishSubscriptionPost(form, pending) {
+    if (!pending || pendingSubscriptionPosts.get(form) !== pending) return;
+
+    pendingSubscriptionPosts.delete(form);
+    if (pending.button) {
+        pending.button.disabled = pending.previousDisabled;
+        if (pending.previousBusy === null) pending.button.removeAttribute('aria-busy');
+        else pending.button.setAttribute('aria-busy', pending.previousBusy);
+    }
+    if (pending.status) {
+        pending.status.hidden = true;
+        pending.status.textContent = '';
+    }
+}
+
 export function showNewSubscription() {
     if (resumeFormDraft(getElementById('newSubscriptionForm'))) return;
     const form = getElementById('subscriptionForm');
+    finishSubscriptionPost(form, pendingSubscriptionPosts.get(form));
     if (form && typeof form.reset === 'function') {
         form.reset();
     }
@@ -784,6 +824,23 @@ export async function createSubscription(event) {
         event.preventDefault();
     }
 
+    const form = getElementById('subscriptionForm') || getDocumentRef();
+    if (!form || pendingSubscriptionPosts.has(form)) return;
+
+    let pending = null;
+    const startPosting = () => {
+        if (!pending) pending = startSubscriptionPost(form);
+        return Boolean(pending);
+    };
+    const finishPosting = () => finishSubscriptionPost(form, pending);
+    try {
+        await submitSubscription(startPosting, finishPosting);
+    } finally {
+        finishPosting();
+    }
+}
+
+async function submitSubscription(startPosting, finishPosting) {
     const werfsleutelSelections = getSelectedWerfsleutelSelections();
     if (werfsleutelSelections.length === 0) {
         showToast(translateKey('werfsleutel.selectKey', {}, 'Selecteer eerst een actieve werfsleutel.'), 'error');
@@ -962,6 +1019,8 @@ export async function createSubscription(event) {
             }
         };
 
+        if (!startPosting()) return;
+
         if (customerWorkSession && typeof customerWorkSession.beginMutation === 'function') {
             customerWorkSession.beginMutation(itemSubmissionId);
         }
@@ -1002,6 +1061,8 @@ export async function createSubscription(event) {
             });
         }
     }
+
+    finishPosting();
 
     if (queuedSalesCodes.length === 0) {
         showToast(
