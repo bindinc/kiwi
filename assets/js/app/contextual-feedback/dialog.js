@@ -60,6 +60,11 @@ export async function openFeedbackDialog({
         return !disposed && dialogsByDocument.get(documentRef) === resumeDialogAfterCapture;
     }
 
+    function revealError() {
+        if (!isCurrent() || !modal.open || modal.hidden || !errorBox.textContent.trim()) return;
+        errorBox.scrollIntoView({ block: 'nearest' });
+    }
+
     function dismiss() {
         if (submitButton.disabled || screenshotButton.disabled) return;
         onCancel?.();
@@ -136,6 +141,7 @@ export async function openFeedbackDialog({
 
         if (!comment) {
             errorBox.textContent = feedbackText('dialog.commentRequired');
+            revealError();
             return;
         }
 
@@ -167,6 +173,7 @@ export async function openFeedbackDialog({
             modal.removeAttribute('aria-busy');
             statusBox.textContent = '';
             errorBox.textContent = error instanceof Error ? error.message : feedbackText('dialog.submitFailed');
+            revealError();
         }
     });
 
@@ -193,6 +200,7 @@ export async function openFeedbackDialog({
             if (isCurrent()) {
                 screenshotButton.disabled = false;
                 screenshotButton.focus();
+                revealError();
             }
         }
     }

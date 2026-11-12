@@ -184,7 +184,17 @@ async function submissionFailureRestoresControlsAndRetainsValues() {
     await openFeedbackDialog({ documentRef, onSubmit: async value => { received = value; throw new Error('Synthetic request failed'); } });
     const modal = modalFor(documentRef);
     modal.querySelector('[name="comment"]').value = '  Synthetic draft  ';
+    const focusedBeforeFailure = documentRef.activeElement;
+    const revealCalls = [];
+    modal.querySelector('[data-feedback-error]').scrollIntoView = options => {
+        assert.equal(modal.querySelector('[data-feedback-submit]').disabled, false);
+        assert.equal(modal.querySelector('[data-feedback-status]').textContent, '');
+        assert.equal(modal.getAttribute('aria-busy'), null);
+        revealCalls.push(options);
+    };
     await modal.querySelector('form').emit('submit');
+    assert.deepEqual(revealCalls, [{ block: 'nearest' }]);
+    assert.equal(documentRef.activeElement, focusedBeforeFailure, 'revealing an error never moves focus');
     assert.equal(received.comment, 'Synthetic draft');
     assert.equal(received.selectionKind, 'none');
     assert.equal(received.screenshots, null);
@@ -193,6 +203,96 @@ async function submissionFailureRestoresControlsAndRetainsValues() {
     assert.equal(modal.querySelector('[data-feedback-close]').disabled, false);
     assert.equal(modal.querySelector('[data-feedback-error]').textContent, 'Synthetic request failed');
     assert.equal(modal.querySelector('[data-feedback-error]').getAttribute('data-feedback-sensitive'), 'opaque-text');
+    resetLightboxDrafts(documentRef);
+}
+async function validationRevealsOnlyTheCurrentOpenDialog() {
+    const { documentRef, button } = setup();
+    await openFeedbackDialog({ documentRef, opener: button });
+    const modal = modalFor(documentRef);
+    const field = modal.querySelector('[name="comment"]');
+    const error = modal.querySelector('[data-feedback-error]');
+    let reveals = 0;
+    error.scrollIntoView = options => { assert.equal(options.block, 'nearest'); reveals++; };
+    await modal.querySelector('form').emit('submit');
+    assert.equal(reveals, 1);
+    assert.ok(error.textContent.length > 0);
+    assert.equal(documentRef.activeElement, field);
+    assert.equal(field.value, '');
+    await modal.emit('cancel');
+    await modal.querySelector('form').emit('submit');
+    assert.equal(reveals, 1, 'a closed retained dialog cannot move scroll');
+    assert.equal(modal.open, false);
+    assert.equal(documentRef.activeElement, button);
+    resetLightboxDrafts(documentRef);
+}
+async function captureFailureRevealsAfterRetainedButtonFocus() {
+    const { documentRef } = setup();
+    const replacement = deferred();
+    let attempts = 0;
+    await openFeedbackDialog({
+        documentRef,
+        onRequestScreenshot() {
+            attempts++;
+            if (attempts === 1) return screenshot;
+            if (attempts === 2) return replacement.promise;
+            return null;
+        }
+    });
+    const modal = modalFor(documentRef);
+    await requestImage(modal);
+    const field = modal.querySelector('[name="comment"]');
+    field.value = 'Retained image draft';
+    const button = modal.querySelector('[data-feedback-add-screenshot]');
+    const error = modal.querySelector('[data-feedback-error]');
+    const events = [];
+    const focus = button.focus.bind(button);
+    button.focus = () => { focus(); events.push('focus'); };
+    error.scrollIntoView = options => {
+        assert.equal(options.block, 'nearest');
+        assert.equal(button.disabled, false);
+        assert.equal(documentRef.activeElement, button);
+        events.push('reveal');
+    };
+    await requestImage(modal);
+    assert.equal(modal.open, false);
+    replacement.reject(new Error('Synthetic replacement capture failed'));
+    await settle();
+    assert.deepEqual(events, ['focus', 'reveal']);
+    assert.equal(error.textContent, 'Synthetic replacement capture failed');
+    assert.equal(modal.open, true);
+    assert.equal(modal.classList.contains('has-screenshot'), true);
+    assert.equal(documentRef.body.classList.contains('contextual-feedback-reviewing'), true);
+    assert.equal(field.value, 'Retained image draft');
+    assert.equal(documentRef.activeElement, button);
+    await requestImage(modal);
+    assert.deepEqual(events, ['focus', 'reveal', 'focus'], 'cancelled capture clears the error and cannot reveal stale text');
+    assert.equal(error.textContent, '');
+    assert.equal(field.value, 'Retained image draft');
+    resetLightboxDrafts(documentRef);
+}
+async function obsoleteCaptureFailureCannotRevealOrRefocusNewDialog() {
+    const { documentRef } = setup();
+    const capture = deferred();
+    await openFeedbackDialog({ documentRef, onRequestScreenshot: () => capture.promise });
+    const old = modalFor(documentRef);
+    let staleReveals = 0;
+    old.querySelector('[data-feedback-error]').scrollIntoView = () => { staleReveals++; };
+    await requestImage(old);
+    resetLightboxDrafts(documentRef);
+    await openFeedbackDialog({ documentRef });
+    const current = modalFor(documentRef);
+    const field = current.querySelector('[name="comment"]');
+    field.value = 'New owner draft';
+    const focusedBeforeFailure = documentRef.activeElement;
+    capture.reject(new Error('Obsolete synthetic capture failed'));
+    await settle();
+    assert.equal(staleReveals, 0);
+    assert.equal(old.isConnected, false);
+    assert.equal(modalFor(documentRef), current);
+    assert.equal(current.open, true);
+    assert.equal(current.querySelector('[data-feedback-error]').textContent, '');
+    assert.equal(field.value, 'New owner draft');
+    assert.equal(documentRef.activeElement, focusedBeforeFailure);
     resetLightboxDrafts(documentRef);
 }
 const settings = {
@@ -304,6 +404,9 @@ try {
     await staleSubmitCannotDeleteNewDialogOrShield();
     await staleScreenshotSwitchAndExportCannotAffectNewOwner();
     await submissionFailureRestoresControlsAndRetainsValues();
+    await validationRevealsOnlyTheCurrentOpenDialog();
+    await captureFailureRevealsAfterRetainedButtonFocus();
+    await obsoleteCaptureFailureCannotRevealOrRefocusNewDialog();
     await staleSettingsLoadAndSaveCannotMutateNewSession();
     await settingsLoadFailureCanRetryAndRestoreOpener();
     await oldFeatureSubmissionCannotUnlockNewOpener();
