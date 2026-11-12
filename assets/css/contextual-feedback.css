@@ -771,4 +771,7 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
 @media (max-width: 600px) {
     .contextual-feedback-actions { flex-direction: column; align-items: stretch; }
     .contextual-feedback-actions > div { display: grid; grid-template-columns: minmax(0, 1fr); }
+    .contextual-feedback-modal.has-screenshot .contextual-feedback-actions > div {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
