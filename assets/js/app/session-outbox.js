@@ -295,6 +295,10 @@ async function openChangeEditor(item, change) {
         } finally { submit.disabled = false; }
     }, { signal: editorController.signal });
     node('sessionOutboxEditorError').textContent = '';
+    const invoker = document.activeElement;
+    dialog.addEventListener('close', () => {
+        if (invoker && !invoker.isConnected) node('customerSessionChanges')?.querySelector('summary')?.focus();
+    }, { once: true, signal: editorController.signal });
     dialog.showModal();
 }
 
@@ -330,11 +334,21 @@ export async function refreshOutbox() {
     const list = node('subscriptionQueueList');
     if (!list || !api() || loading) return;
     loading = true;
+    list.setAttribute('aria-busy', 'true');
+    const initialLoad = list.children.length === 0 && !node('sessionOutboxStatus')?.textContent;
+    if (initialLoad) message('Outbox laden…');
     try {
         const response = await api().get(`${endpoint}?limit=20&offset=${pageOffset}`, { skipCustomerContext: true });
-        if (!dirty && !editing && pageOffset === 0 && response.total <= 20) sessions.clear();
         // Do not replace a menu while someone is choosing an action.
         if (list.querySelector(':popover-open')) return;
+        if (!dirty && !editing && pageOffset === 0 && response.total <= 20) sessions.clear();
+        // Read focus after the GET, so a user who moved elsewhere keeps that focus.
+        const focused = document.activeElement;
+        const focusedRow = focused?.closest?.('.session-outbox-item');
+        const restoreFocus = focusedRow?.parentElement === list;
+        const focusedId = focusedRow?.dataset.sessionId;
+        const focusedControl = focused?.dataset.outboxControl;
+        const focusedIndex = restoreFocus ? [...list.children].indexOf(focusedRow) : -1;
         list.replaceChildren();
         for (const item of response.items) {
             item.clockOffset = Date.parse(item.serverTime) - Date.now();
@@ -357,6 +371,18 @@ export async function refreshOutbox() {
             }});
             list.append(outboxSessionRow(item, labels[item.status] || item.status, () => reopen(item), actions, reportError));
         }
+        if (initialLoad || node('sessionOutboxStatus')?.classList.contains('is-error')) message('');
+        if (restoreFocus) {
+            const rows = [...list.children];
+            const sameRow = rows.find(row => row.dataset.sessionId === focusedId);
+            const row = sameRow || rows[Math.min(focusedIndex, rows.length - 1)];
+            const control = row?.querySelector(`[data-outbox-control="${focusedControl}"]`) || row?.querySelector('button');
+            const target = control || row || node('sessionOutboxTitle');
+            if (target) {
+                if (!control) target.tabIndex = -1;
+                target.focus({ preventScroll: true });
+            }
+        }
         const empty = node('subscriptionQueueEmpty');
         if (empty) empty.hidden = response.items.length > 0;
         const meta = node('subscriptionQueueMeta');
@@ -369,7 +395,7 @@ export async function refreshOutbox() {
         }
     } catch (error) {
         message(`Outbox niet vernieuwd; getoonde gegevens kunnen verouderd zijn. ${error.message}`, true);
-    } finally { loading = false; }
+    } finally { loading = false; list.setAttribute('aria-busy', 'false'); }
 }
 
 async function loadHistoricalOrders() {
@@ -401,7 +427,9 @@ export function initializeSessionOutbox() {
     document.addEventListener('input', event => {
         if (event.target.closest?.('.form-container, .customer-editor, #sessionOutboxEditor')) dirty = true;
     });
-    node('sessionOutboxEditorClose')?.addEventListener('click', () => node('sessionOutboxEditor').close());
+    node('sessionOutboxEditor')?.querySelectorAll('[data-session-outbox-editor-close]').forEach(control => {
+        control.addEventListener('click', () => node('sessionOutboxEditor').close());
+    });
     node('sessionOutboxEditor')?.addEventListener('close', () => { editing = null; });
     node('sessionOutboxTitle')?.prepend(outboxIcon('inbox'));
     void refreshOutbox();

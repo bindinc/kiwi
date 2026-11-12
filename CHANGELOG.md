@@ -12,7 +12,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
-- Prepare operational-state alignment and source-bound visual acceptance for calls, disposition, contact history and the outbox while preserving transitions and server capabilities (`theme_audit` slice 09). [sc-206629]
+- Align operational states and refine modal controls, focus, readonly profile labels and the compact search summary while preserving transitions, capabilities, search behavior and original source values (`theme_audit` slice 09). [sc-206629]
 
 - Align shared dialogs, feedback and access surfaces with Light & Shadow, using consistent ordinary backdrops, preserved screenshot-review shielding, reachable controls and contextual error notices while retaining privacy, drafts and request behavior (`theme_audit` slice 08). [sc-206629]
 

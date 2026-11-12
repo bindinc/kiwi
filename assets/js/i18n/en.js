@@ -976,6 +976,8 @@ const en = {
         "resetComplete": "Customer work session ended. Ready for a new customer."
     },
     "search": {
+        "resultSummaryOne": "customer found",
+        "resultSummaryMany": "customers found",
         "allCustomers": "all customers",
         "backendFailed": "Search via backend failed",
         "nameFilterLabel": "Name: {name}",

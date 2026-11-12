@@ -3,6 +3,84 @@ import { test } from 'node:test';
 import { openCustomerEditor, mutationPath } from '../../../assets/js/app/customer-editor.js';
 import { createEditorDocument } from '../support/editor-dom.mjs';
 
+test('readonly gender is an exact display mapping and leaves source data and unknown values intact', async () => {
+    const previousDocument = globalThis.document;
+    const examples = [
+        ['Geachte heer', 'Man'], ['Geachte mevrouw', 'Vrouw'], ['Geachte heer/mevrouw', 'Anders'],
+        ['  gEaChTe HeEr/MeVrOuW  ', 'Anders'], ['__proto__', '__proto__'],
+        ['constructor', 'constructor'], ['Geachte heer en familie', 'Geachte heer en familie'],
+        ['', ''], ['   ', '   ']
+    ];
+    try {
+        for (const [raw, expected] of examples) {
+            globalThis.document = createEditorDocument();
+            const model = { capabilities: { roleCanWrite: false, operations: {} }, version: 'read-version',
+                sections: { person: [{ id: 'synthetic-person', fields: { firstName: 'Synthetic', salutation: raw } }] } };
+            const original = structuredClone(model);
+            let writes = 0;
+            await openCustomerEditor({ id: 'synthetic-person', credentialKey: 'fixture' }, {
+                api: { async get() { return model; }, async request() { writes++; } }, refresh() {}
+            });
+            const dialog = document.body.children[0];
+            const input = dialog.querySelectorAll('input').find(control => control.name === 'salutation');
+            const label = dialog.querySelectorAll('label').find(row => row.children.includes(input));
+            assert.equal(label.ownText, 'Geslacht');
+            assert.equal(input.value, expected);
+            assert.equal(input.readOnly, true);
+            const summary = dialog.querySelectorAll('select')[0].children[1].textContent;
+            assert.equal(summary, ['Synthetic', expected].filter(Boolean).join(' · '));
+            assert.equal(input.getAttribute('data-feedback-sensitive'), 'salutation');
+            dialog.querySelectorAll('form')[0].emit('submit');
+            assert.equal(writes, 0);
+            assert.deepEqual(model, original, 'display formatting must not normalize the registered source model');
+        }
+    } finally { globalThis.document = previousDocument; }
+});
+
+test('writable salutation keeps its raw summary, reset, draft, no-op and versioned PATCH values', async () => {
+    const previousDocument = globalThis.document;
+    globalThis.document = createEditorDocument();
+    const raw = 'Geachte heer/mevrouw';
+    const model = { capabilities: { roleCanWrite: true, operations: { 'person.update': { enabled: true } } },
+        version: 'original-version', sections: { person: [{ id: 'synthetic-person', fields: { firstName: 'Synthetic', salutation: raw } }] } };
+    const original = structuredClone(model);
+    const writes = [];
+    const customer = { id: 'synthetic-person', credentialKey: 'fixture' };
+    const options = { api: { async get() { return model; }, async request(...args) { writes.push(args); } }, refresh() {} };
+    const settle = async () => { for (let index = 0; index < 12; index++) await Promise.resolve(); };
+    try {
+        await openCustomerEditor(customer, options);
+        const dialog = document.body.children[0];
+        const personForm = () => dialog.querySelectorAll('form')[0];
+        const salutation = () => personForm().querySelectorAll('input').find(input => input.name === 'salutation');
+        const label = dialog.querySelectorAll('label').find(row => row.children.includes(salutation()));
+        assert.equal(label.ownText, 'Aanhef');
+        assert.equal(salutation().value, raw);
+        assert.equal(dialog.querySelectorAll('select')[0].children[1].textContent, `Synthetic · ${raw}`);
+        personForm().emit('submit');
+        await settle();
+        assert.equal(writes.length, 0, 'opening and submitting unchanged data is a no-op');
+        salutation().value = 'Draft letter text'; salutation().emit('input');
+        personForm().querySelectorAll('button')[1].emit('click');
+        assert.equal(salutation().value, raw, 'reset restores the registered letter value');
+        salutation().value = 'Retained letter draft'; salutation().emit('input');
+        dialog.querySelectorAll('button')[0].emit('click');
+        await openCustomerEditor(customer, options);
+        assert.equal(salutation().value, 'Retained letter draft');
+        personForm().querySelectorAll('button')[1].emit('click');
+        const firstName = personForm().querySelectorAll('input').find(input => input.name === 'firstName');
+        firstName.value = 'Changed synthetic'; firstName.emit('input');
+        personForm().emit('submit'); await settle();
+        assert.deepEqual(writes[0][2], { credentialKey: 'fixture', expectedVersion: 'original-version', changes: { firstName: 'Changed synthetic' } });
+        assert.equal(writes[0][0], 'PATCH');
+        assert.ok(writes[0][3].headers['Idempotency-Key']);
+        salutation().value = 'Explicit raw letter value'; salutation().emit('input');
+        personForm().emit('submit'); await settle();
+        assert.deepEqual(writes[1][2].changes, { salutation: 'Explicit raw letter value' });
+        assert.deepEqual(model, original);
+    } finally { globalThis.document = previousDocument; }
+});
+
 test('source viewer uses explicit contact selection, masks banks and cannot submit disabled operations', async () => {
     const oldDocument = globalThis.document;
     globalThis.document = createEditorDocument();

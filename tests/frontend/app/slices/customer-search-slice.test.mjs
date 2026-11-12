@@ -2,7 +2,53 @@ import assert from 'node:assert/strict';
 import en from '../../../../assets/js/i18n/en.js';
 import nl from '../../../../assets/js/i18n/nl.js';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
-import { registerCustomerSearchSlice, __customerSearchTestUtils } from '../../../../assets/js/app/slices/customer-search-slice.js';
+import i18n from '../../../../assets/js/i18n/index.js';
+import { setAppLocale } from '../../../../assets/js/app/slices/localization-slice.js';
+import { displayPaginatedResults, registerCustomerSearchSlice, __customerSearchTestUtils } from '../../../../assets/js/app/slices/customer-search-slice.js';
+
+function testSearchSummaryCountsAndLiveLocaleChange() {
+    const previousDocument = globalThis.document;
+    const previousI18n = globalThis.i18n;
+    const previousLocale = i18n.getLocale();
+    const ids = ['searchSummary', 'resultCount', 'resultCountLabel', 'searchResultsView', 'welcomeMessage',
+        'customerDetail', 'resultsTitle', 'resultsRange', 'paginatedResults'];
+    const nodes = Object.fromEntries(ids.map(id => [id, {
+        textContent: '', style: {}, attributes: {},
+        setAttribute(name, value) { this.attributes[name] = value; },
+        getAttribute(name) { return this.attributes[name]; }
+    }]));
+    globalThis.document = {
+        documentElement: { lang: 'nl' },
+        getElementById: id => nodes[id] || null,
+        querySelectorAll: selector => selector === '[data-i18n]' ? [nodes.resultCountLabel] : []
+    };
+    globalThis.i18n = i18n;
+    try {
+        for (const count of [0, 1, 3]) {
+            const customers = Array.from({ length: count }, (_, index) => ({
+                id: `synthetic-${index}`, firstName: 'Synthetic', lastName: 'Customer', subscriptions: []
+            }));
+            __customerSearchTestUtils.setSearchResultsForTests(customers);
+            setAppLocale('nl');
+            displayPaginatedResults();
+            const generation = __customerSearchTestUtils.getSearchStateSnapshot().generation;
+            assert.equal(nodes.resultCount.textContent, String(count), 'the count node stays numeric-only');
+            assert.equal(nodes.resultCountLabel.textContent, count === 1 ? 'klant gevonden' : 'klanten gevonden');
+            assert.equal(nodes.searchSummary.style.display, count > 0 ? 'block' : 'none', 'zero-result visibility is unchanged');
+            setAppLocale('en');
+            assert.equal(nodes.resultCountLabel.textContent, count === 1 ? 'customer found' : 'customers found');
+            assert.equal(nodes.resultCount.textContent, String(count));
+            assert.equal(__customerSearchTestUtils.getSearchStateSnapshot().generation, generation, 'changing language does not rerun or replace the search');
+            setAppLocale('nl');
+            assert.equal(nodes.resultCountLabel.textContent, count === 1 ? 'klant gevonden' : 'klanten gevonden');
+        }
+    } finally {
+        __customerSearchTestUtils.resetSearchStateForTests();
+        i18n.setLocale(previousLocale);
+        globalThis.document = previousDocument;
+        globalThis.i18n = previousI18n;
+    }
+}
 
 function createRouter() {
     const root = {
@@ -530,6 +576,7 @@ function testSelectedCustomerKeepsSourceIdentity() {
 }
 
 async function run() {
+    testSearchSummaryCountsAndLiveLocaleChange();
     testSelectedCustomerKeepsSourceIdentity();
     testRegistersItemFiveActions();
     testInstallsLegacyCompatibilityExports();

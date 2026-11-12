@@ -879,6 +879,13 @@ export function displayPaginatedResults() {
     const { results, currentPage, itemsPerPage } = searchState;
 
     resultCount.textContent = String(results.length);
+    const countLabel = document.getElementById('resultCountLabel');
+    if (countLabel) {
+        const singular = results.length === 1;
+        const labelKey = singular ? 'search.resultSummaryOne' : 'search.resultSummaryMany';
+        countLabel.setAttribute('data-i18n', labelKey);
+        countLabel.textContent = translateKey(labelKey, {}, singular ? 'klant gevonden' : 'klanten gevonden');
+    }
     setElementDisplay(searchSummary, results.length > 0 ? 'block' : 'none');
 
     if (results.length === 0) {

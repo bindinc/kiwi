@@ -881,291 +881,18 @@ body {
     .header { position: relative; }
 }
 
-/* ============================================================================
-   PHASE 2A: SESSION INFO DISPLAY (Active Call Bar)
-   ============================================================================ */
-
-.session-info {
-    background: var(--surface-inverse);
-    border-top: 1px solid var(--border-inverse);
-    padding: var(--space-3) var(--panel-padding);
-    backdrop-filter: blur(10px);
-}
-
-.session-info-content {
-    max-width: 1800px;
-    margin: 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    min-width: 0;
-    align-items: center;
-    gap: var(--space-3) var(--space-4);
-    font-size: 0.9rem;
-}
-
-.session-service {
-    display: flex;
-    min-width: 0;
-    max-width: 100%;
-    flex-wrap: wrap;
-    overflow-wrap: anywhere;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    color: var(--text-inverse);
-    background: var(--surface-inverse);
-    padding: 0.4rem 1rem;
-    border-radius: 6px;
-    border: 1px solid var(--border-inverse);
-}
-
-.service-icon {
-    font-size: 1.1rem;
-}
-
-.service-number {
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
-}
-
-.session-wait {
-    display: flex;
-    min-width: 0;
-    max-width: 100%;
-    flex-wrap: wrap;
-    overflow-wrap: anywhere;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--text-warning-inverse);
-    font-weight: 500;
-}
-
-.wait-icon {
-    font-size: 1rem;
-}
-
-.session-caller {
-    display: flex;
-    min-width: 0;
-    max-width: 100%;
-    flex-wrap: wrap;
-    overflow-wrap: anywhere;
-    align-items: center;
-    gap: 0.4rem;
-    font-weight: 500;
-}
-
-.session-duration {
-    display: flex;
-    min-width: 0;
-    max-width: 100%;
-    flex-wrap: wrap;
-    overflow-wrap: anywhere;
-    align-items: center;
-    gap: 0.4rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    font-family: 'Courier New', monospace;
-    font-size: 1rem;
-}
-
-.duration-icon {
-    font-size: 1rem;
-}
-
-.session-actions {
-    margin-left: auto;
-    display: flex;
-    flex-wrap: wrap;
-    max-width: 100%;
-    gap: 0.75rem;
-    align-items: center;
-}
-
-.btn-end-call {
-    padding: 0.5rem 1.25rem;
-    background: var(--danger);
-    color: var(--text-inverse);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-    font-weight: 600;
-    box-shadow: var(--elevation-flat);
-}
-
-.btn-end-call:hover {
-    background: var(--danger-hover);
-    box-shadow: var(--elevation-flat);
-}
-
-/* ============================================================================
-   PHASE 6: CALL QUEUE INFO BAR
-   ============================================================================ */
-
-.queue-info {
-    background: var(--action);
-    border-top: 1px solid var(--border-inverse);
-    border-bottom: 1px solid var(--border-inverse);
-    padding: var(--space-3) var(--panel-padding);
-}
-
-.queue-info-content {
-    max-width: 1800px;
-    margin: 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    min-width: 0;
-    align-items: center;
-    gap: var(--space-3) var(--space-4);
-    font-size: 0.9rem;
-    color: var(--text-inverse);
-}
-
-.queue-next-caller,
-.queue-service,
-.queue-wait,
-.queue-length {
-    display: flex;
-    min-width: 0;
-    max-width: 100%;
-    flex-wrap: wrap;
-    overflow-wrap: anywhere;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.queue-icon,
-.queue-length-icon {
-    font-size: 1.1rem;
-}
-
-.queue-label {
-    opacity: 0.9;
-}
-
-.queue-next-name {
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--text-warning-inverse);
-}
-
-.queue-count {
-    font-weight: 700;
-    font-size: 1.1rem;
-    background: var(--surface-inverse);
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    min-width: 2rem;
-    text-align: center;
-}
-
-.queue-actions {
-    max-width: 100%;
-    margin-left: auto;
-}
-
-.btn-accept-call {
-    background: var(--success);
-    color: var(--text-inverse);
-    border: none;
-    padding: 0.6rem 1.5rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-    box-shadow: var(--elevation-flat);
-}
-
-.btn-accept-call:hover {
-    background: var(--success-hover);
-    box-shadow: var(--elevation-flat);
-}
-
-/* ============================================================================
-   PHASE 2B: RECORDING INDICATOR
-   ============================================================================ */
-
-.recording-indicator {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.9rem;
-    background: var(--surface-danger);
-    color: var(--danger);
-    border: 1px solid var(--danger);
-    border-radius: 6px;
-    font-size: 0.85rem;
-}
-
-.rec-icon {
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
-
-.rec-text {
-    font-weight: bold;
-    color: var(--danger);
-}
-
-.rec-notice {
-    color: var(--danger);
-    font-size: 0.8rem;
-}
-
-/* ============================================================================
-   PHASE 4B: HOLD/RESUME FUNCTIONALITY
-   ============================================================================ */
-
-.btn-hold-call {
-    padding: 0.5rem 1.25rem;
-    background: var(--warning);
-    color: var(--text-inverse);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-    font-weight: 600;
-    box-shadow: var(--elevation-flat);
-}
-
-.btn-hold-call:hover {
-    background: var(--warning-hover);
-    box-shadow: var(--elevation-flat);
-}
-
-.btn-hold-call.on-hold {
-    background: var(--success);
-    animation: pulse-hold 1.5s ease-in-out infinite;
-}
-
-.btn-hold-call.on-hold:hover {
-    background: var(--success-hover);
-}
-
-@keyframes pulse-hold {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-/* ============================================================================
-   ACW (AFTER CALL WORK) BAR
-   ============================================================================ */
-
+/* Operational strips keep identity, timing and permitted actions together. */
+.session-info,
+.queue-info,
 .acw-bar {
-    background: var(--warning);
-    border-top: 1px solid var(--warning);
+    background: var(--surface);
+    color: var(--text);
+    border-top: 1px solid var(--border-subtle);
     padding: var(--space-3) var(--panel-padding);
     box-shadow: var(--elevation-flat);
 }
-
+.session-info-content,
+.queue-info-content,
 .acw-bar-content {
     max-width: 1800px;
     margin: 0 auto;
@@ -1174,113 +901,84 @@ body {
     min-width: 0;
     align-items: center;
     gap: var(--space-3) var(--space-4);
-    font-size: 0.9rem;
-    color: var(--text-inverse);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
 }
-
-.acw-icon {
-    font-size: 1.3rem;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.acw-label {
-    font-weight: 700;
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.acw-timer {
-    font-family: 'Courier New', monospace;
-    font-size: 1.2rem;
-    font-weight: 700;
-    background: var(--surface-inverse);
-    padding: 0.3rem 0.8rem;
-    border-radius: 6px;
-    letter-spacing: 1px;
-}
-
-.acw-instruction {
-    flex: 1 1 16rem;
+:is(.session-service, .session-wait, .session-caller, .session-duration,
+    .queue-next-caller, .queue-service, .queue-wait, .queue-length) {
+    display: flex;
+    flex-wrap: wrap;
     min-width: 0;
     max-width: 100%;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
     overflow-wrap: anywhere;
-    font-size: 0.85rem;
-    opacity: 0.95;
 }
-
-.btn-finish-acw {
-    padding: 0.5rem 1.5rem;
-    background: var(--success);
-    color: var(--text-inverse);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 700;
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-    box-shadow: var(--elevation-flat);
-}
-
-.btn-finish-acw:hover {
-    background: var(--success-hover);
-    box-shadow: var(--elevation-flat);
-}
-
-/* ============================================================================
-   DISPOSITION MODAL ENHANCEMENTS
-   ============================================================================ */
-
-.disposition-info {
-    background: var(--surface-info);
-    border: 1px solid var(--border-control);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1.5rem;
-}
-
-.info-row {
+.session-service,
+.queue-service,
+.queue-label,
+.session-wait,
+.queue-wait { color: var(--text-muted); font-size: var(--font-size-label); }
+.session-caller,
+.queue-next-name { font-weight: var(--weight-medium); }
+.session-duration,
+.acw-timer,
+.queue-count,
+#sessionWaitTime,
+#queueNextWaitTime { font-variant-numeric: tabular-nums; }
+.session-duration,
+.acw-timer { font-family: var(--font-ui); font-weight: var(--weight-strong); }
+.session-actions,
+.queue-actions {
     display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-inline-start: auto;
+    max-width: 100%;
 }
-
-.info-row:last-child {
-    border-bottom: none;
+:is(.btn-end-call, .btn-accept-call, .btn-hold-call, .btn-finish-acw) {
+    min-height: var(--control-height);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-action);
+    font-weight: var(--weight-medium);
+    line-height: 1.2;
+    white-space: normal;
+    cursor: pointer;
+    box-shadow: var(--elevation-flat);
+    transition: background-color .2s, border-color .2s, color .2s;
 }
-
-.info-row span:first-child {
-    font-weight: 600;
-    color: var(--text);
-}
-
-.info-row span:last-child {
-    color: var(--text);
-    font-weight: 500;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
+.btn-accept-call,
+.btn-finish-acw { background: var(--action); color: var(--text-inverse); }
+.btn-accept-call:hover,
+.btn-finish-acw:hover { background: var(--action-hover); }
+.btn-end-call { background: var(--danger); color: var(--text-inverse); }
+.btn-end-call:hover { background: var(--danger-hover); }
+.btn-hold-call { background: var(--surface); color: var(--action-secondary); border-color: var(--action-secondary); }
+.btn-hold-call:hover { background: var(--surface-secondary-hover); color: var(--action-secondary-hover); }
+.btn-hold-call.on-hold { color: var(--warning); border-color: var(--warning); }
+.btn-hold-call.on-hold:hover { background: var(--surface-warning); color: var(--warning-hover); }
+.recording-indicator,
 .hold-indicator {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.3rem 0.8rem;
-    background: var(--surface-warning);
-    color: var(--warning);
-    border: 1px solid var(--warning);
-    border-radius: 4px;
-    font-size: 0.85rem;
-    animation: pulse-hold 2s ease-in-out infinite;
+    gap: var(--space-2);
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
 }
-
-.call-on-hold {
-    opacity: 0.8;
-}
+.recording-indicator { color: var(--danger); }
+.hold-indicator { margin-top: var(--space-2); color: var(--warning); }
+.rec-text { font-weight: var(--weight-strong); }
+.rec-notice { font-size: var(--font-size-label); }
+.call-on-hold { border-inline-start: 3px solid var(--warning); }
+.acw-bar { border-inline-start: 3px solid var(--warning); }
+.acw-label { color: var(--warning); font-weight: var(--weight-medium); }
+.acw-instruction { flex: 1 1 16rem; color: var(--text-muted); font-size: var(--font-size-label); }
+.acw-icon { font-size: 1rem; }
 
 /* ============================================================================
    LEGACY CALL STATUS DISPLAY (To be deprecated)
@@ -1677,6 +1375,7 @@ select option {
     background: none;
     border: none;
     font-size: 1.5rem;
+    line-height: 1;
     color: var(--text-muted);
     cursor: pointer;
     padding: 0;
@@ -1697,15 +1396,6 @@ select option {
 
 
 
-.modal-header .btn-close {
-    color: var(--text-inverse);
-}
-
-.modal-header .btn-close:hover {
-    background-color: var(--surface-inverse);
-    color: var(--text-inverse);
-}
-
 .btn[aria-busy="true"] { cursor: progress; }
 
 /* Actions Card */
@@ -1720,32 +1410,11 @@ select option {
 }
 
 /* Search Summary in Left Panel */
-.search-summary {
-    margin-top: 1rem;
-    padding: 1rem;
-    background: var(--surface-subdued);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
-}
-
-.summary-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.summary-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--success-hover);
-}
-
-.summary-icon {
-    font-size: 1rem;
-}
+.search-summary { margin-top: var(--space-3); }
+.summary-content { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); }
+.summary-badge { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--text-muted); font-size: var(--font-size-label); line-height: var(--line-height-body); font-weight: var(--weight-regular); }
+#resultCount { font-variant-numeric: tabular-nums; }
+.search-summary .btn-link { padding-inline: 0; justify-content: flex-start; text-align: left; }
 
 .subscription-queue-panel {
     margin-top: 1rem;
@@ -1919,11 +1588,7 @@ select option {
     border-color: var(--action);
 }
 
-.sort-select:focus {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-    border-color: var(--action);
-}
+.sort-select:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
 
 .btn-close-results {
     background: transparent;
@@ -2716,162 +2381,70 @@ dialog.form-lightbox::backdrop {
 .contact-history {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    flex: 1;
+    gap: var(--space-3);
+    min-height: 0;
     overflow-y: auto;
     max-height: calc(100vh - 300px);
+    scroll-padding-block: var(--space-2);
 }
-
-.timeline-item {
-    position: relative;
-    padding-left: 2rem;
-    padding-bottom: 1.5rem;
-}
-
+.timeline-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.timeline-item { position: relative; min-width: 0; padding-inline-start: var(--space-5); }
 .timeline-item::before {
     content: '';
     position: absolute;
-    left: 0.5rem;
-    top: 2rem;
-    bottom: 0;
-    width: 2px;
-    background-color: var(--border-subtle);
+    left: 3px;
+    top: var(--space-6);
+    bottom: calc(-1 * var(--space-3));
+    width: 1px;
+    background: var(--border-subtle);
 }
-
-.timeline-item:last-child::before {
-    display: none;
-}
-
-.timeline-dot {
-    position: absolute;
-    left: 0;
-    top: 0.5rem;
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: 50%;
-    background-color: var(--action);
-    border: 3px solid var(--surface);
-}
-
+.timeline-item:last-child::before { display: none; }
+.timeline-dot { position: absolute; left: 0; top: var(--space-4); width: 8px; height: 8px; border-radius: 50%; }
 .timeline-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
+    gap: var(--space-1) var(--space-2);
+    width: 100%;
+    min-width: 0;
+    min-height: var(--control-height);
+    padding: var(--space-2);
+    border: 0;
     border-radius: var(--radius-sm);
-    transition: background-color 0.2s;
-}
-
-.timeline-header:hover {
-    background-color: var(--surface-subdued);
-}
-
-.timeline-type {
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.timeline-date {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    margin-left: auto;
-}
-
-.timeline-content {
-    display: none;
-    margin-top: 0.5rem;
-    padding: 0.75rem;
-    background-color: var(--surface-subdued);
-    border-radius: var(--radius-sm);
-    font-size: 0.9rem;
-    color: var(--text-muted);
-}
-
-.timeline-content.expanded {
-    display: block;
-}
-
-.timeline-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.timeline-expand {
-    margin-left: 0.25rem;
-    transition: transform 0.2s;
-}
-
-.timeline-expand.expanded {
-    transform: rotate(180deg);
-}
-
-.timeline-pagination {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-.timeline-pagination:last-child {
-    margin-bottom: 0;
-    margin-top: 0.75rem;
-}
-
-.timeline-page-indicator {
-    flex: 1;
-    text-align: center;
-}
-
-.timeline-nav-btn {
-    border: 1px solid var(--border-control);
-    background-color: var(--surface);
+    background: var(--surface);
     color: var(--text);
+    font-family: var(--font-ui);
+    text-align: left;
+    cursor: pointer;
+}
+.timeline-header:hover { background: var(--surface-subdued); }
+.timeline-header:focus-visible { outline-offset: -3px; }
+.timeline-type { font-size: var(--font-size-action); font-weight: var(--weight-medium); line-height: var(--line-height-body); overflow-wrap: anywhere; }
+.timeline-date { grid-column: 1 / -1; font-size: var(--font-size-label); line-height: var(--line-height-label); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.timeline-content { display: none; padding: var(--space-2); font-size: var(--font-size-body); line-height: var(--line-height-body); color: var(--text); overflow-wrap: anywhere; }
+.timeline-content.expanded { display: block; }
+.timeline-expand { color: var(--text-muted); font-size: var(--font-size-label); }
+.timeline-expand.expanded { transform: rotate(180deg); }
+.timeline-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--font-size-label); color: var(--text-muted); }
+.timeline-page-indicator { flex: 1; text-align: center; }
+.timeline-nav-btn {
+    border: 1px solid var(--action-secondary);
+    background: var(--surface);
+    color: var(--action-secondary);
     min-height: var(--control-height);
     font-family: var(--font-ui);
+    font-size: var(--font-size-action);
     line-height: 1.2;
     white-space: normal;
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-2);
     border-radius: var(--radius-sm);
     font-weight: var(--weight-medium);
     cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
-    font-size: var(--font-size-action);
 }
-
-.timeline-nav-btn:hover:not(:disabled) {
-    background-color: var(--surface-subdued);
-    border-color: var(--action);
-}
-
-.timeline-nav-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-}
-
+.timeline-nav-btn:hover:not(:disabled) { background: var(--surface-secondary-hover); color: var(--action-secondary-hover); }
+.timeline-nav-btn:disabled { cursor: not-allowed; opacity: .5; }
 .timeline-item--highlight .timeline-header,
-.timeline-item--highlight .timeline-content {
-    background-color: var(--surface-success);
-    box-shadow: var(--elevation-flat);
-    animation: timeline-highlight-pulse 0.75s ease-in-out 2;
-}
-
-@keyframes timeline-highlight-pulse {
-    0% {
-        background-color: var(--surface-calm);
-    }
-    50% {
-        background-color: var(--surface-success);
-    }
-    100% {
-        background-color: var(--surface-calm);
-    }
-}
+.timeline-item--highlight .timeline-content { background: var(--surface-success); }
 
 /* Winback Flow */
 .winback-container {
@@ -3975,37 +3548,13 @@ dialog.form-lightbox::backdrop {
     font-weight: normal;
 }
 
-.disposition-info {
-    background: var(--surface-info);
-    border: 2px solid var(--border-control);
-    border-radius: 8px;
-    padding: 1.25rem;
-    margin-top: 1.5rem;
-    box-shadow: var(--elevation-flat);
-}
-
-.disposition-info .info-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border-subtle);
-}
-
-.disposition-info .info-row:last-child {
-    border-bottom: none;
-}
-
-.disposition-info .info-row span:first-child {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.disposition-info .info-row span:last-child {
-    font-weight: 700;
-    color: var(--text);
-    font-size: 1rem;
-}
+.disposition-modal .modal-header { position: relative; padding-inline-end: calc(var(--panel-padding) + var(--control-height) + var(--space-2)); }
+.disposition-modal .modal-close { position: absolute; inset-block-start: var(--panel-padding); inset-inline-end: var(--panel-padding); }
+.disposition-info { margin: 0 0 var(--space-5); border-bottom: 1px solid var(--border-subtle); }
+.disposition-info .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); padding-block: var(--space-2); }
+.disposition-info .info-row span { min-width: 0; overflow-wrap: anywhere; }
+.disposition-info .info-row span:first-child { color: var(--text-muted); font-size: var(--font-size-label); }
+.disposition-info .info-row span:last-child { color: var(--text); font-size: var(--font-size-body); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; }
 
 .checkbox-label {
     display: flex;
@@ -4066,10 +3615,10 @@ dialog.form-lightbox::backdrop {
     min-width: var(--control-height);
     min-height: var(--control-height);
     padding: 0;
-    border: 1px solid var(--action-secondary);
+    border: 0;
     border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--action-secondary);
+    background: transparent;
+    color: var(--text-muted);
     font-size: 1.5rem;
     line-height: 1;
     cursor: pointer;
@@ -5117,6 +4666,8 @@ dialog.form-lightbox::backdrop {
     outline-color: var(--focus-inverse);
 }
 
+.header :is(.queue-info, .session-info, .acw-bar) :is(button, a, [tabindex]):focus-visible { outline-color: var(--focus); }
+
 .timeline-nav-btn:focus-visible {
     outline-offset: -3px;
 }
@@ -5126,7 +4677,7 @@ dialog.form-lightbox::backdrop {
     outline-offset: -3px;
 }
 
-:is(.btn-primary, .btn-danger, .btn-success, .btn-end-call, .btn-accept-call, .btn-hold-call, .btn-finish-acw):focus-visible {
+:is(.btn-primary, .btn-danger, .btn-success, .btn-end-call, .btn-accept-call, .btn-finish-acw):focus-visible {
     box-shadow: inset 0 0 0 3px var(--focus-inverse);
 }
 
@@ -5156,8 +4707,7 @@ dialog.form-lightbox::backdrop {
 .info-box strong,
 .info-box ul,
 .info-box li,
-.info-box a[href],
-.disposition-info .info-row span {
+.info-box a[href] {
     color: var(--text);
 }
 
@@ -5795,3 +5345,6 @@ dialog.form-lightbox::backdrop {
 }
 
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+/* One flush boundary gives text-entry focus its full 2px area without a second separated ring. */
+:is(input:not([type="radio"], [type="checkbox"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="range"], [type="color"], [type="image"]), select, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: 0; box-shadow: none; }

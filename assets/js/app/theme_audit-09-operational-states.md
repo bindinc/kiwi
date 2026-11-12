@@ -1,6 +1,6 @@
 # theme_audit 09 — Align operational state presentation
 
-Status: initialized; source inventory and actual-browser BEFORE are pending. Implementation is authorized by the ten-slice goal; no application changes are accepted yet.
+Status: implementation in progress; immutable source inventory is verified, actual-browser BEFORE remains in progress. No application changes are accepted yet.
 
 Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md). Reference: [Light & Shadow showcase](../../../plans/kiwi-light-and-shadow-theme-palette-showcase.html), especially its operational-state specimens, restrained surfaces, action hierarchy and spacing. The showcase has no complete call-console or outbox workflow; apply its shared visual rules without inventing equivalent business behavior.
 
@@ -8,12 +8,41 @@ Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md).
 
 - Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629), retained in progress for slices09–10.
 - Worktree: `/home/bartdeijkers/_worktrees/align-theme-operational-states`.
-- Branch: `codex/align-theme-operational-states`; PR creation follows the initial documentation push.
+- Branch: `codex/align-theme-operational-states`; draft PR [#154](https://github.com/bindinc/kiwi/pull/154).
 - Base: main `861b386f8d3013b4c4c8ed89b7ada4e8cc64e101`, the user's merge of accepted08 [#152](https://github.com/bindinc/kiwi/pull/152). Its complete tree equals accepted documentation head `e036b49`; application source remains equivalent to validated `e0e5822`.
 - Scope: calls/recording/ACW/disposition, all contact-history categories and outbox states, including the existing five-second refresh/focus failure. All three areas must pass before closure.
 - Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-09/`, outside Git and retained beside worktrees.
 - Ownership: one application writer, one independent source/actual-image reviewer and one browser/PR144 tooling owner. Root owns this audit/index/changelog, PR, runtime and Git. Shared application files are edited serially.
 - Initial checks: documentation-only scaffolding and whitespace; source, browser and behavioral acceptance remain open. One changelog entry is reserved for this PR and amended as implementation completes. No merge, deployment or cleanup is authorized.
+
+## Additional user-directed modal refinements — 2026-11-12
+
+The follow-up feedback after merged08 extends this PR without replacing any operational-state requirement:
+
+- Replace the permanently framed, small feedback close glyph with the existing quiet customer-close grammar: a clear centered cross, 40px target, subtle hover and accessible close name. Preserve native dismissal, focus return, drafts and in-flight guards in every affected dialog.
+- Replace the separated heavy input-focus ring with a single flush 2px boundary (offset0, no extra shadow). Keep a visibly contrasting full focus perimeter, no layout shift, complete text-entry coverage and the approved dark-toolbar/native-datepicker exceptions. Actual before/after keyboard images decide visual quality; color checks alone do not.
+- In the readonly customer editor opened by **Gegevens bekijken**, label the displayed field **Geslacht** and format the personal summary and field using the three confirmed exact aliases: `Geachte heer`→`Man`, `Geachte mevrouw`→`Vrouw`, `Geachte heer/mevrouw`→`Anders`. Match case/trim only; never use substring inference. Unknown/blank values remain unchanged. Writable Aanhef values, summaries, reset/change comparison, PATCH payloads, original source data and the letter salutation normalizer remain unchanged.
+- Replace the search-summary grey framed card and heavy green phrase with a compact, left-aligned status and the existing clear results link. Preserve the count-only `resultCount` ID and search/filter/pagination/navigation/privacy behavior. Use **1 klant gevonden** versus **klanten gevonden**, with matching English customer/customers wording and correct live language changes. Check zero, one and multiple results plus desktop/narrow and keyboard link activation. This follow-up is tracked before implementation in SC-206629 comment207082.
+
+The original showcase snapshot/hash478a remains immutable BEFORE evidence. Any approved focus/close reference refinement must carry a new hash and its explicit user decision. Supplemental actual readonly fixture and close/focus observations are required before application acceptance. No user test identity is copied into fixtures or story comments.
+
+## Immutable BEFORE and parallel implementation boundary
+
+The original09 scaffold `f1c489f` is frozen in `before-originals-01/manifest.json` (SHA-256 `18bcfc0420519a0c64681898be5edbc5ced27d69df95172fa992c9c9c8ba52f6`): all214 production bodies and20 existing tooling sources are preserved. Independent review verified the path set and hashes. Actual BEFORE reads the separate retained08 worktree at `e036b49`, served by Compose08 on port9444; all214 bodies equal that frozen09 source and the original showcase hash478a remains unchanged. See `before-runtime-source-equivalence-01.json`, `before-read-source-equivalence-02.json` and `independent-review/before-read-source-bridge-review-02.json`.
+
+This physical separation permits09 implementation while BEFORE continues against unchanged08. Mutable09 files cannot supply BEFORE evidence. Initial three browser attempts stopped during authentication setup and produced no application captures; they remain failed diagnostics. The reviewed runner uses the native form submission and a bounded main-frame binding, with independently pinned local fixture credentials and default-denied business writes. It has eight passing guard tests; this is tooling verification, not UI acceptance. Browser stages widen only after source/transport and actual-image review. AFTER requires a fresh candidate/runtime source proof and the complete operational and user-feedback acceptance scopes.
+
+## Application candidate and static verification
+
+Candidate03 is frozen outside Git under `implementation-candidate-03/`:20 changed application/reference/test paths, exact patch, file hashes and logs. It aligns call/ACW bars and disposition, timeline density and native disclosure, outbox surfaces/status/menu/editor, quiet close controls, flush text-entry focus, readonly gender display and the compact plural-aware search summary. The server remains authoritative. Source review checks protected call/timing/history, request/reset/capability/revision/idempotency and writable-customer regions separately from presentation.
+
+Independent source/static review passes: `independent-review/candidate03-source-review-01.json` (SHA-256 `7507a4523d0ed6a51dadfbf66e10fb5adf195cc70a9892ccdacc95e0b4aab31c`). The complete214-file production inventory has14 reviewed changed bodies and200 unchanged bodies; protected business/request/timing/draft regions are verified separately. Four focused tests also ran independently against the reconstructed frozen candidate. This authorizes publishing the draft candidate and CI; rendered acceptance remains pending.
+
+Candidate02's complete45-file frontend suite and three guardrails pass. Candidate03 carries the byte-identical JS/test bodies and resolves the two independent CSS/Twig findings; focused outbox/search, guardrails, whitespace, syntax and CSS parsing pass. Compose09 Twig lint passes for the changed template. All80 installed public package version/source references equal accepted08 and the unchanged lockfile; this is dependency equivalence, not UI acceptance. The09 containers and volumes are prepared separately; its application/gateway have not been started for rendered review.
+
+The revised09 showcase SHA-256 is `67f2532069054f48f0bc703b0a54b64edf655678ff8ae48bfb19f125e0cb5ccb`. Its only reference change is the explicitly requested text-entry focus boundary; header/filled/button/calendar focus contracts stay distinct. Original478a remains the sealed BEFORE reference. The palette review records the user-directed change and the existing customer-close grammar.
+
+Desktop BEFORE06 is observationally complete:85 whole frames with exact baseline/source/SDK/native-auth guards and no unexpected request or runtime/source error. Independent review verifies provenance and representative whole images, including actual five-second focus loss and the malformed old native outbox editor. The narrow run retains a later old-refresh setup race as a failed report; a stable pending-GET geometry fixture must be reviewed before retry and does not prove refresh correctness. Firefox, short-height and the new-feedback addendum remain pending. No application or slice09 acceptance follows these static/baseline results.
 
 ## Outcome and dependencies
 

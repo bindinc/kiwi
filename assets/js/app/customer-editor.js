@@ -15,6 +15,15 @@ const sections = {
     bank: { title: 'Bankrekeningen', path: 'bank-accounts', fields: { iban: 'Nieuw IBAN', bic: 'BIC (optioneel)' } }
 };
 
+function readonlyGenderLabel(value) {
+    switch (String(value || '').trim().toLowerCase()) {
+    case 'geachte heer': return 'Man';
+    case 'geachte mevrouw': return 'Vrouw';
+    case 'geachte heer/mevrouw': return 'Anders';
+    default: return value;
+    }
+}
+
 export function mutationPath(personId, section, resourceId = null) {
     const config = sections[section];
     if (!config) throw new Error('Onbekend onderdeel');
@@ -154,7 +163,12 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
         placeholder.setAttribute('data-feedback-public', '');
         select.append(placeholder);
         items.forEach((item, index) => {
-            const summary = item.maskedIban || Object.values(item.fields).filter(Boolean).join(' · ');
+            const canEditPerson = model.capabilities.operations['person.update']?.enabled === true
+                && item.id !== null && Boolean(model.version) && !requiresReload;
+            const readonlyPerson = section === 'person' && !canEditPerson;
+            const summary = item.maskedIban || Object.entries(item.fields).map(([field, value]) =>
+                readonlyPerson && field === 'salutation' ? readonlyGenderLabel(value) : value
+            ).filter(Boolean).join(' · ');
             const option = element('option', `${summary || 'Geen waarde'}${item.id === null ? ' (alleen-lezen)' : ''}`);
             if (summary) option.setAttribute('data-feedback-sensitive', sectionSensitivity[section]);
             option.value = String(index);
@@ -209,12 +223,14 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
                 address.addEventListener('change', markDirty);
             } else {
                 for (const [field, label] of Object.entries(config.fields)) {
-                    const row = element('label', label);
+                    const readonlyGender = !editable && section === 'person' && field === 'salutation';
+                    const row = element('label', readonlyGender ? 'Geslacht' : label);
                     const input = element('input', '', 'form-control');
                     input.setAttribute('aria-describedby', feedback.id);
                     input.name = field;
                     input.type = field === 'birthDay' ? 'date' : field === 'emailAddress' ? 'email' : 'text';
-                    input.value = item.fields[field] || '';
+                    const sourceValue = item.fields[field] || '';
+                    input.value = readonlyGender ? readonlyGenderLabel(sourceValue) : sourceValue;
                     input.readOnly = !editable;
                     input.autocomplete = 'off';
                     input.setAttribute('data-feedback-sensitive', field);

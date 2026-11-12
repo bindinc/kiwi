@@ -359,7 +359,7 @@ export function buildFeedbackDialogHtml() {
                     <h2 id="contextualFeedbackTitle">${escapeHtml(feedbackText('dialog.title'))}</h2>
                     <p data-feedback-selection-summary>${escapeHtml(feedbackText('dialog.noScreenshot'))}</p>
                 </div>
-                <button type="button" class="contextual-feedback-close" data-feedback-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">x</button>
+                <button type="button" class="contextual-feedback-close" data-feedback-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">✕</button>
             </header>
             <div class="contextual-feedback-workspace" data-feedback-workspace hidden>
                 <div class="contextual-feedback-toolbar">${toolButtons}</div>

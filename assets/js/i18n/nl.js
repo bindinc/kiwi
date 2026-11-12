@@ -976,6 +976,8 @@ const nl = {
         "resetComplete": "Klantwerksessie beëindigd. Klaar voor een nieuwe klant."
     },
     "search": {
+        "resultSummaryOne": "klant gevonden",
+        "resultSummaryMany": "klanten gevonden",
         "allCustomers": "alle klanten",
         "backendFailed": "Zoeken via backend mislukt",
         "nameFilterLabel": "Naam: {name}",
