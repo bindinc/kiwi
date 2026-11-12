@@ -5532,6 +5532,271 @@ dialog.form-lightbox::backdrop {
 }
 .subscription-start-date p { margin: .4rem 0; font-size: .875rem; }
 
+/* Service workflows share the form grammar without changing other overlay shells. */
+.service-form > .card {
+    min-width: 0;
+    padding: var(--panel-padding);
+}
+
+.service-form .form-header {
+    align-items: flex-start;
+    gap: var(--field-gap);
+    margin-bottom: var(--space-4);
+}
+
+.service-form .form-header h2 {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.service-form .form-header .btn-close {
+    flex: 0 0 auto;
+}
+
+.service-form .service-context {
+    display: grid;
+    gap: var(--space-1);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-5);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    overflow-wrap: anywhere;
+}
+
+.service-form .service-context-subscription[hidden],
+.service-form .steps-indicator[hidden] {
+    display: none;
+}
+
+.service-form :is(form, .resend-form, .editorial-complaint-form, .winback-container, .winback-step, .customer-form-field) {
+    min-width: 0;
+}
+
+.service-form .winback-container {
+    padding: 0;
+}
+
+.service-form :is(.form-group, .form-row) {
+    margin-bottom: var(--field-gap);
+}
+
+.service-form .form-row,
+.service-form .address-fields .form-row.customer-address-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--field-gap);
+}
+
+.service-form .customer-create-form > .form-row {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+}
+
+.service-form .form-row > .form-group {
+    margin-bottom: 0;
+}
+
+.service-form :is(input:not([type="radio"], [type="checkbox"]), select, textarea) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+#winbackFlow .customer-create-form {
+    margin-top: var(--space-5);
+}
+
+#winbackFlow .customer-create-form > h3.form-subtitle:first-child {
+    margin-top: 0;
+}
+
+#winbackFlow .customer-create-form > .address-fields {
+    display: flow-root;
+}
+
+.service-form .form-subtitle,
+.service-form .winback-step > h4 {
+    margin: var(--space-5) 0 var(--field-gap);
+    font-size: var(--font-size-body);
+    font-weight: var(--weight-medium);
+}
+
+.service-form .form-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+}
+
+.service-form .form-actions .btn {
+    max-width: 100%;
+    white-space: normal;
+}
+
+.service-form .radio-option {
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+}
+
+.service-form :is(.radio-option, .offer-card):has(input:checked) {
+    border-color: var(--action);
+    background: var(--surface-choice-selected);
+}
+
+.service-form .script-box {
+    background: var(--surface-canvas);
+    border-left: 2px solid var(--border-control);
+    padding: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.service-form .script-box p {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+}
+
+.service-form .steps-indicator {
+    gap: var(--field-gap);
+    margin-bottom: var(--space-5);
+}
+
+.service-form .step {
+    flex: 1;
+    min-width: 0;
+    gap: var(--space-1);
+}
+
+.service-form .step-label {
+    font-size: var(--font-size-label);
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.service-form :is(.offers-container, .deceased-subscriptions-list) {
+    min-width: 0;
+    gap: var(--field-gap);
+    margin-bottom: var(--space-4);
+}
+
+.service-form .offer-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--field-gap);
+    min-width: 0;
+    padding: var(--space-3);
+    border-width: 1px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-body);
+    font-weight: normal;
+    color: var(--text);
+}
+
+.service-form .offer-copy {
+    display: grid;
+    gap: var(--space-1);
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.service-form :is(.offer-title, .offer-description, .offer-discount) {
+    margin: 0;
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    color: var(--text);
+}
+
+.service-form .offer-description {
+    color: var(--text-muted);
+}
+
+.service-form .offer-discount {
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
+}
+
+.service-form .deceased-subscription-card {
+    min-width: 0;
+    padding: 0 0 var(--space-4);
+    border: 0;
+    border-bottom: 1px solid var(--border-subtle);
+    background: transparent;
+}
+
+.service-form .deceased-sub-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: 0;
+    margin-bottom: var(--field-gap);
+    border: 0;
+    overflow-wrap: anywhere;
+}
+
+.service-form .deceased-sub-header h4 {
+    font-size: var(--font-size-body);
+}
+
+.service-form .deceased-action-group {
+    min-width: 0;
+    border: 0;
+    padding: 0;
+    margin: 0;
+}
+
+.service-form .deceased-action-group legend {
+    padding: 0;
+    margin-bottom: var(--space-2);
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-medium);
+}
+
+.service-form :is(#refundSubscriptionsList, #transferSubscriptionsList, #combinedTransferList, #combinedRefundList) {
+    margin: var(--space-4) 0;
+    padding: var(--space-3) 0;
+    border: 0;
+    border-block: 1px solid var(--border-subtle);
+    background: transparent;
+    overflow-wrap: anywhere;
+}
+
+.service-form :is(.offer-card, .radio-option):hover:not(:has(input:checked)) {
+    border-color: var(--border-control);
+    background: var(--surface-quiet-hover);
+}
+
+.service-form .service-request-status {
+    font-size: var(--font-size-label);
+    line-height: var(--line-height-body);
+    color: var(--text-muted);
+}
+
+.service-form .service-request-status:not(:empty) {
+    margin-top: var(--space-4);
+}
+
+@media (max-width: 768px) {
+    .service-form {
+        padding: var(--space-4);
+    }
+
+    .service-form > .card {
+        padding: var(--space-4);
+    }
+
+    .service-form .form-row,
+    .service-form .address-fields .form-row.customer-address-row,
+    .service-form .customer-create-form > .form-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .service-form .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;

@@ -1397,16 +1397,16 @@ async function testRoleSearchDiscardsStaleResponses() {
 
 function testSubscriptionBirthdayCaptionKeepsPrivateFieldBoundary() {
     for (const dictionary of [nl, en]) {
-        for (const prefix of ['subRecipient', 'subRequester', 'article', 'transfer']) {
+        for (const prefix of ['subRecipient', 'subRequester', 'article', 'transfer', 'transfer2', 'unrelated']) {
             const { context, elements, runtime } = createRuntimeContext();
             context.translate = (key, _params, fallback) => key.split('.').reduce((value, part) => value?.[part], dictionary) ?? fallback;
             runtime.renderCustomerForm('recipientCreateForm', prefix);
             const document = createEditorDocument();
             document.body.innerHTML = elements.recipientCreateForm.innerHTML;
             const caption = document.body.querySelector(`#${prefix}BirthdayLabel`);
-            const isSubscriptionRole = ['subRecipient', 'subRequester'].includes(prefix);
+            const hasPublicCaption = ['subRecipient', 'subRequester', 'transfer', 'transfer2'].includes(prefix);
             assert.equal(caption.textContent, dictionary.forms.birthdayLabel);
-            assert.equal(caption.getAttribute('data-feedback-public'), isSubscriptionRole ? '' : null);
+            assert.equal(caption.getAttribute('data-feedback-public'), hasPublicCaption ? '' : null);
             assert.equal(caption.children.length, 0, 'only fixed caption text is public');
             const privateFields = ['input', 'select', 'option'].flatMap(tag => document.body.querySelectorAll(tag));
             assert.ok(privateFields.length > 10, 'the real generated person and address fields were rendered');

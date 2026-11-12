@@ -296,7 +296,8 @@ function renderCustomerForm(containerId, prefix, config = {}) {
     };
     const cfg = { ...defaults, ...config };
     const isSubscriptionRole = prefix === 'subRecipient' || prefix === 'subRequester';
-    const birthdayCaptionPublicAttribute = isSubscriptionRole ? ' data-feedback-public=""' : '';
+    const hasPublicBirthdayCaption = isSubscriptionRole || prefix === 'transfer' || prefix === 'transfer2';
+    const birthdayCaptionPublicAttribute = hasPublicBirthdayCaption ? ' data-feedback-public=""' : '';
     const phonePlaceholderBase = translate('forms.phonePlaceholder', {}, 'Telefoonnummer');
     const landlinePhonePlaceholderBase = translate('forms.landlinePhonePlaceholder', {}, 'Vast telefoonnummer');
     const mobilePhonePlaceholderBase = translate('forms.mobilePhonePlaceholder', {}, 'Mobiel telefoonnummer');

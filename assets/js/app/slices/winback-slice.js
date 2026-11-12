@@ -1,6 +1,8 @@
 import { resumeFormDraft, clearFormDraft, registerDraftCleanup } from '../lightbox-drafts.js';
 import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
+import { renderServiceFormContext } from '../service-form-context.js';
+import { beginServiceFormRequest, finishServiceFormRequest, resetServiceFormFeedback } from '../service-form-feedback.js';
 
 const WINBACK_SLICE_NAMESPACE = 'kiwiWinbackSlice';
 
@@ -217,8 +219,9 @@ function pushContactHistory(customer, entry) {
 }
 
 async function selectCustomer(customerId) {
-    const selectCustomerFn = getLegacyFunction('selectCustomer');
-    if (!selectCustomerFn) {
+    const selectCustomerFn = getLegacyFunction('selectCustomer')
+        || getGlobalScope()?.kiwiCustomerDetailSlice?.selectCustomer;
+    if (typeof selectCustomerFn !== 'function') {
         return;
     }
 
@@ -250,6 +253,10 @@ function showWinbackStep(stepNumber) {
     if (targetStep && targetStep.style) {
         targetStep.style.display = 'block';
     }
+
+    const indicators = querySelector('#winbackFlow .steps-indicator');
+    const isDeceasedStep = ['1b', '1c', '1d', '1e'].includes(String(stepNumber));
+    if (indicators) indicators.hidden = isDeceasedStep;
 }
 
 function setActiveStepIndicator(stepNumber) {
@@ -257,12 +264,14 @@ function setActiveStepIndicator(stepNumber) {
     for (const indicator of allIndicators) {
         if (indicator.classList) {
             indicator.classList.remove('active');
+            indicator.removeAttribute?.('aria-current');
         }
     }
 
     const activeIndicator = querySelector(`[data-step="${stepNumber}"]`);
     if (activeIndicator && activeIndicator.classList) {
         activeIndicator.classList.add('active');
+        activeIndicator.setAttribute?.('aria-current', 'step');
     }
 }
 
@@ -485,7 +494,13 @@ export function showWinbackFlow() {
     }
 
     const draftContext = `${winbackState.cancellingSubscriptionId}:${winbackState.isWinbackForEndedSub}`;
+    renderServiceFormContext(
+        getElementById('winbackFlow'), currentCustomer,
+        findSubscription(currentCustomer, winbackState.cancellingSubscriptionId)
+    );
     if (resumeFormDraft(getElementById('winbackFlow'), draftContext)) return;
+    resetServiceFormFeedback(getElementById('winbackFlow'));
+    resetServiceFormFeedback(getElementById('winbackOffersStatus'));
     registerDraftCleanup(getDocumentRef(), resetWinbackDraftState);
 
     showWinbackStep(1);
@@ -508,7 +523,11 @@ export async function winbackNextStep(stepNumber) {
             return;
         }
 
-        await generateWinbackOffers(selectedReason.value);
+        await generateWinbackOffers(selectedReason.value, () => {
+            showWinbackStep(stepNumber);
+            setActiveStepIndicator(stepNumber);
+        });
+        return;
     }
 
     const shouldValidateOfferSelection = Number(stepNumber) === 3;
@@ -541,53 +560,79 @@ export function winbackPrevStep(stepNumber) {
     void winbackNextStep(stepNumber);
 }
 
-export async function generateWinbackOffers(reason) {
-    const apiClient = getApiClient();
-    const canLoadOffers = apiClient && typeof apiClient.get === 'function';
-    if (!canLoadOffers) {
-        showToast(translateKey('winback.offersUnavailable', {}, 'Winback-aanbiedingen via backend zijn niet beschikbaar'), 'error');
-        return;
-    }
-
-    const { offersApiUrl } = getApiEndpoints();
-    let relevantOffers = [];
+// Step transitions share the load owner; direct callers only refresh the offers.
+export async function generateWinbackOffers(reason, advanceStep = null) {
+    const request = beginServiceFormRequest(
+        getElementById('winbackFlow'),
+        translateKey('winback.offersLoading', {}, 'Aanbiedingen laden…'),
+        {
+            owner: getElementById('winbackOffersStatus'),
+            controlSelector: '[data-action="winback-next-step"][data-arg-step="2"]',
+            statusSelector: '#winbackOffersStatus'
+        }
+    );
+    if (!request) return;
 
     try {
-        const query = new URLSearchParams({
-            limit: '20'
-        }).toString();
-        const payload = await apiClient.get(`${offersApiUrl}?${query}`);
-        relevantOffers = payload && Array.isArray(payload.items) ? payload.items : [];
-    } catch (error) {
-        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
-            console.warn('Winback-aanbiedingen laden via backend mislukt.', error);
+        const apiClient = getApiClient();
+        const canLoadOffers = apiClient && typeof apiClient.get === 'function';
+        if (!canLoadOffers) {
+            showToast(translateKey('winback.offersUnavailable', {}, 'Winback-aanbiedingen via backend zijn niet beschikbaar'), 'error');
+            advanceStep?.();
+            return;
         }
-        showToast(error.message || translateKey('winback.offersLoadFailed', {}, 'Winback-aanbiedingen laden mislukt'), 'error');
-        return;
-    }
 
-    if (!relevantOffers.length) {
-        showToast(translateKey('winback.offersNoneAvailable', {}, 'Geen aanbiedingen beschikbaar'), 'warning');
-    }
+        const { offersApiUrl } = getApiEndpoints();
+        let relevantOffers = [];
 
-    const offersMarkup = relevantOffers.map((offer) => {
-        const safeOfferId = escapeHtml(String(offer.offerId ?? offer.salesCode ?? ''));
-        const safeTitle = escapeHtml(String(offer.title || ''));
-        const safeDescription = escapeHtml(String(offer.description || offer.webDescription || offer.additionalDescription || ''));
-        const safeDiscount = offer.price !== undefined && offer.price !== null
-            ? escapeHtml(`EUR ${String(offer.price)}`)
-            : '';
+        try {
+            const query = new URLSearchParams({
+                limit: '20'
+            }).toString();
+            const payload = await apiClient.get(`${offersApiUrl}?${query}`);
+            if (!request.isCurrent()) return;
+            relevantOffers = payload && Array.isArray(payload.items) ? payload.items : [];
+        } catch (error) {
+            if (!request.isCurrent()) return;
+            if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+                console.warn('Winback-aanbiedingen laden via backend mislukt.', error);
+            }
+            showToast(error.message || translateKey('winback.offersLoadFailed', {}, 'Winback-aanbiedingen laden mislukt'), 'error');
+            advanceStep?.();
+            return;
+        }
 
-        return `
-        <div class="offer-card" data-action="select-offer" data-arg-offer-id="${safeOfferId}" data-arg-title="${safeTitle}" data-arg-description="${safeDescription}">
-            <div class="offer-title">${safeTitle}</div>
-            <div class="offer-description">${safeDescription}</div>
-            <div class="offer-discount">${safeDiscount}</div>
-        </div>
+        if (!relevantOffers.length) {
+            showToast(translateKey('winback.offersNoneAvailable', {}, 'Geen aanbiedingen beschikbaar'), 'warning');
+        }
+
+        const offersMarkup = relevantOffers.map((offer) => {
+            const offerId = String(offer.offerId ?? offer.salesCode ?? '');
+            const safeOfferId = escapeHtml(offerId);
+            const isSelected = winbackState.selectedOffer && String(winbackState.selectedOffer.id) === offerId;
+            const safeTitle = escapeHtml(String(offer.title || ''));
+            const safeDescription = escapeHtml(String(offer.description || offer.webDescription || offer.additionalDescription || ''));
+            const safeDiscount = offer.price !== undefined && offer.price !== null
+                ? escapeHtml(`EUR ${String(offer.price)}`)
+                : '';
+
+            return `
+        <label class="offer-card${isSelected ? ' selected' : ''}">
+            <input type="radio" name="winbackOffer" value="${safeOfferId}" ${isSelected ? 'checked' : ''} data-action="select-offer" data-action-event="change" data-arg-offer-id="${safeOfferId}" data-arg-title="${safeTitle}" data-arg-description="${safeDescription}">
+            <span class="offer-copy">
+                <span class="offer-title">${safeTitle}</span>
+                <span class="offer-description">${safeDescription}</span>
+                <span class="offer-discount">${safeDiscount}</span>
+            </span>
+        </label>
     `;
-    }).join('');
+        }).join('');
 
-    setInnerHtml('winbackOffers', offersMarkup);
+        setInnerHtml('winbackOffers', offersMarkup);
+        advanceStep?.();
+    } finally {
+        finishServiceFormRequest(request);
+    }
 }
 
 export function selectOffer(offerId, title, description, selectedElement = null) {
@@ -597,15 +642,15 @@ export function selectOffer(offerId, title, description, selectedElement = null)
         description
     };
 
+    const selectedCard = selectedElement?.closest?.('.offer-card') || selectedElement;
     const offerCards = querySelectorAll('.offer-card');
     for (const offerCard of offerCards) {
+        const radio = offerCard.querySelector?.('input[name="winbackOffer"]');
+        const isSelected = radio ? radio.value === String(offerId) : offerCard === selectedCard;
+        if (radio) radio.checked = isSelected;
         if (offerCard.classList) {
-            offerCard.classList.remove('selected');
+            offerCard.classList.toggle('selected', isSelected);
         }
-    }
-
-    if (selectedElement && selectedElement.classList) {
-        selectedElement.classList.add('selected');
     }
 }
 
@@ -649,8 +694,8 @@ export function winbackHandleDeceased() {
                 <h4>📰 ${escapeHtml(subscription.magazine)}</h4>
                 <span class="sub-start-date">Start: ${formatDate(subscription.startDate)}</span>
             </div>
-            <div class="form-group">
-                <label>Actie voor dit abonnement:</label>
+            <fieldset class="form-group deceased-action-group">
+                <legend>Actie voor dit abonnement:</legend>
                 <div class="radio-group">
                     <label class="radio-option">
                         <input type="radio" name="action_${subscription.id}" value="cancel_refund" required>
@@ -661,7 +706,7 @@ export function winbackHandleDeceased() {
                         <span>${translateKey('subscription.actionTransferToOther', {}, 'Overzetten op andere persoon')}</span>
                     </label>
                 </div>
-            </div>
+            </fieldset>
         </div>
     `).join('');
 
@@ -844,7 +889,9 @@ export function revertRestitution(subscriptionId) {
 }
 
 export function showRestitutionTransferForm(subscription) {
+    renderServiceFormContext(getElementById('restitutionTransferForm'), readCurrentCustomer(), subscription);
     if (resumeFormDraft(getElementById('restitutionTransferForm'), String(subscription.id))) return;
+    resetServiceFormFeedback(getElementById('restitutionTransferForm'));
     registerDraftCleanup(getDocumentRef(), resetWinbackDraftState);
     winbackState.restitutionAddressSessionId = globalThis.crypto.randomUUID();
     setDisplayValue('restitutionTransferForm', 'flex');
@@ -932,50 +979,62 @@ export async function completeRestitutionTransfer(event) {
         return;
     }
 
-    const newCustomerName = buildTransferRecipientName(transferData);
-    const apiClient = getApiClient();
-    const canPersistTransferViaApi = apiClient && typeof apiClient.post === 'function';
-
-    if (canPersistTransferViaApi) {
-        const { subscriptionsApiUrl } = getApiEndpoints();
-
-        try {
-            await apiClient.post(
-                `${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}/restitution-transfer`,
-                { transferData }
-            );
-        } catch (error) {
-            showToast(error.message || translateKey('subscription.transferFailed', {}, 'Overzetten via backend mislukt'), 'error');
-            return;
-        }
-    } else {
-        subscription.status = 'transferred';
-        subscription.transferredTo = {
-            ...transferData,
-            transferDate: new Date().toISOString()
-        };
-        delete subscription.refundInfo;
-
-        pushContactHistory(currentCustomer, {
-            type: 'Restitutie Ongedaan - Abonnement Overgezet',
-            description: `Restitutie van ${subscription.magazine} ongedaan gemaakt. Abonnement overgezet naar ${newCustomerName} (${transferData.email}) op ${transferData.address}, ${transferData.postalCode} ${transferData.city}.`
-        });
-
-        saveCustomers();
-    }
-
-    if (shouldUseSameAddress && typeof apiClient?.delete === 'function') {
-        void apiClient.delete(`/api/v1/addresses/sessions/${winbackState.restitutionAddressSessionId}`).catch(() => {});
-    }
-    closeForm('restitutionTransferForm');
-    await selectCustomer(currentCustomer.id);
-
-    showToast(
-        translateKey('subscription.transferred', { magazine: subscription.magazine, name: newCustomerName }, `${subscription.magazine} overgezet naar ${newCustomerName}`),
-        'success'
+    const request = beginServiceFormRequest(
+        getElementById('restitutionTransferForm'), translateKey('serviceRequests.transfer', {}, 'Overdracht verwerken…')
     );
+    if (!request) return;
 
-    winbackState.restitutionRevertSubId = null;
+    try {
+        const newCustomerName = buildTransferRecipientName(transferData);
+        const apiClient = getApiClient();
+        const canPersistTransferViaApi = apiClient && typeof apiClient.post === 'function';
+
+        if (canPersistTransferViaApi) {
+            const { subscriptionsApiUrl } = getApiEndpoints();
+
+            try {
+                await apiClient.post(
+                    `${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}/restitution-transfer`,
+                    { transferData }
+                );
+            } catch (error) {
+                if (!request.isCurrent()) return;
+                showToast(error.message || translateKey('subscription.transferFailed', {}, 'Overzetten via backend mislukt'), 'error');
+                return;
+            }
+        } else {
+            subscription.status = 'transferred';
+            subscription.transferredTo = {
+                ...transferData,
+                transferDate: new Date().toISOString()
+            };
+            delete subscription.refundInfo;
+
+            pushContactHistory(currentCustomer, {
+                type: 'Restitutie Ongedaan - Abonnement Overgezet',
+                description: `Restitutie van ${subscription.magazine} ongedaan gemaakt. Abonnement overgezet naar ${newCustomerName} (${transferData.email}) op ${transferData.address}, ${transferData.postalCode} ${transferData.city}.`
+            });
+
+            saveCustomers();
+        }
+
+        if (shouldUseSameAddress && typeof apiClient?.delete === 'function') {
+            void apiClient.delete(`/api/v1/addresses/sessions/${transferData.formSessionId}`).catch(() => {});
+        }
+        if (!request.isCurrent()) return;
+        closeForm('restitutionTransferForm');
+        await selectCustomer(currentCustomer.id);
+        if (!request.isCurrent()) return;
+
+        showToast(
+            translateKey('subscription.transferred', { magazine: subscription.magazine, name: newCustomerName }, `${subscription.magazine} overgezet naar ${newCustomerName}`),
+            'success'
+        );
+
+        winbackState.restitutionRevertSubId = null;
+    } finally {
+        finishServiceFormRequest(request);
+    }
 }
 
 export function getTransferDataFromForm(formVersion) {
@@ -1068,97 +1127,110 @@ export async function completeAllDeceasedActions() {
         return;
     }
 
-    const processedMagazines = [];
-    const actionsPayload = [];
+    const request = beginServiceFormRequest(
+        getElementById('winbackFlow'), translateKey('serviceRequests.deceased', {}, 'Abonnementen verwerken…')
+    );
+    if (!request) return;
 
-    for (const action of transferActions) {
-        processedMagazines.push(`${action.subscription.magazine} (overgezet)`);
-        actionsPayload.push({
-            subscriptionId: action.subscription.id,
-            action: 'transfer',
-            transferData
-        });
-    }
+    try {
+        const processedMagazines = [];
+        const actionsPayload = [];
 
-    for (const action of refundActions) {
-        processedMagazines.push(`${action.subscription.magazine} (gerestitueerd)`);
-        actionsPayload.push({
-            subscriptionId: action.subscription.id,
-            action: 'cancel_refund',
-            refundData
-        });
-    }
-
-    let historyDescription = 'Abonnementen verwerkt i.v.m. overlijden:\n';
-
-    if (transferActions.length > 0) {
-        const newCustomerName = buildTransferRecipientName(transferData);
-        historyDescription += `\nOvergezet naar ${newCustomerName} (${transferData.email}):\n`;
-        historyDescription += transferActions.map((action) => `- ${action.subscription.magazine}`).join('\n');
-    }
-
-    if (refundActions.length > 0) {
-        historyDescription += `\n\nOpgezegd met restitutie naar ${refundData.email}:\n`;
-        historyDescription += refundActions.map((action) => `- ${action.subscription.magazine}`).join('\n');
-        if (refundData.notes) {
-            historyDescription += `\nNotities: ${refundData.notes}`;
-        }
-    }
-
-    const apiClient = getApiClient();
-    const canPersistActionsViaApi = apiClient && typeof apiClient.post === 'function';
-
-    if (canPersistActionsViaApi) {
-        const { subscriptionsApiUrl } = getApiEndpoints();
-
-        try {
-            await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/deceased-actions`, {
-                actions: actionsPayload
-            });
-        } catch (error) {
-            showToast(error.message || translateKey('subscription.deceasedProcessFailed', {}, 'Verwerken overlijden via backend mislukt'), 'error');
-            return;
-        }
-    } else {
         for (const action of transferActions) {
-            action.subscription.transferredTo = {
-                ...transferData,
-                transferDate: new Date().toISOString()
-            };
-            action.subscription.status = 'transferred';
+            processedMagazines.push(`${action.subscription.magazine} (overgezet)`);
+            actionsPayload.push({
+                subscriptionId: action.subscription.id,
+                action: 'transfer',
+                transferData
+            });
         }
 
         for (const action of refundActions) {
-            action.subscription.status = 'restituted';
-            action.subscription.endDate = new Date().toISOString();
-            action.subscription.refundInfo = {
-                email: refundData.email,
-                notes: refundData.notes,
-                refundDate: new Date().toISOString()
-            };
+            processedMagazines.push(`${action.subscription.magazine} (gerestitueerd)`);
+            actionsPayload.push({
+                subscriptionId: action.subscription.id,
+                action: 'cancel_refund',
+                refundData
+            });
         }
 
-        pushContactHistory(currentCustomer, {
-            type: 'Overlijden - Meerdere Abonnementen',
-            description: historyDescription
-        });
+        let historyDescription = 'Abonnementen verwerkt i.v.m. overlijden:\n';
 
-        saveCustomers();
+        if (transferActions.length > 0) {
+            const newCustomerName = buildTransferRecipientName(transferData);
+            historyDescription += `\nOvergezet naar ${newCustomerName} (${transferData.email}):\n`;
+            historyDescription += transferActions.map((action) => `- ${action.subscription.magazine}`).join('\n');
+        }
+
+        if (refundActions.length > 0) {
+            historyDescription += `\n\nOpgezegd met restitutie naar ${refundData.email}:\n`;
+            historyDescription += refundActions.map((action) => `- ${action.subscription.magazine}`).join('\n');
+            if (refundData.notes) {
+                historyDescription += `\nNotities: ${refundData.notes}`;
+            }
+        }
+
+        const apiClient = getApiClient();
+        const canPersistActionsViaApi = apiClient && typeof apiClient.post === 'function';
+
+        if (canPersistActionsViaApi) {
+            const { subscriptionsApiUrl } = getApiEndpoints();
+
+            try {
+                await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/deceased-actions`, {
+                    actions: actionsPayload
+                });
+            } catch (error) {
+                if (!request.isCurrent()) return;
+                showToast(error.message || translateKey('subscription.deceasedProcessFailed', {}, 'Verwerken overlijden via backend mislukt'), 'error');
+                return;
+            }
+        } else {
+            for (const action of transferActions) {
+                action.subscription.transferredTo = {
+                    ...transferData,
+                    transferDate: new Date().toISOString()
+                };
+                action.subscription.status = 'transferred';
+            }
+
+            for (const action of refundActions) {
+                action.subscription.status = 'restituted';
+                action.subscription.endDate = new Date().toISOString();
+                action.subscription.refundInfo = {
+                    email: refundData.email,
+                    notes: refundData.notes,
+                    refundDate: new Date().toISOString()
+                };
+            }
+
+            pushContactHistory(currentCustomer, {
+                type: 'Overlijden - Meerdere Abonnementen',
+                description: historyDescription
+            });
+
+            saveCustomers();
+        }
+
+        if (!request.isCurrent()) return;
+
+        closeForm('winbackFlow');
+        await selectCustomer(currentCustomer.id);
+        if (!request.isCurrent()) return;
+
+        showToast(
+            translateKey(
+                'subscription.processed',
+                { count: processedMagazines.length },
+                `${processedMagazines.length} abonnement(en) verwerkt. Bevestigingen worden verstuurd.`
+            ),
+            'success'
+        );
+
+        winbackState.deceasedSubscriptionActions = null;
+    } finally {
+        finishServiceFormRequest(request);
     }
-
-    closeForm('winbackFlow');
-    await selectCustomer(currentCustomer.id);
-
-    showToast(
-        translateKey(
-            'subscription.processed',
-            { count: processedMagazines.length },
-            `${processedMagazines.length} abonnement(en) verwerkt. Bevestigingen worden verstuurd.`
-        ),
-        'success'
-    );
-
-    winbackState.deceasedSubscriptionActions = null;
 }
 
 export async function completeWinback() {
@@ -1180,55 +1252,73 @@ export async function completeWinback() {
         return;
     }
 
-    const resultValue = resultInput.value;
-    const apiClient = getApiClient();
-    const canPersistViaApi = apiClient && typeof apiClient.post === 'function';
+    const request = beginServiceFormRequest(
+        getElementById('winbackFlow'), translateKey('serviceRequests.winback', {}, 'Resultaat verwerken…')
+    );
+    if (!request) return;
 
-    if (canPersistViaApi) {
-        const { subscriptionsApiUrl } = getApiEndpoints();
+    try {
+        const resultValue = resultInput.value;
+        const apiClient = getApiClient();
+        const canPersistViaApi = apiClient && typeof apiClient.post === 'function';
+        let wasQueued = false;
 
-        try {
-            await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, {
-                result: resultValue,
-                offer: winbackState.selectedOffer
+        if (canPersistViaApi) {
+            const { subscriptionsApiUrl } = getApiEndpoints();
+
+            try {
+                const response = await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, {
+                    result: resultValue,
+                    offer: winbackState.selectedOffer
+                });
+                wasQueued = response?.provisional === true;
+            } catch (error) {
+                if (!request.isCurrent()) return;
+                showToast(error.message || translateKey('winback.saveFailed', {}, 'Winback opslaan via backend mislukt'), 'error');
+                return;
+            }
+        } else if (resultValue === 'accepted') {
+            const selectedOfferTitle = winbackState.selectedOffer ? winbackState.selectedOffer.title : 'aanbod';
+
+            pushContactHistory(currentCustomer, {
+                type: 'Winback succesvol',
+                description: `Klant accepteerde winback aanbod: ${selectedOfferTitle}. Abonnement ${subscription.magazine} blijft actief.`
             });
-        } catch (error) {
-            showToast(error.message || translateKey('winback.saveFailed', {}, 'Winback opslaan via backend mislukt'), 'error');
-            return;
+        } else {
+            currentCustomer.subscriptions = getCustomerSubscriptions(currentCustomer)
+                .filter((customerSubscription) => Number(customerSubscription.id) !== Number(subscriptionId));
+
+            pushContactHistory(currentCustomer, {
+                type: 'Abonnement opgezegd',
+                description: `Klant heeft abonnement ${subscription.magazine} opgezegd na winback poging.`
+            });
         }
-    } else if (resultValue === 'accepted') {
-        const selectedOfferTitle = winbackState.selectedOffer ? winbackState.selectedOffer.title : 'aanbod';
 
-        pushContactHistory(currentCustomer, {
-            type: 'Winback succesvol',
-            description: `Klant accepteerde winback aanbod: ${selectedOfferTitle}. Abonnement ${subscription.magazine} blijft actief.`
-        });
-    } else {
-        currentCustomer.subscriptions = getCustomerSubscriptions(currentCustomer)
-            .filter((customerSubscription) => Number(customerSubscription.id) !== Number(subscriptionId));
+        if (!canPersistViaApi) {
+            saveCustomers();
+        }
 
-        pushContactHistory(currentCustomer, {
-            type: 'Abonnement opgezegd',
-            description: `Klant heeft abonnement ${subscription.magazine} opgezegd na winback poging.`
-        });
+        if (!request.isCurrent()) return;
+
+        closeForm('winbackFlow');
+        await selectCustomer(currentCustomer.id);
+        if (!request.isCurrent()) return;
+
+        if (wasQueued) {
+            showToast(translateKey('customerWorkSession.notFinal', {},
+                'De aanvraag is door KIWI geaccepteerd, maar nog niet definitief verwerkt.'), 'success');
+        } else if (resultValue === 'accepted') {
+            showToast(translateKey('winback.success', {}, 'Winback succesvol! Klant blijft abonnee.'), 'success');
+        } else {
+            showToast(translateKey('subscription.cancelled', {}, 'Abonnement opgezegd'), 'error');
+        }
+
+        winbackState.selectedOffer = null;
+        winbackState.cancellingSubscriptionId = null;
+        winbackState.isWinbackForEndedSub = false;
+    } finally {
+        finishServiceFormRequest(request);
     }
-
-    if (!canPersistViaApi) {
-        saveCustomers();
-    }
-
-    closeForm('winbackFlow');
-    await selectCustomer(currentCustomer.id);
-
-    if (resultValue === 'accepted') {
-        showToast(translateKey('winback.success', {}, 'Winback succesvol! Klant blijft abonnee.'), 'success');
-    } else {
-        showToast(translateKey('subscription.cancelled', {}, 'Abonnement opgezegd'), 'error');
-    }
-
-    winbackState.selectedOffer = null;
-    winbackState.cancellingSubscriptionId = null;
-    winbackState.isWinbackForEndedSub = false;
 }
 
 function exposeWinbackSlice() {

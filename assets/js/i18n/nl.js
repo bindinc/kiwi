@@ -1,4 +1,12 @@
 const nl = {
+    "serviceRequests": {
+        "saving": "Wijzigingen opslaan…",
+        "resending": "Editie aanvragen…",
+        "editorial": "Redactie-item registreren…",
+        "transfer": "Overdracht verwerken…",
+        "deceased": "Abonnementen verwerken…",
+        "winback": "Resultaat verwerken…"
+    },
     "subscriptionStartDates": {
         "missingEdition": "Geen editie beschikbaar. Selecteer een andere aanbieding.",
         "edition": "Editie",
@@ -698,6 +706,7 @@ const nl = {
         "selectOutcome": "Selecteer een resultaat",
         "success": "Winback succesvol! Klant blijft abonnee.",
         "offersUnavailable": "Winback-aanbiedingen via backend zijn niet beschikbaar",
+        "offersLoading": "Aanbiedingen laden…",
         "offersLoadFailed": "Winback-aanbiedingen laden mislukt",
         "offersNoneForReason": "Geen winback-aanbiedingen beschikbaar voor deze reden",
         "offersNoneAvailable": "Geen aanbiedingen beschikbaar",

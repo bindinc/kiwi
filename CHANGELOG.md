@@ -12,6 +12,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
+- Align subscription service forms and winback, restitution and transfer flows with Light & Shadow, with native choices, clear request progress and consistent actions while preserving business rules, private capture and drafts (`theme_audit` slice 07). [sc-206629]
+
 - Align article ordering with the Light & Shadow workspace hierarchy, clear request progress, accessible feedback and safe screenshot context while preserving catalog, cart, pricing, coupon, payment, delivery and draft behavior (`theme_audit` slice 06). [sc-206629]
 
 - Align subscription creation with the Light & Shadow workflow hierarchy and clear request progress, while preserving product, recipient, payer, payment, consent and draft behavior (`theme_audit` slice 05). [sc-206629]

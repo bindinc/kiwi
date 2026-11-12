@@ -32,6 +32,14 @@ The slice 02 actual component probe at `c12b7fe` confirms canonical caption/fiel
 
 Evidence is retained under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-10/slice-02/c12b7fe/`; the standalone-field reports and screenshots distinguish the 260 passing type/geometry/draft/source checks per engine from these explicit containment observations. Do not mark this gate complete from those counts alone.
 
+### Narrow toast/action overlap gate — 2026-11-12
+
+Actual Firefox320×1000 complaint recovery on service source `4f1f57f` shows the full transient error toast overlapping the Register action. After its existing expiry, the unchanged form retains its description/follow-up values, the full action is visible and a genuine identical-payload retry succeeds through the controlled queued acknowledgement. The passing functional/geometry counters are not evidence of an unobstructed error-state image.
+
+This slice explicitly owns the shared `.toast` surface and placement. Inspect narrow and short-height toast/error/success presentation with actual form actions and current focus; make consequential feedback readable without covering the required next action. Preserve message lifecycle, outbox notice consumption, draft values and request semantics. Verify in both browsers and repeat the affected service error/action state after the correction. Do not solve overlap by hiding the error, shortening its text, forcing a click or weakening visibility assertions.
+
+Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-07/after-narrow-complaint-firefox-01/firefox/320x1000-service-complaint-visible-error.png`, its settled rejected/queued images and `report.json`. This is a current-source observation; no historical pixel replay is claimed. Service slice07 covers owned progress, retained values and real retry; unobstructed global toast presentation remains a required08 gate and is not accepted by the service report's green counters.
+
 ## Explicit backdrop decision — 2026-11-11
 
 The user requires the background used by **New subscription** to become the shared backdrop for ordinary overlays. Opening contextual feedback currently looks substantially less transparent than opening New subscription or feedback settings. This is an explicit slice 08 acceptance requirement; implementation remains sequential after slices 04–07.
