@@ -22,6 +22,8 @@ const customerOnly = process.env.KIWI_THEME_AUDIT_CUSTOMER_ONLY === '1';
 const subscriptionOnly = process.env.KIWI_THEME_AUDIT_SUBSCRIPTION_ONLY === '1';
 const articleOnly = process.env.KIWI_THEME_AUDIT_ARTICLE_ONLY === '1';
 const serviceOnly = process.env.KIWI_THEME_AUDIT_SERVICE_ONLY === '1';
+const overlayOnly = process.env.KIWI_THEME_AUDIT_OVERLAY_ONLY === '1';
+const overlayPhase = process.env.KIWI_THEME_AUDIT_OVERLAY_PHASE || 'before';
 const servicePhase = process.env.KIWI_THEME_AUDIT_SERVICE_PHASE || 'before';
 const serviceSuite = process.env.KIWI_THEME_AUDIT_SERVICE_SUITE || 'full';
 const articlePhase = process.env.KIWI_THEME_AUDIT_ARTICLE_PHASE || 'before';
@@ -68,6 +70,8 @@ const viewports = process.env.KIWI_THEME_AUDIT_VIEWPORTS
         : (customerOnly || subscriptionOnly) ? [{ width: 1440, height: 1000 }, { width: 390, height: 1000 }]
         : [{ width: 1440, height: 1000 }, { width: 390, height: 1000 }, { width: 320, height: 1000 }, { width: 390, height: 320 }];
 
+if (overlayOnly && (baseUrl.username || baseUrl.password || !['http:', 'https:'].includes(baseUrl.protocol))) throw new Error('Overlay08 requires a credential-free local HTTP(S) URL.');
+if (overlayOnly && (slice !== 8 || overlayPhase !== 'before' || nativeZoom || controlsOnly || shellOnly || customerOnly || subscriptionOnly || articleOnly || serviceOnly)) throw new Error('Run overlay08 BEFORE separately from other modes; AFTER/native gates are not implemented by this checkpoint.');
 if (nativeZoom && slice === 7 && !nativeService) throw new Error('Native service07 mode requires SERVICE_PHASE=after.');
 if ((serviceOnly || nativeService) && ['provider', 'winback'].includes(serviceSuite) && (servicePhase !== 'after' || nativeZoom || viewports.length !== 1 || viewports[0].width < 1000)) throw new Error('Run scoped service provider or callback checks in the after phase at one explicit desktop viewport.');
 if ((serviceOnly || nativeService) && serviceSuite === 'complaint' && (servicePhase !== 'after' || nativeZoom || viewports.length !== 1 || viewports[0].width !== 320)) throw new Error('Run the existing complaint callback subset after at one explicit320px viewport.');
@@ -169,15 +173,15 @@ const report = {
     },
     environment: {
         browser: browserName, browserVersion: browser.version(), playwrightVersion: require(path.join(playwrightPath, 'package.json')).version,
-        locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', role: shellOnly && shellSuite === 'roles' ? 'Actual per-context fallback roles; see shellAcceptance.roles' : 'kiwi-admin', deviceScaleFactor: 1,
+        locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', role: overlayOnly ? 'Actual admin and no-role account contexts; see per-state overlay observations' : shellOnly && shellSuite === 'roles' ? 'Actual per-context fallback roles; see shellAcceptance.roles' : 'kiwi-admin', deviceScaleFactor: 1,
         reducedMotion: 'reduce', nativeZoom: nativeZoom ? 'Actual OS Ctrl+plus/0; measured per capture' : '100% default; 200% native zoom is a separate, unverified gate',
-        scenarioSet: nativeService ? 'Actual native OS200% service family layout, native choices and reset; no mutation/privacy repetition' : serviceOnly ? (serviceSuite === 'complaint' ? 'Service07 existing complaint held/rejected/identical-retry acknowledgement only at320px; visible progress/error wrapping and source-derived queued model; no full workspace claim' : serviceSuite === 'winback' ? 'Service07 existing accepted/declined callbacks only: real held/queued callbacks and source-derived provisional models; no full workspace or provider/privacy repetition' : serviceSuite === 'provider' ? 'Service07 finite provider GET20 held/empty/error/recovery probe; no service mutations or full-workspace acceptance' : 'Service07 ' + servicePhase + ': finite actual service families and conditional branches with controlled fixtures') : articleOnly ? (articlePhase === 'before' ? 'Observed article BEFORE; source/locale counters are not acceptance' : 'Scoped article AFTER: ' + articleSuite) : nativeArticle ? 'Focused actual native OS200% article workspace and small shared sentinel' : subscriptionOnly ? (subscriptionPhase === 'before' ? 'Observed subscription BEFORE; source/locale counters are not acceptance' : 'Focused subscription AFTER layout and preserved interaction gates: ' + subscriptionSuite) : nativeSubscription ? 'Focused actual native OS200% subscription and small shell sentinel' : customerLookupOnly ? 'Bounded actual reusable-person lookup ' + customerPhase + '; not global subscription workflow acceptance' : nativeCustomer ? 'Required focused customer native OS200% gates and small shell sentinel' : customerOnly ? (customerPhase === 'before' ? 'Observed customer BEFORE states; no parity acceptance' : 'Required focused customer AFTER presentation and interaction gates') : shellOnly ? (shellPhase === 'before' ? 'Observed shell states; no parity verdict' : 'Required shell AFTER acceptance: ' + shellSuite) : controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
+        scenarioSet: overlayOnly ? 'Observed overlay08 BEFORE: actual form/feedback/settings/dialog/account surfaces, controlled local transport and capture lifecycle; no parity acceptance' : nativeService ? 'Actual native OS200% service family layout, native choices and reset; no mutation/privacy repetition' : serviceOnly ? (serviceSuite === 'complaint' ? 'Service07 existing complaint held/rejected/identical-retry acknowledgement only at320px; visible progress/error wrapping and source-derived queued model; no full workspace claim' : serviceSuite === 'winback' ? 'Service07 existing accepted/declined callbacks only: real held/queued callbacks and source-derived provisional models; no full workspace or provider/privacy repetition' : serviceSuite === 'provider' ? 'Service07 finite provider GET20 held/empty/error/recovery probe; no service mutations or full-workspace acceptance' : 'Service07 ' + servicePhase + ': finite actual service families and conditional branches with controlled fixtures') : articleOnly ? (articlePhase === 'before' ? 'Observed article BEFORE; source/locale counters are not acceptance' : 'Scoped article AFTER: ' + articleSuite) : nativeArticle ? 'Focused actual native OS200% article workspace and small shared sentinel' : subscriptionOnly ? (subscriptionPhase === 'before' ? 'Observed subscription BEFORE; source/locale counters are not acceptance' : 'Focused subscription AFTER layout and preserved interaction gates: ' + subscriptionSuite) : nativeSubscription ? 'Focused actual native OS200% subscription and small shell sentinel' : customerLookupOnly ? 'Bounded actual reusable-person lookup ' + customerPhase + '; not global subscription workflow acceptance' : nativeCustomer ? 'Required focused customer native OS200% gates and small shell sentinel' : customerOnly ? (customerPhase === 'before' ? 'Observed customer BEFORE states; no parity acceptance' : 'Required focused customer AFTER presentation and interaction gates') : shellOnly ? (shellPhase === 'before' ? 'Observed shell states; no parity verdict' : 'Required shell AFTER acceptance: ' + shellSuite) : controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
         input: customerLookupOnly ? (customerPhase === 'before' ? 'Actual pointer disclosure and native search-action Enter; no selection or submission' : 'Actual native summary Enter/Space and input/button Enter; no selection or submission') : 'Pointer flows plus keyboard focus and Escape checks', requestedViewports: viewports
     },
     checks: [], captures: [], controlContainers: [], blockedWrites: [], errors: [], loadedStylesheets: [],
     limitations: [
         'Measurements and screenshots require independent human visual review; no golden-image equivalence is claimed.',
-        'This read-only run does not submit customer, consent, order, service or feedback changes.',
+        overlayOnly ? 'Only one explicitly declared settings PUT is fulfilled locally for native-entry observation; no settings, feedback or customer write is forwarded.' : 'This read-only run does not submit customer, consent, order, service or feedback changes.',
         nativeZoom ? 'Native zoom is verified by dpr/viewport changes and reset; screen-reader traversal is not covered.' : 'Native 200% browser zoom and screen-reader traversal are not simulated or claimed by this harness.',
         'Shared states not reached through real workflows remain explicitly unverified; unit/class fixtures are separate evidence.'
     ]
@@ -291,7 +295,7 @@ async function capture(page, name, selector, kind = 'actual Compose application 
 
 async function newContext(viewport, readOnly = true, deviceScaleFactor = 1) {
     const context = await browser.newContext({
-        ...((subscriptionOnly || articleOnly || serviceOnly) ? { serviceWorkers: 'block' } : {}),
+        ...((subscriptionOnly || articleOnly || serviceOnly || overlayOnly) ? { serviceWorkers: 'block' } : {}),
         ignoreHTTPSErrors: true, viewport, reducedMotion: 'reduce', deviceScaleFactor,
         locale: 'nl-NL', timezoneId: 'Europe/Amsterdam'
     });
@@ -1377,7 +1381,10 @@ try {
     if (!nativeZoomOnly) {
         for (const viewport of viewports) {
             const contract = await referenceContract(viewport);
-            if (serviceOnly) {
+            if (overlayOnly) {
+                const { inspectOverlays } = await import('./compose-smoke-theme-audit-overlays.mjs');
+                await inspectOverlays({ baseUrl, sourceRoot, capture, check, evidenceDir, login, newContext, normalizeMappedCssUrls, painted, report, saveReport, trackStylesheets }, viewport, contract);
+            } else if (serviceOnly) {
                 const { inspectService } = await import('./compose-smoke-theme-audit-service.mjs');
                 await inspectService({ baseUrl, sourceRoot, capture, check, evidenceDir, login, newContext, painted, report, saveReport, trackStylesheets }, viewport, contract);
             } else if (articleOnly) {
@@ -1425,7 +1432,7 @@ try {
         unverified: report.checks.filter(check => check.status === 'unverified').length,
         errors: report.errors.length, blockedWrites: report.blockedWrites.length,
         captures: report.captures.length,
-        acceptance: (serviceOnly && servicePhase === 'before') || (articleOnly && articlePhase === 'before') || (subscriptionOnly && subscriptionPhase === 'before') || (customerOnly && customerPhase === 'before') || (shellOnly && shellPhase === 'before')
+        acceptance: (overlayOnly && overlayPhase === 'before') || (serviceOnly && servicePhase === 'before') || (articleOnly && articlePhase === 'before') || (subscriptionOnly && subscriptionPhase === 'before') || (customerOnly && customerPhase === 'before') || (shellOnly && shellPhase === 'before')
             ? 'Observational BEFORE capture: locale/provenance counters do not accept recorded visual/keyboard defects.'
             : 'Required gates plus independent visual review remain necessary; a successful run is not complete slice 10 acceptance.'
     };

@@ -381,6 +381,34 @@ This preserves the original unconditional edit unavailable/retry/Escape tail aft
 
 Two boundaries remain explicit. At 320px, the transient global error toast overlaps the lower action until natural expiry; complete error text, retained data and the settled successful retry are proven, while unobstructed error-state action access is not. The [.toast owner in slice 08](../assets/css/theme_audit-08-overlays-feedback-and-system-surfaces.md) must resolve that global presentation gate. Actual English UI expansion remains assigned to final slice 10; this checkpoint proves Dutch application flows and reviewed English source translations. Slice 10 and PR #144 remain in progress through slices 08–09 and final integrated acceptance. No merge or deployment follows from this evidence.
 
+### Slice 08 frozen observational overlay baseline (2026-11-12)
+
+The [overlay companion](compose-smoke-theme-audit-overlays.mjs) adds an isolated `KIWI_THEME_AUDIT_OVERLAY_ONLY=1` BEFORE mode for slice 08. Chromium and Firefox ran serially at 1440×1000, 390×1000, 320×1000 and 390×320, with Dutch locale, reduced motion and DPR1. Each completed 156 source/locale checks, 79 PNGs (71 actual application states and eight showcase references), zero errors and zero blocked requests. These are observational counters, not acceptance of the recorded visual or keyboard defects. PR [#152](https://github.com/bindinc/kiwi/pull/152) owns the application implementation; this tooling PR remains [#144](https://github.com/bindinc/kiwi/pull/144), in progress through slice 09 and final integration.
+
+Durable evidence is under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-08`. `before-final-provenance.json` (SHA-256 `edd2378ee0761976978a9ad62172202109a3825acd74a2a59ebb03ef76ec5387`) freezes 448 artifacts, including both terminal reports and all 158 terminal PNGs, helpers, guards, the original pinned SDK and failed attempts 01/02. The canonical BEFORE source is accepted slice07 Git `771ab506a43feddb4a56d76cd68248ef77738dcd`: all 212 product files are saved in `before-source-07-git-snapshot`, with zero mismatches against the root source-equivalence proof. Runtime07 remained on port9444; the then-equivalent08 scaffold was Git `daa71c22acab50c439cadb97925b10088dcccabe`. Current08 working files are not a BEFORE source. `validation/before-observations-01.json` and `independent-review/before-and-scope-review-01.json` link measured findings and independent whole-image review.
+
+For a new observational invocation, first verify that both the source worktree and live Compose runtime still represent accepted07. Use a fresh evidence directory; never overwrite the frozen runs:
+
+```bash
+KIWI_THEME_APP_ROOT=/home/bartdeijkers/_worktrees/align-theme-service-workflows \
+KIWI_SMOKE_BASE_URL=https://bdc.rtvmedia.org.local:9444/kiwi/ \
+KIWI_THEME_AUDIT_SLICE=8 \
+KIWI_THEME_AUDIT_OVERLAY_ONLY=1 \
+KIWI_THEME_AUDIT_OVERLAY_PHASE=before \
+KIWI_THEME_AUDIT_VIEWPORTS=1440x1000,390x1000,320x1000,390x320 \
+KIWI_THEME_OVERLAY_BASELINE_PROOF=/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-08/before-source-equivalence-01.json \
+KIWI_THEME_OVERLAY_SDK_FILE=/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-08/before-03/helpers/dom-to-image-more-3.10.1-esm.js \
+KIWI_THEME_EVIDENCE_DIR=/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-08/new-before-attempt \
+KIWI_SMOKE_BROWSER=chromium \
+node scripts/compose-smoke-theme-audit.mjs
+```
+
+Repeat Firefox only after Chromium terminates. Mixed modes, unsupported slice/phase/native combinations and credential-bearing base URLs are rejected. Service workers are blocked; unmatched writes and foreign reads are denied. Only the exact source-declared `dom-to-image-more@3.10.1/+esm` GET is fulfilled from the unchanged 26,113-byte original SDK, SHA-256 `1913ae113e0675d70c684af23d5b29da8d1409d10440866d3cca1db6b888f70c`; `independent-review/before-helper-review-02.json` confirms its original slice04 provenance. No SDK function is stubbed. Safe settings GETs use declared synthetic defaults; one isolated native-coexistence scene submits the real settings UI through an exact payload/CSRF-presence-matched, locally fulfilled PUT, with empty secret inputs and no server persistence. Other settings writes, feedback uploads and business writes are forbidden.
+
+Full images and computed filters confirm ordinary backdrop differences: actual New subscription uses alpha0.5 with a sharp background, settings alpha0.72, and feedback alpha0.86 with blur14 plus body blur18/opacity0.08 even without an image. Capture suspension clears the shield, while image removal leaves it active. One Escape closes both feedback/settings and the underlying ordinary task, retaining the changed draft. Short feedback clips its header/actions; generic notifications overlap underlying content. The native customer editor correctly intercepts a nonforced background feedback-button attempt; this is a platform entry boundary, not a newly required feedback-over-native feature. Actual Donny403 and public logged-out GET routes are captured. Generic workflows/native editor use actual installed handlers with explicitly declared synthetic data; ordinary feedback uses its installed hidden-button handler and is not pointer-entry proof. Uniform edge samples establish color only; independent full-image review establishes the sharpness observations.
+
+AFTER remains pending: ordinary and nested single-veil fidelity, image-only privacy shield and lifecycle, keyboard containment/invoker return/topmost Escape, short/narrow and real breakpoint behavior, actual native200% plus reset in both engines, account/role/English coverage, controlled pending/error/retry states, the focused320px slice07 complaint retry/overlap regression, full unchanged-threshold SDK privacy and an actual production capture proving newly hosted inline private errors are masked and restored. The current mode intentionally rejects AFTER; this checkpoint does not complete slice08 or slice10.
+
 ## Outcome and dependencies
 
 Replace palette-only confidence with reviewable evidence that all Kiwi surfaces follow the agreed style guide. Acceptance covers visual consistency, interaction states and accessibility observations without changing business behavior.
