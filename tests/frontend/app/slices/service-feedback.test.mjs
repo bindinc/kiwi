@@ -6,6 +6,7 @@ import { editSubscription, saveSubscriptionEdit, showResendMagazine, resendMagaz
     showEditorialComplaintForm, submitEditorialComplaint } from '../../../../assets/js/app/slices/subscription-workflow-slice.js';
 import { cancelSubscription, completeWinback, selectOffer, revertRestitution, completeRestitutionTransfer } from '../../../../assets/js/app/slices/winback-slice.js';
 import { configureCustomerDetailSliceDependencies, registerCustomerDetailSlice } from '../../../../assets/js/app/slices/customer-detail-slice.js';
+import { showToast as showAppShellToast } from '../../../../assets/js/app/slices/app-shell-slice.js';
 
 function deferred() {
     let resolve;
@@ -112,13 +113,13 @@ function controllerHarness() {
     };
     globalThis.showToast = (message, type) => toasts.push({ message, type });
     globalThis.selectCustomer = () => {};
-    return { fields, containers, calls, toasts, documentRef,
+    return { fields, containers, calls, toasts, documentRef, outcome,
         replaceCustomer: value => customer = value, getCustomer: () => customer };
 }
 
 async function withGlobals(callback) {
     const keys = ['document', 'kiwiApi', 'kiwiLegacyCustomerSearchBridge', 'showToast', 'selectCustomer',
-        'kiwiCustomerDetailSlice'];
+        'kiwiCustomerDetailSlice', 'window', 'kiwiOutbox', 'setTimeout'];
     const originals = new Map(keys.map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
     const harness = controllerHarness();
     try { await callback(harness); }
@@ -329,6 +330,141 @@ async function testOldRefreshDoesNotClearNewWinbackSelection() {
     });
 }
 
+function useAppShellFeedback(harness) {
+    const toast = node();
+    toast.classList = { add() {}, remove() {} };
+    harness.fields.toast = toast;
+    let saveNotice = false;
+    let consumedNotices = 0;
+    globalThis.window = globalThis;
+    globalThis.setTimeout = () => 0;
+    globalThis.kiwiOutbox = { consumeSaveNotice() {
+        const notice = saveNotice;
+        saveNotice = false;
+        if (notice) consumedNotices += 1;
+        return notice;
+    } };
+    globalThis.showToast = (message, type) => {
+        harness.toasts.push({ message, type });
+        showAppShellToast(message, type);
+    };
+    return { toast, queueNotice() { saveNotice = true; },
+        hasNotice: () => saveNotice, consumedNotices: () => consumedNotices };
+}
+
+async function testWinbackOutcomeFeedbackMatchesAcknowledgement() {
+    const persistenceCases = [
+        { name: 'queued', response: { provisional: true } },
+        { name: 'immediate', response: { provisional: false } },
+        { name: 'legacy API', response: undefined },
+        { name: 'local', local: true }
+    ];
+    for (const result of ['accepted', 'declined']) {
+        for (const persistence of persistenceCases) await withGlobals(async harness => {
+            const feedback = useAppShellFeedback(harness);
+            // An earlier projected customer must not classify this request's acknowledgement.
+            harness.getCustomer().provisional = true;
+            harness.outcome.value = result;
+            if (persistence.local) globalThis.kiwiApi = null;
+            cancelSubscription(7);
+            selectOffer('retained', 'Retained offer', 'Known description');
+            const pending = completeWinback();
+            if (!persistence.local) {
+                await until(() => harness.calls.length === 1);
+                assert.equal(harness.calls[0].url, '/api/v1/subscriptions/1001/7');
+                assert.deepEqual(harness.calls[0].body, { result, offer: {
+                    id: 'retained', title: 'Retained offer', description: 'Known description'
+                } });
+                if (persistence.name === 'queued') feedback.queueNotice();
+                harness.calls[0].resolve(persistence.response);
+            }
+            await pending;
+            assert.equal(harness.toasts.length, 1);
+            if (persistence.name === 'queued') {
+                assert.equal(feedback.hasNotice(), false, 'queued feedback consumes the shared notice');
+                assert.equal(feedback.consumedNotices(), 1);
+                assert.deepEqual(harness.toasts[0], {
+                    message: 'De aanvraag is door KIWI geaccepteerd, maar nog niet definitief verwerkt.',
+                    type: 'success'
+                });
+                assert.equal(feedback.toast.textContent, 'Opgeslagen in outbox. Nog niet verwerkt.');
+                assert.equal(feedback.toast.className, 'toast success');
+                showAppShellToast('Later unrelated success', 'success');
+                assert.equal(feedback.toast.textContent, 'Later unrelated success');
+                assert.equal(feedback.consumedNotices(), 1);
+            } else {
+                const expectedMessage = result === 'accepted'
+                    ? 'Winback succesvol! Klant blijft abonnee.' : 'Abonnement opgezegd';
+                const expectedType = result === 'accepted' ? 'success' : 'error';
+                assert.deepEqual(harness.toasts[0], { message: expectedMessage, type: expectedType },
+                    `${persistence.name} retains its original outcome meaning`);
+                assert.equal(feedback.toast.textContent, expectedMessage);
+                assert.equal(feedback.toast.className, `toast ${expectedType}`);
+                assert.equal(feedback.consumedNotices(), 0);
+            }
+            const remainingIds = harness.getCustomer().subscriptions.map(subscription => subscription.id);
+            assert.deepEqual(remainingIds, persistence.local && result === 'declined' ? [8] : [7, 8],
+                'only the existing local declined fallback mutates subscriptions');
+            assert.equal(harness.containers.winbackFlow.commit.disabled, false);
+        });
+    }
+}
+
+async function testQueuedWinbackFallbackWithoutOutboxNotice() {
+    for (const result of ['accepted', 'declined']) await withGlobals(async harness => {
+        harness.outcome.value = result;
+        cancelSubscription(7);
+        const pending = completeWinback();
+        await until(() => harness.calls.length === 1);
+        harness.calls[0].resolve({ provisional: true });
+        await pending;
+        assert.deepEqual(harness.toasts, [{
+            message: 'De aanvraag is door KIWI geaccepteerd, maar nog niet definitief verwerkt.',
+            type: 'success'
+        }], 'the actual queued flag has truthful feedback even without the shared outbox notice');
+    });
+}
+
+async function testStaleQueuedAcknowledgementCannotConsumeNewNotice() {
+    for (const phase of ['held acknowledgement', 'held reload']) await withGlobals(async harness => {
+        const feedback = useAppShellFeedback(harness);
+        const reload = deferred();
+        if (phase === 'held reload') globalThis.selectCustomer = () => reload.promise;
+        harness.outcome.value = 'declined';
+        cancelSubscription(7);
+        const old = completeWinback();
+        await until(() => harness.calls.length === 1);
+        if (phase === 'held reload') {
+            harness.calls[0].resolve({ provisional: true });
+            await until(() => harness.containers.winbackFlow.style.display === 'none');
+        }
+        resetLightboxDrafts(harness.documentRef);
+        globalThis.selectCustomer = () => {};
+        cancelSubscription(8);
+        selectOffer('new-offer', 'New offer', 'New description');
+        const current = completeWinback();
+        await until(() => harness.calls.length === 2);
+        feedback.queueNotice();
+        if (phase === 'held acknowledgement') harness.calls[0].resolve({ provisional: true });
+        else reload.resolve();
+        await old;
+        assert.equal(harness.toasts.length, 0);
+        assert.equal(feedback.hasNotice(), true, 'an old queued completion cannot consume another owner notice');
+        assert.equal(feedback.consumedNotices(), 0);
+        assert.equal(harness.containers.winbackFlow.commit.disabled, true);
+        assert.equal(harness.calls[1].url, '/api/v1/subscriptions/1001/8');
+        assert.deepEqual(harness.calls[1].body, { result: 'declined', offer: {
+            id: 'new-offer', title: 'New offer', description: 'New description'
+        } });
+        harness.calls[1].resolve({ provisional: true });
+        await current;
+        assert.equal(harness.toasts.length, 1);
+        assert.equal(feedback.toast.textContent, 'Opgeslagen in outbox. Nog niet verwerkt.');
+        assert.equal(feedback.consumedNotices(), 1);
+        assert.equal(feedback.hasNotice(), false);
+    });
+}
+
 async function testRestitutionCleanupKeepsTheOriginalAddressSession() {
     await withGlobals(async harness => {
         const { calls, containers, documentRef } = harness;
@@ -365,4 +501,7 @@ await testOldRefreshDoesNotClearNewWinbackSelection();
 await testRestitutionCleanupKeepsTheOriginalAddressSession();
 await testCanonicalNamespaceReloadAfterAcknowledgement();
 await testLegacyReloadOverrideRetainsPriority();
+await testWinbackOutcomeFeedbackMatchesAcknowledgement();
+await testQueuedWinbackFallbackWithoutOutboxNotice();
+await testStaleQueuedAcknowledgementCannotConsumeNewNotice();
 console.log('service pending ownership, validation, duplicate, retry, reset and stale completion tests passed');

@@ -1261,15 +1261,17 @@ export async function completeWinback() {
         const resultValue = resultInput.value;
         const apiClient = getApiClient();
         const canPersistViaApi = apiClient && typeof apiClient.post === 'function';
+        let wasQueued = false;
 
         if (canPersistViaApi) {
             const { subscriptionsApiUrl } = getApiEndpoints();
 
             try {
-                await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, {
+                const response = await apiClient.post(`${subscriptionsApiUrl}/${currentCustomer.id}/${subscriptionId}`, {
                     result: resultValue,
                     offer: winbackState.selectedOffer
                 });
+                wasQueued = response?.provisional === true;
             } catch (error) {
                 if (!request.isCurrent()) return;
                 showToast(error.message || translateKey('winback.saveFailed', {}, 'Winback opslaan via backend mislukt'), 'error');
@@ -1302,7 +1304,10 @@ export async function completeWinback() {
         await selectCustomer(currentCustomer.id);
         if (!request.isCurrent()) return;
 
-        if (resultValue === 'accepted') {
+        if (wasQueued) {
+            showToast(translateKey('customerWorkSession.notFinal', {},
+                'De aanvraag is door KIWI geaccepteerd, maar nog niet definitief verwerkt.'), 'success');
+        } else if (resultValue === 'accepted') {
             showToast(translateKey('winback.success', {}, 'Winback succesvol! Klant blijft abonnee.'), 'success');
         } else {
             showToast(translateKey('subscription.cancelled', {}, 'Abonnement opgezegd'), 'error');
