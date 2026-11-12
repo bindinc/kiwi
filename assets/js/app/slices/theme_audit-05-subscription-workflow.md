@@ -2,7 +2,7 @@
 
 Audit marker: theme_audit
 
-Status: implemented and accepted at application `ac37e1b`; independent source/rendered completion review and delivery evidence are recorded below. PR #148 remains draft as requested; no merge or deployment is included. See the [audit index](../../../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries.
+Status: implemented and accepted at application `ac37e1b`; independent source/rendered completion review and delivery evidence are recorded below. PR #148 was retained as draft until the user merged it into main on 2026-11-12 at `232e700cab9a9a04a01144fc25c7532d1d30036e`, from accepted head `ad68a31`. Historical evidence stays at its recorded source; no deployment was performed by this work. See the [audit index](../../../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries.
 
 ## Implementation record
 
@@ -11,7 +11,7 @@ Status: implemented and accepted at application `ac37e1b`; independent source/re
 - Branch: `codex/align-theme-subscription-workflow`.
 - Base: integrated `main` at `a39b9dbfd7b839b4f1bf530382ac8cccfd838295`, following the user's prerequisite to merge #142/#147 and retain drafts #144/#148. The original scaffold started on accepted slice 04 `1c76db9`; no application edits or slice 05 browser runs occurred before the merge gate. Rebase `b26ff7d` preserves that scaffold and one changelog entry; the earlier local orientation patch/stash remain retained as recovery copies.
 - Slice 04 source, visual, interaction and completion reviews passed; final Actions [43005522519](https://github.com/bindinc/kiwi/actions/runs/43005522519) succeeded.
-- PR: draft [#148](https://github.com/bindinc/kiwi/pull/148), created immediately after original scaffold `e7a78c8` was pushed; retargeted to main after rebase, with English text and one Unreleased changelog entry. No slice 05 merge or deployment is authorized.
+- PR: [#148](https://github.com/bindinc/kiwi/pull/148), created immediately after original scaffold `e7a78c8` was pushed; retargeted to main after rebase, with English text and one Unreleased changelog entry. Originally retained as draft; user-merged on 2026-11-12 as recorded above. No further merge or deployment is authorized.
 - Evidence root: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-11/slice-05/`, outside Git. Actual application, intercepted fixtures and reference captures must remain distinguishable.
 - Ownership: one application writer; independent review; slice 10 owner supplies Compose before/reference/after, keyboard and native-zoom validation. Parent owns this document, index, changelog and PR.
 - Inherited fixes are retained: keyboard-operable payment choices from 02, shared person/address and safe screenshot serialization from 04. Historical findings below require current-source confirmation rather than reapplying already completed fixes.

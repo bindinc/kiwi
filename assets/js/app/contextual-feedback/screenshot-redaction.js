@@ -71,7 +71,8 @@ const PSEUDO_VALUES = {
     iban: ['NL91 ABNA 0417 1643 00', 'BE68 5390 0754 7034'],
     id: [],
     date: [],
-    'free-text': ['Klantnotitie met testgegevens', 'Contactmoment met voorbeeldtekst']
+    'free-text': ['Klantnotitie met testgegevens', 'Contactmoment met voorbeeldtekst'],
+    'opaque-text': ['Afgeschermde melding', 'Melding met testgegevens']
 };
 
 export function redactScreenshotDom(documentRef = document, {

@@ -2,21 +2,21 @@
 
 Audit marker: theme_audit
 
-Status: implemented and independently accepted for the service scope. All slice 07-owned criteria have scoped evidence below. Shared toast presentation remains a mandatory slice 08 gate, and complete-interface acceptance belongs to slice 10. See the [audit index](../../../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries. Deliver the coherent service-form alignment as one implementation PR with its own worktree and changelog entry.
+Status: implemented and independently accepted for the service scope. The user merged PR #151 into main on 2026-11-12 at `bfb310d825299a2086d88e6c59dcf85f69e4d6f7`, from accepted closure head `771ab50`; historical evidence keeps its original source boundary. All slice 07-owned criteria have scoped evidence below. The shared toast/action obstruction is resolved by accepted slice 08 at `e0e5822`, with actual Chromium/Firefox 320px inline-error and immediate-retry evidence; its limits remain in the [slice 08 audit](../../../css/theme_audit-08-overlays-feedback-and-system-surfaces.md). Complete-interface acceptance belongs to slice 10. See the [audit index](../../../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries. Deliver the coherent service-form alignment as one implementation PR with its own worktree and changelog entry.
 
 ## Implementation record
 
 - Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629).
 - Worktree: `/home/bartdeijkers/_worktrees/align-theme-service-workflows`.
 - Branch: `codex/align-theme-service-workflows`.
-- Base: accepted slice 06 `0bb8182652dc93edae9cf06e3af340b232cb0c30`, final [CI43045613680](https://github.com/bindinc/kiwi/actions/runs/43045613680) passed. Stack on `codex/align-theme-article-workspace` while PR #150 remains unmerged.
+- Base: accepted slice 06 `0bb8182652dc93edae9cf06e3af340b232cb0c30`, final [CI43045613680](https://github.com/bindinc/kiwi/actions/runs/43045613680) passed. Originally stacked on `codex/align-theme-article-workspace` while PR #150 remained unmerged; the user subsequently merged both PRs on 2026-11-12.
 - PR: [#151](https://github.com/bindinc/kiwi/pull/151), created immediately after scaffold `2e58730` was pushed.
 - Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-11/slice-07/` and `2026-11-12/slice-07/`, outside Git.
 - Ownership: one application writer; independent source/actual-image reviewer; one browser/slice10 tooling owner. Root owns audit/index/changelog/PR/runtime.
 - Direction: calm, compact flat service forms; customer/subscription identity first, conditional choices next and one explicit current-step action. Use shared 20/16px insets, 12px gaps, 13px labels/15px text/40px controls. Preserve warnings, native choices, every existing branch and draft/request ownership; no business simplification.
 - Application source: `4f1f57fd3c78e3d3ed3d641fc4eea02a7e81c1b3`; [full CI43185678112](https://github.com/bindinc/kiwi/actions/runs/43185678112) passes, including PHPUnit and production build. The closure changes only audit/changelog documents.
 - Reusable slice10 tooling: `8a6a6950e92b33f57f0fbfd04a11389153d5a0d3` in draft [#144](https://github.com/bindinc/kiwi/pull/144); nine code files and two existing documentation/changelog files are independently reviewed. Slice10 remains open.
-- Rendered acceptance and exact exclusions are recorded below. Merge/deployment remain unauthorized. The explicitly approved obsolete-container cleanup is recorded in the common index; it does not authorize future cleanup.
+- Rendered acceptance and exact exclusions are recorded below. The user merge is recorded above; further merge/deployment remain unauthorized. The explicitly approved obsolete-container cleanup is recorded in the common index; it does not authorize future cleanup.
 
 ## Accepted service scope and evidence — 2026-11-12
 
@@ -40,7 +40,7 @@ The customer-session criterion is covered by actual declared-customer ownership,
 
 ### Explicit limits and remaining cross-slice work
 
-- Global transient toasts cover Register at 320 while the full error text is visible. Retained fields and genuine retry after normal expiry work in both engines. Unobstructed global toast presentation is not accepted here; slice 08 explicitly owns and must resolve it, then slice 10 verifies combined source.
+- Global transient toasts cover Register at 320 while the full error text is visible. Retained fields and genuine retry after normal expiry work in both engines. Unobstructed global toast presentation is not accepted at this historical slice 07 source boundary. Slice 08 subsequently resolves the obstruction at `e0e5822`, with the full error beside an immediately usable action in both browsers; slice 10 still verifies the combined interface.
 - Native Firefox's protocol `check()` reports interception although the control is unobstructed. One finite diagnostic proves a trusted physical click and natural Edition→Tab→Space at actual 200%, with raw drafts/reset/source exact. The final native Firefox setup uses genuine focus/Space and checked assertions only; original offer Tab/Space/Arrow is unchanged. No forced click, checked-property assignment or application workaround is used. Internal protocol coordinate calculation was not measured. Failed native 01 remains retained.
 - Firefox's production SVG renderer omits some native radio/checkbox/arrow glyphs; actual native controls render correctly. Internal unexported SELECT option values and the existing precisely bounded blank-native-widget serialization limitation remain unchanged. Pixel, raw-state, observer and restoration guards are not relaxed.
 - Actual English expansion remains a final slice 10 gate. No screen-reader run or full WCAG conformance is claimed. Source translations and long synthetic content do not substitute for actual English UI proof.
@@ -70,7 +70,7 @@ Application `227ade29a16950b0aefd79bd8d68fc37a9a5ee8f` is committed and pushed. 
 
 Independent source review verifies132 protected function segments,57 static controls,27 action bindings and13 whole dependency files. Outside the five service Twig roots and appended service CSS block, the reviewed content is exact. All41 frontend test files, guardrails, four JS syntax checks, CSS parsing and whitespace pass. The new regression uses modeled DOM interfaces with the real action router/state and unchanged explicit POST contract; actual native Tab/Space/Arrow and rendered acceptance remain browser gates. `implementation-static-01/provenance.json` and `independent-review/application-source-review-02.json` retain exact hashes and boundaries.
 
-Isolated Compose07 now serves the candidate on9444, with five production source hashes exact in-container, passing Twig lint and the same immutable validated runtime image. Compose06 is stopped with all containers and volumes retained. `committed-source-checkpoint-01.json` records provenance. [CI43048638211](https://github.com/bindinc/kiwi/actions/runs/43048638211) passes on this exact source, including PHPUnit and the production build. Actual AFTER/state/payload/privacy/native acceptance remains pending.
+Isolated Compose07 now serves the candidate on 9444, with five production source hashes exact in-container, passing Twig lint and the same immutable validated runtime image. Compose06 is stopped with all containers and volumes retained. `committed-source-checkpoint-01.json` records provenance. [CI43048638211](https://github.com/bindinc/kiwi/actions/runs/43048638211) passes on this exact source, including PHPUnit and the production build. Actual AFTER/state/payload/privacy/native acceptance remains pending.
 
 ## Actual first AFTER findings — bounded correction in progress
 

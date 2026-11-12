@@ -880,6 +880,8 @@ const en = {
             "storedWithWarning": "Feedback was stored, but Teams delivery did not complete."
         },
         "settings": {
+            "loading": "Loading settings…",
+            "retry": "Try again",
             "title": "Feedback settings",
             "subtitle": "Contextual feedback and Microsoft Teams connector",
             "feedbackButton": "Feedback button",

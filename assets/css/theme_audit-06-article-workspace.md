@@ -2,15 +2,15 @@
 
 Audit marker: theme_audit
 
-Status: implemented and independently accepted; changes are pushed for review. No merge or deployment is claimed. See the [audit index](../../plans/theme_audit.md) for baseline, sequencing and evidence boundaries.
+Status: implemented and independently accepted; user-merged PR #150 into main on 2026-11-12 at `7d5ece6128850b4fcba112c90b5a77794c7b7e3c`, from accepted head `0bb8182`. Historical source/evidence boundaries remain unchanged; no deployment was performed by this work. See the [audit index](../../plans/theme_audit.md) for baseline, sequencing and evidence boundaries.
 
 ## Implementation record
 
 - Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629).
 - Worktree: `/home/bartdeijkers/_worktrees/align-theme-article-workspace`.
 - Branch: `codex/align-theme-article-workspace`.
-- Base: accepted slice 05 `ad68a3145ce242c77e35fe66f74e65e4f062f587`; final CI `43028159036` and independent completion pass. Stack on `codex/align-theme-subscription-workflow` while draft #148 remains unmerged, as permitted by the sequential workflow.
-- PR: [#150](https://github.com/bindinc/kiwi/pull/150), created immediately after scaffold `20cf1c8` was pushed; English title/text and one Unreleased entry. No merge, deployment or cleanup is authorized.
+- Base: accepted slice 05 `ad68a3145ce242c77e35fe66f74e65e4f062f587`; final CI `43028159036` and independent completion pass. Originally stacked on `codex/align-theme-subscription-workflow` while #148 remained unmerged, as permitted by the sequential workflow; the user subsequently merged both PRs on 2026-11-12.
+- PR: [#150](https://github.com/bindinc/kiwi/pull/150), created immediately after scaffold `20cf1c8` was pushed; English title/text and one Unreleased entry. The user merge is recorded above; no further merge, deployment or cleanup is authorized.
 - Evidence root: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-11/slice-06/`, outside Git.
 - Ownership: one application writer for article-only styles/template/generated markup; independent read-only review; slice 10 owner for Compose/browser evidence and reusable tooling. Root owns this document, index, changelog and PR.
 - Direction: make the complete recipient/catalog/cart/total context clear before committing an order, using compact flat sections and stable action placement. Preserve actual pricing, coupons, delivery calendar, identities, payment, drafts and validation.

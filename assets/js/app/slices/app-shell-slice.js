@@ -2,6 +2,7 @@ import { resetLightboxDrafts, resumeFormDraft, clearFormDraft } from '../lightbo
 import { endAddressSessions } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
 import { DIRECT_DEBIT_PAYMENT_METHOD, syncSubscriptionIbanRequirement } from '../subscription-payment.js';
+import { renderOverlayNotification } from '../overlay-notification.js';
 
 const APP_SHELL_SLICE_NAMESPACE = 'kiwiAppShellSlice';
 let appShellDependenciesResolver = null;
@@ -265,6 +266,10 @@ export function showToast(message, type = 'success', options = {}) {
         return;
     }
 
+    if (renderOverlayNotification(getDocumentRef(), message, type)) {
+        toast.classList.remove('show');
+        return;
+    }
     toast.textContent = message;
     toast.className = `toast ${type}`;
     toast.classList.add('show');

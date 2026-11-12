@@ -7,6 +7,8 @@ import { feedbackApiError, feedbackText } from './i18n.js';
 import { buildFeedbackPayload } from './payload.js';
 import { initContextualFeedbackSettings } from './settings-modal.js';
 
+const flowsByDocument = new WeakMap();
+
 export function initContextualFeedbackFeature({ documentRef = document, windowRef = window } = {}) {
     initContextualFeedbackSettings({ documentRef });
 
@@ -19,27 +21,40 @@ export function initContextualFeedbackFeature({ documentRef = document, windowRe
 }
 
 async function startFeedbackFlow({ button, documentRef, windowRef }) {
-    button.disabled = true;
-    button.classList.add('is-active');
+    const retained = flowsByDocument.get(documentRef);
+    if (retained) {
+        await retained.open();
+        return;
+    }
+    const captureAbort = new AbortController();
+    const flow = { open };
+    flowsByDocument.set(documentRef, flow);
+    await open();
 
-    await openFeedbackDialog({
-        documentRef,
-        onRequestScreenshot: captureScreenshot,
-        onCancel() {
-            resetButton(button);
-        },
-        async onSubmit({
-            comment,
-            severity,
-            category,
-            selectionKind,
-            teamsScreenshotVariant,
-            selectedElement,
-            selectedRect,
-            annotations,
-            screenshots
-        }) {
-            const payload = buildFeedbackPayload({
+    function isCurrent() {
+        return flowsByDocument.get(documentRef) === flow;
+    }
+
+    async function open() {
+        if (!isCurrent()) return;
+        const opener = documentRef.activeElement && documentRef.activeElement !== documentRef.body
+            ? documentRef.activeElement : button;
+        button.disabled = true;
+        button.classList.add('is-active');
+        await openFeedbackDialog({
+            documentRef,
+            opener,
+            onRequestScreenshot: captureScreenshot,
+            onCancel() {
+                if (isCurrent()) resetButton(button);
+            },
+            onDispose() {
+                if (!isCurrent()) return;
+                flowsByDocument.delete(documentRef);
+                captureAbort.abort();
+                resetButton(button);
+            },
+            async onSubmit({
                 comment,
                 severity,
                 category,
@@ -48,23 +63,36 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
                 selectedElement,
                 selectedRect,
                 annotations,
-                locationRef: windowRef.location,
-                windowRef,
-                navigatorRef: windowRef.navigator
-            });
-
-            await submitFeedback({
-                apiUrl: button.dataset.contextualFeedbackApiUrl || '/api/v1/development-feedback',
-                payload,
                 screenshots
-            });
-            resetButton(button);
-        }
-    });
+            }) {
+                const payload = buildFeedbackPayload({
+                    comment,
+                    severity,
+                    category,
+                    selectionKind,
+                    teamsScreenshotVariant,
+                    selectedElement,
+                    selectedRect,
+                    annotations,
+                    locationRef: windowRef.location,
+                    windowRef,
+                    navigatorRef: windowRef.navigator
+                });
+
+                await submitFeedback({
+                    apiUrl: button.dataset.contextualFeedbackApiUrl || '/api/v1/development-feedback',
+                    payload,
+                    screenshots
+                });
+                if (isCurrent()) resetButton(button);
+            }
+        });
+    }
 
     async function captureScreenshot() {
         button.title = feedbackText('picker.selectTarget');
-        const selection = await selectScreenshotTarget({ documentRef, windowRef });
+        const selection = await selectScreenshotTarget({ documentRef, windowRef, signal: captureAbort.signal });
+        if (!isCurrent()) return null;
         if (!selection) {
             button.title = feedbackText('button.title');
             return null;
@@ -90,6 +118,7 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
                     windowRef
                 });
 
+            if (!isCurrent()) return null;
             return {
                 selectionKind: selection.kind,
                 selectedRect,
@@ -101,23 +130,28 @@ async function startFeedbackFlow({ button, documentRef, windowRef }) {
                 }
             };
         } finally {
-            button.title = feedbackText('button.title');
+            if (isCurrent()) button.title = feedbackText('button.title');
         }
     }
 }
 
-function selectScreenshotTarget({ documentRef, windowRef }) {
+function selectScreenshotTarget({ documentRef, windowRef, signal }) {
     return new Promise((resolve) => {
-        startElementPicker({
+        let cleanup = null;
+        function finish(selection) {
+            cleanup?.();
+            signal?.removeEventListener('abort', cancel);
+            resolve(selection);
+        }
+        function cancel() { finish(null); }
+        cleanup = startElementPicker({
             documentRef,
             windowRef,
-            onCancel() {
-                resolve(null);
-            },
-            onSelect(selection) {
-                resolve(selection);
-            }
+            onCancel: cancel,
+            onSelect: finish
         });
+        signal?.addEventListener('abort', cancel, { once: true });
+        if (signal?.aborted) cancel();
     });
 }
 
