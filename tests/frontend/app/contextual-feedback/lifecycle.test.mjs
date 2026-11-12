@@ -194,6 +194,10 @@ async function submissionFailureRestoresControlsAndRetainsValues() {
     };
     await modal.querySelector('form').emit('submit');
     assert.deepEqual(revealCalls, [{ block: 'nearest' }]);
+    documentRef.flushAnimationFrames();
+    assert.deepEqual(revealCalls, [{ block: 'nearest' }, { block: 'nearest' }]);
+    documentRef.flushAnimationFrames();
+    assert.equal(revealCalls.length, 2, 'the follow-up reveal does not schedule a loop');
     assert.equal(documentRef.activeElement, focusedBeforeFailure, 'revealing an error never moves focus');
     assert.equal(received.comment, 'Synthetic draft');
     assert.equal(received.selectionKind, 'none');
@@ -264,10 +268,96 @@ async function captureFailureRevealsAfterRetainedButtonFocus() {
     assert.equal(documentRef.body.classList.contains('contextual-feedback-reviewing'), true);
     assert.equal(field.value, 'Retained image draft');
     assert.equal(documentRef.activeElement, button);
+    documentRef.flushAnimationFrames();
+    assert.deepEqual(events, ['focus', 'reveal', 'reveal'], 'the next frame reveals after the existing retained focus without focusing again');
     await requestImage(modal);
-    assert.deepEqual(events, ['focus', 'reveal', 'focus'], 'cancelled capture clears the error and cannot reveal stale text');
+    assert.deepEqual(events, ['focus', 'reveal', 'reveal', 'focus'], 'cancelled capture clears the error and cannot reveal stale text');
     assert.equal(error.textContent, '');
     assert.equal(field.value, 'Retained image draft');
+    resetLightboxDrafts(documentRef);
+}
+async function queuedRevealCannotScrollClosedOrReopenedDialog() {
+    for (const reopen of [false, true]) {
+        const { documentRef, button } = setup();
+        const options = { documentRef, opener: button };
+        await openFeedbackDialog(options);
+        const modal = modalFor(documentRef);
+        let reveals = 0;
+        modal.querySelector('[data-feedback-error]').scrollIntoView = () => { reveals++; };
+        await modal.querySelector('form').emit('submit');
+        await modal.emit('cancel');
+        if (reopen) await openFeedbackDialog(options);
+        const focused = documentRef.activeElement;
+        documentRef.flushAnimationFrames();
+        assert.equal(reveals, 1, 'dismissal invalidates the queued reveal even when the same draft reopens');
+        assert.equal(documentRef.activeElement, focused);
+        assert.equal(modal.open, reopen);
+        resetLightboxDrafts(documentRef);
+    }
+}
+async function queuedRevealRequiresTheSameErrorFocusAndVisibleDialog() {
+    for (const change of ['clear error', 'replace error', 'move focus', 'hide dialog']) {
+        const { documentRef } = setup();
+        await openFeedbackDialog({ documentRef });
+        const modal = modalFor(documentRef);
+        const error = modal.querySelector('[data-feedback-error]');
+        let reveals = 0;
+        error.scrollIntoView = () => { reveals++; };
+        await modal.querySelector('form').emit('submit');
+        if (change === 'clear error') error.textContent = '';
+        if (change === 'replace error') error.textContent = 'A newer error';
+        if (change === 'move focus') modal.querySelector('[data-feedback-submit]').focus();
+        if (change === 'hide dialog') modal.hidden = true;
+        const message = error.textContent;
+        const focused = documentRef.activeElement;
+        documentRef.flushAnimationFrames();
+        assert.equal(reveals, 1, change + ' invalidates the delayed scroll');
+        assert.equal(error.textContent, message);
+        assert.equal(documentRef.activeElement, focused);
+        resetLightboxDrafts(documentRef);
+    }
+}
+async function queuedRevealCannotAffectANewOwnerOrCapture() {
+    const { documentRef } = setup();
+    const capture = deferred();
+    await openFeedbackDialog({ documentRef, onRequestScreenshot: () => capture.promise });
+    const old = modalFor(documentRef);
+    let reveals = 0;
+    old.querySelector('[data-feedback-error]').scrollIntoView = () => { reveals++; };
+    await old.querySelector('form').emit('submit');
+    await requestImage(old);
+    assert.equal(old.open, false);
+    documentRef.flushAnimationFrames();
+    assert.equal(reveals, 1, 'a new capture cannot receive an old validation scroll');
+    capture.reject(new Error('Current capture failed'));
+    await settle();
+    assert.equal(reveals, 2);
+    resetLightboxDrafts(documentRef);
+    await openFeedbackDialog({ documentRef });
+    const current = modalFor(documentRef);
+    const field = current.querySelector('[name="comment"]');
+    field.value = 'New owner draft';
+    documentRef.flushAnimationFrames();
+    assert.equal(reveals, 2, 'a queued failure from a disposed owner cannot scroll');
+    assert.equal(current.open, true);
+    assert.equal(current.querySelector('[data-feedback-error]').textContent, '');
+    assert.equal(field.value, 'New owner draft');
+    assert.equal(documentRef.activeElement, field);
+    resetLightboxDrafts(documentRef);
+}
+async function onlyTheLatestQueuedErrorRevealRuns() {
+    const { documentRef } = setup();
+    await openFeedbackDialog({ documentRef });
+    const modal = modalFor(documentRef);
+    let reveals = 0;
+    modal.querySelector('[data-feedback-error]').scrollIntoView = () => { reveals++; };
+    await modal.querySelector('form').emit('submit');
+    await modal.querySelector('form').emit('submit');
+    assert.equal(reveals, 2);
+    documentRef.flushAnimationFrames();
+    assert.equal(reveals, 3, 'only the latest error schedules an effective follow-up reveal');
+    documentRef.flushAnimationFrames();
+    assert.equal(reveals, 3);
     resetLightboxDrafts(documentRef);
 }
 async function obsoleteCaptureFailureCannotRevealOrRefocusNewDialog() {
@@ -406,6 +496,10 @@ try {
     await submissionFailureRestoresControlsAndRetainsValues();
     await validationRevealsOnlyTheCurrentOpenDialog();
     await captureFailureRevealsAfterRetainedButtonFocus();
+    await queuedRevealCannotScrollClosedOrReopenedDialog();
+    await queuedRevealRequiresTheSameErrorFocusAndVisibleDialog();
+    await queuedRevealCannotAffectANewOwnerOrCapture();
+    await onlyTheLatestQueuedErrorRevealRuns();
     await obsoleteCaptureFailureCannotRevealOrRefocusNewDialog();
     await staleSettingsLoadAndSaveCannotMutateNewSession();
     await settingsLoadFailureCanRetryAndRestoreOpener();

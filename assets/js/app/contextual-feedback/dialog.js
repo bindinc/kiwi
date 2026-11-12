@@ -55,18 +55,34 @@ export async function openFeedbackDialog({
     let annotationCanvas = null;
     let disposed = false;
     let returnFocus = opener;
+    let pendingErrorReveal = null;
 
     function isCurrent() {
         return !disposed && dialogsByDocument.get(documentRef) === resumeDialogAfterCapture;
     }
 
     function revealError() {
+        pendingErrorReveal = null;
         if (!isCurrent() || !modal.open || modal.hidden || !errorBox.textContent.trim()) return;
+        const expectedMessage = errorBox.textContent;
+        const expectedFocus = documentRef.activeElement;
+        const request = {};
+        pendingErrorReveal = request;
         errorBox.scrollIntoView({ block: 'nearest' });
+        // Native focus scrolling can settle after the synchronous error reveal.
+        documentRef.defaultView.requestAnimationFrame(() => {
+            if (pendingErrorReveal !== request) return;
+            pendingErrorReveal = null;
+            const sameMessage = errorBox.textContent === expectedMessage;
+            const sameFocus = documentRef.activeElement === expectedFocus;
+            if (!isCurrent() || !modal.open || modal.hidden || !sameMessage || !sameFocus) return;
+            errorBox.scrollIntoView({ block: 'nearest' });
+        });
     }
 
     function dismiss() {
         if (submitButton.disabled || screenshotButton.disabled) return;
+        pendingErrorReveal = null;
         onCancel?.();
         hideFeedbackModal(modal, returnFocus);
     }
@@ -270,6 +286,7 @@ export async function openFeedbackDialog({
     }
 
     function suspendDialogForCapture() {
+        pendingErrorReveal = null;
         modal.classList.add('is-capturing');
         hideFeedbackModal(modal);
     }
@@ -284,6 +301,7 @@ export async function openFeedbackDialog({
 
     function cleanup() {
         if (disposed) return;
+        pendingErrorReveal = null;
         disposed = true;
         unregisterCleanup();
         if (dialogsByDocument.get(documentRef) === resumeDialogAfterCapture) dialogsByDocument.delete(documentRef);

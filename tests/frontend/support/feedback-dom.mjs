@@ -1,6 +1,7 @@
 // A controller test double: native focus/inertness, layout and capture remain browser gates.
 export function createFeedbackDocument() {
     const observers = new Set();
+    const animationFrames = [];
     const documentRef = { activeElement: null, listeners: {} };
     const notify = target => {
         for (const observer of observers) if (observer.target === target) observer.callback();
@@ -98,7 +99,12 @@ export function createFeedbackDocument() {
     documentRef.getElementById = id => documentRef.querySelector(`#${id}`);
     documentRef.addEventListener = (name, listener) => { (documentRef.listeners[name] ||= []).push(listener); };
     documentRef.emit = async (name, target) => { for (const listener of documentRef.listeners[name] || []) await listener({ target }); };
+    documentRef.flushAnimationFrames = () => {
+        const pending = animationFrames.splice(0);
+        for (const callback of pending) callback();
+    };
     documentRef.defaultView = {
+        requestAnimationFrame(callback) { animationFrames.push(callback); return animationFrames.length; },
         MutationObserver: class {
             constructor(callback) { this.callback = callback; }
             observe(target) { this.target = target; observers.add(this); }
