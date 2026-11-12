@@ -1,6 +1,7 @@
 import { AnnotationCanvas } from './annotation-canvas.js';
 import { feedbackText } from './i18n.js';
 import { registerDraftCleanup } from '../lightbox-drafts.js';
+import { showFeedbackModal, hideFeedbackModal, syncFeedbackModalState } from './modal-surface.js';
 
 const dialogsByDocument = new WeakMap();
 
@@ -15,21 +16,23 @@ const TOOLS = [
 
 export async function openFeedbackDialog({
     documentRef = document,
+    opener = documentRef.activeElement,
     onRequestScreenshot,
     onSubmit,
-    onCancel
+    onCancel,
+    onDispose
 }) {
     const retained = dialogsByDocument.get(documentRef);
     if (retained) {
-        retained();
+        retained(opener);
         return;
     }
-    const modal = documentRef.createElement('div');
+    const modal = documentRef.createElement('dialog');
     modal.className = 'contextual-feedback-modal';
     modal.dataset.feedbackIgnore = 'true';
+    modal.setAttribute('aria-labelledby', 'contextualFeedbackTitle');
     modal.innerHTML = buildFeedbackDialogHtml();
     documentRef.body.append(modal);
-    documentRef.body.classList.add('contextual-feedback-reviewing');
 
     const canvas = modal.querySelector('[data-feedback-canvas]');
     const canvasViewport = modal.querySelector('[data-feedback-canvas-wrap]');
@@ -50,21 +53,30 @@ export async function openFeedbackDialog({
     const feedbackNote = modal.querySelector('[data-feedback-note]');
     let screenshot = null;
     let annotationCanvas = null;
+    let disposed = false;
+    let returnFocus = opener;
+
+    function isCurrent() {
+        return !disposed && dialogsByDocument.get(documentRef) === resumeDialogAfterCapture;
+    }
 
     function dismiss() {
         if (submitButton.disabled || screenshotButton.disabled) return;
-        suspendDialogForCapture();
         onCancel?.();
+        hideFeedbackModal(modal, returnFocus);
     }
     modal.querySelector('[data-feedback-close]').addEventListener('click', dismiss);
     modal.addEventListener('click', (event) => { if (event.target === modal) dismiss(); });
-    modal.addEventListener('keydown', (event) => { if (event.key === 'Escape') dismiss(); });
+    modal.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') event.stopPropagation();
+    });
+    modal.addEventListener('cancel', (event) => { event.preventDefault(); dismiss(); });
     dialogsByDocument.set(documentRef, resumeDialogAfterCapture);
     const unregisterCleanup = registerDraftCleanup(documentRef, () => { cleanup(); onCancel?.(); });
 
     for (const button of modal.querySelectorAll('[data-feedback-tool]')) {
         button.addEventListener('click', () => {
-            if (!annotationCanvas) {
+            if (!isCurrent() || !annotationCanvas || submitButton.disabled || screenshotButton.disabled) {
                 return;
             }
 
@@ -76,10 +88,10 @@ export async function openFeedbackDialog({
         });
     }
 
-    undoButton.addEventListener('click', () => annotationCanvas?.undo());
-    clearButton.addEventListener('click', () => annotationCanvas?.clear());
+    undoButton.addEventListener('click', () => { if (isCurrent() && !submitButton.disabled) annotationCanvas?.undo(); });
+    clearButton.addEventListener('click', () => { if (isCurrent() && !submitButton.disabled) annotationCanvas?.clear(); });
     pseudonymizationCheckbox.addEventListener('change', async (event) => {
-        if (!annotationCanvas || !screenshot) {
+        if (!isCurrent() || !annotationCanvas || !screenshot) {
             return;
         }
 
@@ -87,16 +99,26 @@ export async function openFeedbackDialog({
         const usePseudonymizedScreenshot = event.target.checked && pseudonymizedScreenshotIsSafe;
         event.target.checked = usePseudonymizedScreenshot;
         submitButton.disabled = true;
+        screenshotButton.disabled = true;
+        pseudonymizationCheckbox.disabled = true;
+        const currentCanvas = annotationCanvas;
+        modal.setAttribute('aria-busy', 'true');
         statusBox.textContent = feedbackText('dialog.switchingScreenshot');
         try {
             const screenshotBlob = usePseudonymizedScreenshot
                 ? screenshot.screenshots.pseudonymized.blob
                 : screenshot.screenshots.original.blob;
-            await annotationCanvas.setScreenshotBlob(screenshotBlob);
+            await currentCanvas.setScreenshotBlob(screenshotBlob);
+            if (!isCurrent() || annotationCanvas !== currentCanvas) return;
             updatePrivacyStatus(usePseudonymizedScreenshot);
         } finally {
-            submitButton.disabled = false;
-            statusBox.textContent = '';
+            if (isCurrent() && annotationCanvas === currentCanvas) {
+                submitButton.disabled = false;
+                screenshotButton.disabled = false;
+                pseudonymizationCheckbox.disabled = !pseudonymizedScreenshotIsSafe;
+                statusBox.textContent = '';
+                modal.removeAttribute('aria-busy');
+            }
         }
     });
 
@@ -107,6 +129,7 @@ export async function openFeedbackDialog({
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
+        if (!isCurrent() || submitButton.disabled || screenshotButton.disabled) return;
         errorBox.textContent = '';
         const formData = new FormData(form);
         const comment = String(formData.get('comment') || '').trim();
@@ -116,7 +139,10 @@ export async function openFeedbackDialog({
             return;
         }
 
-        submitButton.disabled = true;
+        const disabledStates = new Map([...modal.querySelectorAll('input, select, textarea, button')]
+            .map(control => [control, control.disabled]));
+        for (const control of disabledStates.keys()) control.disabled = true;
+        modal.setAttribute('aria-busy', 'true');
         statusBox.textContent = feedbackText('dialog.uploading');
 
         try {
@@ -125,40 +151,49 @@ export async function openFeedbackDialog({
                 screenshot,
                 pseudonymizationCheckbox
             });
+            if (!isCurrent()) return;
             await onSubmit({
                 comment,
                 severity: String(formData.get('severity') || 'normal'),
                 category: String(formData.get('category') || 'bug'),
                 ...submission
             });
+            if (!isCurrent()) return;
             statusBox.textContent = feedbackText('dialog.delivered');
             cleanup();
         } catch (error) {
-            submitButton.disabled = false;
+            if (!isCurrent()) return;
+            for (const [control, disabled] of disabledStates) control.disabled = disabled;
+            modal.removeAttribute('aria-busy');
             statusBox.textContent = '';
             errorBox.textContent = error instanceof Error ? error.message : feedbackText('dialog.submitFailed');
         }
     });
 
-    modal.querySelector('textarea[name="comment"]')?.focus();
+    resumeDialogAfterCapture();
 
     async function requestScreenshot() {
+        if (!isCurrent() || submitButton.disabled || screenshotButton.disabled) return;
         errorBox.textContent = '';
         screenshotButton.disabled = true;
         suspendDialogForCapture();
 
         try {
             const nextScreenshot = await onRequestScreenshot?.();
+            if (!isCurrent()) return;
             resumeDialogAfterCapture();
             if (nextScreenshot) {
                 await installScreenshot(nextScreenshot);
             }
         } catch (error) {
+            if (!isCurrent()) return;
             resumeDialogAfterCapture();
             errorBox.textContent = error instanceof Error ? error.message : feedbackText('dialog.captureFailed');
         } finally {
-            screenshotButton.disabled = false;
-            screenshotButton.focus();
+            if (isCurrent()) {
+                screenshotButton.disabled = false;
+                screenshotButton.focus();
+            }
         }
     }
 
@@ -177,10 +212,13 @@ export async function openFeedbackDialog({
             viewport: canvasViewport
         });
         updateScreenshotState();
-        await annotationCanvas.initialize();
+        const installedCanvas = annotationCanvas;
+        await installedCanvas.initialize();
+        if (!isCurrent() || annotationCanvas !== installedCanvas) installedCanvas.destroy();
     }
 
     function removeScreenshot() {
+        if (!isCurrent() || submitButton.disabled || screenshotButton.disabled) return;
         annotationCanvas?.destroy();
         annotationCanvas = null;
         screenshot = null;
@@ -210,6 +248,7 @@ export async function openFeedbackDialog({
         feedbackNote.textContent = hasScreenshot
             ? feedbackText('dialog.noteWithScreenshot')
             : feedbackText('dialog.noteWithoutScreenshot');
+        syncFeedbackModalState(documentRef);
     }
 
     function updatePrivacyStatus(usePseudonymizedScreenshot) {
@@ -223,24 +262,28 @@ export async function openFeedbackDialog({
     }
 
     function suspendDialogForCapture() {
-        modal.hidden = true;
         modal.classList.add('is-capturing');
-        documentRef.body.classList.remove('contextual-feedback-reviewing');
+        hideFeedbackModal(modal);
     }
 
-    function resumeDialogAfterCapture() {
-        modal.hidden = false;
+    function resumeDialogAfterCapture(nextOpener = null) {
+        if (!isCurrent()) return;
+        if (nextOpener) returnFocus = nextOpener;
         modal.classList.remove('is-capturing');
-        documentRef.body.classList.add('contextual-feedback-reviewing');
+        showFeedbackModal(modal);
         modal.querySelector('textarea[name="comment"]')?.focus();
     }
 
     function cleanup() {
+        if (disposed) return;
+        disposed = true;
         unregisterCleanup();
-        dialogsByDocument.delete(documentRef);
+        if (dialogsByDocument.get(documentRef) === resumeDialogAfterCapture) dialogsByDocument.delete(documentRef);
         annotationCanvas?.destroy();
+        onDispose?.();
+        hideFeedbackModal(modal, returnFocus);
         modal.remove();
-        documentRef.body.classList.remove('contextual-feedback-reviewing');
+        syncFeedbackModalState(documentRef);
     }
 }
 
@@ -284,7 +327,7 @@ export function buildFeedbackDialogHtml() {
     }).join('');
 
     return `
-        <div class="contextual-feedback-panel" role="dialog" aria-modal="true" aria-labelledby="contextualFeedbackTitle">
+        <div class="contextual-feedback-panel">
             <header class="contextual-feedback-panel-header">
                 <div>
                     <h2 id="contextualFeedbackTitle">${escapeHtml(feedbackText('dialog.title'))}</h2>
@@ -354,7 +397,7 @@ export function buildFeedbackDialogHtml() {
                     <button type="submit" data-feedback-submit>${escapeHtml(feedbackText('dialog.send'))}</button>
                 </div>
                 <p class="contextual-feedback-status" data-feedback-status aria-live="polite"></p>
-                <p class="contextual-feedback-error" data-feedback-error role="alert"></p>
+                <p class="contextual-feedback-error" data-feedback-error role="alert" data-feedback-sensitive="free-text"></p>
             </form>
         </div>
     `;

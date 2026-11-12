@@ -1650,7 +1650,7 @@
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" data-feedback-sensitive="free-text"></div>
 
     <!-- Edit Delivery Remarks Modal -->
     <div id="editDeliveryRemarksModal" class="modal">
@@ -1707,12 +1707,12 @@
                           rows="4" 
                           placeholder="Voer bezorginstructies in..." data-i18n-placeholder="indexHtml.placeholder.voer_bezorginstructies_in_444e08a0"></textarea>
                 
-                <div class="modal-actions">
-                    <button class="btn btn-secondary" type="button" data-action="close-edit-delivery-remarks-modal" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
-                    <button class="btn btn-primary" type="button" data-action="save-delivery-remarks" data-i18n="indexHtml.text.opslaan_414388eb">
-                        Opslaan
-                    </button>
-                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" type="button" data-action="close-edit-delivery-remarks-modal" data-i18n="indexHtml.text.annuleren_35de0a19">Annuleren</button>
+                <button class="btn btn-primary" type="button" data-action="save-delivery-remarks" data-i18n="indexHtml.text.opslaan_414388eb">
+                    Opslaan
+                </button>
             </div>
         </div>
     </div>

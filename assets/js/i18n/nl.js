@@ -880,6 +880,8 @@ const nl = {
             "storedWithWarning": "De feedback is opgeslagen, maar kon niet volledig naar Teams worden verstuurd."
         },
         "settings": {
+            "loading": "Instellingen laden…",
+            "retry": "Opnieuw proberen",
             "title": "Feedbackinstellingen",
             "subtitle": "Contextuele feedback en Microsoft Teams-koppeling",
             "feedbackButton": "Feedbackknop",

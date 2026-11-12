@@ -2629,6 +2629,12 @@ select option {
     margin-bottom: 3rem;
 }
 
+body.contextual-feedback-overlay-open :is(.form-container, .form-lightbox, .modal) { background-color: transparent; }
+body.contextual-feedback-overlay-open dialog::backdrop { background: transparent; }
+dialog:not(.form-lightbox)::backdrop { background: var(--overlay-backdrop); }
+dialog:modal { overscroll-behavior: contain; }
+dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
+
 /* Native keyboard scrolling must reveal the full focused control in short dialogs. */
 :is(.form-container, .form-lightbox) :is(input, select, textarea, button, a[href], [tabindex]) {
     scroll-margin-block: var(--space-4);
@@ -3073,33 +3079,43 @@ dialog.form-lightbox::backdrop {
     margin-bottom: 0.25rem;
 }
 
-/* Toast Notification */
+/* Global notifications remain brief; task errors stay beside their actions. */
 .toast {
     position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    background-color: var(--text);
+    inset: auto var(--panel-padding) var(--panel-padding) auto;
+    max-width: min(400px, calc(100vw - 2 * var(--panel-padding)));
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    background: var(--text);
     color: var(--text-inverse);
-    padding: 1rem 1.5rem;
-    border-radius: var(--radius-md);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    overflow-wrap: anywhere;
     box-shadow: var(--elevation-overlay);
     transform: translateY(200%);
-    transition: transform 0.3s ease;
+    transition: transform 0.2s ease;
     z-index: 2000;
-    max-width: 400px;
 }
-
-.toast.show {
-    transform: translateY(0);
+.toast.show { transform: translateY(0); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.overlay-notification {
+    flex: 1 0 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    padding: var(--space-3);
+    border-inline-start: 2px solid var(--action);
+    background: var(--surface-data);
+    color: var(--text);
+    font-size: var(--font-size-body);
+    font-weight: var(--weight-regular);
+    line-height: var(--line-height-body);
+    overflow-wrap: anywhere;
 }
-
-.toast.success {
-    background-color: var(--success);
-}
-
-.toast.error {
-    background-color: var(--danger);
-}
+.overlay-notification.error { border-color: var(--danger); background: var(--surface-danger); }
+.overlay-notification.warning { border-color: var(--warning); background: var(--surface-warning); }
+.overlay-notification.success { border-color: var(--success); background: var(--surface-success); }
 
 /* Responsive Design */
 
@@ -3914,34 +3930,34 @@ dialog.form-lightbox::backdrop {
     }
 }
 
-/* Debug Modal */
+/* Shared task dialogs */
 .modal {
     display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--overlay-backdrop);
-    animation: fadeIn 0.2s ease;
-}
-
-.modal.show {
-    display: flex;
     align-items: center;
     justify-content: center;
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    padding: var(--panel-padding);
+    background: var(--overlay-backdrop);
 }
-
+.modal.show {
+    display: flex;
+}
 .modal-content {
-    background-color: var(--surface);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--elevation-overlay);
+    min-width: 0;
+    width: 100%;
     max-width: 500px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: slideIn 0.3s ease;
+    max-height: calc(100dvh - 2 * var(--panel-padding));
+    overflow: auto;
+    scroll-padding-block: var(--space-4);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--elevation-overlay);
+}
+.modal :is(input, select, textarea, button, a[href], [tabindex]) {
+    scroll-margin-block: var(--space-4);
 }
 
 /* ============================================================================
@@ -4008,11 +4024,12 @@ dialog.form-lightbox::backdrop {
 
 .modal-actions {
     display: flex;
-    gap: 1rem;
+    flex-wrap: wrap;
     justify-content: flex-end;
-    padding: 1rem 1.5rem;
+    gap: var(--space-3);
+    padding: var(--panel-padding);
     border-top: 1px solid var(--border-subtle);
-    background: var(--surface-subdued);
+    background: var(--surface);
 }
 
 .debug-modal-content {
@@ -4021,69 +4038,55 @@ dialog.form-lightbox::backdrop {
 
 .modal-header {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
+    gap: var(--space-3);
+    padding: var(--panel-padding);
     border-bottom: 1px solid var(--border-subtle);
-    background: var(--action);
-    color: var(--text-inverse);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-
-.modal-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    color: var(--text-inverse);
-    font-size: 2rem;
-    cursor: pointer;
-    padding: 0;
-    flex: 0 0 auto;
-    min-width: var(--control-height);
-    min-height: var(--control-height);
-    width: var(--control-height);
-    height: var(--control-height);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    transition: background-color 0.2s;
-}
-
-.modal-close:hover {
-    background-color: var(--surface-inverse);
-}
-
-.modal-body {
-    padding: 1.5rem;
-}
-
-.modal-body label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
+    background: var(--surface);
     color: var(--text);
 }
-
-.modal-body textarea {
-    width: 100%;
-    margin-bottom: 1rem;
+.modal-header h2 {
+    min-width: 0;
+    margin: 0;
+    font-size: var(--font-size-title);
+    font-weight: var(--weight-strong);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
 }
-
-
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-subtle);
+.modal-header:has(.modal-subtitle) { flex-direction: column; gap: var(--space-2); }
+.modal-header .modal-subtitle { margin: 0; font-size: var(--font-size-body); line-height: var(--line-height-body); color: var(--text-muted); }
+.modal-close {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--control-height);
+    height: var(--control-height);
+    min-width: var(--control-height);
+    min-height: var(--control-height);
+    padding: 0;
+    border: 1px solid var(--action-secondary);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--action-secondary);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
 }
+.modal-close:hover { background: var(--surface-secondary-hover); color: var(--action-secondary-hover); }
+.modal-body { min-width: 0; padding: var(--panel-padding); }
+.modal-body p { overflow-wrap: anywhere; }
+.modal-body label:not(.checkbox-label) {
+    display: block;
+    margin-bottom: var(--space-1);
+    color: var(--text);
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-medium);
+    line-height: var(--line-height-label);
+}
+.modal-body .form-group { margin-bottom: var(--space-3); }
+.modal-body textarea { width: 100%; }
 
 .debug-section {
     margin-bottom: 1.5rem;
@@ -4904,54 +4907,40 @@ dialog.form-lightbox::backdrop {
    ============================================================================ */
 
 .access-denied-page {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: var(--panel-padding);
     background: var(--page);
     color: var(--text);
 }
-
 .access-denied-card {
     width: min(720px, 100%);
-    background: var(--surface);
+    min-width: 0;
+    padding: var(--panel-padding);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    box-shadow: var(--elevation-flat);
-    padding: 2.5rem;
-    text-align: center;
+    background: var(--surface);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    overflow-wrap: anywhere;
 }
-
-.access-denied-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-}
-
-.access-denied-actions {
-    margin: 1.5rem 0 2rem;
-    display: flex;
-    justify-content: center;
-}
-
+.access-denied-card h1 { margin: 0 0 var(--space-3); font-size: var(--font-size-title); line-height: 1.2; }
+.access-denied-icon { margin-bottom: var(--space-3); font-size: 1.5rem; }
+.access-denied-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-5); }
 .access-denied-roles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.5rem;
-    text-align: left;
-    background: var(--surface);
-    border-radius: var(--radius-md);
-    padding: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    min-width: 0;
+    gap: var(--space-5);
+    margin-top: var(--space-5);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border-subtle);
 }
-
-.access-denied-roles h2 {
-    font-size: 1rem;
-    margin-bottom: 0.75rem;
-}
-
-.access-denied-roles ul {
-    padding-left: 1.2rem;
-    margin: 0;
-}
+.access-denied-roles > div { min-width: 0; }
+.access-denied-roles h2 { margin: 0 0 var(--space-2); font-size: var(--font-size-body); }
+.access-denied-roles ul { margin: 0; padding-inline-start: var(--space-5); }
+.access-denied-roles code { font-size: var(--font-size-label); overflow-wrap: anywhere; }
 
 .address-completion-status {
     font-size: var(--font-size-label);
@@ -5124,8 +5113,7 @@ dialog.form-lightbox::backdrop {
 .header :is(button, a, [tabindex]):focus-visible,
 .queue-info :is(button, a, [tabindex]):focus-visible,
 .session-info :is(button, a, [tabindex]):focus-visible,
-.acw-bar :is(button, a, [tabindex]):focus-visible,
-.modal-header :is(button, a, [tabindex]):focus-visible {
+.acw-bar :is(button, a, [tabindex]):focus-visible {
     outline-color: var(--focus-inverse);
 }
 
@@ -5805,3 +5793,5 @@ dialog.form-lightbox::backdrop {
         scroll-behavior: auto !important;
     }
 }
+
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
