@@ -8,6 +8,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+## [v1.0.36] - 2026-11-12
+
 - Use Abel’s next delivery date per guide and selected edition during subscription signup, revalidate before staging an order, and keep ATV/ATL/ATM/STKN memberships independent of delivery dates. [sc-203456]
 
 ### Changed
