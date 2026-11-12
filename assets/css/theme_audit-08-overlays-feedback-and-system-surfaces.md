@@ -1,6 +1,6 @@
 # theme_audit 08 — Overlays, feedback and system surfaces
 
-Audit marker: `theme_audit`. Status: application accepted at `e0e5822` after independent source, actual-image and requirement review. Final documentation-head CI and PR delivery are tracked separately in `closure-provenance.json`; no merge or deployment is implied. Original audit baseline: `c05973e`, 2026-11-09. Historical BEFORE base: accepted slice07 `771ab50`; current adoption target: main `bfb310d` after user merges 05–07.
+Audit marker: `theme_audit`. Status: accepted and user-merged into main on 2026-11-12 at `861b386f8d3013b4c4c8ed89b7ada4e8cc64e101`. The merged tree equals accepted documentation head `e036b49`; validated application source remains `e0e5822`. Source/rendered and final delivery reviews passed, including exact-head CI43231365422. Historical BEFORE keeps accepted07 `771ab50`; original audit baseline remains `c05973e`. No deployment or cleanup is implied.
 
 Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-206629. Depends on 01/02 and shell placement from 03; coordinate disposition/outbox overlays with 09 and form lightboxes with 04–07.
 

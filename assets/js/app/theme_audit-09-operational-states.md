@@ -1,8 +1,19 @@
 # theme_audit 09 — Align operational state presentation
 
-Status: planned; documentation only. This file does not authorize or implement runtime changes.
+Status: initialized; source inventory and actual-browser BEFORE are pending. Implementation is authorized by the ten-slice goal; no application changes are accepted yet.
 
 Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md). Reference: [Light & Shadow showcase](../../../plans/kiwi-light-and-shadow-theme-palette-showcase.html), especially its operational-state specimens, restrained surfaces, action hierarchy and spacing. The showcase has no complete call-console or outbox workflow; apply its shared visual rules without inventing equivalent business behavior.
+
+## Implementation record — 2026-11-12
+
+- Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629), retained in progress for slices09–10.
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-operational-states`.
+- Branch: `codex/align-theme-operational-states`; PR creation follows the initial documentation push.
+- Base: main `861b386f8d3013b4c4c8ed89b7ada4e8cc64e101`, the user's merge of accepted08 [#152](https://github.com/bindinc/kiwi/pull/152). Its complete tree equals accepted documentation head `e036b49`; application source remains equivalent to validated `e0e5822`.
+- Scope: calls/recording/ACW/disposition, all contact-history categories and outbox states, including the existing five-second refresh/focus failure. All three areas must pass before closure.
+- Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-09/`, outside Git and retained beside worktrees.
+- Ownership: one application writer, one independent source/actual-image reviewer and one browser/PR144 tooling owner. Root owns this audit/index/changelog, PR, runtime and Git. Shared application files are edited serially.
+- Initial checks: documentation-only scaffolding and whitespace; source, browser and behavioral acceptance remain open. One changelog entry is reserved for this PR and amended as implementation completes. No merge, deployment or cleanup is authorized.
 
 ## Outcome and dependencies
 
