@@ -2,21 +2,38 @@
 // Real local UI and login, synthetic browser-only address/source responses. No upstream writes.
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { isAbsolute, resolve } from 'node:path';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || '/home/bartdeijkers/emailtemplates/node_modules/playwright');
 const baseUrl = process.env.KIWI_SMOKE_BASE_URL || 'https://bdc.rtvmedia.org.local:8443/kiwi/';
-const evidence = process.env.KIWI_ADDRESS_EVIDENCE_DIR || '/tmp/kiwi-shared-addresses';
+const localUrl = new URL(baseUrl);
+assert.ok(['http:', 'https:'].includes(localUrl.protocol)
+    && ['bdc.rtvmedia.org.local', 'localhost', '127.0.0.1'].includes(localUrl.hostname)
+    && !localUrl.username && !localUrl.password, 'Use an isolated local Compose URL.');
+const evidence = process.env.KIWI_ADDRESS_EVIDENCE_DIR;
+assert.ok(evidence && isAbsolute(evidence) && !/^\/(?:var\/)?tmp(?:\/|$)/.test(resolve(evidence)),
+    'Set KIWI_ADDRESS_EVIDENCE_DIR to an absolute durable evidence directory.');
+const blockedWrites = [];
+let completed = false;
 await mkdir(evidence, { recursive: true });
 const browser = await chromium.launch({ headless: true, executablePath: '/usr/bin/google-chrome', args: ['--host-resolver-rules=MAP bdc.rtvmedia.org.local 127.0.0.1'] });
-const page = await browser.newPage({ ignoreHTTPSErrors: true, viewport: { width: 1440, height: 1100 } });
+const page = await browser.newPage({ ignoreHTTPSErrors: true, serviceWorkers: 'block', viewport: { width: 1440, height: 1100 } });
 page.setDefaultTimeout(15000);
 const searches = [];
 const closed = [];
 let unavailable = false;
 const candidates = ['1', '2'].map(houseNumberAddition => ({ postalCode: '1223CK', houseNumber: '2A', houseNumberAddition, street: 'Kometenstraat', city: 'HILVERSUM', countryCode: 'NL', verified: true }));
+await page.route('**/*', async route => {
+    const request = route.request(), url = new URL(request.url());
+    if (!url.pathname.includes('/api/') || ['GET', 'HEAD', 'OPTIONS'].includes(request.method())) return route.continue();
+    blockedWrites.push({ method: request.method(), path: url.pathname });
+    return route.abort('blockedbyclient');
+});
 await page.route('**/api/v1/addresses/**', async route => {
     const request = route.request();
+    const url = new URL(request.url());
+    if (url.origin !== localUrl.origin || !url.pathname.startsWith(new URL('api/v1/addresses/', baseUrl).pathname)) return route.fallback();
     assert.ok(request.headers()['x-csrf-token']);
     if (request.method() === 'DELETE') { closed.push(request.url()); return route.fulfill({ status: 204 }); }
     const payload = request.postDataJSON();
@@ -154,4 +171,13 @@ try {
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#editAddressStatus').isVisible(), false);
     console.log('PASS failure/retry and keyboard dismissal');
-} finally { await browser.close(); }
+    completed = true;
+} finally {
+    await browser.close();
+    await writeFile(`${evidence}/guard-report.json`, JSON.stringify({ marker: 'theme_audit', completed, blockedWrites,
+        prefixes: (process.env.KIWI_ADDRESS_PREFIXES || 'subRecipient,subRequester,article,edit,restitutionTransfer,transfer,transfer2,customerEditorAddress').split(','),
+        trailingScope: 'The original edit unavailable/retry/Escape regression always runs after the selected prefixes.',
+        boundary: 'Local synthetic address transport only; unexpected API mutations abort. No upstream or business persistence claim.',
+        searches: searches.length, closedAddressSessions: closed.length }, null, 2) + '\n');
+    assert.equal(blockedWrites.length, 0, 'Unexpected API writes were blocked; this run is not accepted.');
+}
