@@ -12,6 +12,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
+- Prepare the dedicated overlay, feedback and system-surface alignment audit, including shared backdrop, short-height and notification/action acceptance gates (`theme_audit` slice 08). [sc-206629]
+
 - Align subscription service forms and winback, restitution and transfer flows with Light & Shadow, with native choices, clear request progress and consistent actions while preserving business rules, private capture and drafts (`theme_audit` slice 07). [sc-206629]
 
 - Align article ordering with the Light & Shadow workspace hierarchy, clear request progress, accessible feedback and safe screenshot context while preserving catalog, cart, pricing, coupon, payment, delivery and draft behavior (`theme_audit` slice 06). [sc-206629]

@@ -1,8 +1,19 @@
 # theme_audit 08 — Overlays, feedback and system surfaces
 
-Audit marker: `theme_audit`. Status: planned. Baseline: `c05973e`, 2026-11-09.
+Audit marker: `theme_audit`. Status: implementation preparation; source orientation and fresh BEFORE acceptance are required before application changes. Original audit baseline: `c05973e`, 2026-11-09. Current implementation base: accepted slice07 `771ab50`.
 
 Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-206629. Depends on 01/02 and shell placement from 03; coordinate disposition/outbox overlays with 09 and form lightboxes with 04–07.
+
+## Implementation record
+
+- Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629), tracked in Codex feedback engineer / Codex in Progress.
+- Worktree: `/home/bartdeijkers/_worktrees/align-theme-overlays-and-feedback`.
+- Branch: `codex/align-theme-overlays-and-feedback`.
+- Base: accepted slice07 `771ab506a43feddb4a56d76cd68248ef77738dcd`, [full CI43189913666](https://github.com/bindinc/kiwi/actions/runs/43189913666) passed. Stack on `codex/align-theme-service-workflows` while PR151 remains unmerged.
+- Evidence root: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-08/`, outside Git. Keep the existing07 runtime/source unchanged for the observational baseline until a reviewed08 candidate is ready.
+- Ownership: one application writer; independent source/actual-image reviewer; one browser/slice10 tooling owner. Root owns08 audit/index/changelog/PR/runtime/commits.
+- Direction: consistent New subscription backdrop transparency/sharpness; restrained shared dialog anatomy, reachable short-height content and clear contextual feedback. Preserve actual screenshot-review shielding, capture suspension, privacy, annotation, draft, permission and request semantics. Resolve the explicit320 global notification/action overlap without losing its complete message or the required action.
+- Preparation only: no application modification or rendered acceptance is claimed. One changelog entry is retained for this PR; merge/deployment/cleanup remain separately gated.
 
 ## Finding and reference
 
