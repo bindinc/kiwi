@@ -6,7 +6,7 @@ import { normalizeKnownJsImports } from './compose-smoke-theme-audit-shell-accep
 
 // theme_audit: BEFORE observations do not accept the observed presentation or focus behavior.
 const phase = process.env.KIWI_THEME_AUDIT_OVERLAY_PHASE || 'before';
-if (phase !== 'before') throw new Error('This overlay checkpoint supports observational BEFORE only.');
+if (!['before', 'after'].includes(phase)) throw new Error('Overlay phase must be before or after.');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const modulePath = fileURLToPath(import.meta.url);
 const screenshotSdkUrl = 'https://cdn.jsdelivr.net/npm/dom-to-image-more@3.10.1/+esm';
@@ -134,12 +134,13 @@ function trackRuntimeErrors(page, driver, viewport) {
 }
 
 async function trackBehavior(page, driver, meta) {
-    const sources = Object.fromEntries(await Promise.all(behaviorFiles.map(async file =>
+    const trackedFiles = phase === 'after' ? behaviorFiles.concat(['js/app/contextual-feedback/modal-surface.js', 'js/app/contextual-feedback/selector.js', 'js/app/overlay-notification.js', 'js/i18n/nl.js', 'js/i18n/en.js']) : behaviorFiles;
+    const sources = Object.fromEntries(await Promise.all(trackedFiles.map(async file =>
         [file, await readFile(path.join(driver.sourceRoot, 'assets', file), 'utf8')])));
     const pending = [], seen = new Set();
     page.on('response', response => {
         const url = new URL(response.url());
-        const file = behaviorFiles.find(file => {
+        const file = trackedFiles.find(file => {
             const expected = new URL('assets/' + file, driver.baseUrl), stem = path.posix.basename(expected.pathname, '.js');
             return url.origin === expected.origin && path.posix.dirname(url.pathname) === path.posix.dirname(expected.pathname)
                 && new RegExp('^' + stem + '(?:-[\\w-]{7})?\\.js$').test(path.posix.basename(url.pathname));
@@ -157,7 +158,7 @@ async function trackBehavior(page, driver, meta) {
     });
     return async () => {
         await Promise.all(pending);
-        for (const file of behaviorFiles) driver.check(file + ' overlay behavior actually loaded', seen.has(file), true, meta, 8);
+        for (const file of trackedFiles) driver.check(file + ' overlay behavior actually loaded', seen.has(file), true, meta, 8);
     };
 }
 
@@ -171,7 +172,7 @@ async function observe(page, driver, meta, name, rootSelector, panelSelector = r
         await Promise.all(finite.map(animation => animation.finished.catch(() => {})));
     }, [rootSelector, panelSelector]);
     await driver.painted(page);
-    await driver.capture(page, 'before-overlay-' + name, undefined, kind);
+    await driver.capture(page, phase + '-overlay-' + name, undefined, kind);
     const data = await page.evaluate(({ rootSelector, panelSelector }) => {
         const box = node => {
             if (!node) return null;
@@ -201,8 +202,8 @@ async function observe(page, driver, meta, name, rootSelector, panelSelector = r
             })) };
     }, { rootSelector, panelSelector });
     const last = driver.report.captures.at(-1);
-    const png = (await readFile(path.join(driver.evidenceDir, last.filename))).toString('base64');
-    const pixels = await page.evaluate(async data => {
+    const png = meta.native ? null : (await readFile(path.join(driver.evidenceDir, last.filename))).toString('base64');
+    const pixels = meta.native ? [] : await page.evaluate(async data => {
         const image = new Image(); image.src = 'data:image/png;base64,' + data;
         await image.decode();
         const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
@@ -212,7 +213,7 @@ async function observe(page, driver, meta, name, rootSelector, panelSelector = r
             return { x, y, rgba: [...ctx.getImageData(x, y, 1, 1).data] };
         });
     }, png);
-    driver.report.overlayEvidence.observations.push({ ...meta, state: name, kind, filename: last.filename, data, colorSampleBoundary: 'Three uniform viewport-edge samples describe color only; sharpness requires whole images/computed filters.', outsidePanelColorSamples: pixels.map(pixel => ({ ...pixel, outsidePanel: !data.panel || pixel.x < data.panel.x || pixel.x >= data.panel.right || pixel.y < data.panel.y || pixel.y >= data.panel.bottom })) });
+    driver.report.overlayEvidence.observations.push({ ...meta, state: name, kind, filename: last.filename, data, colorSampleBoundary: meta.native ? 'Native full-desktop pixels are not CSS viewport coordinates; use uncropped image review.' : 'Three uniform viewport-edge samples describe color only; sharpness requires whole images/computed filters.', outsidePanelColorSamples: pixels.map(pixel => ({ ...pixel, outsidePanel: !data.panel || pixel.x < data.panel.x || pixel.x >= data.panel.right || pixel.y < data.panel.y || pixel.y >= data.panel.bottom })) });
     return data;
 }
 
@@ -468,7 +469,11 @@ async function accountPage(driver, viewport, denied) {
     } finally { await context.close(); }
 }
 
-export async function inspectOverlays(driver, viewport) {
+export async function inspectOverlays(driver, viewport, contract) {
+    if (phase === 'after') {
+        const { inspectOverlayAcceptance } = await import('./compose-smoke-theme-audit-overlays-acceptance.mjs');
+        return inspectOverlayAcceptance({ ...driver, contract }, viewport);
+    }
     driver.report.overlayEvidence ||= { phase,
         baseline: await verifyBaseline(driver),
         companion: { path: modulePath, sha256: hash(await readFile(modulePath)) },
@@ -503,3 +508,5 @@ export async function inspectOverlays(driver, viewport) {
         finally { await finish(); await nativeContext.close(); await driver.saveReport(); }
     }
 }
+
+export { behaviorFiles, safeSettings, exactObject, observe, trackBehavior, trackRuntimeErrors, accountPage };
