@@ -5,6 +5,7 @@ import { resetLightboxDrafts } from '../../../../assets/js/app/lightbox-drafts.j
 import { editSubscription, saveSubscriptionEdit, showResendMagazine, resendMagazine,
     showEditorialComplaintForm, submitEditorialComplaint } from '../../../../assets/js/app/slices/subscription-workflow-slice.js';
 import { cancelSubscription, completeWinback, selectOffer, revertRestitution, completeRestitutionTransfer } from '../../../../assets/js/app/slices/winback-slice.js';
+import { configureCustomerDetailSliceDependencies, registerCustomerDetailSlice } from '../../../../assets/js/app/slices/customer-detail-slice.js';
 
 function deferred() {
     let resolve;
@@ -116,17 +117,95 @@ function controllerHarness() {
 }
 
 async function withGlobals(callback) {
-    const keys = ['document', 'kiwiApi', 'kiwiLegacyCustomerSearchBridge', 'showToast', 'selectCustomer'];
+    const keys = ['document', 'kiwiApi', 'kiwiLegacyCustomerSearchBridge', 'showToast', 'selectCustomer',
+        'kiwiCustomerDetailSlice'];
     const originals = new Map(keys.map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
     const harness = controllerHarness();
     try { await callback(harness); }
     finally {
+        configureCustomerDetailSliceDependencies(null);
         resetLightboxDrafts(harness.documentRef);
         for (const [key, descriptor] of originals) {
             if (descriptor) Object.defineProperty(globalThis, key, descriptor);
             else delete globalThis[key];
         }
     }
+}
+
+const reloadCases = [
+    { id: 'editSubscriptionForm', open: () => editSubscription(7), commit: saveSubscriptionEdit,
+        expectedMethod: 'PATCH' },
+    { id: 'winbackFlow', open() {
+        cancelSubscription(7);
+        selectOffer('retained', 'Retained offer', 'Known description');
+    }, commit: completeWinback, expectedMethod: 'POST' }
+];
+
+async function testCanonicalNamespaceReloadAfterAcknowledgement() {
+    for (const testCase of reloadCases) await withGlobals(async harness => {
+        const { calls, containers } = harness;
+        const reads = [];
+        const cached = [];
+        const projected = { ...harness.getCustomer(), provisional: true,
+            subscriptions: [{ ...harness.getCustomer().subscriptions[0], magazine: 'Projected magazine', status: 'paused' }] };
+        globalThis.kiwiApi.get = url => {
+            const response = deferred();
+            reads.push({ url, ...response });
+            return response.promise;
+        };
+        configureCustomerDetailSliceDependencies(() => ({
+            personsApiUrl: '/api/v1/persons',
+            findCustomerById: () => harness.getCustomer(),
+            getCurrentCustomer: harness.getCustomer,
+            setCurrentCustomer: harness.replaceCustomer,
+            upsertCustomerInCache: customer => cached.push(customer)
+        }));
+        registerCustomerDetailSlice(null);
+        delete globalThis.selectCustomer;
+        testCase.open();
+        let settled = false;
+        const pending = testCase.commit().then(() => { settled = true; });
+        await until(() => calls.length === 1);
+        assert.equal(calls[0].method, testCase.expectedMethod);
+        calls[0].resolve({ provisional: true });
+        await until(() => reads.length === 1);
+        assert.equal(reads[0].url, '/api/v1/persons/1001');
+        assert.equal(containers[testCase.id].style.display, 'none');
+        assert.equal(containers[testCase.id].commit.disabled, true, 'the callback still awaits the canonical reload');
+        assert.equal(settled, false);
+        assert.notEqual(harness.getCustomer().subscriptions[0].magazine, 'Projected magazine');
+        reads[0].resolve(projected);
+        await pending;
+        assert.equal(harness.getCustomer().provisional, true);
+        assert.equal(harness.getCustomer().subscriptions[0].magazine, 'Projected magazine');
+        assert.equal(harness.getCustomer().subscriptions[0].status, 'paused');
+        assert.equal(cached.length, 1);
+        assert.equal(containers[testCase.id].commit.disabled, false);
+        assert.equal(containers[testCase.id].status.textContent, '');
+        assert.equal(calls.length, 1, 'source reload does not add or replay a business mutation');
+    });
+}
+
+async function testLegacyReloadOverrideRetainsPriority() {
+    for (const testCase of reloadCases) await withGlobals(async harness => {
+        const refresh = deferred();
+        const selected = [];
+        let canonicalCalls = 0;
+        globalThis.kiwiCustomerDetailSlice = { selectCustomer() { canonicalCalls += 1; } };
+        globalThis.selectCustomer = customerId => { selected.push(customerId); return refresh.promise; };
+        testCase.open();
+        let settled = false;
+        const pending = testCase.commit().then(() => { settled = true; });
+        await until(() => harness.calls.length === 1);
+        harness.calls[0].resolve({ provisional: true });
+        await until(() => selected.length === 1);
+        assert.deepEqual(selected, [1001]);
+        assert.equal(canonicalCalls, 0, 'a legacy override remains the first-choice callback');
+        assert.equal(settled, false, 'the original asynchronous override is still awaited');
+        refresh.resolve();
+        await pending;
+        assert.equal(harness.containers[testCase.id].commit.disabled, false);
+    });
 }
 
 async function testControllersClaimOnlyAfterValidationAndRetainPendingDraft() {
@@ -284,4 +363,6 @@ await testOldFailureCannotChangeNewOwner();
 await testOldEditStillCompletesItsRequiredHistorySequence();
 await testOldRefreshDoesNotClearNewWinbackSelection();
 await testRestitutionCleanupKeepsTheOriginalAddressSession();
+await testCanonicalNamespaceReloadAfterAcknowledgement();
+await testLegacyReloadOverrideRetainsPriority();
 console.log('service pending ownership, validation, duplicate, retry, reset and stale completion tests passed');

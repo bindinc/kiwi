@@ -696,8 +696,9 @@ function upsertCustomerInCache(customer) {
 }
 
 async function selectCustomer(customerId) {
-    const selectCustomerFn = getLegacyFunction('selectCustomer');
-    if (!selectCustomerFn) {
+    const selectCustomerFn = getLegacyFunction('selectCustomer')
+        || getGlobalScope()?.kiwiCustomerDetailSlice?.selectCustomer;
+    if (typeof selectCustomerFn !== 'function') {
         return;
     }
 
