@@ -707,6 +707,8 @@ const en = {
         "saveFailed": "Saving winback via backend failed"
     },
     "articleOrders": {
+        "calculating": "Calculating the order…",
+        "creating": "Creating the order…",
         "addItem": "Add at least one item to the order",
         "created": "Item order successfully created!",
         "createdWithCustomer": "New customer and item order successfully created!",
@@ -914,6 +916,7 @@ const en = {
         "outboxLabel": "Outbox"
     },
     "articleSearch": {
+        "loading": "Searching articles…",
         "removeOrderItem": "Remove article from order",
         "removeCoupon": "Remove coupon",
         "searchLabel": "Search articles",

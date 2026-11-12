@@ -24,6 +24,7 @@ let appliedCoupon = null;
 let lastOrderQuote = createDefaultOrderQuote();
 let compatibilityExportsInstalled = false;
 let articleSearchInitialized = false;
+let articleSearchFeedback = null;
 
 function createDefaultOrderQuote() {
     return {
@@ -61,6 +62,64 @@ function showToast(message, type = 'success') {
 
 function asCurrency(amount) {
     return `€${Number(amount || 0).toFixed(2).replace('.', ',')}`;
+}
+
+function readBusyAttribute(element) {
+    return element && typeof element.getAttribute === 'function'
+        ? element.getAttribute('aria-busy')
+        : null;
+}
+
+function restoreBusyAttribute(element, value) {
+    if (!element || typeof element.setAttribute !== 'function') return;
+    if (value === null) element.removeAttribute('aria-busy');
+    else element.setAttribute('aria-busy', value);
+}
+
+function beginArticleSearchFeedback(documentRef) {
+    const input = documentRef.getElementById('articleSearch');
+    const dropdown = documentRef.getElementById('articleDropdown');
+    const previous = articleSearchFeedback;
+    const owner = {
+        input,
+        dropdown,
+        status: documentRef.getElementById('articleSearchStatus'),
+        inputBusy: previous && previous.input === input ? previous.inputBusy : readBusyAttribute(input),
+        dropdownBusy: previous && previous.dropdown === dropdown ? previous.dropdownBusy : readBusyAttribute(dropdown)
+    };
+    articleSearchFeedback = owner;
+    if (input && typeof input.setAttribute === 'function') input.setAttribute('aria-busy', 'true');
+    if (dropdown && typeof dropdown.setAttribute === 'function') dropdown.setAttribute('aria-busy', 'true');
+    if (owner.status) owner.status.textContent = translateArticle('articleSearch.loading', {}, 'Artikelen worden gezocht…');
+    return owner;
+}
+
+function finishArticleSearchFeedback(owner) {
+    if (articleSearchFeedback !== owner) return;
+    restoreBusyAttribute(owner.input, owner.inputBusy);
+    restoreBusyAttribute(owner.dropdown, owner.dropdownBusy);
+    if (owner.status) owner.status.textContent = '';
+    articleSearchFeedback = null;
+}
+
+export function resetArticleSearchFeedback() {
+    if (articleSearchFeedback) finishArticleSearchFeedback(articleSearchFeedback);
+}
+
+function isPublicCatalogItem(item) {
+    if (!item || typeof item.name !== 'string' || /[<>]/.test(item.name)) return false;
+    const known = articleLookup.get(String(item.articleId));
+    return Boolean(known && String(known.id) === String(item.articleId) && known.name === item.name);
+}
+
+function isPublicVolumeDescription(discount, items) {
+    if (!discount || discount.isCoupon || discount.type !== 'Stapelkorting') return false;
+    return items.some((item) => {
+        const quantity = Number(item.quantity);
+        const isKnownVolume = isPublicCatalogItem(item) && Number.isInteger(quantity) && quantity >= 5;
+        if (!isKnownVolume || discount.itemName !== item.name) return false;
+        return discount.description === '10% korting op ' + item.name + ' (' + quantity + 'x)';
+    });
 }
 
 function setArticleLookup(items) {
@@ -224,19 +283,24 @@ export async function filterArticles(query) {
     selectedArticleIndex = -1;
     const normalizedQuery = (query || '').trim();
 
+    const feedback = beginArticleSearchFeedback(documentRef);
     try {
-        latestSearchArticles = await fetchArticles({
-            query: normalizedQuery,
-            popular: normalizedQuery ? undefined : true,
-            limit: 10
-        });
-    } catch (error) {
-        latestSearchArticles = [];
-        showToast(error.message || 'Kan artikelen niet laden', 'error');
-    }
+        try {
+            latestSearchArticles = await fetchArticles({
+                query: normalizedQuery,
+                popular: normalizedQuery ? undefined : true,
+                limit: 10
+            });
+        } catch (error) {
+            latestSearchArticles = [];
+            showToast(error.message || 'Kan artikelen niet laden', 'error');
+        }
 
-    renderArticleDropdown(latestSearchArticles, normalizedQuery);
-    dropdown.style.display = 'block';
+        renderArticleDropdown(latestSearchArticles, normalizedQuery);
+        dropdown.style.display = 'block';
+    } finally {
+        finishArticleSearchFeedback(feedback);
+    }
 }
 
 export function renderArticleDropdown(filteredArticles, query) {
@@ -748,7 +812,8 @@ export async function removeCoupon() {
 
     if (messageEl) {
         messageEl.className = 'coupon-message';
-        messageEl.style.display = 'none';
+        messageEl.textContent = '';
+        messageEl.style.display = '';
     }
 
     await renderOrderItems();
@@ -793,7 +858,7 @@ export async function renderOrderItems() {
             itemsHtml += `
                 <div class="order-item">
                     <div class="order-item-details">
-                        <div class="order-item-name">${item.name}</div>
+                        <div class="order-item-name"${isPublicCatalogItem(item) ? ' data-feedback-public' : ''}>${item.name}</div>
                         <div class="order-item-meta">${item.code} • ${item.magazine} • ${asCurrency(item.unitPrice)} per stuk</div>
                         ${hasVolumeDiscount ? '<div class="order-item-discount">✨ Stapelkorting actief (10%)<span class="order-item-discount-badge">KORTING</span></div>' : ''}
                     </div>
@@ -824,7 +889,7 @@ export async function renderOrderItems() {
                                 <span class="discount-type">${discount.type}</span>
                                 <span class="discount-badge ${isCoupon ? 'coupon-applied' : ''}">${isCoupon ? 'COUPON' : 'ACTIE'}</span>
                             </div>
-                            <div class="discount-description">${discount.description}</div>
+                            <div class="discount-description"${isPublicVolumeDescription(discount, quote.items) ? ' data-feedback-public' : ''}>${discount.description}</div>
                         </div>
                         <div class="discount-item-amount">
                             -${asCurrency(discount.amount)}
@@ -986,7 +1051,11 @@ export function registerArticleSearchSlice(actionRouter) {
 
 export const __articleSearchTestUtils = {
     createDefaultOrderQuote,
+    isPublicCatalogItem,
+    isPublicVolumeDescription,
+    setOrderItems,
     resetStateForTests() {
+        resetArticleSearchFeedback();
         articleLookup = new Map();
         latestSearchArticles = [];
         modalArticles = [];

@@ -707,6 +707,8 @@ const nl = {
         "saveFailed": "Winback opslaan via backend mislukt"
     },
     "articleOrders": {
+        "calculating": "Bestelling wordt berekend…",
+        "creating": "Bestelling wordt aangemaakt…",
         "addItem": "Voeg minimaal één artikel toe aan de bestelling",
         "created": "Artikel bestelling succesvol aangemaakt!",
         "createdWithCustomer": "Nieuwe klant en artikel bestelling succesvol aangemaakt!",
@@ -914,6 +916,7 @@ const nl = {
         "outboxLabel": "Outbox"
     },
     "articleSearch": {
+        "loading": "Artikelen worden gezocht…",
         "removeOrderItem": "Artikel uit bestelling verwijderen",
         "removeCoupon": "Kortingscode verwijderen",
         "searchLabel": "Artikel zoeken",

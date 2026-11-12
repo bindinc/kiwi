@@ -3145,117 +3145,181 @@ dialog.form-lightbox::backdrop {
     width: 100%;
 }
 
-/* Article Sale Form - Two Column Layout for Desktop */
-.article-sale-container {
-    max-width: none !important;
-    width: 100%;
-}
-
-/* Compact spacing for article sale to fit 1080p screens */
+/* Article ordering uses flat work blocks while retaining the shared form controls. */
 #articleSaleForm.form-container {
-    padding: 1.5rem;
-    padding-top: 2rem;
+    padding: var(--space-5);
+    padding-top: var(--space-6);
 }
 
-#articleSaleForm .card {
-    padding: 1rem 1.25rem;
-    margin-bottom: 2rem;
+#articleSaleForm .article-sale-container {
+    max-width: 1280px;
+    padding: 0;
+    margin-bottom: var(--space-6);
 }
 
-.article-sale-container .form-header {
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.625rem;
+#articleSaleForm .form-header {
+    margin: 0;
+    padding: var(--panel-padding);
+    align-items: flex-start;
+    gap: var(--space-4);
 }
 
-.article-sale-container .form-subtitle {
-    margin-top: 0.75rem;
-    margin-bottom: 0.4rem;
-    font-size: 0.95em;
+#articleSaleForm .form-header h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
-.article-sale-container .form-row {
-    margin-bottom: 0.5rem;
+#articleSaleForm .article-sale-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-/* Extra compacte betaalmethode sectie in artikel verkoop */
-.article-sale-container .payment-methods {
-    margin-top: 0;
+#articleSaleForm .article-sale-left,
+#articleSaleForm .article-sale-right {
+    min-width: 0;
 }
 
-.article-sale-container .payment-methods .form-row {
+#articleSaleForm .article-sale-right {
+    border-inline-start: 1px solid var(--border-subtle);
+}
+
+#articleSaleForm .article-form-block {
+    min-width: 0;
+    padding: var(--panel-padding);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+#articleSaleForm .article-form-block:last-child {
+    border-bottom: 0;
+}
+
+#articleSaleForm .form-subtitle {
+    margin: 0 0 var(--space-3);
+    font-size: var(--font-size-body);
+    font-weight: var(--weight-medium);
+    line-height: 1.25;
+}
+
+#articleSaleForm .form-subtitle::after {
+    content: none;
+}
+
+#articleSaleForm :is(.form-row, .customer-address-row) {
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+#articleSaleForm .form-group {
+    min-width: 0;
+    margin-bottom: var(--space-3);
+}
+
+/* Contain the address row margin so screenshot clones retain the native contact gap. */
+#articleSaleForm .address-fields {
+    display: flow-root;
+}
+
+#articleSaleForm .form-row > .form-group {
+    flex: 1;
     margin-bottom: 0;
 }
 
-.article-sale-container .aanhef-row {
-    margin-bottom: 0.625rem;
-    gap: 1.25rem;
-}
-
-.article-sale-container .payment-option {
-    margin-bottom: 0.4rem;
-}
-
-.article-sale-container .payment-option:last-child {
+#articleSaleForm .article-form-block > .form-row:last-child,
+#articleSaleForm .article-form-block > .form-group:last-child,
+#articleSaleForm .article-form-block > .form-group:last-child > .form-row:last-child {
     margin-bottom: 0;
 }
 
-.article-sale-container .delivery-remarks-shortcuts {
-    gap: 0.375rem;
-    margin-bottom: 0.4rem;
+#articleSaleForm .form-group > :is(input, select, textarea) {
+    width: 100%;
+    min-width: 0;
 }
 
-.article-sale-container textarea {
-    min-height: 60px;
+#articleSaleForm .aanhef-row {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-3);
 }
 
-.article-sale-container .form-actions {
-    margin-top: 1rem;
-    padding-top: 0.75rem;
+#articleSaleForm .delivery-remarks-shortcuts {
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+#articleSaleForm textarea {
+    min-height: 80px;
+}
+
+#articleSaleForm .payment-option {
+    margin-bottom: var(--space-2);
+}
+
+#articleSaleForm .payment-option:last-child {
+    margin-bottom: 0;
+}
+
+#articleSaleForm .payment-option > label {
+    overflow-wrap: anywhere;
+}
+
+#articleSaleForm .article-inline-status {
+    margin: var(--space-2) 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-label);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+#articleSaleForm .article-inline-status:empty {
+    margin: 0;
+}
+
+#articleSaleForm #articleSubmitStatus:not(:empty) {
+    margin: 0;
+    padding: var(--space-3) var(--panel-padding);
+    border-top: 1px solid var(--border-subtle);
+}
+
+#articleSaleForm .form-actions {
+    min-width: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-4) var(--panel-padding);
+    border-top: 1px solid var(--border-subtle);
+}
+
+#articleSaleForm .form-actions .btn {
+    max-width: 100%;
+    white-space: normal;
+}
+
+@media (max-width: 1024px) {
+    #articleSaleForm .article-sale-columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    
+    #articleSaleForm .article-sale-right {
+        border-inline-start: 0;
+        border-top: 1px solid var(--border-subtle);
+    }
+}
+    
+@media (max-width: 768px) {
+    #articleSaleForm.form-container {
+        padding: var(--space-4);
+    }
+    
+    #articleSaleForm .form-actions {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: stretch;
+    }
 }
 
 .onepager-container .form-section {
     width: 100%;
-}
-
-/* Article Sale Two Column Layout */
-.article-sale-columns {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-}
-
-.article-sale-left,
-.article-sale-right {
-    flex: 1;
-    min-width: 300px;
-}
-
-.article-sale-left {
-    flex: 1;
-}
-
-.article-sale-right {
-    flex: 1;
-}
-
-/* Mobile: Stack columns */
-@media (max-width: 1024px) {
-    .article-sale-columns {
-        flex-direction: column;
-    }
-    
-    .article-sale-container {
-        max-width: 800px;
-    }
-    
-    /* Reset spacing on mobile for better readability */
-    .article-sale-container .card {
-        padding: 1.5rem;
-    }
-    
-    .article-sale-container .form-row {
-        margin-bottom: 1rem;
-    }
 }
 
 .onepager-container .form-section h2::after, 
