@@ -330,6 +330,57 @@ Every selected report has zero required deviations, scenario errors or attempted
 
 Positive production captures preserve fixed captions, verified catalog names and the exact backend volume formatter. Three negative captures per focused viewport prove unknown title, arbitrary discount text and coupon descriptions remain masked through the original production callback. Normalized postal inequality, actual private input pixels, selected Birthday display/serialization, original API/controller preservation, raw live restoration and resource verification all pass in both engines. No screen-reader traversal, real upstream business mutation or upstream success/policy acceptance is claimed. PR144 remains draft until the remaining implementation and complete interface acceptance are finished.
 
+### Slice 07 scoped service acceptance (2026-11-12)
+
+Application source is frozen at `4f1f57fd3c78e3d3ed3d641fc4eea02a7e81c1b3` in [PR #151](https://github.com/bindinc/kiwi/pull/151). The [service companion](compose-smoke-theme-audit-service.mjs), [interaction/privacy checks](compose-smoke-theme-audit-service-acceptance.mjs), [finite provider probe](compose-smoke-theme-audit-service-provider.mjs) and [acknowledgement fixtures](compose-smoke-theme-audit-service-ack-fixtures.mjs) run the actual local application with synthetic customer, offer and address transport. The PHP projection generator executes the actual in-memory backend projection logic; its reviewed output supplies nine independent provisional acknowledgements. Business payloads, prepared change identifiers, customer reloads and full projected models remain checked. No database, consumer or upstream business persistence is claimed.
+
+Evidence remains outside Git under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-07`. `after-final-provenance.json`, SHA-256 `1ffbf02ccfa9ba74453e80e258ff4c48709af1fee1848887faafd89925c0b312`, selects 439 artifacts including 332 PNGs, records 28 application/reference/SDK/backend/test source hashes and nine tooling hashes, and proves all 114 original BEFORE artifacts unchanged. The separately retained BEFORE register is observational. Independent source and whole-image reviews accompany each scoped result; image and check counts do not imply complete interface acceptance.
+
+| Selected report | Verified checks | Captures | Scope |
+| --- | ---: | ---: | --- |
+| `after-winback-notice-01/chromium` | 96 | 6 | Existing accepted/declined held and queued callbacks only |
+| `after-full-firefox-01/firefox` | 620 | 79 | Desktop nine acknowledgements, provider, privacy and drafts; 390/320px representative layouts |
+| `after-narrow-chromium-01/chromium` | 214 | 36 | Sixteen actual family/choice states plus two references at each of 390/320px |
+| `after-narrow-complaint-firefox-01/firefox` | 59 | 6 | One 320px held rejection and identical-payload explicit retry |
+| `after-narrow-complaint-chromium-01/chromium` | 59 | 6 | The same finite pending/error/retry scope in Chromium |
+| `after-native-chromium-01/chromium` | 124 | 23 | Actual OS200% family/choice layout and exact 100% reset |
+| `after-native-firefox-02/firefox` | 148 | 19 | Actual OS200% family/keyboard-choice layout and exact reset |
+
+All selected reports have zero deviations, scenario errors or unexpected writes. Chromium desktop `after-preflight-04` remains a failed whole run with one incorrect processed-cancellation notice. Only its named unaffected positives transfer through `source-carry-forward-01.json`; the final-source 96-check accepted/declined supplement resolves that notice. Earlier provider, callback, hover-oracle and native setup failures remain immutable diagnostics. The full Firefox run independently exercises all nine final-source callbacks. Held controls, duplicate attempts, retained drafts, Back/provider ownership, close/reopen, queued customer reloads and explicit retry are actual controller interactions with local responses.
+
+The minimal three-property address diagnostic separately proves exact native geometry for 33 controls and complete original/pseudonymized checkbox paint. Final-source production captures independently preserve all literal captions, replace 13 private pixel regions, change selected Birthday display and normalized postal data, and restore raw fields/attributes and the capture observer. The diagnostic's 33-control comparison is not claimed as a repeated measurement in every final browser. Native Chromium measures 1050×1093/DPR1 → 525×546/DPR2 → exact reset; Firefox measures 1440×1000/DPR1 → 720×500/DPR2 → exact reset. Native screenshots are uncropped X11 desktops.
+
+Firefox's first native run failed because nonforced `locator.check()` reported card interception at 200%. One finite diagnostic retains the actual failed screen, DOM/protocol rectangles and hit stack: the checkbox is the first CSS hit, a real XTest pointer checks it with trusted events, and Edition → actual Tab → Space restores the raw draft. This establishes actual reachability and a native-zoom protocol-action limitation; its exact internal mapping is not measured. The reviewed helper uses actual focus and Space only for native Firefox setup, with enabled/visible/focus/checked assertions. It preserves all 100% and Chromium pointer paths and the separate natural offer Tab/Space/Arrow checks. Setup focus is not reported as natural sequential Tab for every control.
+
+For a fresh isolated full Firefox checkpoint, choose a new durable evidence directory:
+
+```bash
+KIWI_THEME_APP_ROOT=/home/bartdeijkers/_worktrees/align-theme-service-workflows \
+KIWI_SMOKE_BASE_URL=https://bdc.rtvmedia.org.local:9444/kiwi/ \
+KIWI_THEME_AUDIT_SLICE=7 KIWI_THEME_AUDIT_SERVICE_PHASE=after \
+KIWI_THEME_AUDIT_SERVICE_ONLY=1 KIWI_THEME_AUDIT_SERVICE_SUITE=full \
+KIWI_THEME_AUDIT_VIEWPORTS=1440x1000,390x1000,320x1000 \
+KIWI_THEME_SERVICE_ACK_FIXTURES=/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-11/slice-07/source-derived-ack-fixtures-01/service-projections.json \
+KIWI_SMOKE_BROWSER=firefox \
+KIWI_THEME_EVIDENCE_DIR=/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-07/new-review-run \
+node scripts/compose-smoke-theme-audit.mjs
+```
+
+`KIWI_THEME_AUDIT_SERVICE_SUITE=winback` selects the two existing outcome callbacks at one explicit desktop viewport. `KIWI_THEME_AUDIT_SERVICE_SUITE=complaint` selects only the existing held 422 → same-payload retry acknowledgement at one explicit 320px viewport, including visible pending/error evidence before the original toast expiry. For native mode omit `KIWI_THEME_AUDIT_SERVICE_ONLY`, set `KIWI_THEME_AUDIT_NATIVE_ZOOM_ONLY=1`, use `KIWI_THEME_AUDIT_SERVICE_SUITE=full` and an unused `KIWI_THEME_AUDIT_DISPLAY`; record measured geometry and reset in each engine. Do not repeat unrelated full matrices to close a bounded finding.
+
+The guarded shared-address check also passes, with six component images, five synthetic searches, three closed local address sessions and zero unexpected writes:
+
+```bash
+KIWI_SMOKE_BASE_URL=https://bdc.rtvmedia.org.local:9444/kiwi/ \
+KIWI_ADDRESS_PREFIXES=transfer,transfer2,restitutionTransfer \
+KIWI_ADDRESS_EVIDENCE_DIR=/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-07/new-address-review \
+node scripts/compose-smoke-shared-addresses.mjs
+```
+
+This preserves the original unconditional edit unavailable/retry/Escape tail after the three selected service prefixes. It does not claim all eight address flows or upstream validation. The whole legacy customer-session smoke was not replayed; criterion mapping uses the recorded controlled A/B draft block, explicit reset and unchanged source/tests.
+
+Two boundaries remain explicit. At 320px, the transient global error toast overlaps the lower action until natural expiry; complete error text, retained data and the settled successful retry are proven, while unobstructed error-state action access is not. The [.toast owner in slice 08](../assets/css/theme_audit-08-overlays-feedback-and-system-surfaces.md) must resolve that global presentation gate. Actual English UI expansion remains assigned to final slice 10; this checkpoint proves Dutch application flows and reviewed English source translations. Slice 10 and PR #144 remain in progress through slices 08–09 and final integrated acceptance. No merge or deployment follows from this evidence.
+
 ## Outcome and dependencies
 
 Replace palette-only confidence with reviewable evidence that all Kiwi surfaces follow the agreed style guide. Acceptance covers visual consistency, interaction states and accessibility observations without changing business behavior.

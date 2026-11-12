@@ -21,6 +21,9 @@ const shellOnly = process.env.KIWI_THEME_AUDIT_SHELL_ONLY === '1';
 const customerOnly = process.env.KIWI_THEME_AUDIT_CUSTOMER_ONLY === '1';
 const subscriptionOnly = process.env.KIWI_THEME_AUDIT_SUBSCRIPTION_ONLY === '1';
 const articleOnly = process.env.KIWI_THEME_AUDIT_ARTICLE_ONLY === '1';
+const serviceOnly = process.env.KIWI_THEME_AUDIT_SERVICE_ONLY === '1';
+const servicePhase = process.env.KIWI_THEME_AUDIT_SERVICE_PHASE || 'before';
+const serviceSuite = process.env.KIWI_THEME_AUDIT_SERVICE_SUITE || 'full';
 const articlePhase = process.env.KIWI_THEME_AUDIT_ARTICLE_PHASE || 'before';
 const articleSuite = process.env.KIWI_THEME_AUDIT_ARTICLE_SUITE || 'layout';
 const subscriptionPhase = process.env.KIWI_THEME_AUDIT_SUBSCRIPTION_PHASE || 'before';
@@ -30,6 +33,7 @@ const customerLookupOnly = process.env.KIWI_THEME_AUDIT_CUSTOMER_LOOKUP_ONLY ===
 const nativeCustomer = nativeZoom && slice === 4 && customerPhase === 'after';
 const nativeSubscription = nativeZoom && slice === 5 && subscriptionPhase === 'after';
 const nativeArticle = nativeZoom && slice === 6 && articlePhase === 'after';
+const nativeService = nativeZoom && slice === 7 && servicePhase === 'after';
 const shellPhase = process.env.KIWI_THEME_AUDIT_SHELL_PHASE || 'before';
 const shellSuite = process.env.KIWI_THEME_AUDIT_SHELL_SUITE || 'matrix';
 const evidenceRoot = path.resolve(process.env.KIWI_THEME_EVIDENCE_DIR || path.join(sourceRoot, '..', '.kiwi-theme-audit/evidence', `slice-${String(slice).padStart(2, '0')}`, `contract-${new Date().toISOString().replace(/[:.]/g, '-')}`));
@@ -60,10 +64,14 @@ const viewports = process.env.KIWI_THEME_AUDIT_VIEWPORTS
         return { width, height };
     })
     : shellOnly ? shellViewports()
-        : articleOnly ? [1440, 390, 320].map(width => ({ width, height: 1000 }))
+        : (articleOnly || serviceOnly) ? [1440, 390, 320].map(width => ({ width, height: 1000 }))
         : (customerOnly || subscriptionOnly) ? [{ width: 1440, height: 1000 }, { width: 390, height: 1000 }]
         : [{ width: 1440, height: 1000 }, { width: 390, height: 1000 }, { width: 320, height: 1000 }, { width: 390, height: 320 }];
 
+if (nativeZoom && slice === 7 && !nativeService) throw new Error('Native service07 mode requires SERVICE_PHASE=after.');
+if ((serviceOnly || nativeService) && ['provider', 'winback'].includes(serviceSuite) && (servicePhase !== 'after' || nativeZoom || viewports.length !== 1 || viewports[0].width < 1000)) throw new Error('Run scoped service provider or callback checks in the after phase at one explicit desktop viewport.');
+if ((serviceOnly || nativeService) && serviceSuite === 'complaint' && (servicePhase !== 'after' || nativeZoom || viewports.length !== 1 || viewports[0].width !== 320)) throw new Error('Run the existing complaint callback subset after at one explicit320px viewport.');
+if (serviceOnly && (slice !== 7 || !['before', 'after'].includes(servicePhase) || shellOnly || customerOnly || controlsOnly || subscriptionOnly || articleOnly || nativeZoom)) throw new Error('Run service07 before/after separately from other modes.');
 if (articleOnly && (shellOnly || customerOnly || controlsOnly || subscriptionOnly || nativeZoom)) throw new Error('Run article BEFORE separately from other modes.');
 if (!['before', 'after'].includes(articlePhase)) throw new Error('Article phase must be before or after.');
 if (!['layout', 'focused', 'sentinels'].includes(articleSuite)) throw new Error('Unknown article suite.');
@@ -163,7 +171,7 @@ const report = {
         browser: browserName, browserVersion: browser.version(), playwrightVersion: require(path.join(playwrightPath, 'package.json')).version,
         locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', role: shellOnly && shellSuite === 'roles' ? 'Actual per-context fallback roles; see shellAcceptance.roles' : 'kiwi-admin', deviceScaleFactor: 1,
         reducedMotion: 'reduce', nativeZoom: nativeZoom ? 'Actual OS Ctrl+plus/0; measured per capture' : '100% default; 200% native zoom is a separate, unverified gate',
-        scenarioSet: articleOnly ? (articlePhase === 'before' ? 'Observed article BEFORE; source/locale counters are not acceptance' : 'Scoped article AFTER: ' + articleSuite) : nativeArticle ? 'Focused actual native OS200% article workspace and small shared sentinel' : subscriptionOnly ? (subscriptionPhase === 'before' ? 'Observed subscription BEFORE; source/locale counters are not acceptance' : 'Focused subscription AFTER layout and preserved interaction gates: ' + subscriptionSuite) : nativeSubscription ? 'Focused actual native OS200% subscription and small shell sentinel' : customerLookupOnly ? 'Bounded actual reusable-person lookup ' + customerPhase + '; not global subscription workflow acceptance' : nativeCustomer ? 'Required focused customer native OS200% gates and small shell sentinel' : customerOnly ? (customerPhase === 'before' ? 'Observed customer BEFORE states; no parity acceptance' : 'Required focused customer AFTER presentation and interaction gates') : shellOnly ? (shellPhase === 'before' ? 'Observed shell states; no parity verdict' : 'Required shell AFTER acceptance: ' + shellSuite) : controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
+        scenarioSet: nativeService ? 'Actual native OS200% service family layout, native choices and reset; no mutation/privacy repetition' : serviceOnly ? (serviceSuite === 'complaint' ? 'Service07 existing complaint held/rejected/identical-retry acknowledgement only at320px; visible progress/error wrapping and source-derived queued model; no full workspace claim' : serviceSuite === 'winback' ? 'Service07 existing accepted/declined callbacks only: real held/queued callbacks and source-derived provisional models; no full workspace or provider/privacy repetition' : serviceSuite === 'provider' ? 'Service07 finite provider GET20 held/empty/error/recovery probe; no service mutations or full-workspace acceptance' : 'Service07 ' + servicePhase + ': finite actual service families and conditional branches with controlled fixtures') : articleOnly ? (articlePhase === 'before' ? 'Observed article BEFORE; source/locale counters are not acceptance' : 'Scoped article AFTER: ' + articleSuite) : nativeArticle ? 'Focused actual native OS200% article workspace and small shared sentinel' : subscriptionOnly ? (subscriptionPhase === 'before' ? 'Observed subscription BEFORE; source/locale counters are not acceptance' : 'Focused subscription AFTER layout and preserved interaction gates: ' + subscriptionSuite) : nativeSubscription ? 'Focused actual native OS200% subscription and small shell sentinel' : customerLookupOnly ? 'Bounded actual reusable-person lookup ' + customerPhase + '; not global subscription workflow acceptance' : nativeCustomer ? 'Required focused customer native OS200% gates and small shell sentinel' : customerOnly ? (customerPhase === 'before' ? 'Observed customer BEFORE states; no parity acceptance' : 'Required focused customer AFTER presentation and interaction gates') : shellOnly ? (shellPhase === 'before' ? 'Observed shell states; no parity verdict' : 'Required shell AFTER acceptance: ' + shellSuite) : controlsOnly ? 'Controlled action renderers and canonical modal fields' : 'Default application flows',
         input: customerLookupOnly ? (customerPhase === 'before' ? 'Actual pointer disclosure and native search-action Enter; no selection or submission' : 'Actual native summary Enter/Space and input/button Enter; no selection or submission') : 'Pointer flows plus keyboard focus and Escape checks', requestedViewports: viewports
     },
     checks: [], captures: [], controlContainers: [], blockedWrites: [], errors: [], loadedStylesheets: [],
@@ -283,7 +291,7 @@ async function capture(page, name, selector, kind = 'actual Compose application 
 
 async function newContext(viewport, readOnly = true, deviceScaleFactor = 1) {
     const context = await browser.newContext({
-        ...((subscriptionOnly || articleOnly) ? { serviceWorkers: 'block' } : {}),
+        ...((subscriptionOnly || articleOnly || serviceOnly) ? { serviceWorkers: 'block' } : {}),
         ignoreHTTPSErrors: true, viewport, reducedMotion: 'reduce', deviceScaleFactor,
         locale: 'nl-NL', timezoneId: 'Europe/Amsterdam'
     });
@@ -369,7 +377,7 @@ async function referenceContract(viewport) {
                 contract.shell[selector] = await measure(page, selector);
             }
         }
-        if (subscriptionOnly || nativeSubscription || articleOnly || nativeArticle) {
+        if (subscriptionOnly || nativeSubscription || articleOnly || nativeArticle || serviceOnly || nativeService) {
             contract.subscription = {};
             for (const selector of ['.subscription-workspace', '.subscription-form-grid', '.subscription-form-block', '.subscription-selected-person', '.subscription-choice', '.subscription-consent-row', '.subscription-form-actions']) contract.subscription[selector] = await measure(page, selector);
             contract.subscriptionTitle = await measure(page, '.subscription-form-header h3');
@@ -1190,7 +1198,7 @@ async function waitForNativeHeaderUncovered(page) {
 async function nativeZoomChecks() {
     const contract = slice >= 2 ? await referenceContract({ width: 1440, height: 1000 }) : null;
     const context = await browser.newContext({
-        ...((nativeSubscription || nativeArticle) ? { serviceWorkers: 'block' } : {}),
+        ...((nativeSubscription || nativeArticle || nativeService) ? { serviceWorkers: 'block' } : {}),
         viewport: null, ignoreHTTPSErrors: true, locale: 'nl-NL',
         timezoneId: 'Europe/Amsterdam', reducedMotion: 'reduce'
     });
@@ -1207,6 +1215,11 @@ async function nativeZoomChecks() {
     const finishSubscriptionEvidence = nativeSubscription
         ? await subscriptionModule.trackSubscriptionBehavior(page, nativeDriver, { state: 'native subscription window' }) : async () => {};
     const subscriptionFixtures = nativeSubscription ? await subscriptionModule.installSubscriptionFixtures(page, nativeDriver) : null;
+    const serviceModule = nativeService ? await import('./compose-smoke-theme-audit-service.mjs') : null;
+    if (nativeService) await serviceModule.prepareServiceEvidence(nativeDriver);
+    const finishServiceEvidence = nativeService
+        ? await serviceModule.trackServiceBehavior(page, nativeDriver, { state: 'native service window' }) : async () => {};
+    const serviceFixtures = nativeService ? await serviceModule.installServiceFixtures(page, nativeDriver) : null;
     const articleModule = nativeArticle ? await import('./compose-smoke-theme-audit-article.mjs') : null;
     if (nativeArticle) await articleModule.prepareArticleEvidence(nativeDriver);
     const finishArticleEvidence = nativeArticle
@@ -1263,6 +1276,15 @@ async function nativeZoomChecks() {
             report.nativeBrowserUI.applicationAfter = afterPopup;
             report.nativeBrowserUI.scope = 'Browser UI preparation before the complete native200% application suite; uncropped visual review remains required.';
             check('actual browser-popup dismissal retains empty application state', JSON.stringify(afterPopup), JSON.stringify(beforePopup), { state: 'native browser UI' });
+        }
+        if (nativeService) {
+            const meta = { viewport: { width: zoomed.innerWidth, height: zoomed.innerHeight }, locale: 'nl', phase: 'after', native: true };
+            await serviceModule.runServiceScenarios(page, nativeDriver, meta, serviceFixtures);
+            sendNativeZoomKey(true);
+            const reset = await geometry();
+            check('native service zoom reset restored 100%', Math.abs(reset.dpr - before.dpr) < 0.03 && Math.abs(reset.innerWidth - before.innerWidth) < 3, true, { before, reset });
+            await capture(page, 'native-service-100-reset', undefined, 'Actual OS100% reset after focused service native200% family/choice layout; uncropped desktop.');
+            return;
         }
         if (nativeArticle) {
             const meta = { viewport: { width: zoomed.innerWidth, height: zoomed.innerHeight }, locale: 'nl', phase: 'after', suite: 'focused', native: true };
@@ -1340,6 +1362,8 @@ async function nativeZoomChecks() {
         sendNativeZoomKey(true);
         if (nativeSubscription) subscriptionModule.releaseSubscriptionFixtures(subscriptionFixtures);
         if (nativeArticle) articleModule.releaseArticleFixtures(articleFixtures);
+        if (nativeService) serviceModule.releaseServiceFixtures(serviceFixtures);
+        await finishServiceEvidence();
         await finishArticleEvidence();
         await finishSubscriptionEvidence();
         await finishCustomerEvidence();
@@ -1353,7 +1377,10 @@ try {
     if (!nativeZoomOnly) {
         for (const viewport of viewports) {
             const contract = await referenceContract(viewport);
-            if (articleOnly) {
+            if (serviceOnly) {
+                const { inspectService } = await import('./compose-smoke-theme-audit-service.mjs');
+                await inspectService({ baseUrl, sourceRoot, capture, check, evidenceDir, login, newContext, painted, report, saveReport, trackStylesheets }, viewport, contract);
+            } else if (articleOnly) {
                 const { inspectArticle } = await import('./compose-smoke-theme-audit-article.mjs');
                 await inspectArticle({ baseUrl, sourceRoot, capture, check, evidenceDir, login, newContext, painted, report, saveReport, trackStylesheets }, viewport, contract);
             } else if (shellOnly) {
@@ -1398,7 +1425,7 @@ try {
         unverified: report.checks.filter(check => check.status === 'unverified').length,
         errors: report.errors.length, blockedWrites: report.blockedWrites.length,
         captures: report.captures.length,
-        acceptance: (articleOnly && articlePhase === 'before') || (subscriptionOnly && subscriptionPhase === 'before') || (customerOnly && customerPhase === 'before') || (shellOnly && shellPhase === 'before')
+        acceptance: (serviceOnly && servicePhase === 'before') || (articleOnly && articlePhase === 'before') || (subscriptionOnly && subscriptionPhase === 'before') || (customerOnly && customerPhase === 'before') || (shellOnly && shellPhase === 'before')
             ? 'Observational BEFORE capture: locale/provenance counters do not accept recorded visual/keyboard defects.'
             : 'Required gates plus independent visual review remain necessary; a successful run is not complete slice 10 acceptance.'
     };
