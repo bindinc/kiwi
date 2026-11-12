@@ -115,6 +115,22 @@
     opacity: 0;
 }
 
+/* Keep the floating entry outside legacy task content and both focus outlines. */
+@media (max-width: 1560px) {
+    body:has(> #contextualFeedbackButton:not([hidden])) :is(.modal, div.form-container):not(dialog):not(dialog *) {
+        padding-inline-end: max(var(--panel-padding), calc(60px + env(safe-area-inset-right, 0px)));
+    }
+
+    #contextualFeedbackButton {
+        width: 46px;
+        transition: background-color 0.18s ease;
+    }
+
+    #contextualFeedbackButton .contextual-feedback-label {
+        opacity: 0;
+    }
+}
+
 /* Picker annotations and privacy-verification colors stay independent of the app theme. */
 .contextual-feedback-picker-overlay {
     position: fixed;
