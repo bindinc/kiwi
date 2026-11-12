@@ -7,11 +7,13 @@ import {
 import {
     auditPseudonymizedClone,
     createPseudonymContext,
+    pseudonymizeFeedbackText,
     pseudonymizeScreenshotClone,
     pseudonymizeSelectedElement,
     redactScreenshotDom
 } from '../../../../assets/js/app/contextual-feedback/screenshot-redaction.js';
 import { copyScreenshotFormState, serializeScreenshotFormState } from '../../../../assets/js/app/contextual-feedback/screenshot-form-state.js';
+import { describeElement } from '../../../../assets/js/app/contextual-feedback/selector.js';
 
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
@@ -679,3 +681,83 @@ testFreeTextKeepsDomainContextAndReplacesPii();
 testRedactionInstallsAndRemovesTemporaryStylesheet();
 testIdentifierInferenceCoversCallerAndRemarksNames();
 testAuditFailsClosedWhenARecordedSourceValueRemains();
+
+function testOpaqueMessagesReplaceAllUnknownPiiAndRestoreOriginalText() {
+    const original = '  Synthetic Elena Overlay08: elena.overlay08@example.test, 0611223344, NL91 ABNA 0417 1643 00, Syntheticstraat 88, persoon 87654321.  ';
+    const text = new FakeText(original);
+    const notice = new FakeElement('p', { 'data-feedback-sensitive': 'opaque-text' }, { children: [text] });
+    const root = new FakeElement('main', {}, { children: [notice] });
+    const documentRef = { body: root };
+    const restoreRaw = redactScreenshotDom(documentRef, { pseudonymizeText: false });
+    assert.equal(text.nodeValue, original, 'the original capture keeps the complete opaque message');
+    restoreRaw();
+    assert.equal(text.nodeValue, original);
+
+    const context = createPseudonymContext();
+    const restorePseudo = redactScreenshotDom(documentRef, { context });
+    assert.equal(text.nodeValue, '  Afgeschermde melding  ');
+    for (const value of ['Synthetic Elena Overlay08', 'elena.overlay08@example.test', '0611223344', 'NL91 ABNA 0417 1643 00', 'Syntheticstraat 88', '87654321']) {
+        assert.equal(text.nodeValue.includes(value), false, value);
+    }
+    assert.equal(context.privacySummary.pseudoValues, 1, 'opaque messages use full replacement without pattern parsing');
+    assert.equal(auditPseudonymizedClone(root, context).verified, true);
+    restorePseudo();
+    assert.equal(text.nodeValue, original, 'restoration preserves all original text and whitespace');
+}
+
+function testOpaqueCloneReplacesNameOnlyAndNestedText() {
+    const name = new FakeText('Synthetic Elena Overlay08');
+    const email = new FakeText('elena.overlay08@example.test');
+    const notice = new FakeElement('p', { 'data-feedback-sensitive': 'opaque-text' }, {
+        children: [new FakeElement('span', {}, { children: [name] }), new FakeElement('span', {}, { children: [email] })]
+    });
+    notice.ownerDocument = {};
+    const summary = pseudonymizeScreenshotClone(notice);
+    assert.equal(name.nodeValue, 'Afgeschermde melding');
+    assert.equal(email.nodeValue, 'Melding met testgegevens');
+    assert.equal(notice.textContent.includes('Synthetic Elena Overlay08'), false);
+    assert.equal(notice.textContent.includes('elena.overlay08@example.test'), false);
+    assert.equal(summary.verified, true);
+    assert.equal(summary.unresolvedValues, 0);
+}
+
+function testOpaqueReplacementCacheWhitespaceAndPlaceholderIdentity() {
+    const context = createPseudonymContext();
+    const original = 'Synthetic Elena Overlay08';
+    const first = pseudonymizeFeedbackText(original, 'opaque-text', context);
+    assert.equal(first, 'Afgeschermde melding');
+    assert.equal(pseudonymizeFeedbackText(original, 'opaque-text', context), first);
+    assert.equal(context.privacySummary.pseudoValues, 1, 'repeat values reuse the same opaque replacement');
+    assert.equal(pseudonymizeFeedbackText('  \n  ', 'opaque-text', context), '  \n  ');
+    const identity = pseudonymizeFeedbackText('Afgeschermde melding', 'opaque-text', createPseudonymContext());
+    assert.notEqual(identity, 'Afgeschermde melding');
+    assert.equal(identity, 'Contactmoment met voorbeeldtekst', 'the existing safe alternate handles placeholder identity');
+}
+
+function testDirectlySelectedOpaqueNoticePseudonymizesItsMetadata() {
+    const original = 'Synthetic Elena Overlay08, elena.overlay08@example.test, persoon 87654321';
+    const notice = new FakeElement('p', { id: 'opaqueError', role: 'alert', 'data-feedback-sensitive': 'opaque-text' }, {
+        children: [new FakeText(original)]
+    });
+    const documentRef = {
+        body: {}, documentElement: {}, querySelector: () => null,
+        querySelectorAll: selector => selector === '#opaqueError' ? [notice] : []
+    };
+    const selected = describeElement(notice, documentRef);
+    assert.equal(selected.sensitivityType, 'opaque-text');
+    assert.equal(selected.label, original);
+    const pseudonymized = pseudonymizeSelectedElement(selected);
+    assert.equal(pseudonymized.label, 'Afgeschermde melding');
+    assert.equal(pseudonymized.textSample, null);
+    assert.equal(pseudonymized.sensitivityType, undefined);
+    for (const value of ['Synthetic Elena Overlay08', 'elena.overlay08@example.test', '87654321']) {
+        assert.equal(JSON.stringify(pseudonymized).includes(value), false, value);
+    }
+    assert.equal(notice.textContent, original, 'metadata pseudonymization never alters the live notice');
+    assert.equal(selected.label, original, 'the original descriptor is not mutated');
+}
+
+testOpaqueMessagesReplaceAllUnknownPiiAndRestoreOriginalText();
+testOpaqueCloneReplacesNameOnlyAndNestedText();
+testOpaqueReplacementCacheWhitespaceAndPlaceholderIdentity();
+testDirectlySelectedOpaqueNoticePseudonymizesItsMetadata();

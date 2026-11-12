@@ -48,7 +48,7 @@ export function renderOverlayNotification(documentRef, message, type) {
     notice.className = `overlay-notification ${type}`;
     notice.setAttribute('role', type === 'error' ? 'alert' : 'status');
     notice.setAttribute('aria-atomic', 'true');
-    notice.setAttribute('data-feedback-sensitive', 'free-text');
+    notice.setAttribute('data-feedback-sensitive', 'opaque-text');
     notice.textContent = message;
     host.prepend(notice);
     const current = { notice, observer: null, timeout: null };

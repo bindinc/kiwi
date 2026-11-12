@@ -397,7 +397,7 @@ export function buildFeedbackDialogHtml() {
                     <button type="submit" data-feedback-submit>${escapeHtml(feedbackText('dialog.send'))}</button>
                 </div>
                 <p class="contextual-feedback-status" data-feedback-status aria-live="polite"></p>
-                <p class="contextual-feedback-error" data-feedback-error role="alert" data-feedback-sensitive="free-text"></p>
+                <p class="contextual-feedback-error" data-feedback-error role="alert" data-feedback-sensitive="opaque-text"></p>
             </form>
         </div>
     `;

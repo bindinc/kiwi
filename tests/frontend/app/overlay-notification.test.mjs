@@ -23,7 +23,7 @@ try {
     const error = overlay.querySelector('.overlay-notification');
     assert.equal(error.textContent, fullMessage);
     assert.equal(error.children.length, 0, 'dynamic request text is never parsed as markup');
-    assert.equal(error.getAttribute('data-feedback-sensitive'), 'free-text');
+    assert.equal(error.getAttribute('data-feedback-sensitive'), 'opaque-text');
     assert.equal(error.getAttribute('role'), 'alert');
     assert.equal(error.parentElement, overlay.querySelector('.form-actions'));
     assert.equal(error.parentElement.scrolled, true, 'message and actions are revealed together');

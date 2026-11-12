@@ -2,7 +2,7 @@ import { feedbackText } from './i18n.js';
 
 const VOLATILE_CLASS_PATTERN = /^(active|busy|checked|current|disabled|enabled|error|focus|focused|hidden|hover|invalid|loading|open|selected|show|success|valid)$/i;
 const GENERATED_VALUE_PATTERN = /(^\d+$|[a-f0-9]{8,}|^ember\d+|^react-|^vue-|generated|random|uuid)/i;
-const TYPED_SENSITIVITY_VALUES = new Set(['name', 'email', 'phone', 'address', 'postal-code', 'iban', 'id', 'date', 'free-text']);
+const TYPED_SENSITIVITY_VALUES = new Set(['name', 'email', 'phone', 'address', 'postal-code', 'iban', 'id', 'date', 'free-text', 'opaque-text']);
 
 export function describeElement(element, documentRef = document) {
     const tag = element.tagName.toLowerCase();

@@ -73,7 +73,7 @@ function renderSettingsModal(documentRef) {
             </header>
             <div class="contextual-feedback-settings-form">
                 <p data-feedback-settings-load-status role="status">${escapeHtml(feedbackText('settings.loading'))}</p>
-                <p data-feedback-settings-load-error class="contextual-feedback-error" role="alert" data-feedback-sensitive="free-text"></p>
+                <p data-feedback-settings-load-error class="contextual-feedback-error" role="alert" data-feedback-sensitive="opaque-text"></p>
                 <button type="button" data-feedback-settings-retry hidden>${escapeHtml(feedbackText('settings.retry'))}</button>
             </div>
         </div>`;
@@ -323,7 +323,7 @@ export function buildFeedbackSettingsHtml(settings) {
                     <button type="submit">${escapeHtml(feedbackText('settings.save'))}</button>
                 </div>
                 <p class="contextual-feedback-status" data-feedback-settings-status role="status"></p>
-                <p class="contextual-feedback-error" data-feedback-settings-error role="alert" data-feedback-sensitive="free-text"></p>
+                <p class="contextual-feedback-error" data-feedback-settings-error role="alert" data-feedback-sensitive="opaque-text"></p>
             </form>
         </div>
     `;

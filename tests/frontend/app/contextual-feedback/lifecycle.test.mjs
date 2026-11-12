@@ -192,7 +192,7 @@ async function submissionFailureRestoresControlsAndRetainsValues() {
     assert.equal(modal.querySelector('[data-feedback-submit]').disabled, false);
     assert.equal(modal.querySelector('[data-feedback-close]').disabled, false);
     assert.equal(modal.querySelector('[data-feedback-error]').textContent, 'Synthetic request failed');
-    assert.equal(modal.querySelector('[data-feedback-error]').getAttribute('data-feedback-sensitive'), 'free-text');
+    assert.equal(modal.querySelector('[data-feedback-error]').getAttribute('data-feedback-sensitive'), 'opaque-text');
     resetLightboxDrafts(documentRef);
 }
 const settings = {
