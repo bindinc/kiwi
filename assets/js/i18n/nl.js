@@ -706,6 +706,7 @@ const nl = {
         "selectOutcome": "Selecteer een resultaat",
         "success": "Winback succesvol! Klant blijft abonnee.",
         "offersUnavailable": "Winback-aanbiedingen via backend zijn niet beschikbaar",
+        "offersLoading": "Aanbiedingen laden…",
         "offersLoadFailed": "Winback-aanbiedingen laden mislukt",
         "offersNoneForReason": "Geen winback-aanbiedingen beschikbaar voor deze reden",
         "offersNoneAvailable": "Geen aanbiedingen beschikbaar",

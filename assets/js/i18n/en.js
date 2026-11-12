@@ -706,6 +706,7 @@ const en = {
         "selectOutcome": "Select a result",
         "success": "Winback successful! Customer remains a subscriber.",
         "offersUnavailable": "Winback offers via backend are unavailable",
+        "offersLoading": "Loading offers…",
         "offersLoadFailed": "Loading winback offers failed",
         "offersNoneForReason": "No winback offers are available for this reason",
         "offersNoneAvailable": "No offers are available",

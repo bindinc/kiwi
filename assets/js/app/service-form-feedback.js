@@ -1,28 +1,32 @@
 import { registerDraftCleanup } from './lightbox-drafts.js';
 
-const requestsByForm = new WeakMap();
-const cleanupByForm = new WeakMap();
+const requestsByOwner = new WeakMap();
+const cleanupByOwner = new WeakMap();
 
-export function beginServiceFormRequest(form, message) {
-    if (form && requestsByForm.has(form)) return null;
+export function beginServiceFormRequest(form, message, options = {}) {
+    const owner = options.owner || form;
+    if (owner && requestsByOwner.has(owner)) return null;
 
-    const controls = Array.from(form?.querySelectorAll?.('[data-service-commit]') || []);
-    const statuses = Array.from(form?.querySelectorAll?.('[data-service-status]') || []);
+    const controlSelector = options.controlSelector || '[data-service-commit]';
+    const statusSelector = options.statusSelector || '[data-service-status]';
+    const controls = Array.from(form?.querySelectorAll?.(controlSelector) || []);
+    const statuses = Array.from(form?.querySelectorAll?.(statusSelector) || []);
     const request = {
         form,
+        owner,
         controls: controls.map(control => ({ control, disabled: control.disabled,
             busy: control.getAttribute?.('aria-busy') ?? null })),
         statuses,
-        isCurrent() { return !form || requestsByForm.get(form) === request; }
+        isCurrent() { return !owner || requestsByOwner.get(owner) === request; }
     };
-    if (form) {
-        requestsByForm.set(form, request);
-        const documentRef = form.ownerDocument || globalThis.document;
+    if (owner) {
+        requestsByOwner.set(owner, request);
+        const documentRef = form?.ownerDocument || globalThis.document;
         if (documentRef) {
-            let cleanup = cleanupByForm.get(form);
+            let cleanup = cleanupByOwner.get(owner);
             if (!cleanup) {
-                cleanup = () => resetServiceFormFeedback(form);
-                cleanupByForm.set(form, cleanup);
+                cleanup = () => resetServiceFormFeedback(owner);
+                cleanupByOwner.set(owner, cleanup);
             }
             // Workspace reset clears its callback set, so every new claim registers again.
             registerDraftCleanup(documentRef, cleanup);
@@ -39,7 +43,7 @@ export function beginServiceFormRequest(form, message) {
 export function finishServiceFormRequest(request) {
     if (!request || !request.isCurrent()) return;
 
-    if (request.form) requestsByForm.delete(request.form);
+    if (request.owner) requestsByOwner.delete(request.owner);
     for (const { control, disabled, busy } of request.controls) {
         control.disabled = disabled;
         if (busy === null) control.removeAttribute?.('aria-busy');
@@ -48,6 +52,6 @@ export function finishServiceFormRequest(request) {
     for (const status of request.statuses) status.textContent = '';
 }
 
-export function resetServiceFormFeedback(form) {
-    if (form) finishServiceFormRequest(requestsByForm.get(form));
+export function resetServiceFormFeedback(owner) {
+    if (owner) finishServiceFormRequest(requestsByOwner.get(owner));
 }

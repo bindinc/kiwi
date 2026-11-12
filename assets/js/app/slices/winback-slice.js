@@ -499,6 +499,7 @@ export function showWinbackFlow() {
     );
     if (resumeFormDraft(getElementById('winbackFlow'), draftContext)) return;
     resetServiceFormFeedback(getElementById('winbackFlow'));
+    resetServiceFormFeedback(getElementById('winbackOffersStatus'));
     registerDraftCleanup(getDocumentRef(), resetWinbackDraftState);
 
     showWinbackStep(1);
@@ -521,7 +522,11 @@ export async function winbackNextStep(stepNumber) {
             return;
         }
 
-        await generateWinbackOffers(selectedReason.value);
+        await generateWinbackOffers(selectedReason.value, () => {
+            showWinbackStep(stepNumber);
+            setActiveStepIndicator(stepNumber);
+        });
+        return;
     }
 
     const shouldValidateOfferSelection = Number(stepNumber) === 3;
@@ -554,46 +559,63 @@ export function winbackPrevStep(stepNumber) {
     void winbackNextStep(stepNumber);
 }
 
-export async function generateWinbackOffers(reason) {
-    const apiClient = getApiClient();
-    const canLoadOffers = apiClient && typeof apiClient.get === 'function';
-    if (!canLoadOffers) {
-        showToast(translateKey('winback.offersUnavailable', {}, 'Winback-aanbiedingen via backend zijn niet beschikbaar'), 'error');
-        return;
-    }
-
-    const { offersApiUrl } = getApiEndpoints();
-    let relevantOffers = [];
+// Step transitions share the load owner; direct callers only refresh the offers.
+export async function generateWinbackOffers(reason, advanceStep = null) {
+    const request = beginServiceFormRequest(
+        getElementById('winbackFlow'),
+        translateKey('winback.offersLoading', {}, 'Aanbiedingen laden…'),
+        {
+            owner: getElementById('winbackOffersStatus'),
+            controlSelector: '[data-action="winback-next-step"][data-arg-step="2"]',
+            statusSelector: '#winbackOffersStatus'
+        }
+    );
+    if (!request) return;
 
     try {
-        const query = new URLSearchParams({
-            limit: '20'
-        }).toString();
-        const payload = await apiClient.get(`${offersApiUrl}?${query}`);
-        relevantOffers = payload && Array.isArray(payload.items) ? payload.items : [];
-    } catch (error) {
-        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
-            console.warn('Winback-aanbiedingen laden via backend mislukt.', error);
+        const apiClient = getApiClient();
+        const canLoadOffers = apiClient && typeof apiClient.get === 'function';
+        if (!canLoadOffers) {
+            showToast(translateKey('winback.offersUnavailable', {}, 'Winback-aanbiedingen via backend zijn niet beschikbaar'), 'error');
+            advanceStep?.();
+            return;
         }
-        showToast(error.message || translateKey('winback.offersLoadFailed', {}, 'Winback-aanbiedingen laden mislukt'), 'error');
-        return;
-    }
 
-    if (!relevantOffers.length) {
-        showToast(translateKey('winback.offersNoneAvailable', {}, 'Geen aanbiedingen beschikbaar'), 'warning');
-    }
+        const { offersApiUrl } = getApiEndpoints();
+        let relevantOffers = [];
 
-    const offersMarkup = relevantOffers.map((offer) => {
-        const offerId = String(offer.offerId ?? offer.salesCode ?? '');
-        const safeOfferId = escapeHtml(offerId);
-        const isSelected = winbackState.selectedOffer && String(winbackState.selectedOffer.id) === offerId;
-        const safeTitle = escapeHtml(String(offer.title || ''));
-        const safeDescription = escapeHtml(String(offer.description || offer.webDescription || offer.additionalDescription || ''));
-        const safeDiscount = offer.price !== undefined && offer.price !== null
-            ? escapeHtml(`EUR ${String(offer.price)}`)
-            : '';
+        try {
+            const query = new URLSearchParams({
+                limit: '20'
+            }).toString();
+            const payload = await apiClient.get(`${offersApiUrl}?${query}`);
+            if (!request.isCurrent()) return;
+            relevantOffers = payload && Array.isArray(payload.items) ? payload.items : [];
+        } catch (error) {
+            if (!request.isCurrent()) return;
+            if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+                console.warn('Winback-aanbiedingen laden via backend mislukt.', error);
+            }
+            showToast(error.message || translateKey('winback.offersLoadFailed', {}, 'Winback-aanbiedingen laden mislukt'), 'error');
+            advanceStep?.();
+            return;
+        }
 
-        return `
+        if (!relevantOffers.length) {
+            showToast(translateKey('winback.offersNoneAvailable', {}, 'Geen aanbiedingen beschikbaar'), 'warning');
+        }
+
+        const offersMarkup = relevantOffers.map((offer) => {
+            const offerId = String(offer.offerId ?? offer.salesCode ?? '');
+            const safeOfferId = escapeHtml(offerId);
+            const isSelected = winbackState.selectedOffer && String(winbackState.selectedOffer.id) === offerId;
+            const safeTitle = escapeHtml(String(offer.title || ''));
+            const safeDescription = escapeHtml(String(offer.description || offer.webDescription || offer.additionalDescription || ''));
+            const safeDiscount = offer.price !== undefined && offer.price !== null
+                ? escapeHtml(`EUR ${String(offer.price)}`)
+                : '';
+
+            return `
         <label class="offer-card${isSelected ? ' selected' : ''}">
             <input type="radio" name="winbackOffer" value="${safeOfferId}" ${isSelected ? 'checked' : ''} data-action="select-offer" data-action-event="change" data-arg-offer-id="${safeOfferId}" data-arg-title="${safeTitle}" data-arg-description="${safeDescription}">
             <span class="offer-copy">
@@ -603,9 +625,13 @@ export async function generateWinbackOffers(reason) {
             </span>
         </label>
     `;
-    }).join('');
+        }).join('');
 
-    setInnerHtml('winbackOffers', offersMarkup);
+        setInnerHtml('winbackOffers', offersMarkup);
+        advanceStep?.();
+    } finally {
+        finishServiceFormRequest(request);
+    }
 }
 
 export function selectOffer(offerId, title, description, selectedElement = null) {

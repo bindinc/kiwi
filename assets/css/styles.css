@@ -5603,6 +5603,18 @@ dialog.form-lightbox::backdrop {
     max-width: 100%;
 }
 
+#winbackFlow .customer-create-form {
+    margin-top: var(--space-5);
+}
+
+#winbackFlow .customer-create-form > h3.form-subtitle:first-child {
+    margin-top: 0;
+}
+
+#winbackFlow .customer-create-form > .address-fields {
+    display: flow-root;
+}
+
 .service-form .form-subtitle,
 .service-form .winback-step > h4 {
     margin: var(--space-5) 0 var(--field-gap);
@@ -5675,6 +5687,7 @@ dialog.form-lightbox::backdrop {
     min-width: 0;
     padding: var(--space-3);
     border-width: 1px;
+    border-radius: var(--radius-sm);
     font-size: var(--font-size-body);
     font-weight: normal;
     color: var(--text);
