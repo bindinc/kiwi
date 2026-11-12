@@ -123,7 +123,7 @@
 
     #contextualFeedbackButton {
         width: 46px;
-        transition: background-color 0.18s ease;
+        transition-property: background-color;
     }
 
     #contextualFeedbackButton .contextual-feedback-label {
