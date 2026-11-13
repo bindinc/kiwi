@@ -12,6 +12,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
+- Unify interface icons with the header's quiet line style while preserving labels, identity, accessibility and business behavior (`theme_audit` icon refinement). [sc-206629]
+
 - Align operational states, modal controls, focus and search feedback; show all customer source records with direct actions while preserving permissions, identities, drafts and original values (`theme_audit` slice 09). [sc-206629]
 
 - Align shared dialogs, feedback and access surfaces with Light & Shadow, using consistent ordinary backdrops, preserved screenshot-review shielding, reachable controls and contextual error notices while retaining privacy, drafts and request behavior (`theme_audit` slice 08). [sc-206629]
