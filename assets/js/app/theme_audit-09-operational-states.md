@@ -1,6 +1,6 @@
 # theme_audit 09 — Align operational state presentation
 
-Status: implementation in progress. Original08-source BEFORE and the b4 multiple-record supplement are independently sealed. The record candidate passes source/static review; rendered AFTER and the validity decision remain open. Slice09 is not accepted.
+Status: implementation and rendered acceptance in progress. Original08-source BEFORE and the b4 multiple-record supplement are independently sealed. Readonly and component desktop record scopes pass independent rendered review. A real outbox fallback-focus clipping finding is being corrected; the remaining environment checks and validity decision remain open. Slice09 is not accepted.
 
 Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md). Reference: [Light & Shadow showcase](../../../plans/kiwi-light-and-shadow-theme-palette-showcase.html), especially its operational-state specimens, restrained surfaces, action hierarchy and spacing. The showcase has no complete call-console or outbox workflow; apply its shared visual rules without inventing equivalent business behavior.
 
@@ -17,7 +17,7 @@ Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md).
 
 ## Customer record overview revision — 2026-11-13
 
-The user chose **all records visible per data type, with validity and an individual view/edit action**. Record lists replace the section dropdowns. One selected form per section repeats its ordinal and sensitive summary; person singleton remains initially open. Fixed detail placement still requires actual2/12-record short/tall keyboard review. New copy uses the existing Dutch/English localization.
+The user chose **all records visible per data type, with validity and an individual view/edit action**. Record lists replace the section dropdowns. One selected form per section repeats its ordinal and sensitive summary; person singleton remains initially open. Desktop2/12-record review confirms the selected identity and naturally focused first field remain clear. Narrow/short checks and reverse keyboard return remain open. New copy uses the existing Dutch/English localization.
 
 Remove only the redundant customer-detail X beside Editorial complaint. New session, controller/router compatibility, exact source IDs/credentials, null-ID/read-only gates, versions/idempotency/readback, masked banks, dirty cancellation/reset/reopen, unique address prefixes and privacy annotations remain protected. All replacement row/create actions lock during submission; synthetic events also respect the existing disabled bank/delete/reset gates.
 
@@ -26,6 +26,19 @@ The current PPA Snapshot exports IDs and editable values without validity interv
 Evidence is durable under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-13/slice-09/`. The b4 supplemental BEFORE closure `354e664ed1beb96241d82ebdec86d2083d71a01a79d2ab048220ea88f980e2a0` seals two Chromium1440/390 contexts:18 states/28 matching served bodies/two exact readonly GETs each, zero errors/business writes. All36 whole frames were reviewed. Visible X/New session is proven; complaint adjacency is DOM-only because source policy hid that action. Original08/ref478 BEFORE remains immutable:11 contexts/506 frames, aggregate394b33fd and closureef28ae1a.
 
 The six-file record candidate is frozen in `records-implementation/candidate-01/manifest.json`, SHA-256 `d96172a15df6351143219ca5a60959f24e948bdc9e01c781b667769b1bbfbbd4`. Independent source review `6ddccc61631d1b0b9289aad2585ade7816564397c20e472b0d05d08d1cb9dbba` verifies patch, protected regions and logs:15 focused tests,45 frontend files, three guards, syntax, whitespace and CSS parsing pass. Compose Twig lint also passes. New committed/runtime proofs and exact AFTER tooling precede browser release; no rendered acceptance follows these static checks.
+
+### Rendered progress and outbox correction
+
+Evidence paths below are relative to the durable Nov13 slice09 directory. These are finite scopes, not full slice acceptance; failed attempts remain preserved.
+
+| Scope | Actual checks and evidence | Independent outcome |
+| --- | --- | --- |
+| Readonly record lists, Chromium1440, two and twelve records | `after-records-02`:26 whole application frames plus two reference frames, exact served-source checks and source-shaped readonly GET fixtures; no mutations or unexpected requests. | `independent-review/records-after-readonly-rendered-review-01.json`, `ac31a76e`:all28 whole frames reviewed. Selected identity and desktop reachability pass; actual periods and other environments remain open. |
+| Separate synthetic writable component contexts | `after-records-component-01`:32 whole application frames plus two references. Exact person/email PATCH requests are held and locally answered503; no upstream business write or source capability activation. Draft cancellation, confirmation, reset, pending locks and failed-value retention pass. | `independent-review/records-after-component-rendered-review-01.json`, `c7a3cf7c`:all new whole frames reviewed. Raw writable salutation and exact source identities are preserved; email reopen retention is a DOM assertion, not a claim that the reopened viewport shows its error. |
+| Operational desktop | `after-preflight-02` operational report:86 whole frames, all history categories and outbox states, real five-second refresh scenarios. Natural Tab scrolls the disposition footer fully into view, including the focused action perimeter. The containing attempt remains failed because the separate feedback context hit a tooling text-boundary assertion. | `independent-review/general-after-operational-rendered-review-01.json`, `ec4649f9`:all86 whole frames reviewed. A clipped fallback-row focus perimeter remains an actual finding; the rest of this scope cannot close09. |
+| Summary and visible feedback desktop | `after-feedback-01`:27 whole application frames plus two references. Exact per-node zero/singular/plural counts, live NL/EN/NL with unchanged query count, and actual visible feedback/settings entry pass. | Whole-image review pending. The earlier whole-container text assertion failure is retained; its replacement asserts the numeric count and localized label separately. |
+
+The independently observed outbox fallback row is fully inside its scrolling list, but its inherited3px outline plus3px outward offset is clipped at the list edges. The targeted readonly diagnostic `after-outbox-focus-diagnostic-01` confirms this is an outward-perimeter issue, with scrollTop0 and no row-border-box clipping. The correction adds only a scoped3px inset outline to the focused outbox row. It changes no JavaScript, refresh timing, scroll behavior, server capability, request or draft logic. Candidate `outbox-focus-correction/candidate-01/manifest.json` (`788084ed`) preserves all213 other production bodies exactly. New committed/runtime proof, independent source review and actual corrected-row checks precede the wider browser matrix.
 
 All original calls/history/outbox requirements remain. Preparatory final10 registry source review passed, but all78 area/environment cells remain unreviewed. No merge, production deployment or cleanup is authorized.
 

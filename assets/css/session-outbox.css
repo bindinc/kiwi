@@ -28,6 +28,10 @@
     border-bottom: 1px solid var(--border-subtle);
     border-radius: 0;
 }
+#subscriptionQueueList > .session-outbox-item:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: -3px;
+}
 .session-outbox-item[data-status="paused"] { border-left: 2px solid var(--action); background: var(--surface-subdued); padding-left: 10px; }
 .session-outbox-body { min-width: 0; overflow-wrap: anywhere; }
 .session-outbox-item:is([data-status="pending"], [data-status="ready"], [data-status="processing"]) .session-outbox-state { color: var(--action); }
