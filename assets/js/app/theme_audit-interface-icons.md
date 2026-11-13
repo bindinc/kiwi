@@ -6,6 +6,7 @@ Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629). Parent: [th
 
 Worktree: `/home/bartdeijkers/_worktrees/unify-kiwi-interface-icons`.
 Branch: `codex/unify-kiwi-interface-icons`.
+PR: draft [#155](https://github.com/bindinc/kiwi/pull/155).
 Initial base: `codex/align-theme-operational-states` at `31056b4e4d7eae9010defc2e8b8c0a9e7d0ffe5c`.
 
 Finish slice09 and adopt its accepted source before implementing this refinement. Keep application edits sequential. Complete the icon refinement before final slice10 integration so the final whole-interface review includes the approved icon language. The additional PR retains one Unreleased changelog entry and does not authorize merging, deployment or worktree cleanup.
@@ -20,7 +21,7 @@ Keep icon markup separate from translatable text. Use self-contained inline SVG 
 
 ## Initial source orientation
 
-The initial source scan covers tracked JavaScript, Twig and CSS at the base above. It finds graphical Unicode symbols in 21 files, including translations; this is an inventory, not a count of confirmed defects. Classify ordinary punctuation, navigation arrows, status conventions and favicon/brand assets separately before replacing a symbol.
+The initial source scan covers tracked JavaScript, Twig and CSS at the base above. It finds graphical Unicode symbols in 21 files, including translations; this is an inventory, not a count of confirmed defects. Durable path/hash/codepoint evidence is retained beside the worktrees under `.kiwi-theme-audit/evidence/2026-11-13/icon-refinement/initial-inventory-01.json`. Classify ordinary punctuation, navigation arrows, status conventions and favicon/brand assets separately before replacing a symbol.
 
 | Area | Source to inspect | Required outcome |
 | --- | --- | --- |
