@@ -5,7 +5,7 @@ import nl from '../../../../assets/js/i18n/nl.js';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
 import i18n from '../../../../assets/js/i18n/index.js';
 import { setAppLocale } from '../../../../assets/js/app/slices/localization-slice.js';
-import { displaySearchResults, displayPaginatedResults, refreshSearchResultLabels, goToPage, searchCustomer, registerCustomerSearchSlice, __customerSearchTestUtils } from '../../../../assets/js/app/slices/customer-search-slice.js';
+import { displaySearchResults, displayPaginatedResults, refreshSearchResultLabels, goToPage, scrollToResults, searchCustomer, registerCustomerSearchSlice, __customerSearchTestUtils } from '../../../../assets/js/app/slices/customer-search-slice.js';
 
 function createSearchMetadataFixture() {
     const ids = ['searchSummary', 'resultCount', 'resultCountLabel', 'searchResultsView', 'welcomeMessage',
@@ -19,6 +19,12 @@ function createSearchMetadataFixture() {
         get innerHTML() { return this.markup; },
         setAttribute(name, value) { this.attributes[name] = value; },
         getAttribute(name) { return this.attributes[name] ?? null; },
+        contains(node) {
+            for (let current = node; current; current = current.parentNode) {
+                if (current === this) return true;
+            }
+            return false;
+        },
         scrollIntoView() { scrolls.push(id); }
     }]));
     // Read the real annotations so a static translation cannot silently replace populated metadata.
@@ -148,6 +154,59 @@ async function testAcceptedQuerySnapshotSurvivesPendingAndOutOfOrderSearches() {
     });
 }
 
+async function testSubscriptionRefreshKeepsFocusedSummaryWithoutBlockingResultsNavigation() {
+    await withSearchMetadataFixture(async ({ document, nodes, writes, scrolls, activeElement }) => {
+        setAppLocale('nl');
+        const customer = { ...syntheticSearchCustomers(1)[0], personId: '1', credentialKey: 'tvk', sourceSystem: 'subscription-api' };
+        let resolveSummary;
+        const requests = [];
+        globalThis.kiwiApi = {
+            post(url, payload) {
+                requests.push({ url, payload });
+                return new Promise(resolve => { resolveSummary = resolve; });
+            }
+        };
+        __customerSearchTestUtils.setSearchResultsForTests([customer]);
+        const generation = __customerSearchTestUtils.getSearchStateSnapshot().generation;
+        const pendingSummary = __customerSearchTestUtils.loadVisibleSubscriptionSummaries(generation);
+        displayPaginatedResults();
+        assert.deepEqual(scrolls, ['searchResultsView'], 'initial results retain automatic scrolling from other focus');
+        assert.match(nodes.paginatedResults.innerHTML, /Abonnementstatus laden/);
+
+        const summaryLink = { parentNode: nodes.searchSummary };
+        const focusedLinkContent = { parentNode: summaryLink };
+        document.activeElement = focusedLinkContent;
+        const writesBefore = writes.length;
+        resolveSummary({ items: [{ personId: '1', credentialKey: 'tvk', state: 'loaded', activeCount: 1,
+            activeSubscriptions: [{ magazine: 'Mikrogids' }], inactiveSubscription: null }] });
+        await pendingSummary;
+
+        assert.equal(document.activeElement, focusedLinkContent);
+        assert.deepEqual(scrolls, ['searchResultsView'], 'background summary completion must not scroll retained summary focus away');
+        assert.match(nodes.paginatedResults.innerHTML, /Mikrogids/);
+        assert.doesNotMatch(nodes.paginatedResults.innerHTML, /Abonnementstatus laden/);
+        assert.equal(nodes.resultCount.textContent, '1');
+        assert.equal(nodes.resultCountLabel.textContent, 'klant gevonden');
+        assert.equal(nodes.resultsRange.textContent, 'Toont 1-1 van 1');
+        assert.match(nodes.resultsTitle.textContent, /^Zoekresultaten:/);
+        assert.deepEqual(writes.slice(writesBefore), ['paginatedResults', 'pagination'], 'rows and pagination still redraw');
+        assert.equal(nodes.searchResultsView.style.display, 'block');
+        assert.deepEqual(requests, [{ url: '/api/v1/persons/subscription-summaries',
+            payload: { persons: [{ personId: '1', credentialKey: 'tvk' }] } }]);
+
+        document.activeElement = nodes.searchSummary;
+        displayPaginatedResults();
+        assert.equal(scrolls.length, 1, 'the summary itself also retains its position');
+        document.activeElement = activeElement;
+        displayPaginatedResults();
+        assert.equal(scrolls.length, 2, 'focus outside the summary retains automatic result scrolling');
+        document.activeElement = focusedLinkContent;
+        scrollToResults();
+        assert.equal(scrolls.length, 3, 'explicit results navigation still scrolls from the summary');
+        assert.equal(document.activeElement, focusedLinkContent, 'neither path moves focus');
+    });
+}
+
 function testSearchSummaryCountsAndLiveLocaleChange() {
     const previousDocument = globalThis.document;
     const previousI18n = globalThis.i18n;
@@ -157,7 +216,8 @@ function testSearchSummaryCountsAndLiveLocaleChange() {
     const nodes = Object.fromEntries(ids.map(id => [id, {
         textContent: '', style: {}, attributes: {},
         setAttribute(name, value) { this.attributes[name] = value; },
-        getAttribute(name) { return this.attributes[name]; }
+        getAttribute(name) { return this.attributes[name]; },
+        contains(node) { return node === this; }
     }]));
     globalThis.document = {
         documentElement: { lang: 'nl' },
@@ -721,6 +781,7 @@ async function run() {
     testSearchSummaryCountsAndLiveLocaleChange();
     await testNativeLocaleRefreshKeepsRealSearchMetadataAndRetainedWorkspace();
     await testAcceptedQuerySnapshotSurvivesPendingAndOutOfOrderSearches();
+    await testSubscriptionRefreshKeepsFocusedSummaryWithoutBlockingResultsNavigation();
     testSelectedCustomerKeepsSourceIdentity();
     testRegistersItemFiveActions();
     testInstallsLegacyCompatibilityExports();

@@ -946,7 +946,8 @@ export function displayPaginatedResults() {
     renderPagination();
     void loadVisibleSubscriptionSummaries(searchState.generation);
 
-    if (typeof searchResultsView.scrollIntoView === 'function') {
+    const summaryHasFocus = searchSummary.contains(document.activeElement);
+    if (!summaryHasFocus && typeof searchResultsView.scrollIntoView === 'function') {
         searchResultsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }

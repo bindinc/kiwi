@@ -56,6 +56,12 @@ The same review and three isolated native diagnostics (`77bfce3f`) establish fou
 
 Independent source review `independent-review/operational-responsive-candidate01-source-review-01.json` (`f7bc1451`) verifies all214 candidate bodies:four changed/210 unchanged, plus protected business regions and complete logs. All45 frontend files, three guards, syntax, whitespace and nested CSS parsing pass. New committed/runtime proof and real corrected native geometry must precede remaining Chromium-short/Firefox matrix and supplemental gates. Earlier failed reports and scoped passes retain their original source/tool identities.
 
+### Retained search-summary focus correction — 2026-11-13
+
+The settled Firefox narrow-screen diagnostic confirms that a background subscription-summary redraw automatically scrolls the still-focused result-summary link above the viewport. The bounded correction skips only that automatic results scroll while focus is inside `searchSummary`. Rows, count, title, range, pagination and subscription loading still update. Focus elsewhere retains automatic scrolling, and explicit results navigation remains unchanged; no focus movement, manual scrolling, request or locale behavior is added.
+
+`search-summary-focus-correction/candidate-01/` retains exact before/after bodies, the minimal patch and verification logs. The behavioral regression fails on the original source when a pending summary response completes, then passes with the correction: refreshed subscription content and metadata remain visible in the DOM, nested summary focus is retained, ordinary result scrolling and explicit navigation still work. All45 frontend test files and three guardrails pass, including existing native-locale retention coverage. Independent source review, new committed/runtime proof and actual browser geometry remain required; these local checks do not accept the slice or supersede failed evidence.
+
 ## Additional icon refinement
 
 The user approved the header's quiet line-icon style as the reference for the remaining demo-style icons on2026-11-13. Separate draft [#155](https://github.com/bindinc/kiwi/pull/155) records orientation in its own worktree and branch. Finish09 before icon implementation; final10 integration must include that refinement. No icon implementation is claimed in this slice, and the original operational acceptance remains required.
