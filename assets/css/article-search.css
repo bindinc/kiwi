@@ -15,10 +15,9 @@
     transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
-#articleSaleForm #articleSearch:focus {
-    border-color: var(--action);
-    outline: 3px solid var(--focus);
-    outline-offset: 2px;
+#articleSaleForm #articleSearch:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 0;
 }
 
 .article-dropdown {
@@ -195,10 +194,9 @@
     font-size: var(--font-size-body);
 }
 
-#allArticlesModal .article-search-in-modal input:focus {
-    border-color: var(--action);
-    outline: 3px solid var(--focus);
-    outline-offset: 2px;
+#allArticlesModal .article-search-in-modal input:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 0;
 }
 
 #allArticlesModal .article-tabs {

@@ -1,6 +1,7 @@
 import { renderAddressFields, sourceAddressValues, sourceAddressChanges, sourceAddressInputName } from './address-fields.js';
 import { endAddressSessions } from './address-completion.js';
 import { registerDraftCleanup } from './lightbox-drafts.js';
+import { t } from '../i18n/index.js';
 
 const sectionSensitivity = { person: 'name', address: 'address', email: 'email', phone: 'phone', mobile: 'phone', bank: 'iban' };
 const editorsByDocument = new WeakMap();
@@ -15,6 +16,15 @@ const sections = {
     bank: { title: 'Bankrekeningen', path: 'bank-accounts', fields: { iban: 'Nieuw IBAN', bic: 'BIC (optioneel)' } }
 };
 
+function readonlyGenderLabel(value) {
+    switch (String(value || '').trim().toLowerCase()) {
+    case 'geachte heer': return 'Man';
+    case 'geachte mevrouw': return 'Vrouw';
+    case 'geachte heer/mevrouw': return 'Anders';
+    default: return value;
+    }
+}
+
 export function mutationPath(personId, section, resourceId = null) {
     const config = sections[section];
     if (!config) throw new Error('Onbekend onderdeel');
@@ -26,6 +36,13 @@ function element(tag, text, className) {
     const node = document.createElement(tag);
     if (text) node.textContent = text;
     if (className) node.className = className;
+    return node;
+}
+
+function recordText(tag, key, className) {
+    const node = element(tag, t(`customerEditorRecords.${key}`), className);
+    node.setAttribute('data-i18n', `customerEditorRecords.${key}`);
+    node.setAttribute('data-feedback-public', '');
     return node;
 }
 
@@ -144,52 +161,118 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
 
     function renderSection(section, config, model) {
         const region = element('section');
-        region.append(element('h3', config.title));
+        region.setAttribute('data-customer-section', section);
+        const heading = recordText('h3', section);
+        region.append(heading);
         const items = model.sections[section] || [];
-        const select = element('select', '', 'form-control');
-        const selectionLabel = element('label', `${config.title} kiezen`, 'form-label');
-        selectionLabel.append(select);
-        const placeholder = element('option', items.length ? 'Kies het te bekijken onderdeel' : 'Geen gegevens beschikbaar');
-        placeholder.value = '';
-        placeholder.setAttribute('data-feedback-public', '');
-        select.append(placeholder);
-        items.forEach((item, index) => {
-            const summary = item.maskedIban || Object.values(item.fields).filter(Boolean).join(' · ');
-            const option = element('option', `${summary || 'Geen waarde'}${item.id === null ? ' (alleen-lezen)' : ''}`);
-            if (summary) option.setAttribute('data-feedback-sensitive', sectionSensitivity[section]);
-            option.value = String(index);
-            select.append(option);
-        });
-        if (section === 'bank') {
-            const option = element('option', 'Nieuwe bankrekening');
-            option.value = 'new';
-            option.setAttribute('data-feedback-public', '');
-            select.append(option);
-        }
+        const list = element('ul', '', 'customer-editor-records');
+        const detail = element('div', '', 'customer-editor-record-detail');
+        detail.id = `customer-editor-${editorId}-${section}-detail`;
+        detail.hidden = true;
+        const selectedTitle = element('h4', '', 'customer-editor-selected-title');
+        selectedTitle.id = `customer-editor-${editorId}-${section}-selected-title`;
+        selectedTitle.setAttribute('data-feedback-public', '');
+        const selectedSummary = element('p', '', 'customer-editor-record-summary');
+        selectedSummary.setAttribute('data-feedback-sensitive', sectionSensitivity[section]);
         const form = element('form');
+        form.setAttribute('aria-labelledby', selectedTitle.id);
         const feedback = element('p', '', 'customer-editor-feedback');
         feedback.id = `customer-editor-${editorId}-${section}-feedback`;
-        select.setAttribute('aria-describedby', feedback.id);
         feedback.setAttribute('role', 'status');
         feedback.setAttribute('data-feedback-public', '');
-        region.append(selectionLabel, form, feedback);
+        detail.append(selectedTitle, selectedSummary, form, feedback);
+        region.append(list, detail);
         content.append(region);
-
-        let previousSelection = '';
+        const recordButtons = [];
+        let selectedIndex = '';
         let submitListener = null;
-        function choose() {
-            endAddressSessions(form);
-            form.replaceChildren();
-            feedback.textContent = '';
-            feedback.setAttribute('data-state', '');
-            if (select.value === '') return;
-            const create = select.value === 'new';
-            const item = create ? { id: null, fields: {} } : items[Number(select.value)];
+
+        function isEditable(item, create = false) {
             const operation = `${section}.${create ? 'create' : 'update'}`;
             const permitted = model.capabilities.operations[operation]?.enabled === true;
             const hasIdentity = create || item.id !== null;
             const domesticAddress = section !== 'address' || item.fields.isoCountryCode === 'NL';
-            const editable = permitted && hasIdentity && Boolean(model.version) && !requiresReload && domesticAddress;
+            return permitted && hasIdentity && Boolean(model.version) && !requiresReload && domesticAddress;
+        }
+        function summaryFor(item) {
+            const readonlyPerson = section === 'person' && !isEditable(item);
+            return item.maskedIban || Object.entries(item.fields).map(([field, value]) =>
+                readonlyPerson && field === 'salutation' ? readonlyGenderLabel(value) : value
+            ).filter(Boolean).join(' · ');
+        }
+        function appendRecordTitle(target, index) {
+            target.append(recordText('span', section), element('span', ` ${index + 1}`));
+        }
+        function focusDetail() {
+            form.querySelector('input')?.focus();
+        }
+        function selectRecord(index) {
+            if (saving) return;
+            if (selectedIndex === index) { focusDetail(); return; }
+            if (dirty && !window.confirm(t('customerEditorRecords.discardChanges'))) {
+                recordButtons.find(button => button.getAttribute('data-customer-record-index') === selectedIndex)?.focus();
+                return;
+            }
+            selectedIndex = index;
+            dirty = false;
+            unlockOtherSections();
+            choose();
+            focusDetail();
+        }
+        items.forEach((item, index) => {
+            const row = element('li', '', 'customer-editor-record');
+            const identity = element('div', '', 'customer-editor-record-identity');
+            const title = element('h4', '', 'customer-editor-record-title');
+            title.id = `customer-editor-${editorId}-${section}-record-${index}-title`;
+            title.setAttribute('data-feedback-public', '');
+            appendRecordTitle(title, index);
+            const summary = element('p', summaryFor(item), 'customer-editor-record-summary');
+            if (summary.textContent) summary.setAttribute('data-feedback-sensitive', sectionSensitivity[section]);
+            else summary.append(recordText('span', 'noValue'));
+            const validity = recordText('p', 'validityUnavailable', 'customer-editor-record-validity');
+            const action = recordText('button', isEditable(item) ? 'edit' : 'view', 'btn btn-secondary customer-editor-record-action');
+            action.type = 'button';
+            action.id = `customer-editor-${editorId}-${section}-record-${index}-action`;
+            action.setAttribute('aria-labelledby', `${title.id} ${action.id}`);
+            action.setAttribute('aria-controls', detail.id);
+            action.setAttribute('aria-expanded', 'false');
+            action.setAttribute('data-customer-record-index', String(index));
+            action.addEventListener('click', () => selectRecord(String(index)));
+            recordButtons.push(action);
+            identity.append(title, summary, validity);
+            row.append(identity, action);
+            list.append(row);
+        });
+        if (!items.length) region.append(recordText('p', 'empty', 'customer-editor-empty'));
+        if (section === 'bank') {
+            const create = recordText('button', 'newBank', 'btn btn-secondary customer-editor-record-action');
+            create.type = 'button';
+            create.setAttribute('aria-controls', detail.id);
+            create.setAttribute('aria-expanded', 'false');
+            create.setAttribute('data-customer-record-index', 'new');
+            create.addEventListener('click', () => selectRecord('new'));
+            recordButtons.push(create);
+            region.append(create);
+        }
+        function choose() {
+            endAddressSessions(form);
+            form.replaceChildren();
+            selectedTitle.replaceChildren();
+            feedback.textContent = '';
+            feedback.setAttribute('data-state', '');
+            detail.hidden = selectedIndex === '';
+            for (const button of recordButtons) {
+                button.setAttribute('aria-expanded', String(button.getAttribute('data-customer-record-index') === selectedIndex));
+            }
+            if (selectedIndex === '') return;
+            const create = selectedIndex === 'new';
+            const item = create ? { id: null, fields: {} } : items[Number(selectedIndex)];
+            const operation = `${section}.${create ? 'create' : 'update'}`;
+            const hasIdentity = create || item.id !== null;
+            const editable = isEditable(item, create);
+            if (create) selectedTitle.append(recordText('span', 'newBank'));
+            else appendRecordTitle(selectedTitle, Number(selectedIndex));
+            selectedSummary.textContent = create ? '' : summaryFor(item);
             const controls = {};
             const initialAddress = section === 'address' ? sourceAddressValues(item.fields) : null;
             if (initialAddress) {
@@ -209,12 +292,16 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
                 address.addEventListener('change', markDirty);
             } else {
                 for (const [field, label] of Object.entries(config.fields)) {
-                    const row = element('label', label);
+                    const readonlyGender = !editable && section === 'person' && field === 'salutation';
+                    const row = element('label', readonlyGender ? 'Geslacht' : label);
                     const input = element('input', '', 'form-control');
                     input.setAttribute('aria-describedby', feedback.id);
                     input.name = field;
+                    input.id = `customer-editor-${editorId}-${section}-${field}`;
+                    row.setAttribute('for', input.id);
                     input.type = field === 'birthDay' ? 'date' : field === 'emailAddress' ? 'email' : 'text';
-                    input.value = item.fields[field] || '';
+                    const sourceValue = item.fields[field] || '';
+                    input.value = readonlyGender ? readonlyGenderLabel(sourceValue) : sourceValue;
                     input.readOnly = !editable;
                     input.autocomplete = 'off';
                     input.setAttribute('data-feedback-sensitive', field);
@@ -241,7 +328,7 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
             reset.type = 'button';
             reset.disabled = !editable;
             reset.addEventListener('click', () => {
-                if (saving) return;
+                if (saving || !editable) return;
                 endAddressSessions(form);
                 for (const [field, input] of Object.entries(controls)) input.value = (initialAddress || item.fields)[field] || '';
                 dirty = false;
@@ -252,8 +339,12 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
             if (section === 'bank' && !create) {
                 const remove = element('button', 'Bankrekening verwijderen', 'btn btn-secondary');
                 remove.type = 'button';
-                remove.disabled = !model.capabilities.operations['bank.delete']?.enabled || !item.deletionAllowed || !hasIdentity || !model.version;
-                remove.addEventListener('click', () => submit('bank.delete', 'DELETE', {}, item));
+                const canDelete = model.capabilities.operations['bank.delete']?.enabled === true
+                    && item.deletionAllowed && hasIdentity && Boolean(model.version);
+                remove.disabled = !canDelete;
+                remove.addEventListener('click', () => {
+                    if (canDelete) submit('bank.delete', 'DELETE', {}, item);
+                });
                 fieldActions.append(remove);
                 form.append(element('p', 'Verwijderen is alleen mogelijk nadat is vastgesteld dat de rekening niet meer gekoppeld is.'));
             }
@@ -281,7 +372,8 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
                 saving = true;
                 close.disabled = true;
                 dismiss.disabled = true;
-                select.disabled = true;
+                lockOtherSections(region);
+                for (const button of recordButtons) button.disabled = true;
                 for (const button of form.querySelectorAll('button')) button.disabled = true;
                 feedback.setAttribute('data-state', 'pending');
                 feedback.textContent = 'Bezig met opslaan…';
@@ -296,6 +388,11 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
                     status.textContent = 'Opgeslagen en opnieuw uit de bron geladen.';
                 } catch (error) {
                     requiresReload = true;
+                    for (const button of content.querySelectorAll('button')) {
+                        if (button.getAttribute('data-i18n') !== 'customerEditorRecords.edit') continue;
+                        button.setAttribute('data-i18n', 'customerEditorRecords.view');
+                        button.textContent = t('customerEditorRecords.view');
+                    }
                     feedback.setAttribute('data-state', 'error');
                     const code = error.payload?.error?.code;
                     feedback.textContent = ['duplicate_mutation', 'mutation_outcome_unknown'].includes(code)
@@ -310,19 +407,13 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
                     saving = false;
                     close.disabled = false;
                     dismiss.disabled = false;
-                    select.disabled = false;
+                    for (const button of recordButtons) button.disabled = false;
                 }
             }
         }
-        select.addEventListener('change', () => {
-            if (dirty && !window.confirm('Niet-opgeslagen wijzigingen in dit onderdeel verlaten?')) { select.value = previousSelection; return; }
-            previousSelection = select.value;
-            dirty = false;
-            unlockOtherSections();
-            choose();
-        });
-        // Person is a single object; contact and bank collections always require selection.
-        if (section === 'person' && items.length === 1) { select.value = '0'; previousSelection = '0'; choose(); }
+        // The person singleton opens immediately; collections require a direct record action.
+        if (section === 'person' && items.length === 1) { selectedIndex = '0'; choose(); }
+
     }
     async function loadWithStatus() {
         try {

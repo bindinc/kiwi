@@ -67,3 +67,12 @@ Verification: 23 focused interaction assertions passed in Chromium, covering all
 This is a local design artifact. It does not save customer data, create subscriptions, validate bank accounts, check actual delivery availability, or connect to KIWI services. The existing implementation plan and application source were not changed. No PR was created for this local showcase revision.
 
 Screen-reader testing, Firefox/Safari verification, and native browser zoom were not performed. The checks above are scoped evidence, not a full WCAG 2.2 AA conformance claim. Application acceptance checks such as OIDC, PHP tests, and Kubernetes rollout tests do not apply to this standalone artifact revision.
+
+
+## User-directed focus refinement — 2026-11-12
+
+The user requested a single, quieter text-input focus boundary instead of the separated outer ring. Text-entry inputs, selects and textareas now use a 2px outline at offset 0, without an additional focus shadow. The full external outline retains its 2px area, contrasts with the work surface and does not change layout. Native choices, dark-header controls, filled actions and the approved calendar retain their existing focus contracts.
+
+The original showcase SHA-256 `478a652ec6da827c7e15f839ba77352585bd53eb561bc2dd09535339665bd4c4` remains the sealed historical BEFORE reference. This is a user-directed reference revision; prior captures are not relabeled. Actual candidate browser verification remains a separate slice09 gate.
+
+The user also selected the existing customer editor's quiet, large close X as the application pattern: a borderless resting button, 40px hit area, subtle hover and visible keyboard focus. The showcase's reset dialog has labeled footer decisions rather than a header X; no new specimen or dismissal behavior was invented for that unrelated example.

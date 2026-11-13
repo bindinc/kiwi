@@ -7,10 +7,10 @@
     background: var(--surface);
     color: var(--text);
     border-color: var(--border-subtle);
-    border-radius: 4px;
+    border-radius: 0;
     box-shadow: none;
 }
-#sessionOutboxTitle { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; }
+#sessionOutboxTitle { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-body); }
 #sessionOutboxTitle svg { width: 20px; height: 20px; color: var(--action); }
 #subscriptionQueueMeta { color: var(--text-muted); margin-bottom: 12px; }
 #sessionOutboxStatus { font-size: .8125rem; line-height: 1.5; color: var(--text-muted); margin: 0 0 12px; }
@@ -28,8 +28,16 @@
     border-bottom: 1px solid var(--border-subtle);
     border-radius: 0;
 }
+#subscriptionQueueList > .session-outbox-item:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: -3px;
+}
 .session-outbox-item[data-status="paused"] { border-left: 2px solid var(--action); background: var(--surface-subdued); padding-left: 10px; }
-.session-outbox-body { min-width: 0; }
+.session-outbox-body { min-width: 0; overflow-wrap: anywhere; }
+.session-outbox-item:is([data-status="pending"], [data-status="ready"], [data-status="processing"]) .session-outbox-state { color: var(--action); }
+.session-outbox-item:is([data-status="paused"], [data-status="uncertain"]) .session-outbox-state { color: var(--warning); }
+.session-outbox-item[data-status="completed"] .session-outbox-state { color: var(--success-hover); }
+.session-outbox-item[data-status="failed"] .session-outbox-state { color: var(--danger); }
 .session-outbox-customer {
     display: block;
     padding: 0;
@@ -37,8 +45,8 @@
     background: transparent;
     color: var(--text);
     font: inherit;
-    font-weight: 650;
-    font-size: .9375rem;
+    font-weight: var(--weight-medium);
+    font-size: var(--font-size-body);
     line-height: 1.4;
     text-align: left;
     overflow-wrap: anywhere;
@@ -46,7 +54,7 @@
 button.session-outbox-customer { cursor: pointer; }
 button.session-outbox-customer:hover { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
 .session-outbox-caption { margin: 4px 0 0; color: var(--text-muted); font-size: .8125rem; line-height: 1.5; }
-.session-outbox-state { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: .75rem; color: var(--action); font-weight: 600; font-variant-numeric: tabular-nums; }
+.session-outbox-state { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: var(--font-size-label); color: var(--text-muted); font-weight: 600; font-variant-numeric: tabular-nums; }
 .session-outbox-state svg { width: 14px; height: 14px; }
 .session-outbox-icon-button {
     display: inline-flex;
@@ -75,6 +83,10 @@ button.session-outbox-customer:hover { color: var(--action); text-decoration: un
     position: fixed;
     inset: auto;
     width: 204px;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    overflow: auto;
+    overscroll-behavior: contain;
     margin: 0;
     padding: 6px;
     background: var(--surface);
@@ -86,14 +98,30 @@ button.session-outbox-customer:hover { color: var(--action); text-decoration: un
 .session-outbox-menu .session-outbox-icon-button { justify-content: flex-start; gap: 12px; width: 100%; height: auto; font-family: var(--font-ui); font-size: var(--font-size-action); line-height: 1.2; padding-inline: 12px; font-weight: var(--weight-medium); text-align: left; white-space: normal; }
 .session-outbox-menu .session-outbox-icon-button:focus-visible { outline-offset: -2px; }
 .session-outbox-menu .is-destructive { color: var(--danger); border-top: 1px solid var(--border-subtle); border-radius: 0; margin-top: 4px; }
-.session-changes-disclosure { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 4px; box-shadow: none; }
+@supports (position-area: block-end span-inline-start) {
+    /* Keep the menu inside the viewport when neither anchored block side fits. */
+    @position-try --session-outbox-viewport {
+        position-area: none;
+        inset: 8px;
+        margin: 0;
+        block-size: max-content;
+        align-self: end;
+        justify-self: end;
+    }
+    .session-outbox-menu {
+        position-area: block-end span-inline-start;
+        position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline, --session-outbox-viewport;
+        margin: 4px 0;
+    }
+}
+.session-changes-disclosure { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 0; box-shadow: none; }
 .session-changes-disclosure[hidden] { display: none; }
 .session-changes-disclosure > summary { cursor: pointer; color: var(--action); font-size: .875rem; font-weight: 600; }
 #sessionOutboxChanges { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
-#sessionOutboxChanges h3 { margin: 0; font-size: .875rem; font-weight: 650; }
+#sessionOutboxChanges h3 { margin: 0; font-size: .875rem; font-weight: var(--weight-medium); }
 #sessionOutboxChanges > .session-outbox-caption { margin-bottom: 8px; }
 .session-outbox-change { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 44px; font-size: .875rem; }
-.session-outbox-sequence { color: var(--text-muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.session-outbox-sequence { color: var(--text-muted); font-size: var(--font-size-label); font-variant-numeric: tabular-nums; }
 @media (hover: hover) and (pointer: fine) {
     .session-outbox-reveal { opacity: 0; }
     .session-outbox-change:hover .session-outbox-reveal,
@@ -103,10 +131,23 @@ button.session-outbox-customer:hover { color: var(--action); text-decoration: un
 #sessionOutboxHistorical { margin-top: 16px; font-size: .8125rem; color: var(--text-muted); }
 #sessionOutboxPages { display: flex; justify-content: space-between; margin-top: 8px; }
 #sessionOutboxPages:empty { display: none; }
-#sessionOutboxEditor { max-width: min(48rem, 94vw); max-height: 90vh; overflow: auto; }
+#sessionOutboxEditor > .card { max-width: 48rem; margin-bottom: 0; }
+#sessionOutboxEditor .form-header {
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+#sessionOutboxEditorTitle {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+#sessionOutboxEditor form { margin-top: var(--space-4); }
+#sessionOutboxEditorError { color: var(--danger); overflow-wrap: anywhere; }
+#sessionOutboxEditorError:empty { display: none; }
 #sessionOutboxEditorFields { display: grid; gap: .75rem; }
-#sessionOutboxEditorFields label { display: flex; flex-direction: column; gap: .25rem; }
-#sessionOutboxEditorFields fieldset { min-width: 0; border: 1px solid var(--border-subtle); padding: .75rem; }
+#sessionOutboxEditorFields label { display: flex; flex-direction: column; gap: var(--space-1); }
+#sessionOutboxEditorFields label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; gap: var(--space-2); min-height: var(--choice-height); }
+#sessionOutboxEditorFields fieldset { min-width: 0; display: grid; gap: var(--field-gap); border: 0; border-top: 1px solid var(--border-subtle); padding: var(--space-4) 0; }
+#sessionOutboxEditorFields legend { padding-inline-end: var(--space-2); font-weight: var(--weight-medium); }
 #sessionOutboxEditorFields input { max-width: 100%; }
 
 .session-outbox-preview { margin: 8px 0; padding-left: 8px; border-left: 2px solid var(--action); color: var(--action); font-size: .8125rem; line-height: 1.5; }

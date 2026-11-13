@@ -6,6 +6,7 @@ const searchState = {
     currentPage: 1,
     itemsPerPage: 20,
     sortBy: 'name',
+    queryDisplayFilters: null,
     generation: 0,
     requestVersion: 0,
     requestController: null
@@ -321,7 +322,7 @@ function matchesCustomerMandants(customer, mandants) {
     return normalizedMandants.includes(customerMandant) || normalizedMandants.includes(customerDivisionId);
 }
 
-function buildSearchQueryLabel() {
+function readSearchDisplayFilters() {
     const postalCode = getElementValueById('searchPostalCode').trim();
     const houseNumber = getElementValueById('searchHouseNumber').trim();
     const name = getElementValueById('searchName').trim();
@@ -331,6 +332,12 @@ function buildSearchQueryLabel() {
     const birthDate = getElementValueById('searchBirthDate').trim();
     const phone = getElementValueById('searchPhone').trim();
     const mandants = getSelectedValuesByName('searchMandants');
+
+    return { postalCode, houseNumber, name, customerNumber, email, iban, birthDate, phone, mandants };
+}
+
+function buildSearchQueryLabel(filters = readSearchDisplayFilters()) {
+    const { postalCode, houseNumber, name, customerNumber, email, iban, birthDate, phone, mandants } = filters;
 
     const labelParts = [];
 
@@ -432,7 +439,8 @@ export function toggleAdditionalFilters() {
     setAdditionalFiltersOpen(willOpen);
 }
 
-function setSearchResults(results) {
+function setSearchResults(results, queryDisplayFilters = readSearchDisplayFilters()) {
+    searchState.queryDisplayFilters = queryDisplayFilters;
     searchState.results = Array.isArray(results) ? results : [];
     searchState.currentPage = 1;
     searchState.sortBy = 'name';
@@ -518,6 +526,7 @@ function filterCustomersLocally(customers, filters) {
 
 export async function searchCustomer() {
     const filters = getSearchFilters();
+    const queryDisplayFilters = readSearchDisplayFilters();
     const globalScope = getGlobalScope();
     searchState.requestVersion += 1;
     const requestVersion = searchState.requestVersion;
@@ -558,7 +567,7 @@ export async function searchCustomer() {
         return;
     }
     searchState.requestController = null;
-    setSearchResults(results);
+    setSearchResults(results, queryDisplayFilters);
     sortResultsData();
     displayPaginatedResults();
 }
@@ -849,6 +858,41 @@ function renderPagination() {
     pagination.innerHTML = html;
 }
 
+export function refreshSearchResultLabels() {
+    if (typeof document === 'undefined' || !searchState.queryDisplayFilters) return;
+    const resultCount = document.getElementById('resultCount');
+    const resultsTitle = document.getElementById('resultsTitle');
+    const resultsRange = document.getElementById('resultsRange');
+    const { results, currentPage, itemsPerPage } = searchState;
+    const pageStartIndex = (currentPage - 1) * itemsPerPage;
+    const pageEndIndex = pageStartIndex + itemsPerPage;
+    if (resultCount) resultCount.textContent = String(results.length);
+    const countLabel = document.getElementById('resultCountLabel');
+    if (countLabel) {
+        const singular = results.length === 1;
+        const labelKey = singular ? 'search.resultSummaryOne' : 'search.resultSummaryMany';
+        countLabel.setAttribute('data-i18n', labelKey);
+        countLabel.textContent = translateKey(labelKey, {}, singular ? 'klant gevonden' : 'klanten gevonden');
+    }
+    const searchQueryLabel = buildSearchQueryLabel(searchState.queryDisplayFilters);
+    if (resultsTitle) {
+        resultsTitle.textContent = translateKey(
+            'search.resultsTitle',
+            { query: searchQueryLabel },
+            `Zoekresultaten: "${searchQueryLabel}"`
+        );
+    }
+    if (resultsRange) {
+        const visibleStart = results.length ? pageStartIndex + 1 : 0;
+        const visibleEnd = Math.min(pageEndIndex, results.length);
+        resultsRange.textContent = translateKey(
+            'search.resultsRange',
+            { start: visibleStart, end: visibleEnd, total: results.length },
+            `Toont ${visibleStart}-${visibleEnd} van ${results.length}`
+        );
+    }
+}
+
 export function displayPaginatedResults() {
     if (typeof document === 'undefined') {
         return;
@@ -878,7 +922,7 @@ export function displayPaginatedResults() {
 
     const { results, currentPage, itemsPerPage } = searchState;
 
-    resultCount.textContent = String(results.length);
+    refreshSearchResultLabels();
     setElementDisplay(searchSummary, results.length > 0 ? 'block' : 'none');
 
     if (results.length === 0) {
@@ -893,22 +937,6 @@ export function displayPaginatedResults() {
     const pageEndIndex = pageStartIndex + itemsPerPage;
     const pageResults = results.slice(pageStartIndex, pageEndIndex);
 
-    const searchQueryLabel = buildSearchQueryLabel();
-    resultsTitle.textContent = translateKey(
-        'search.resultsTitle',
-        { query: searchQueryLabel },
-        `Zoekresultaten: "${searchQueryLabel}"`
-    );
-    resultsRange.textContent = translateKey(
-        'search.resultsRange',
-        {
-            start: pageStartIndex + 1,
-            end: Math.min(pageEndIndex, results.length),
-            total: results.length
-        },
-        `Toont ${pageStartIndex + 1}-${Math.min(pageEndIndex, results.length)} van ${results.length}`
-    );
-
     paginatedResults.innerHTML = pageResults.map((customer) => renderCustomerRow(customer)).join('');
 
     setElementDisplay(welcomeMessage, 'none');
@@ -918,7 +946,8 @@ export function displayPaginatedResults() {
     renderPagination();
     void loadVisibleSubscriptionSummaries(searchState.generation);
 
-    if (typeof searchResultsView.scrollIntoView === 'function') {
+    const summaryHasFocus = searchSummary.contains(document.activeElement);
+    if (!summaryHasFocus && typeof searchResultsView.scrollIntoView === 'function') {
         searchResultsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
@@ -978,6 +1007,7 @@ function resetSearchState() {
         searchState.requestController.abort();
     }
     searchState.results = [];
+    searchState.queryDisplayFilters = null;
     searchState.currentPage = 1;
     searchState.sortBy = 'name';
     searchState.generation += 1;
@@ -1313,6 +1343,7 @@ function installLegacyCompatibilityExports() {
     globalScope.searchCustomer = searchCustomer;
     globalScope.handleSearchKeyPress = handleSearchKeyPress;
     globalScope.displayPaginatedResults = displayPaginatedResults;
+    globalScope.refreshSearchResultLabels = refreshSearchResultLabels;
     globalScope.goToPage = goToPage;
     globalScope.scrollToResults = scrollToResults;
     globalScope.clearSearchResults = clearSearchResults;

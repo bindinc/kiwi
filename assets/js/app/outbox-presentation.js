@@ -49,24 +49,34 @@ export function outboxActionMenu(item, actions, onError) {
     popover.setAttribute('popover', 'auto');
     popover.setAttribute('aria-label', `Acties voor ${item.summary.customer}`);
     const trigger = outboxIconButton(`Acties voor ${item.summary.customer}`, 'more', event => {
-        const bounds = trigger.getBoundingClientRect();
-        popover.style.left = `${Math.max(8, Math.min(innerWidth - 212, bounds.right - 204))}px`;
-        const menuHeight = actions.length * 40 + 20;
-        const top = bounds.bottom + menuHeight + 8 <= innerHeight ? bounds.bottom + 4 : bounds.top - menuHeight - 4;
-        popover.style.top = `${Math.max(8, top)}px`;
-        popover.showPopover();
+        if (popover.matches(':popover-open')) {
+            trigger.focus({ preventScroll: true });
+            popover.hidePopover();
+            return;
+        }
+        popover.showPopover({ source: trigger });
+        // Measure rendered content: coarse targets and wrapped labels do not have a fixed row height.
+        if (!globalThis.CSS?.supports('position-area: block-end span-inline-start')) {
+            const bounds = trigger.getBoundingClientRect();
+            const menu = popover.getBoundingClientRect();
+            const below = bounds.bottom + 4;
+            const top = below + menu.height + 8 <= innerHeight ? below : bounds.top - menu.height - 4;
+            popover.style.left = `${Math.max(8, Math.min(innerWidth - menu.width - 8, bounds.right - menu.width))}px`;
+            popover.style.top = `${Math.max(8, Math.min(innerHeight - menu.height - 8, top))}px`;
+        }
         if (event.detail === 0) popover.querySelector('button')?.focus();
     }, onError);
+    trigger.dataset.outboxControl = 'actions';
     trigger.setAttribute('aria-expanded', 'false');
     trigger.setAttribute('aria-controls', popover.id);
     popover.addEventListener('toggle', event => trigger.setAttribute('aria-expanded', String(event.newState === 'open')));
     popover.addEventListener('keydown', event => {
-        if (event.key === 'Escape') { popover.hidePopover(); trigger.focus(); }
+        if (event.key === 'Escape') { trigger.focus({ preventScroll: true }); popover.hidePopover(); }
     });
     for (const {label, icon, run} of actions) {
         const control = outboxIconButton(label, icon, async () => {
+            trigger.focus({ preventScroll: true });
             popover.hidePopover();
-            trigger.focus();
             await run();
         }, onError, true);
         if (icon === 'delete') control.classList.add('is-destructive');
@@ -80,6 +90,7 @@ export function outboxSessionRow(item, statusLabel, open, actions, onError) {
     const row = document.createElement('article');
     row.className = 'subscription-queue-item session-outbox-item';
     row.dataset.status = item.status;
+    row.dataset.sessionId = String(item.id);
     const body = document.createElement('div');
     body.className = 'session-outbox-body';
     const title = document.createElement(item.capabilities.edit ? 'button' : 'strong');
@@ -87,6 +98,7 @@ export function outboxSessionRow(item, statusLabel, open, actions, onError) {
     title.textContent = item.summary.customer;
     if (item.capabilities.edit) {
         title.type = 'button';
+        title.dataset.outboxControl = 'customer';
         title.title = 'Sessie openen en pauzeren';
         title.addEventListener('click', () => { void open().catch(onError); });
     }

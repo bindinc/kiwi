@@ -1,4 +1,19 @@
 const en = {
+    "customerEditorRecords": {
+        "person": "Personal details",
+        "address": "Address",
+        "email": "Email",
+        "phone": "Landline",
+        "mobile": "Mobile",
+        "bank": "Bank accounts",
+        "view": "View",
+        "edit": "Edit",
+        "noValue": "No value",
+        "validityUnavailable": "Validity unavailable",
+        "empty": "No data available",
+        "newBank": "New bank account",
+        "discardChanges": "Leave unsaved changes in this section?"
+    },
     "serviceRequests": {
         "saving": "Saving changes…",
         "resending": "Requesting edition…",
@@ -976,6 +991,8 @@ const en = {
         "resetComplete": "Customer work session ended. Ready for a new customer."
     },
     "search": {
+        "resultSummaryOne": "customer found",
+        "resultSummaryMany": "customers found",
         "allCustomers": "all customers",
         "backendFailed": "Search via backend failed",
         "nameFilterLabel": "Name: {name}",

@@ -409,8 +409,7 @@
                     <div id="searchSummary" class="search-summary" style="display: none;">
                         <div class="summary-content">
                             <div class="summary-badge">
-                                <span class="summary-icon">✓</span>
-                                <span id="resultCount">0</span> klanten gevonden
+                                <span id="resultCount">0</span> <span id="resultCountLabel" data-i18n="search.resultSummaryMany">klanten gevonden</span>
                             </div>
                             <button class="btn btn-link" type="button" data-action="scroll-to-results" data-i18n="indexHtml.text.bekijk_resultaten_031dfc60">
                                 Bekijk resultaten →
@@ -446,8 +445,8 @@
                     <div class="card">
                         <div class="results-header">
                             <div class="results-title-section">
-                                <h2 id="resultsTitle" data-i18n="indexHtml.text.zoekresultaten_b9b61881">Zoekresultaten</h2>
-                                <span id="resultsRange" class="results-range" data-i18n="indexHtml.text.toont_1_20_van_153_f98909cb">Toont 1-20 van 153</span>
+                                <h2 id="resultsTitle">Zoekresultaten</h2>
+                                <span id="resultsRange" class="results-range"></span>
                             </div>
                             <div class="results-controls">
                                 <label for="sortBy" class="sort-label" data-i18n="indexHtml.text.sorteren_0388b769">Sorteren:</label>
@@ -494,14 +493,21 @@
                         <div id="sessionOutboxChanges" hidden></div>
                     </details>
                     <dialog id="sessionOutboxEditor" class="form-lightbox customer-editor" aria-labelledby="sessionOutboxEditorTitle">
-                        <form>
-                            <h2 id="sessionOutboxEditorTitle">Opgeslagen wijziging</h2>
-                            <p>Voorlopige gegevens. De sessie blijft gepauzeerd na opslaan.</p>
-                            <div id="sessionOutboxEditorFields" class="form-grid"></div>
-                            <p id="sessionOutboxEditorError" role="alert"></p>
-                            <button type="submit" class="btn btn-primary">Correctie opslaan</button>
-                            <button type="button" id="sessionOutboxEditorClose" class="btn btn-secondary">Sluiten</button>
-                        </form>
+                        <div class="card">
+                            <div class="form-header">
+                                <h2 id="sessionOutboxEditorTitle">Opgeslagen wijziging</h2>
+                                <button type="button" class="btn-close" data-session-outbox-editor-close aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b">✕</button>
+                            </div>
+                            <form>
+                                <p>Voorlopige gegevens. De sessie blijft gepauzeerd na opslaan.</p>
+                                <div id="sessionOutboxEditorFields" class="form-grid"></div>
+                                <p id="sessionOutboxEditorError" role="alert"></p>
+                                <div class="customer-editor-actions">
+                                    <button type="submit" class="btn btn-primary">Correctie opslaan</button>
+                                    <button type="button" id="sessionOutboxEditorClose" data-session-outbox-editor-close class="btn btn-secondary">Sluiten</button>
+                                </div>
+                            </form>
+                        </div>
                     </dialog>
                     <div class="card">
                         <div class="customer-header">
@@ -523,9 +529,6 @@
                                     <button id="resendMagazineBtn" class="btn btn-small btn-secondary" type="button" data-action="show-resend-magazine" data-i18n="indexHtml.text.editie_verzenden_f7f6196d">📮 Editie Verzenden</button>
                                     <!-- <button id="winbackFlowBtn" class="btn btn-small btn-secondary" onclick="showWinbackFlow()">🎯 Winback/Opzegging</button> -->
                                     <button id="editorialComplaintBtn" class="btn btn-small btn-secondary" type="button" data-action="show-editorial-complaint-form" data-i18n="indexHtml.text.klacht_redactie_45bd08ef">✍️ Klacht Redactie</button>
-                                    <button class="btn btn-small btn-close-customer" type="button" data-action="close-customer-detail" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">
-                                        ✕
-                                    </button>
                                 </div>
                             </div>
                             <dl class="customer-meta">
@@ -554,7 +557,7 @@
                     <div class="card onepager-container">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.nieuw_abonnement_aanmaken_a7bddc25">Nieuw Abonnement Aanmaken</h2>
-                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="newSubscriptionForm">✕</button>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="newSubscriptionForm">✕</button>
                         </div>
                         <form id="subscriptionForm" class="form-section" data-action="create-subscription" data-action-event="submit" data-action-prevent-default="true">
                             <input type="hidden" id="subscriptionSubmissionId" data-feedback-sensitive="id">
@@ -821,7 +824,7 @@
                     <div class="card onepager-container article-sale-container">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.artikel_verkoop_baa29866">🛒 Artikel Verkoop</h2>
-                            <button class="btn-close" type="button" data-action="close-article-sale-form">✕</button>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-article-sale-form">✕</button>
                         </div>
                         <form id="articleForm"
                               class="form-section"
@@ -1080,7 +1083,7 @@
                     <div class="card onepager-container">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.klantgegevens_bewerken_de8f3786">✏️ Klantgegevens Bewerken</h2>
-                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="editCustomerForm">✕</button>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="editCustomerForm">✕</button>
                         </div>
                         <form id="customerEditForm" class="form-section" data-action="save-customer-edit" data-action-event="submit" data-action-prevent-default="true">
                             <input type="hidden" id="editCustomerId" data-feedback-sensitive="id">
@@ -1181,7 +1184,7 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.abonnement_bewerken_b16c21e3">✏️ Abonnement Bewerken</h2>
-                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="editSubscriptionForm">✕</button>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="editSubscriptionForm">✕</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1250,7 +1253,7 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.editie_opnieuw_verzenden_3bd3bf34">📮 Editie Opnieuw Verzenden</h2>
-                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="resendMagazineForm">✕</button>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="resendMagazineForm">✕</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1287,7 +1290,7 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.klacht_opmerking_voor_redactie_40e9bc48">✍️ Klacht/Opmerking voor Redactie</h2>
-                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="editorialComplaintForm">✕</button>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="editorialComplaintForm">✕</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1362,7 +1365,7 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 id="restitutionTransferTitle" data-i18n="indexHtml.text.abonnement_overzetten_04a00045">🔄 Abonnement Overzetten</h2>
-                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="restitutionTransferForm">✕</button>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="restitutionTransferForm">✕</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1432,7 +1435,7 @@
                     <div class="card">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.winback_opzegging_flow_41075f12">🎯 Winback/Opzegging Flow</h2>
-                            <button class="btn-close" type="button" data-action="close-form" data-arg-form-id="winbackFlow">✕</button>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="winbackFlow">✕</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1639,7 +1642,7 @@
                         <h2 id="sessionOutboxTitle">Outbox</h2>
                     </div>
                     <div id="subscriptionQueueMeta" class="subscription-queue-summary">Nog geen aanvragen in beeld</div>
-                    <div id="subscriptionQueueEmpty" class="empty-state-small subscription-queue-empty">Nog geen aanvragen in de wachtrij.</div>
+                    <div id="subscriptionQueueEmpty" class="empty-state-small subscription-queue-empty" hidden>Nog geen aanvragen in de wachtrij.</div>
                     <p id="sessionOutboxStatus" role="status"></p>
                     <div id="subscriptionQueueList" class="subscription-queue-list"></div>
                     <div id="sessionOutboxPages"></div>
@@ -1723,6 +1726,7 @@
             <div class="modal-header">
                 <h2 data-i18n="indexHtml.text.gesprek_afronden_273bd847">📋 Gesprek Afronden</h2>
                 <p class="modal-subtitle" data-i18n="indexHtml.text.de_gegevens_hieronder_zijn_automatisch_ingevuld_op_basis_van_de_acties_t_d0fef57c">De gegevens hieronder zijn automatisch ingevuld op basis van de acties tijdens het gesprek</p>
+                <button type="button" class="modal-close" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="disposition.cancel" data-action-event="click">✕</button>
             </div>
             <div class="modal-body">
                 <!-- Call Information (Prominent at top) -->

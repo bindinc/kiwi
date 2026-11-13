@@ -387,13 +387,13 @@ export function displayContactHistory() {
         return `
         <div class="timeline-item timeline-item--${typeInfo.tone}${highlightClass}" data-contact-id="${rawItemId}">
             <div class="timeline-dot"></div>
-            <div class="timeline-header" data-action="toggle-timeline-item" data-arg-entry-dom-id="${entryDomId}">
+            <button type="button" id="toggle-${entryDomId}" class="timeline-header" aria-expanded="true" aria-controls="content-${entryDomId}" data-action="toggle-timeline-item" data-arg-entry-dom-id="${entryDomId}">
                 <span class="timeline-type">
                     ${typeInfo.icon} ${typeInfo.label}
                 </span>
                 <span class="timeline-expand expanded" id="expand-${entryDomId}">▼</span>
                 <span class="timeline-date">${formatDateTime(item.date)}</span>
-            </div>
+            </button>
             <div class="timeline-content expanded" id="content-${entryDomId}" data-feedback-sensitive="free-text">
                 ${descriptionHtml}
             </div>
@@ -423,6 +423,7 @@ export function toggleTimelineItem(entryDomId) {
 
     const isExpanded = content.classList.toggle('expanded');
     expand.classList.toggle('expanded', isExpanded);
+    document.getElementById(`toggle-${entryDomId}`)?.setAttribute('aria-expanded', String(isExpanded));
 }
 
 export function changeContactHistoryPage(newPage) {

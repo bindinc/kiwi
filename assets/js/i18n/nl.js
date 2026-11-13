@@ -1,4 +1,19 @@
 const nl = {
+    "customerEditorRecords": {
+        "person": "Persoonsgegevens",
+        "address": "Adres",
+        "email": "E-mail",
+        "phone": "Vaste telefoon",
+        "mobile": "Mobiel",
+        "bank": "Bankrekeningen",
+        "view": "Bekijken",
+        "edit": "Bewerken",
+        "noValue": "Geen waarde",
+        "validityUnavailable": "Geldigheid niet beschikbaar",
+        "empty": "Geen gegevens beschikbaar",
+        "newBank": "Nieuwe bankrekening",
+        "discardChanges": "Niet-opgeslagen wijzigingen in dit onderdeel verlaten?"
+    },
     "serviceRequests": {
         "saving": "Wijzigingen opslaan…",
         "resending": "Editie aanvragen…",
@@ -976,6 +991,8 @@ const nl = {
         "resetComplete": "Klantwerksessie beëindigd. Klaar voor een nieuwe klant."
     },
     "search": {
+        "resultSummaryOne": "klant gevonden",
+        "resultSummaryMany": "klanten gevonden",
         "allCustomers": "alle klanten",
         "backendFailed": "Zoeken via backend mislukt",
         "nameFilterLabel": "Naam: {name}",

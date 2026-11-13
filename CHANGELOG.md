@@ -14,6 +14,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
+- Align operational states, reachable menus, modal controls, focus and search feedback; show all customer source records with direct actions while preserving permissions, identities, drafts, privacy and original values (`theme_audit` slice 09). [sc-206629]
+
 - Align shared dialogs, feedback and access surfaces with Light & Shadow, using consistent ordinary backdrops, preserved screenshot-review shielding, reachable controls and contextual error notices while retaining privacy, drafts and request behavior (`theme_audit` slice 08). [sc-206629]
 
 - Align subscription service forms and winback, restitution and transfer flows with Light & Shadow, with native choices, clear request progress and consistent actions while preserving business rules, private capture and drafts (`theme_audit` slice 07). [sc-206629]
