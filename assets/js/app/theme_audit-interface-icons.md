@@ -35,6 +35,19 @@ The initial source scan covers tracked JavaScript, Twig and CSS at the base abov
 
 Inspect the existing header SVG definitions before introducing helpers or dependencies. Preserve the frozen pre-refinement source and reference separately; update any current reference specimen deliberately under this user-approved direction.
 
+## Semantic classification and protected payloads
+
+Read-only orientation against current slice09 source `ac26a020eac29be6a86e83bca6047b8be2e682c3` classifies all21 inventory files and11 supporting source bodies. All32 bodies match that commit;67 source and usage checks pass. The durable `semantic-classification-01/manifest.json` is pinned at `65a7453c06e31610f8fb300ee22483cd91a35cadad5ed35c05a76c6fd2b59d3a`. Adopt accepted09 before application implementation.
+
+- Toast messages are stored verbatim as contact-history descriptions and can reach the history API. Preserve those messages, shared translation values and stored/user-written content; separate icon presentation from the payload.
+- Delivery shortcut captions and their plain `delivery.remarkPresets` payloads are already separate. Replace only their presentation glyphs. Provider offer/quote values and free annotation text keep their existing content.
+- Static translation updates and runtime writers can replace a parent's entire `textContent`. Place SVG outside translated caption nodes and preserve it through hold/resume, coupon, pending and locale changes.
+- Subscription edit/cancel controls currently rely on titles. Give the existing buttons explicit localized accessible names when their decorative glyphs become SVG.
+- Current close controls use a literal glyph in an unframed40px target with1.5rem text. Assess a vector cross while preserving the target, focus and dismissal behavior. Existing quiet SVGs, native controls, status conventions, punctuation and identity assets require deliberate exceptions.
+- Current screenshot redaction masks explicitly marked media and replaces unsupported embedded content; it does not automatically mask static inline SVG. Preserve existing sensitivity/mask/ignore boundaries. No new public wrapper or blanket masking exemption is required.
+
+This classification is preparation, not implementation or rendered acceptance. Source references and per-file decisions are retained in `semantic-classification-01/review.md` beside the worktrees. The retrieved `icons` guidance and implementation direction are retained in the same icon-refinement evidence directory.
+
 ## Acceptance
 
 - Inventory every remaining demo-style interface icon and record intentional exceptions.
