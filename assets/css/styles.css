@@ -4558,6 +4558,50 @@ dialog.form-lightbox::backdrop {
 .customer-editor section > h3 {
     margin-bottom: var(--space-3);
 }
+.customer-editor-records {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.customer-editor-record {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.customer-editor-record-identity { min-width: 0; }
+.customer-editor-record-title,
+.customer-editor-selected-title {
+    margin: 0 0 var(--space-1);
+    font-size: var(--font-size-label);
+    font-weight: 600;
+}
+.customer-editor-record-summary {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+.customer-editor-record-validity,
+.customer-editor-empty {
+    margin: var(--space-1) 0 0;
+    font-size: var(--font-size-label);
+    color: var(--text-muted);
+}
+.customer-editor-record-detail {
+    margin-top: var(--space-4);
+    padding-inline-start: var(--space-3);
+    border-inline-start: 2px solid var(--action);
+}
+.customer-editor-record-detail[hidden] { display: none; }
+.customer-editor-record-action[aria-expanded="true"] {
+    background: var(--surface-secondary-hover);
+}
+.customer-editor section > .customer-editor-record-action { margin-top: var(--space-3); }
+@media (max-width: 400px) {
+    .customer-editor-record { grid-template-columns: minmax(0, 1fr); }
+    .customer-editor-record-action { justify-self: start; }
+}
 .customer-editor form {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1,4 +1,19 @@
 const en = {
+    "customerEditorRecords": {
+        "person": "Personal details",
+        "address": "Address",
+        "email": "Email",
+        "phone": "Landline",
+        "mobile": "Mobile",
+        "bank": "Bank accounts",
+        "view": "View",
+        "edit": "Edit",
+        "noValue": "No value",
+        "validityUnavailable": "Validity unavailable",
+        "empty": "No data available",
+        "newBank": "New bank account",
+        "discardChanges": "Leave unsaved changes in this section?"
+    },
     "serviceRequests": {
         "saving": "Saving changes…",
         "resending": "Requesting edition…",

@@ -1,6 +1,6 @@
 # theme_audit 09 — Align operational state presentation
 
-Status: implementation in progress; immutable source inventory is verified, actual-browser BEFORE remains in progress. No application changes are accepted yet.
+Status: implementation in progress. Original08-source BEFORE and the b4 multiple-record supplement are independently sealed. The record candidate passes source/static review; rendered AFTER and the validity decision remain open. Slice09 is not accepted.
 
 Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md). Reference: [Light & Shadow showcase](../../../plans/kiwi-light-and-shadow-theme-palette-showcase.html), especially its operational-state specimens, restrained surfaces, action hierarchy and spacing. The showcase has no complete call-console or outbox workflow; apply its shared visual rules without inventing equivalent business behavior.
 
@@ -14,6 +14,20 @@ Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md).
 - Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-12/slice-09/`, outside Git and retained beside worktrees.
 - Ownership: one application writer, one independent source/actual-image reviewer and one browser/PR144 tooling owner. Root owns this audit/index/changelog, PR, runtime and Git. Shared application files are edited serially.
 - Initial checks: documentation-only scaffolding and whitespace; source, browser and behavioral acceptance remain open. One changelog entry is reserved for this PR and amended as implementation completes. No merge, deployment or cleanup is authorized.
+
+## Customer record overview revision — 2026-11-13
+
+The user chose **all records visible per data type, with validity and an individual view/edit action**. Record lists replace the section dropdowns. One selected form per section repeats its ordinal and sensitive summary; person singleton remains initially open. Fixed detail placement still requires actual2/12-record short/tall keyboard review. New copy uses the existing Dutch/English localization.
+
+Remove only the redundant customer-detail X beside Editorial complaint. New session, controller/router compatibility, exact source IDs/credentials, null-ID/read-only gates, versions/idempotency/readback, masked banks, dirty cancellation/reset/reopen, unique address prefixes and privacy annotations remain protected. All replacement row/create actions lock during submission; synthetic events also respect the existing disabled bank/delete/reset gates.
+
+The current PPA Snapshot exports IDs and editable values without validity intervals. The supplied PPA contract has an as-of `validitydate` selector/defaultcurrent but no contact start/end fields. Anonymous newer-documentation checks returned404 or redirected to SSO, without credentials/customer lookup. Current copy is **Geldigheid niet beschikbaar / Validity unavailable**. Actual periods remain unfulfilled and the fallback decision is pending; no current/future status is inferred from array order.
+
+Evidence is durable under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-13/slice-09/`. The b4 supplemental BEFORE closure `354e664ed1beb96241d82ebdec86d2083d71a01a79d2ab048220ea88f980e2a0` seals two Chromium1440/390 contexts:18 states/28 matching served bodies/two exact readonly GETs each, zero errors/business writes. All36 whole frames were reviewed. Visible X/New session is proven; complaint adjacency is DOM-only because source policy hid that action. Original08/ref478 BEFORE remains immutable:11 contexts/506 frames, aggregate394b33fd and closureef28ae1a.
+
+The six-file record candidate is frozen in `records-implementation/candidate-01/manifest.json`, SHA-256 `d96172a15df6351143219ca5a60959f24e948bdc9e01c781b667769b1bbfbbd4`. Independent source review `6ddccc61631d1b0b9289aad2585ade7816564397c20e472b0d05d08d1cb9dbba` verifies patch, protected regions and logs:15 focused tests,45 frontend files, three guards, syntax, whitespace and CSS parsing pass. Compose Twig lint also passes. New committed/runtime proofs and exact AFTER tooling precede browser release; no rendered acceptance follows these static checks.
+
+All original calls/history/outbox requirements remain. Preparatory final10 registry source review passed, but all78 area/environment cells remain unreviewed. No merge, production deployment or cleanup is authorized.
 
 ## Additional user-directed modal refinements — 2026-11-12
 
@@ -32,7 +46,7 @@ The original09 scaffold `f1c489f` is frozen in `before-originals-01/manifest.jso
 
 This physical separation permits09 implementation while BEFORE continues against unchanged08. Mutable09 files cannot supply BEFORE evidence. Initial three browser attempts stopped during authentication setup and produced no application captures; they remain failed diagnostics. The reviewed runner uses the native form submission and a bounded main-frame binding, with independently pinned local fixture credentials and default-denied business writes. It has eight passing guard tests; this is tooling verification, not UI acceptance. Browser stages widen only after source/transport and actual-image review. AFTER requires a fresh candidate/runtime source proof and the complete operational and user-feedback acceptance scopes.
 
-## Application candidate and static verification
+## Original candidate and static verification — 2026-11-12 snapshot
 
 Candidate03 is frozen outside Git under `implementation-candidate-03/`:20 changed application/reference/test paths, exact patch, file hashes and logs. It aligns call/ACW bars and disposition, timeline density and native disclosure, outbox surfaces/status/menu/editor, quiet close controls, flush text-entry focus, readonly gender display and the compact plural-aware search summary. The server remains authoritative. Source review checks protected call/timing/history, request/reset/capability/revision/idempotency and writable-customer regions separately from presentation.
 

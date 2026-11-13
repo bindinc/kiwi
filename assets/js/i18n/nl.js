@@ -1,4 +1,19 @@
 const nl = {
+    "customerEditorRecords": {
+        "person": "Persoonsgegevens",
+        "address": "Adres",
+        "email": "E-mail",
+        "phone": "Vaste telefoon",
+        "mobile": "Mobiel",
+        "bank": "Bankrekeningen",
+        "view": "Bekijken",
+        "edit": "Bewerken",
+        "noValue": "Geen waarde",
+        "validityUnavailable": "Geldigheid niet beschikbaar",
+        "empty": "Geen gegevens beschikbaar",
+        "newBank": "Nieuwe bankrekening",
+        "discardChanges": "Niet-opgeslagen wijzigingen in dit onderdeel verlaten?"
+    },
     "serviceRequests": {
         "saving": "Wijzigingen opslaan…",
         "resending": "Editie aanvragen…",
