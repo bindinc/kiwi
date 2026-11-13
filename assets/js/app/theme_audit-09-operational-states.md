@@ -1,8 +1,23 @@
 # theme_audit 09 — Align operational state presentation
 
-Status: implementation and rendered acceptance in progress. Original08-source BEFORE and the b4 multiple-record supplement are independently sealed. Desktop record, focus and search-language scopes pass independent rendered review. Narrow operational corrections pass source review and await fresh rendered checks. The user approved explicit unavailable-validity copy; remaining browser/environment checks are open. Slice09 is not accepted.
+Status: application acceptance passed on 2026-11-13; ready for review in PR154. All eight operational criteria and the additional record/control refinements have scoped source/rendered evidence. Final integrated interface acceptance follows icon PR155 and slice10. Merge and deployment remain separate.
 
 Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md). Reference: [Light & Shadow showcase](../../../plans/kiwi-light-and-shadow-theme-palette-showcase.html), especially its operational-state specimens, restrained surfaces, action hierarchy and spacing. The showcase has no complete call-console or outbox workflow; apply its shared visual rules without inventing equivalent business behavior.
+
+## Completion record — 2026-11-13
+
+All application and affected-record capture gates below passed independent review. Earlier implementation and capture notes retain their historical source and limitations; this completion record is the current summary. Final documentation delivery receives a separate review and CI checkpoint.
+
+- Production source: `eafef7ef2d114bcc33c747eed3ba32840155ca43`; all45 frontend files, three guards, syntax/CSS parsing and whitespace pass. CI43445372332 passes. Complete214-file committed/current/recursive container equality and health are retained in `outbox-viewport-*01.json`; exactsource bridge516efdbc.
+- Actual Chromium/Firefox desktop,320/390 narrow and390×320 short states are independently reviewed. Scoped reference/BEFORE/AFTER includes actual queue/call/recording/hold/ACW/disposition, all history/outbox states and unknown fallbacks, readonly2/12-record views, separately labeled writable component fixtures, keyboard entry/exit/focus, language metadata, roles, motion and coarse input. The closure coverage index links the exact reviews rather than treating all historical attempts as passed.
+- Production five-second refresh retains meaningful focused nodes, ownership and revision/capability protection. The settled focused search-summary scroll correction passes current Firefox review; genuine keyboard and initial/full-focus menu containment close the actual short-screen findings.
+- Genuine OS200/reset: Chromium140checks/29wholeimages reviewed51aaf764; Firefox142checks/30wholeimages reviewed `ed676cd2`. Firefox's automated click delivered divergent coordinates while the button remained clear. The new native-only opening uses a genuine, observed OS pointer click; no application layout change or forced click is introduced. The two diagnostics remain nonacceptance and historical failed native runs remain failed.
+- Affected-record privacy on current helper32: default Chromium and Firefox each pass12 checks with4 application plus2 reference frames. Independent reviews are `3474d6b5` and `f147d110`. The production constructor, exact sanitized serialized values/options/context, full original SDK and live form-state restoration are exercised. Chromium production capture changes all four private input regions; Firefox changes three, with the precise DATE exception below. Saved live/direct-SDK frames supplement in-page production-pixel evidence. The production pseudonymized PNG is saved; the original production PNG and deterministic scratch canvases are not separately retained. The existing hidden outbox dialog remains exact, and only two newly retained source-customer roots are counted. One exact source-generated local calendar prerequisite and two one-use editing GETs occur per context; no business write or selection/reset POST occurs. The existing precise uniform-blank Firefox native DATE exception remains limited to that original SVG region plus strict sanitized-property/attribute evidence.
+- Original full privacy script and SDK are unchanged. Both original runs pass only in their declared comparison profiles: Chromium with LCD text disabled and default Firefox, keeping64-channel/2% limits and original fixtures/crops. Ordinary UI/native and the affected-record runs use default rendering. The original default Chromium failure1163/57600 versus1152budget remains documented; glyph rasterization, not flat surfaces/geometry, accounts for the difference. These original runs do not claim coverage of every new editor field or arbitrary app DOM/observers.
+- Missing per-record validity is the user-approved explicit unavailable copy; no current/future dates are inferred. Readonly gender aliases leave raw writable letter salutations unchanged. Existing mixed-language legacy captions remain a stated scope limit, with affected locale writers addressed in the subsequent icon refinement.
+- Exact retained08 source carry covers its previously accepted opaque-error/lifecycle checks; changed/new record surfaces have their own explicit validation. No blanket reuse of old screenshots is claimed for changed code.
+- Evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-13/slice-09/`; original BEFORE and previous-day boundaries remain in their own dated archives. `slice09-closure-plan-01.json` indexes the criterion mapping; the independent completion audit records final delivery separately.
+- Separate icon PR155 follows accepted09. Final integrated slice10/PR144 includes the icon refinement and all13 workflow areas; those later scopes are not completed by this slice.
 
 ## Implementation record — 2026-11-12
 
@@ -175,14 +190,14 @@ Each substep can be reviewed separately, but the slice is complete only when all
 
 ## Acceptance criteria
 
-- [ ] Queue, active call, hold, recording, ACW, disposition, timeline and outbox are all represented in the review, with screenshots identified by actual state.
-- [ ] Shared spacing, typography, radii, action hierarchy and elevation match slices 01/02; any deliberate exception has a concrete operational reason.
-- [ ] Every meaningful state has a text/icon indication in addition to color. Text and required controls meet the agreed contrast criteria on their actual surfaces.
-- [ ] Desktop, narrow and short-height checks show no clipped identity, essential action, timer, popover or focused control. Long content remains readable.
-- [ ] Keyboard-only users can enter and leave menus/dialogs and reach revealed actions. Focus is visible and restored to a sensible control.
-- [ ] State transitions, event content, server capability checks and outbox concurrency behavior are unchanged.
-- [ ] Real rendered operational surfaces pass review; synthetic class fixtures are retained only as supplemental coverage and are labeled as such.
-- [ ] The shared visual report records untested or inaccessible states explicitly rather than counting them as passed.
+- [x] Queue, active call, hold, recording, ACW, disposition, timeline and outbox are all represented in the review, with screenshots identified by actual state.
+- [x] Shared spacing, typography, radii, action hierarchy and elevation match slices 01/02; any deliberate exception has a concrete operational reason.
+- [x] Every meaningful state has a text/icon indication in addition to color. Text and required controls meet the agreed contrast criteria on their actual surfaces.
+- [x] Desktop, narrow and short-height checks show no clipped identity, essential action, timer, popover or focused control. Long content remains readable.
+- [x] Keyboard-only users can enter and leave menus/dialogs and reach revealed actions. Focus is visible and restored to a sensible control.
+- [x] State transitions, event content, server capability checks and outbox concurrency behavior are unchanged.
+- [x] Real rendered operational surfaces pass review; synthetic class fixtures are retained only as supplemental coverage and are labeled as such.
+- [x] The shared visual report records untested or inaccessible states explicitly rather than counting them as passed.
 
 ## Validation using existing entry points
 
