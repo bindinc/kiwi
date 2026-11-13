@@ -96,7 +96,7 @@ delete globalThis.window;
 // This controller double models focus lost by DOM replacement; actual native layout,
 // popover dismissal and dialog containment are independently exercised in both browsers.
 function outboxDocument() {
-    const doc = { activeElement: null, addEventListener() {} };
+    const doc = { activeElement: null, scrolls: [], addEventListener() {} };
     function create(tag) {
         const attributes = {};
         const node = {
@@ -134,6 +134,7 @@ function outboxDocument() {
             addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); },
             async emit(name, detail = {}) { for (const callback of this.listeners[name] || []) await callback({ preventDefault() {}, detail: 0, ...detail }); },
             focus() { if (!this.disabled) doc.activeElement = this; },
+            scrollIntoView(options) { doc.scrolls.push({ target: this, options }); },
             getBoundingClientRect() { return { right: 200, top: 50, bottom: 90, width: 180, height: 120 }; },
             showPopover() { this.popoverOpen = true; },
             hidePopover() { this.popoverOpen = false; },
@@ -190,10 +191,12 @@ try {
     assert.notEqual(currentControl('actions'), oldTrigger);
     assert.equal(oldTrigger.isConnected, false);
     assert.equal(dom.activeElement, currentControl('actions'), 'polling preserves a focused closed-menu trigger');
+    assert.equal(dom.scrolls.length, 0, 'a matching leaf control keeps its existing scroll position');
     await currentControl('actions').emit('click');
     const menu = focusList.querySelector('.session-outbox-menu');
     await refreshOutbox();
     assert.equal(focusList.querySelector('.session-outbox-menu'), menu, 'an open native menu is not replaced');
+    assert.equal(dom.scrolls.length, 0, 'refresh does not scroll an open menu');
     assert.equal(prepareWrite('PATCH', '/api/v1/persons/42', { firstName: 'Menu remains open' }, context)['X-Kiwi-Outbox-Id'], '900', 'the open-menu guard also preserves the server membership/revision map');
     await menu.querySelectorAll('button')[1].emit('click');
     await settleOutbox();
@@ -209,16 +212,26 @@ try {
     await refresh;
     pendingRead = null;
     assert.equal(dom.activeElement, outside, 'a user who leaves during GET keeps outside focus');
+    assert.equal(dom.scrolls.length, 0, 'a user who leaves during GET also keeps outside scroll position');
     currentControl('actions').focus();
     fixtureItems = [{ ...fixtureItems[0], capabilities: {} }];
     await refreshOutbox();
     assert.equal(dom.activeElement, focusList.children[0], 'capability loss falls back to the same readable row');
+    assert.equal(dom.scrolls[0].target, dom.activeElement, 'the fallback article is revealed after focus restoration');
+    assert.deepEqual(dom.scrolls[0].options, { block: 'nearest', inline: 'nearest' });
     fixtureItems = [{ ...fixtureItems[0], id: 901, capabilities: { edit: true } }];
     await refreshOutbox();
     assert.equal(dom.activeElement, currentControl('customer'), 'removed item falls back to a surviving row control');
+    assert.equal(dom.scrolls.length, 1, 'a surviving leaf control does not use the article reveal');
+    fixtureItems = [{ ...fixtureItems[0], id: 903, capabilities: {} }];
+    await refreshOutbox();
+    assert.equal(dom.activeElement, focusList.children[0], 'a removed item can fall back to a no-control surviving article');
+    assert.equal(dom.scrolls[1].target, dom.activeElement);
+    assert.deepEqual(dom.scrolls[1].options, { block: 'nearest', inline: 'nearest' });
     fixtureItems = [];
     await refreshOutbox();
     assert.equal(dom.activeElement, focusTitle, 'an empty refreshed list returns focus to its heading');
+    assert.equal(dom.scrolls.length, 2, 'the empty heading behavior remains unchanged');
 
     const changes = dom.createElement('div'); changes.id = 'sessionOutboxChanges';
     const disclosure = dom.createElement('details'); disclosure.id = 'customerSessionChanges';

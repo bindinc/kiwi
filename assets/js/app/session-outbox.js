@@ -381,6 +381,7 @@ export async function refreshOutbox() {
             if (target) {
                 if (!control) target.tabIndex = -1;
                 target.focus({ preventScroll: true });
+                if (target === row) target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             }
         }
         const empty = node('subscriptionQueueEmpty');

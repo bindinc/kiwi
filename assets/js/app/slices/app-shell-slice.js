@@ -10,6 +10,8 @@ const DEBUG_KEY = ']';
 const DEBUG_KEY_COUNT = 4;
 const DEBUG_KEY_WINDOW_MS = 10000;
 const TOAST_DEDUPLICATION_WINDOW_MS = 1500;
+// Match the document-flow header breakpoint in styles.css.
+const SHORT_HEADER_MAX_HEIGHT = 540;
 
 let debugKeySequence = [];
 let listenersInstalled = false;
@@ -17,7 +19,8 @@ let installedDocumentRef = null;
 const listenersByEventType = {
     keydown: null,
     click: null,
-    change: null
+    change: null,
+    focusin: null
 };
 
 export function configureAppShellSliceDependencies(dependenciesResolver) {
@@ -224,6 +227,39 @@ function shouldSkipContactHistoryToast(type, contactHistoryState) {
     return ageMs < TOAST_DEDUPLICATION_WINDOW_MS;
 }
 
+function revealCallActionAboveToast(documentRef, toast) {
+    const view = documentRef?.defaultView || getGlobalScope();
+    const action = documentRef?.activeElement;
+    const isCallAction = action?.id === 'holdCallBtn' || action?.id === 'endCallBtn';
+    const isShortViewport = view?.innerHeight <= SHORT_HEADER_MAX_HEIGHT;
+    const toastVisible = toast?.classList?.contains?.('show');
+    if (!isCallAction || !isShortViewport || !toastVisible) return;
+    if (!view.getComputedStyle || !view.scrollBy || !action.getBoundingClientRect || !toast.getBoundingClientRect) return;
+
+    const toastStyle = view.getComputedStyle(toast);
+    const bottomInset = parseFloat(toastStyle.bottom);
+    if (!Number.isFinite(bottomInset) || !toast.offsetHeight) return;
+    // Entrance motion translates the notice; its layout size gives the final visible footprint.
+    const toastTop = view.innerHeight - bottomInset - toast.offsetHeight;
+    const toastBottom = view.innerHeight - bottomInset;
+    const toastBounds = toast.getBoundingClientRect();
+    const actionBounds = action.getBoundingClientRect();
+    const actionStyle = view.getComputedStyle(action);
+    const outline = parseFloat(actionStyle.outlineWidth) || 0;
+    const offset = parseFloat(actionStyle.outlineOffset) || 0;
+    const hasOutline = actionStyle.outlineStyle !== 'none' && actionStyle.outlineStyle !== 'hidden';
+    const focusOutset = hasOutline ? Math.max(0, outline + offset) : 0;
+    const overlapsHorizontally = actionBounds.right + focusOutset > toastBounds.left
+        && actionBounds.left - focusOutset < toastBounds.right;
+    const overlapsVertically = actionBounds.bottom + focusOutset > toastTop
+        && actionBounds.top - focusOutset < toastBottom;
+    if (!overlapsHorizontally || !overlapsVertically) return;
+
+    // One CSS pixel clears fractional layout rounding without moving keyboard focus.
+    const distance = Math.ceil(actionBounds.bottom + focusOutset - toastTop) + 1;
+    view.scrollBy({ top: distance, behavior: 'instant' });
+}
+
 export function showToast(message, type = 'success', options = {}) {
     if (type === 'success' && globalThis.window?.kiwiOutbox?.consumeSaveNotice?.()) {
         message = 'Opgeslagen in outbox. Nog niet verwerkt.';
@@ -273,6 +309,7 @@ export function showToast(message, type = 'success', options = {}) {
     toast.textContent = message;
     toast.className = `toast ${type}`;
     toast.classList.add('show');
+    revealCallActionAboveToast(getDocumentRef(), toast);
 
     setTimeout(() => {
         toast.classList.remove('show');
@@ -461,10 +498,14 @@ export function installGlobalListeners() {
     listenersByEventType.change = (event) => {
         handleGlobalChange(event);
     };
+    listenersByEventType.focusin = () => {
+        revealCallActionAboveToast(documentRef, documentRef.getElementById('toast'));
+    };
 
     documentRef.addEventListener('keydown', listenersByEventType.keydown);
     documentRef.addEventListener('click', listenersByEventType.click);
     documentRef.addEventListener('change', listenersByEventType.change);
+    documentRef.addEventListener('focusin', listenersByEventType.focusin);
 
     installedDocumentRef = documentRef;
     listenersInstalled = true;
@@ -491,9 +532,14 @@ export function uninstallGlobalListeners() {
         installedDocumentRef.removeEventListener('change', listenersByEventType.change);
     }
 
+    if (listenersByEventType.focusin) {
+        installedDocumentRef.removeEventListener('focusin', listenersByEventType.focusin);
+    }
+
     listenersByEventType.keydown = null;
     listenersByEventType.click = null;
     listenersByEventType.change = null;
+    listenersByEventType.focusin = null;
     installedDocumentRef = null;
     listenersInstalled = false;
 }

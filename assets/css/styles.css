@@ -974,6 +974,10 @@ body {
 .hold-indicator { margin-top: var(--space-2); color: var(--warning); }
 .rec-text { font-weight: var(--weight-strong); }
 .rec-notice { font-size: var(--font-size-label); }
+@media (max-width: 768px) {
+    #sessionInfo { flex-wrap: wrap; }
+    #sessionInfo > .hold-indicator { flex-basis: 100%; }
+}
 .call-on-hold { border-inline-start: 3px solid var(--warning); }
 .acw-bar { border-inline-start: 3px solid var(--warning); }
 .acw-label { color: var(--warning); font-weight: var(--weight-medium); }

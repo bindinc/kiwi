@@ -119,6 +119,14 @@ button.session-outbox-customer:hover { color: var(--action); text-decoration: un
 #sessionOutboxPages { display: flex; justify-content: space-between; margin-top: 8px; }
 #sessionOutboxPages:empty { display: none; }
 #sessionOutboxEditor > .card { max-width: 48rem; margin-bottom: 0; }
+#sessionOutboxEditor .form-header {
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+#sessionOutboxEditorTitle {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
 #sessionOutboxEditor form { margin-top: var(--space-4); }
 #sessionOutboxEditorError { color: var(--danger); overflow-wrap: anywhere; }
 #sessionOutboxEditorError:empty { display: none; }
