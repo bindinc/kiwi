@@ -9,6 +9,8 @@ import { normalizeKnownJsImports } from './compose-smoke-theme-audit-shell-accep
 const modulePath = fileURLToPath(import.meta.url);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const phase = process.env.KIWI_THEME_AUDIT_CUSTOMER_PHASE || 'before';
+const finalSource = process.env.KIWI_THEME_AUDIT_FINAL_SOURCE === '1';
+if (finalSource && phase !== 'after') throw new Error('Final record navigation requires explicit AFTER mode.');
 const lookupOnly = process.env.KIWI_THEME_AUDIT_CUSTOMER_LOOKUP_ONLY === '1';
 const lookupFiles = ['js/app/subscription-role-runtime.js'];
 if (phase === 'after') lookupFiles.push('js/app/slices/subscription-role-slice.js');
@@ -93,7 +95,22 @@ async function observe(page, driver, meta, state, selector) {
     await driver.capture(page, meta.prefix + state, selector, meta.kind);
 }
 
+async function selectSourceRecord(section) {
+    if (finalSource) {
+        await section.locator('.customer-editor-record-action[data-customer-record-index="0"]').click();
+        return;
+    }
+    await section.locator('select').first().selectOption('0');
+}
+
 async function expandSourceSections(dialog) {
+    if (finalSource) {
+        for (const section of await dialog.locator('section[data-customer-section]').all()) {
+            const action = section.locator('.customer-editor-record-action[data-customer-record-index="0"]');
+            if (await action.count()) await action.click();
+        }
+        return;
+    }
     for (const section of await dialog.locator('section').all()) {
         const select = section.locator('select').first();
         if (await select.locator('option[value="0"]').count() && await select.inputValue() === '') await select.selectOption('0');
@@ -138,9 +155,9 @@ async function sourceEditorFixtures(page, driver, meta, fixtures) {
     }
     await dialog().locator('section').first().waitFor();
     const person = dialog().locator('section').filter({ has: page.getByRole('heading', { name: 'Persoonsgegevens', exact: true }) });
-    await person.locator('select').first().selectOption('0');
+    await selectSourceRecord(person);
     const address = dialog().locator('section').filter({ has: page.getByRole('heading', { name: 'Adres', exact: true }) });
-    await address.locator('select').first().selectOption('0');
+    await selectSourceRecord(address);
     if (phase === 'after') await expandSourceSections(dialog());
     await observe(page, driver, { ...meta, kind }, 'source-editor-fields', '.customer-editor[open]');
     if (phase === 'after' && meta.native) await inspectLiveNativeDate(page, driver, meta);
@@ -200,7 +217,7 @@ async function sourceEditorFixtures(page, driver, meta, fixtures) {
         await page.evaluate(() => window.themeAuditOpenSourceEditor('b'));
     }
     const secondAddress = dialog().locator('section').filter({ has: page.getByRole('heading', { name: 'Adres', exact: true }) });
-    await secondAddress.locator('select').first().selectOption('0');
+    await selectSourceRecord(secondAddress);
     await observe(page, driver, { ...meta, kind }, 'two-retained-editable-addresses', '.customer-editor[open]');
     if (phase === 'after') {
         const secondPrefix = await secondAddress.locator('[data-address-prefix]').getAttribute('data-address-prefix');
@@ -224,11 +241,11 @@ async function sourceEditorFixtures(page, driver, meta, fixtures) {
     await page.evaluate(() => window.themeAuditOpenSourceEditor('readonly'));
     await dialog().waitFor({ state: 'visible' });
     const readonlyAddress = dialog().locator('section').filter({ has: page.getByRole('heading', { name: 'Adres', exact: true }) });
-    await readonlyAddress.locator('select').first().selectOption('0');
+    await selectSourceRecord(readonlyAddress);
     await observe(page, driver, { ...meta, kind }, 'retained-editors-readonly-address', '.customer-editor[open]');
     if (phase === 'after') {
         const readonlyPerson = dialog().locator('section').filter({ has: page.getByRole('heading', { name: 'Persoonsgegevens', exact: true }) });
-        await readonlyPerson.locator('select').first().selectOption('0');
+        await selectSourceRecord(readonlyPerson);
         await expandSourceSections(dialog());
         const longField = readonlyPerson.locator('input[name="lastName"]');
         await longField.focus(); await longField.press('End');

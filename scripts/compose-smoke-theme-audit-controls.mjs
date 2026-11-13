@@ -11,10 +11,16 @@ const companionProvenance = {
     path: companionPath,
     sourceSha256: createHash('sha256').update(await readFile(companionPath)).digest('hex')
 };
+const finalSource = process.env.KIWI_THEME_AUDIT_FINAL_SOURCE === '1';
+const finalReference = '67f2532069054f48f0bc703b0a54b64edf655678ff8ae48bfb19f125e0cb5ccb';
 const controlScenarios = process.env.KIWI_THEME_AUDIT_CONTROL_SCENARIOS || 'extended';
 if (!['extended', 'choices'].includes(controlScenarios)) throw new Error('Use extended or choices for KIWI_THEME_AUDIT_CONTROL_SCENARIOS.');
 
 export async function inspectControls(driver, viewport, contract) {
+    if (finalSource && (contract.referenceSha256 !== finalReference || contract.inputFocus?.outlineWidth !== '2px'
+        || contract.inputFocus.outlineOffset !== '0px' || contract.inputFocus.boxShadow !== 'none')) {
+        throw new Error('Final field checks require an actual measured reference67 focus contract.');
+    }
     if (controlScenarios === 'choices') return inspectChoiceValues(driver, viewport, contract);
     const {
         actionChecks, baseUrl, capture, check, compositedTextContrast, controlChecks, evidenceDir,
@@ -105,16 +111,23 @@ export async function inspectControls(driver, viewport, contract) {
             await field.scrollIntoViewIfNeeded();
             await page.keyboard.press('Tab');
             await field.focus();
+            if (finalSource) await painted(page);
             const observed = await field.evaluate(node => {
                 const style = getComputedStyle(node), bounds = node.getBoundingClientRect();
                 return {
                     id: node.id, active: document.activeElement === node, visible: node.matches(':focus-visible'),
-                    outlineWidth: style.outlineWidth, outlineColor: style.outlineColor, boxShadow: style.boxShadow,
+                    tag: node.tagName, type: node.type, role: node.getAttribute('role'),
+                    outlineWidth: style.outlineWidth, outlineOffset: style.outlineOffset, outlineColor: style.outlineColor, boxShadow: style.boxShadow,
                     bounds: { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom, width: innerWidth, height: innerHeight }
                 };
             });
-            check(id + ' single canonical keyboard focus paint', observed.active && observed.visible
-                && observed.outlineWidth === '3px' && observed.outlineColor === 'rgb(73, 98, 117)' && observed.boxShadow === 'none',
+            const ordinaryField = ['SELECT', 'TEXTAREA'].includes(observed.tag) || (observed.tag === 'INPUT'
+                && !['radio', 'checkbox', 'hidden', 'button', 'submit', 'reset', 'file', 'range', 'color', 'image'].includes(observed.type));
+            const focusPaint = finalSource && ordinaryField
+                ? observed.outlineWidth === contract.inputFocus.outlineWidth && observed.outlineOffset === contract.inputFocus.outlineOffset
+                    && observed.outlineColor === contract.inputFocus.outlineColor && observed.boxShadow === contract.inputFocus.boxShadow
+                : observed.outlineWidth === '3px' && observed.outlineColor === 'rgb(73, 98, 117)' && observed.boxShadow === 'none';
+            check(id + ' single canonical keyboard focus paint', observed.active && observed.visible && focusPaint,
                 true, { ...metadata, state, observed }, 2);
             const bounds = observed.bounds;
             check(id + ' focused field fits viewport after scrolling', bounds.left >= 0 && bounds.right <= bounds.width
@@ -277,11 +290,14 @@ export async function inspectControls(driver, viewport, contract) {
         await tabWithoutActivation('#recipientDuplicateCheck .warning', 'duplicate create-anyway warning', () => page.evaluate(() => window.kiwiSubscriptionRoleRuntime.getSubscriptionDuplicateRoleState('recipient').acknowledgedFingerprint === ''));
         await page.locator('#newSubscriptionForm [data-action="close-form"]').first().press('Enter');
 
-        await page.evaluate(() => {
+        await page.evaluate(finalSource => {
             currentCustomer = { id: 9531, firstName: 'Alex', lastName: 'Synthetic delivery fixture',
                 sourceSystem: 'theme-audit-local', deliveryRemarks: { default: '' } };
+            if (finalSource) Object.assign(currentCustomer, { initials: 'A.', middleName: '', postalCode: '1234AB',
+                houseNumber: '10', houseNumberAddition: '', address: 'Synthetic street 10', city: 'Synthetic town',
+                countryCode: 'NL', email: 'synthetic-delivery@example.invalid', phone: '0209462718' });
             window.kiwiDeliveryRemarksSlice.editDeliveryRemarks();
-        });
+        }, finalSource);
         await page.locator('#editDeliveryRemarksModal').waitFor({ state: 'visible' });
         await inspectDialog('installed delivery-notes modal fields and actions', '#editDeliveryRemarksModal');
         await canonicalFields('installed delivery-notes modal', ['editCustomerDeliveryRemarks']);

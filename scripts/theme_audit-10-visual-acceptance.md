@@ -1,6 +1,12 @@
 # theme_audit 10 — Complete visual acceptance against the showcase
 
-Status: in progress. Scoped evidence through slice 08 is independently accepted below; application and tooling delivery checkpoints remain separate. Final slice 10 acceptance remains pending slice 09 and the integrated matrix below. This is the verification slice for [theme_audit](../plans/theme_audit.md).
+Status: in progress. Scoped evidence through slices01–09 is recorded separately from final integrated acceptance. Final10 follows the additional interface-icon refinement PR155 and the complete matrix below. This is the verification slice for [theme_audit](../plans/theme_audit.md).
+
+## Delivery checkpoint — 2026-11-13
+
+This draft checkpoint preserves the operational acceptance runner, its strict transport tests, affected-record privacy adapter, compatible prior runners and the pure final13-area registry. The complete frontend suite passes160 tests; three guardrails and whitespace pass. Actual32 has40 focused transport checks; both default Chromium/Firefox affected-record contexts pass12 checks each, and genuine OS200/reset has separately reviewed Chromium/Firefox evidence. Exact source/SDK/reference/adoption pins, historical failed attempts and the declared original privacy rendering profiles remain in the durable Nov13 slice09 evidence archive.
+
+Final integration is not complete: the pure registry has78 pending review cells, the final driver candidate remains unadopted, and this tooling branch still needs reconciliation with accepted09 plus icon155. No full-interface acceptance follows from this checkpoint. Keep PR144 draft. Evidence and the user-requested17:30 pause handoff are under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/`; no screenshots or actual customer data are committed.
 
 ## Implementation evidence register
 
