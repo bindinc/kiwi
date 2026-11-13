@@ -63,18 +63,33 @@ async function assertStyle(page, selector, property, expected) {
     report.assertions.push(`${selector} ${property}: ${actual}`);
 }
 
-async function assertKeyboardFocus(page, selector, expectedColor) {
+async function assertKeyboardFocus(page, selector, expectedColor, role = 'action') {
     if (baselineDir) return;
+    assert.ok(['action', 'text-entry'].includes(role), 'Use an explicit supported focus role.');
+    const textEntry = role === 'text-entry';
     await page.keyboard.press('Tab');
     await page.locator(selector).first().focus();
+    if (textEntry) await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const focus = await page.locator(selector).first().evaluate(element => ({
-        visible: element.matches(':focus-visible'),
+        visible: element.matches(':focus-visible'), active: document.activeElement === element,
+        tag: element.tagName, type: element.type,
         width: getComputedStyle(element).outlineWidth,
-        color: getComputedStyle(element).outlineColor
+        offset: getComputedStyle(element).outlineOffset,
+        color: getComputedStyle(element).outlineColor,
+        shadow: getComputedStyle(element).boxShadow
     }));
     assert.equal(focus.visible, true, `${selector} keyboard focus`);
-    assert.equal(focus.width, '3px', `${selector} outline width`);
+    // theme_audit: ref67 gives text entry a flush2px boundary; action focus remains3px.
+    assert.equal(focus.width, textEntry ? '2px' : '3px', `${selector} outline width`);
     assert.equal(focus.color, expectedColor, `${selector} outline color`);
+    if (textEntry) {
+        const ordinaryTextEntry = ['SELECT', 'TEXTAREA'].includes(focus.tag) || (focus.tag === 'INPUT'
+            && !['radio', 'checkbox', 'hidden', 'button', 'submit', 'reset', 'file', 'range', 'color', 'image'].includes(focus.type));
+        assert.equal(ordinaryTextEntry, true, `${selector} ordinary text-entry role`);
+        assert.equal(focus.active, true, `${selector} active text entry`);
+        assert.equal(focus.offset, '0px', `${selector} flush outline offset`);
+        assert.equal(focus.shadow, 'none', `${selector} no duplicate shadow ring`);
+    }
     report.assertions.push(`${selector} keyboard focus visible`);
 }
 
@@ -335,7 +350,7 @@ async function runWorkspace(width) {
         await page.locator('[data-action="open-article-sale-form"]').click();
         await page.locator('#articleSaleForm').waitFor({ state: 'visible' });
         await assertStyle(page, '#articleInitials', 'borderTopColor', 'rgb(118, 136, 148)');
-        await assertKeyboardFocus(page, '#articleInitials', 'rgb(73, 98, 117)');
+        await assertKeyboardFocus(page, '#articleInitials', 'rgb(73, 98, 117)', 'text-entry');
         await capture(page, 'article-form');
         await inspectDatePicker(page);
         await page.locator('#articleSearch').fill('a');

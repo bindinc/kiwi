@@ -1171,6 +1171,11 @@ export async function inspectNativeOverlay(page, driver, session, meta) {
 }
 
 export async function prepareLegacyOverlayPrivacy({ baseUrl, evidenceDir }) {
+    if (process.env.KIWI_THEME_AUDIT_OPERATIONAL_PRIVACY === '1') {
+        const { prepareOperationalLegacyPrivacy } = await import('./compose-smoke-theme-audit-operational-privacy.mjs');
+        return prepareOperationalLegacyPrivacy({ baseUrl, evidenceDir,
+            installLegacyTransport: installOverlayTransport, trackErrors: trackRuntimeErrors });
+    }
     const url = validateLocalUrl(baseUrl);
     const declaredOutput = process.env.KIWI_FEEDBACK_EVIDENCE_DIR;
     if (!declaredOutput || !path.isAbsolute(declaredOutput) || path.resolve(declaredOutput).startsWith('/tmp/')) {

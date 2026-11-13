@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const modulePath = fileURLToPath(import.meta.url);
+const finalSource = process.env.KIWI_THEME_AUDIT_FINAL_SOURCE === '1';
+const finalReference = '67f2532069054f48f0bc703b0a54b64edf655678ff8ae48bfb19f125e0cb5ccb';
 export async function registerCustomerAcceptance(report) {
     report.customerAcceptance ||= { module: { path: modulePath, sha256: createHash('sha256').update(await readFile(modulePath)).digest('hex') }, states: [], privacy: [] };
 }
@@ -49,7 +51,7 @@ export async function readCustomerPresentation(page) {
                     labelBounds: field.labels?.length ? bounds(field.labels[0]) : null })) },
             filter: { bounds: bounds(filter), caption: bounds(filter.querySelector('[data-i18n]')), chevron: bounds(filter.querySelector('.chevron')),
                 expanded: filter.getAttribute('aria-expanded') },
-            sort: bounds(document.querySelector('.sort-select')), rows,
+            sort: { ...bounds(document.querySelector('.sort-select')), tag: document.querySelector('.sort-select')?.tagName }, rows,
             record: { header: bounds(document.querySelector('.customer-header')), title: bounds(document.querySelector('.customer-info h2')),
                 metadata: bounds(meta), labels: [...(meta?.querySelectorAll('dt') || [])].map(bounds), values: [...(meta?.querySelectorAll('dd') || [])].map(bounds) },
             duplicateIds: [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))],
@@ -103,8 +105,14 @@ export function customerPresentationChecks(data, reference, state) {
             && bounds.radius === '0px' && bounds.transform === 'none', { filter: data.filter });
     }
     if (state === 'sort-keyboard-focus') {
-        add('sort uses the canonical single visible focus indicator', data.sort?.focus && data.sort.outlineWidth === '3px'
-            && data.sort.outlineColor === reference.primary.backgroundColor && data.sort.shadow === 'none', { sort: data.sort });
+        const focusPaint = finalSource
+            ? data.sort?.tag === 'SELECT' && reference.referenceSha256 === finalReference && reference.inputFocus?.outlineWidth === '2px'
+                && reference.inputFocus.outlineOffset === '0px' && reference.inputFocus.boxShadow === 'none'
+                && data.sort?.outlineWidth === reference.inputFocus.outlineWidth
+                && data.sort.outlineOffset === reference.inputFocus.outlineOffset
+                && data.sort.outlineColor === reference.inputFocus.outlineColor && data.sort.shadow === reference.inputFocus.boxShadow
+            : data.sort?.outlineWidth === '3px' && data.sort.outlineColor === reference.primary.backgroundColor && data.sort.shadow === 'none';
+        add('sort uses the canonical single visible focus indicator', data.sort?.focus && focusPaint, { sort: data.sort });
     }
     if (data.rows.length && /results|view|mixed-table/.test(state)) {
         add('actual results preserve six native table cells with continuous row geometry', data.rows.every(row => row.cells.length === 6

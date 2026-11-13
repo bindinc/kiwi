@@ -22,6 +22,7 @@ const page = await browser.newPage({ ignoreHTTPSErrors: true, serviceWorkers: 'b
 page.setDefaultTimeout(15000);
 const searches = [];
 const closed = [];
+const finalSource = process.env.KIWI_THEME_AUDIT_FINAL_SOURCE === '1';
 let unavailable = false;
 const candidates = ['1', '2'].map(houseNumberAddition => ({ postalCode: '1223CK', houseNumber: '2A', houseNumberAddition, street: 'Kometenstraat', city: 'HILVERSUM', countryCode: 'NL', verified: true }));
 await page.route('**/*', async route => {
@@ -57,6 +58,17 @@ async function load() {
     await page.evaluate(() => {
         window.currentCustomer = { id: 999001, firstName: 'Test', lastName: 'Adrescontrole', postalCode: '', houseNumber: '', address: '', city: '', subscriptions: [] };
     });
+}
+async function selectSourceAddress(index, actionName) {
+    const section = page.locator('.customer-editor[open] section[data-customer-section="address"]');
+    const action = section.getByRole('button', { name: `Adres ${index + 1} ${actionName}`, exact: true });
+    assert.equal(await action.getAttribute('data-customer-record-index'), String(index));
+    await action.click();
+}
+async function sourceAddressPrefix() {
+    const prefix = await page.locator('.customer-editor[open] [data-address-prefix]').getAttribute('data-address-prefix');
+    assert.match(prefix, /^customerEditorAddress\d+$/);
+    return prefix;
 }
 async function open(prefix) {
     await page.evaluate(async prefix => {
@@ -96,8 +108,14 @@ async function open(prefix) {
             await window.openSourceTest();
         }
     }, prefix);
-    if (prefix === 'customerEditorAddress') await page.selectOption('.customer-editor select[aria-label="Adres kiezen"]', '0');
+    if (prefix === 'customerEditorAddress') {
+        if (finalSource) {
+            await selectSourceAddress(0, 'Bewerken');
+            prefix = await sourceAddressPrefix();
+        } else await page.selectOption('.customer-editor select[aria-label="Adres kiezen"]', '0');
+    }
     await page.locator(`#${prefix}PostalCode`).waitFor({ state: 'visible' });
+    return prefix;
 }
 async function complete(prefix) {
     await page.fill(`#${prefix}AddressExtension`, '310');
@@ -123,9 +141,9 @@ async function complete(prefix) {
     return address.formSessionId;
 }
 try {
-    for (const prefix of (process.env.KIWI_ADDRESS_PREFIXES || 'subRecipient,subRequester,article,edit,restitutionTransfer,transfer,transfer2,customerEditorAddress').split(',')) {
+    for (const requestedPrefix of (process.env.KIWI_ADDRESS_PREFIXES || 'subRecipient,subRequester,article,edit,restitutionTransfer,transfer,transfer2,customerEditorAddress').split(',')) {
         await load();
-        await open(prefix);
+        const prefix = await open(requestedPrefix);
         const firstSession = await complete(prefix);
         const component = page.locator(`[data-address-prefix="${prefix}"]`);
         for (const width of [1440, 390]) {
@@ -133,13 +151,13 @@ try {
             assert.equal(await component.evaluate(node => node.scrollWidth <= node.clientWidth), true);
             const columns = await component.locator('.customer-address-row').first().evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length);
             assert.equal(columns, width > 768 ? 2 : 1);
-            await component.screenshot({ path: `${evidence}/${prefix}-${width}.png` });
+            await component.screenshot({ path: `${evidence}/${requestedPrefix}-${width}.png` });
         }
         await page.setViewportSize({ width: 1440, height: 1100 });
-        if (prefix === 'customerEditorAddress') {
+        if (requestedPrefix === 'customerEditorAddress') {
             await page.getByRole('button', { name: 'Wijzigingen herstellen', exact: true }).click();
-            assert.equal(await page.inputValue('#customerEditorAddressPostalCode'), '');
-            assert.equal(await page.inputValue('#customerEditorAddressAdditionalExtension'), 'Desk');
+            assert.equal(await page.inputValue(`#${prefix}PostalCode`), '');
+            assert.equal(await page.inputValue(`#${prefix}AdditionalExtension`), 'Desk');
             assert.notEqual(await complete(prefix), firstSession);
             await page.getByRole('button', { name: 'Adres opslaan', exact: true }).click();
             await page.waitForFunction(() => window.sourceWrites.length === 1);
@@ -147,16 +165,30 @@ try {
             assert.equal(write.body.changes.housenumber, '2A 2');
             assert.equal(write.body.changes.extension, undefined);
             assert.equal(write.body.changes.additionalExtension, undefined);
-            await page.selectOption('.customer-editor select[aria-label="Adres kiezen"]', '1');
-            assert.equal(await page.inputValue('#customerEditorAddressHouseExt'), '2');
-            assert.equal(await page.inputValue('#customerEditorAddressAddressExtension'), 'Other');
-            await page.locator('.customer-editor .btn-close').click();
-            await page.locator('.customer-editor').waitFor({ state: 'detached' });
+            if (finalSource) await selectSourceAddress(1, 'Bewerken');
+            else await page.selectOption('.customer-editor select[aria-label="Adres kiezen"]', '1');
+            assert.equal(await page.inputValue(`#${prefix}HouseExt`), '2');
+            assert.equal(await page.inputValue(`#${prefix}AddressExtension`), 'Other');
+            await page.locator('.customer-editor[open] .btn-close').click();
+            if (finalSource) {
+                await page.locator('.customer-editor').waitFor({ state: 'hidden' });
+                assert.equal(await page.locator('.customer-editor').count(), 1, 'The editable draft remains retained.');
+            } else await page.locator('.customer-editor').waitFor({ state: 'detached' });
             assert.ok(closed.some(url => url.endsWith(firstSession)));
-            await page.evaluate(async () => { window.sourceModel.capabilities.operations = {}; await window.openSourceTest(); });
-            await page.selectOption('.customer-editor select[aria-label="Adres kiezen"]', '1');
-            assert.equal(await page.locator('#customerEditorAddressPostalCode').isEditable(), false);
-            assert.equal(await page.getByRole('button', { name: 'Adres opslaan', exact: true }).isEnabled(), false);
+            await page.evaluate(async finalSource => {
+                window.sourceModel.capabilities.operations = {};
+                if (finalSource) window.currentCustomer = { ...window.currentCustomer, id: 999002 };
+                await window.openSourceTest();
+            }, finalSource);
+            if (finalSource) await selectSourceAddress(1, 'Bekijken');
+            else await page.selectOption('.customer-editor select[aria-label="Adres kiezen"]', '1');
+            const readonlyPrefix = finalSource ? await sourceAddressPrefix() : prefix;
+            if (finalSource) {
+                assert.notEqual(readonlyPrefix, prefix, 'Readonly source identity must not reuse the retained writable editor.');
+                assert.equal(await page.locator('.customer-editor').count(), 2);
+            }
+            assert.equal(await page.locator(`#${readonlyPrefix}PostalCode`).isEditable(), false);
+            assert.equal(await page.locator('.customer-editor[open]').getByRole('button', { name: 'Adres opslaan', exact: true }).isEnabled(), false);
         }
         console.log(`PASS ${prefix}: common layout, completion, buffered additions, separate internal value, validation and responsive layout`);
     }

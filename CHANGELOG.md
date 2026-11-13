@@ -10,7 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
-- Add traceable showcase comparisons, reusable controlled application and choice states, observational shell/customer/subscription/article/service/overlay baselines and required responsive workflow, provisional-acknowledgement, provider/error/retry, role, draft, keyboard, source-recovery and capture-privacy gates, actual native-paint checks, browser coverage, scoped overlay lifecycle and unchanged-threshold SDK privacy evidence, and focused native zoom checks for the complete interface alignment; final integration remains pending (`theme_audit` slice 10). [sc-206629]
+- Add source-bound showcase and workflow acceptance tooling, controlled application states, operational and per-record privacy checks, genuine native zoom/input validation and explicit final coverage tracking; final integrated acceptance remains pending (`theme_audit` slice 10). [sc-206629]
 - Document the complete styleguide evaluation and code-adjacent implementation slices, marked `theme_audit`, without changing application styling or behavior. [sc-206629]
 - Apply the Light & Shadow palette as Kiwi's default light theme using semantic colors, accessible control borders and keyboard focus, while preserving operational states and feedback privacy; include a flat, responsive delivery date picker with keyboard navigation, the design showcase, contrast checks and browser smoke coverage. [sc-206629]
 

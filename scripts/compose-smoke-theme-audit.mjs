@@ -14,6 +14,8 @@ const sourceRoot = path.resolve(process.env.KIWI_THEME_APP_ROOT || fileURLToPath
 const baseUrl = new URL(process.env.KIWI_SMOKE_BASE_URL || 'https://bdc.rtvmedia.org.local:8443/kiwi/');
 const browserName = process.env.KIWI_SMOKE_BROWSER || 'chromium';
 const slice = Number(process.env.KIWI_THEME_AUDIT_SLICE || '1');
+const finalSource = process.env.KIWI_THEME_AUDIT_FINAL_SOURCE === '1';
+const finalReference = '67f2532069054f48f0bc703b0a54b64edf655678ff8ae48bfb19f125e0cb5ccb';
 const nativeZoomOnly = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM_ONLY === '1';
 const nativeZoom = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM === '1' || nativeZoomOnly;
 const controlsOnly = process.env.KIWI_THEME_AUDIT_CONTROLS_ONLY === '1';
@@ -44,6 +46,13 @@ const shellSuite = process.env.KIWI_THEME_AUDIT_SHELL_SUITE || 'matrix';
 const evidenceRoot = path.resolve(process.env.KIWI_THEME_EVIDENCE_DIR || path.join(sourceRoot, '..', '.kiwi-theme-audit/evidence', `slice-${String(slice).padStart(2, '0')}`, `contract-${new Date().toISOString().replace(/[:.]/g, '-')}`));
 const evidenceDir = path.join(evidenceRoot, browserName);
 const referencePath = path.join(sourceRoot, 'plans/kiwi-light-and-shadow-theme-palette-showcase.html');
+if (finalSource) {
+    if (!process.env.KIWI_THEME_APP_ROOT) throw new Error('Current-source legacy checks require an explicit application worktree.');
+    if (slice === 10 || !(controlsOnly || customerOnly || nativeCustomer) || (customerOnly && customerPhase !== 'after')) {
+        throw new Error('This current-source bridge supports legacy controls and AFTER customer checks only; final10 remains separate.');
+    }
+    if (sha256(await readFile(referencePath)) !== finalReference) throw new Error('Current-source checks require the approved reference67.');
+}
 const stylesheetNames = ['styles.css', 'delivery-date-picker.css', 'article-search.css', 'contextual-feedback.css', 'session-outbox.css'];
 const actionPrimitiveClasses = [
     'btn-primary', 'btn-secondary', 'btn-danger', 'btn-close', 'icon-btn', 'remark-shortcut',
@@ -374,6 +383,34 @@ async function referenceContract(viewport) {
             quiet: await measure(page, '#themeAuditQuietReference'),
             choice: await measure(page, '.subscription-choice')
         };
+        if (finalSource) {
+            contract.referenceSha256 = sha256(await readFile(referencePath));
+            if (contract.referenceSha256 !== finalReference) throw new Error('The approved reference changed before focus measurement.');
+            const input = page.locator('.search-input').first();
+            await input.scrollIntoViewIfNeeded();
+            await input.focus();
+            await page.keyboard.press('ArrowRight');
+            await painted(page);
+            contract.inputFocus = await input.evaluate(node => {
+                const style = getComputedStyle(node);
+                return {
+                    active: document.activeElement === node, focusVisible: node.matches(':focus-visible'),
+                    tag: node.tagName, type: node.type,
+                    outlineWidth: style.outlineWidth, outlineOffset: style.outlineOffset,
+                    outlineColor: style.outlineColor, boxShadow: style.boxShadow
+                };
+            });
+            await writeFile(path.join(evidenceDir, `${viewport.width}x${viewport.height}-reference-focus-contract.json`),
+                JSON.stringify({ marker: 'theme_audit', referencePath, referenceSha256: contract.referenceSha256,
+                    inputFocus: contract.inputFocus }, null, 2) + '\n');
+            await capture(page, 'reference-text-focus', undefined, 'Actual ref67 native keyboard focus; whole viewport, documentation header excluded.');
+            const focus = contract.inputFocus;
+            if (!focus.active || !focus.focusVisible || focus.tag !== 'INPUT' || focus.type !== 'search'
+                || focus.outlineWidth !== '2px' || focus.outlineOffset !== '0px'
+                || focus.outlineColor !== contract.primary.backgroundColor || focus.boxShadow !== 'none') {
+                throw new Error('The actual focused reference must retain its approved single flush2px text-entry boundary.');
+            }
+        }
         contract.choiceStates = {};
         for (const [state, selector] of [
             ['checked', '.subscription-choice:has(input:checked)'],
