@@ -8,6 +8,10 @@ This draft checkpoint preserves the operational acceptance runner, its strict tr
 
 Final integration is not complete: the pure registry has78 pending review cells, the final driver candidate remains unadopted, and this tooling branch still needs reconciliation with accepted09 plus icon155. No full-interface acceptance follows from this checkpoint. Keep PR144 draft. Evidence and the user-requested17:30 pause handoff are under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/`; no screenshots or actual customer data are committed.
 
+## Icon validation checkpoint — 2026-11-16
+
+The new icon driver retains exact current/Git/runtime membership (216 files), native local authentication and explicit dual-base API fixtures. Node syntax and whitespace pass. Firefox broad source32db2641 has171 checks/84 frames plus an isolated SDK specimen; finalb782eb32 call-only390 has23checks/8frames in each engine. Broad Chromium attempts remain incomplete; visible filled-history and remaining advanced/native/full privacy gates are not accepted. All source-specific failures and supplements remain separate in durable Nov16 evidence. The driver is a checkpoint, not completed final10 integration; its additional source review and the full matrix remain open. No legacy helper is changed by this checkpoint.
+
 ## Implementation evidence register
 
 Dedicated worktree: `/home/bartdeijkers/_worktrees/validate-theme-showcase-alignment`. Branch: `codex/validate-theme-showcase-alignment`. PR: [#144](https://github.com/bindinc/kiwi/pull/144); finalization follows slice 09. No merge or deployment is included.
