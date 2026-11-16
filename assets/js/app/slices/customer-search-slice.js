@@ -1,3 +1,4 @@
+import { interfaceIcon, iconLabel } from '../interface-icons.js';
 import { getGlobalScope } from '../services.js';
 import { NAME_INSERTION_PREFIXES } from '../subscription-shared-helpers.js';
 
@@ -385,7 +386,7 @@ function buildSearchQueryLabel(filters = readSearchDisplayFilters()) {
 function getWelcomeMessageMarkup() {
     return `
         <div class="empty-state">
-            <span class="empty-icon">👤</span>
+            <span class="empty-icon">${interfaceIcon('person')}</span>
             <h2>${translateKey('welcome.title', {}, 'Welkom bij Klantenservice')}</h2>
             <p>${translateKey('welcome.description', {}, 'Zoek een klant of start een nieuwe actie')}</p>
         </div>
@@ -395,7 +396,7 @@ function getWelcomeMessageMarkup() {
 function getSearchEmptyStateMarkup() {
     return `
         <div class="empty-state">
-            <span class="empty-icon">🔍</span>
+            <span class="empty-icon">${interfaceIcon('search')}</span>
             <h2>${translateKey('search.noneFoundTitle', {}, 'Geen klanten gevonden')}</h2>
             <p>${translateKey('search.noneFoundDescription', {}, 'Pas je zoekcriteria aan en probeer opnieuw')}</p>
         </div>
@@ -769,7 +770,7 @@ function renderCustomerRow(customer) {
                                 data-action="call-session.identify-caller"
                                 data-arg-customer-id="${customer.id}"
                                 data-action-stop-propagation="true">
-                            👤 Identificeer
+                            ${iconLabel('person', translateKey('calls.identifyAction', {}, 'Identificeer'), 'calls.identifyAction')}
                         </button>
                     ` : ''}
                 </div>

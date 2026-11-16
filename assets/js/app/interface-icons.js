@@ -1,0 +1,57 @@
+// theme_audit: trusted, self-contained interface glyphs. Never pass customer or provider markup.
+const glyphs = {
+    "phone": "<path d=\"M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z\"/>",
+    "person": "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21v-2a8 8 0 0 1 16 0v2\"/>",
+    "search": "<circle cx=\"10.5\" cy=\"10.5\" r=\"6.5\"/><path d=\"m16 16 5 5\"/>",
+    "clock": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/>",
+    "pause": "<path d=\"M8 5v14M16 5v14\"/>",
+    "play": "<path d=\"m8 4 12 8-12 8Z\"/>",
+    "music": "<path d=\"M9 18V5l12-2v13M9 8l12-2\"/><ellipse cx=\"6\" cy=\"18\" rx=\"3\" ry=\"3\"/><ellipse cx=\"18\" cy=\"16\" rx=\"3\" ry=\"3\"/>",
+    "clipboard": "<path d=\"M8 4H5v18h14V4h-3M8 10h8M8 14h8M8 18h5\"/><rect x=\"8\" y=\"2\" width=\"8\" height=\"4\" rx=\"1\"/>",
+    "newspaper": "<path d=\"M4 4h16v16H4a2 2 0 0 1-2-2V8h2M8 8h8M8 12h3M8 16h3M15 12h1M15 16h1\"/>",
+    "cart": "<path d=\"M2 3h3l3 12h11l3-9H6M8 15l-1 3h13\"/><circle cx=\"9\" cy=\"21\" r=\"1\"/><circle cx=\"19\" cy=\"21\" r=\"1\"/>",
+    "edit": "<path d=\"m15 4 5 5M4 20l1-6L16 3a2 2 0 0 1 3 0l2 2a2 2 0 0 1 0 3L10 19Z\"/>",
+    "ban": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m6 6 12 12\"/>",
+    "target": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"5\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/>",
+    "transfer": "<path d=\"M3 7h17l-4-4M21 17H4l4 4M20 7l-4 4M4 17l4-4\"/>",
+    "warning": "<path d=\"m12 3 10 18H2Z M12 9v4M12 17h.01\"/>",
+    "trash": "<path d=\"M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7\"/>",
+    "ticket": "<path d=\"M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4ZM15 6v2M15 11v2M15 16v2\"/>",
+    "coins": "<ellipse cx=\"9\" cy=\"6\" rx=\"7\" ry=\"3\"/><path d=\"M2 6v5c0 4 14 4 14 0V6M2 11v5c0 4 14 4 14 0v-5M16 9c8 0 8 6 0 6M16 15v5c7 0 7-5 7-5v-3\"/>",
+    "star": "<path d=\"m12 2 3 6.5 7 .9-5 5 1.3 7-6.3-3.5-6.3 3.5 1.3-7-5-5 7-.9Z\"/>",
+    "mail": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"m3 6 9 7 9-7\"/>",
+    "people": "<circle cx=\"9\" cy=\"8\" r=\"3\"/><path d=\"M2 21v-2a7 7 0 0 1 14 0v2M17 5a3 3 0 0 1 0 6M19 14a7 7 0 0 1 3 5v2\"/>",
+    "door": "<path d=\"M3 21h18M6 21V3h12v18M14 12h.01\"/>",
+    "card": "<rect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\"/><path d=\"M2 9h20M6 15h4\"/>",
+    "bank": "<path d=\"m2 8 10-6 10 6ZM4 21h16M6 11v7M12 11v7M18 11v7\"/>",
+    "receipt": "<path d=\"M5 2l3 2 4-2 4 2 3-2v20l-3-2-4 2-4-2-3 2ZM9 8h6M9 12h6M9 16h3\"/>",
+    "package": "<path d=\"m12 2 10 5v10l-10 5-10-5V7ZM2 7l10 5 10-5M12 12v10M7 4.5l10 5\"/>",
+    "wrench": "<path d=\"M14 6a6 6 0 0 0-7 8l-5 5 3 3 5-5a6 6 0 0 0 8-7l-4 4-4-4Z\"/>",
+    "move": "<path d=\"M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3\"/>",
+    "rectangle": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"1\"/>",
+    "arrow-up-right": "<path d=\"M5 19 19 5M5 5h14v14\"/>",
+    "blur": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M7 8h2M13 8h4M7 12h5M16 12h1M7 16h2M13 16h4\"/>",
+    "close": "<path d=\"m6 6 12 12M18 6 6 18\"/>",
+    "shield": "<path d=\"m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6ZM9 12l2 2 4-4\"/>",
+    "check": "<path d=\"m5 12 4 4L19 6\"/>",
+    "plus": "<path d=\"M12 4v16M4 12h16\"/>",
+    "info": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 11v6M12 7h.01\"/>",
+    "record": "<circle cx=\"12\" cy=\"12\" r=\"7\"/>",
+    "logout": "<path d=\"M9 21H3V3h6M9 12h13l-4-4M22 12l-4 4\"/>",
+    "calendar": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M7 3v4M17 3v4M3 11h18\"/>",
+    "help": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 18h.01\"/>"
+};
+
+function escapeText(value) {
+    return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+}
+
+export function interfaceIcon(name) {
+    if (!Object.hasOwn(glyphs, name)) return '';
+    return `<svg class="interface-icon" data-interface-icon="${name}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${glyphs[name]}</svg>`;
+}
+
+export function iconLabel(name, label, translationKey = '') {
+    const binding = translationKey ? ` data-i18n="${escapeText(translationKey)}"` : '';
+    return `${interfaceIcon(name)} <span class="interface-icon-label"${binding}>${escapeText(label)}</span>`;
+}

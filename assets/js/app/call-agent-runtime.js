@@ -67,8 +67,18 @@ function runtimeSelectCustomer(customerId) {
     return invokeRuntimeCompatibilityMethod('selectCustomer', [customerId]);
 }
 
-function runtimeShowToast(message, type = 'success') {
-    return invokeRuntimeCompatibilityMethod('showToast', [message, type]);
+function runtimeIconLabel(name, key, fallback) {
+    const label = translate(key, {}, fallback);
+    return window.kiwiInterfaceIcons?.iconLabel(name, label, key) || label;
+}
+
+function runtimeShowToast(message, type = 'success', options) {
+    const args = options ? [message, type, options] : [message, type];
+    return invokeRuntimeCompatibilityMethod('showToast', args);
+}
+
+function runtimeToastPresentation(icon, key, params, fallback) {
+    return { presentation: { icon, message: translate('interfaceMessages.' + key, params, fallback) } };
 }
 
 function runtimeNowMs() {
@@ -339,7 +349,7 @@ async function toggleCallHold() {
     
     if (callSession.onHold) {
         // Put call on hold
-        holdBtn.innerHTML = translate('calls.resumeButtonLabel', {}, '▶️ Hervatten');
+        holdBtn.innerHTML = runtimeIconLabel('play', 'calls.resumeButtonLabel', 'Hervatten');
         holdBtn.classList.add('on-hold');
         
         // Show hold indicator
@@ -349,7 +359,7 @@ async function toggleCallHold() {
         const holdIndicator = document.createElement('div');
         holdIndicator.id = 'holdIndicator';
         holdIndicator.className = 'hold-indicator';
-        holdIndicator.innerHTML = translate('calls.holdIndicator', {}, '🎵 Klant in wacht');
+        holdIndicator.innerHTML = runtimeIconLabel('music', 'calls.holdIndicator', 'Klant in wacht');
         sessionInfo.appendChild(holdIndicator);
         
         if (!window.kiwiApi) {
@@ -368,7 +378,7 @@ async function toggleCallHold() {
         }
     } else {
         // Resume call
-        holdBtn.innerHTML = translate('calls.holdButtonLabel', {}, '⏸️ In Wacht Zetten');
+        holdBtn.innerHTML = runtimeIconLabel('pause', 'calls.holdButtonLabel', 'In Wacht Zetten');
         holdBtn.classList.remove('on-hold');
         
         sessionInfo.classList.remove('call-on-hold');
@@ -1312,7 +1322,7 @@ async function debugGenerateQueue() {
     
     runtimeShowToast(
         translate('queue.generated', { count: queueSize }, `✅ Wachtrij gegenereerd met ${queueSize} bellers`),
-        'success'
+        'success', runtimeToastPresentation('check', 'generated', { count: queueSize }, `Wachtrij gegenereerd met ${queueSize} bellers`)
     );
     
     // Update debug status
@@ -1467,7 +1477,7 @@ async function debugClearQueue() {
         if (debugStatus) {
             debugStatus.textContent = translate('queue.debugStatusDisabled', {}, 'Uitgeschakeld');
         }
-        runtimeShowToast(translate('queue.cleared', {}, '✅ Wachtrij gewist'), 'info');
+        runtimeShowToast(translate('queue.cleared', {}, '✅ Wachtrij gewist'), 'info', runtimeToastPresentation('check', 'cleared', {}, 'Wachtrij gewist'));
     }
 }
 
@@ -1495,8 +1505,8 @@ function updateDebugQueuePreview() {
         item.className = 'debug-queue-item';
         if (index === 0) item.classList.add('current');
         const callerTypeLabel = entry.callerType === 'known'
-            ? translate('queue.callerTypeKnown', {}, '👤 Bekend')
-            : translate('queue.callerTypeAnonymous', {}, '❓ Anoniem');
+            ? runtimeIconLabel('person', 'queue.callerTypeKnown', 'Bekend')
+            : runtimeIconLabel('help', 'queue.callerTypeAnonymous', 'Anoniem');
         
         item.innerHTML = `
             <div class="debug-queue-item-info">
@@ -1509,7 +1519,7 @@ function updateDebugQueuePreview() {
                 </div>
             </div>
             <div class="debug-queue-item-wait">
-                ⏳ ${formatTime(entry.waitTime)}
+                ${window.kiwiInterfaceIcons?.interfaceIcon('clock') || ''} ${formatTime(entry.waitTime)}
             </div>
         `;
         
@@ -1541,12 +1551,12 @@ function isRecordingEnabled() {
  */
 async function acceptNextCall() {
     if (!callQueue.enabled || callQueue.queue.length === 0) {
-        runtimeShowToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
+        runtimeShowToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error', runtimeToastPresentation('warning', 'empty', {}, 'Geen bellers in wachtrij'));
         return;
     }
     
     if (callSession.active) {
-        runtimeShowToast(translate('queue.activeCallExists', {}, '⚠️ Er is al een actief gesprek'), 'error');
+        runtimeShowToast(translate('queue.activeCallExists', {}, '⚠️ Er is al een actief gesprek'), 'error', runtimeToastPresentation('warning', 'activeCallExists', {}, 'Er is al een actief gesprek'));
         return;
     }
     
@@ -1554,7 +1564,7 @@ async function acceptNextCall() {
     if (agentStatus.current !== 'ready') {
         runtimeShowToast(
             translate('queue.mustBeReady', {}, '⚠️ Agent status moet "Beschikbaar" zijn om gesprek te accepteren'),
-            'error'
+            'error', runtimeToastPresentation('warning', 'mustBeReady', {}, 'Agent status moet "Beschikbaar" zijn om gesprek te accepteren')
         );
         return;
     }
@@ -1579,7 +1589,7 @@ async function acceptNextCall() {
         return;
     }
     if (!nextEntry) {
-        runtimeShowToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error');
+        runtimeShowToast(translate('queue.empty', {}, '⚠️ Geen bellers in wachtrij'), 'error', runtimeToastPresentation('warning', 'empty', {}, 'Geen bellers in wachtrij'));
         return;
     }
     
@@ -1626,7 +1636,7 @@ function startCallFromQueue(queueEntry) {
     
     runtimeShowToast(
         translate('calls.startedFromQueue', { name: queueEntry.customerName }, `📞 Gesprek gestart met ${queueEntry.customerName}`),
-        'success'
+        'success', runtimeToastPresentation('phone', 'startedFromQueue', { name: queueEntry.customerName }, `Gesprek gestart met ${queueEntry.customerName}`)
     );
 }
 

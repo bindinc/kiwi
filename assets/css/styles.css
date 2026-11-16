@@ -5396,3 +5396,25 @@ dialog.form-lightbox::backdrop {
 
 /* One flush boundary gives text-entry focus its full 2px area without a second separated ring. */
 :is(input:not([type="radio"], [type="checkbox"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="range"], [type="color"], [type="image"]), select, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: 0; box-shadow: none; }
+
+/* theme_audit: shared line glyphs retain the containing control's semantics and hit area. */
+.interface-icon {
+    display: inline-block;
+    inline-size: 1.125em;
+    block-size: 1.125em;
+    flex: none;
+    vertical-align: -0.2em;
+    pointer-events: none;
+}
+.empty-icon .interface-icon,
+.access-denied-icon .interface-icon {
+    inline-size: 1em;
+    block-size: 1em;
+}
+
+.btn-close .interface-icon,
+.modal-close .interface-icon,
+.contextual-feedback-close .interface-icon {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+}

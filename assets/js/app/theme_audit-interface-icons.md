@@ -1,6 +1,6 @@
 # theme_audit — Unify interface icons
 
-Status: preparation only. The user requested this refinement on 2026-11-13, using the existing header icons as the visual reference. No icon implementation or rendered acceptance is claimed.
+Status: implementation in progress from 2026-11-16. The user-approved reference is the existing quiet header icon family. Source review and actual rendered acceptance remain required; this draft is not accepted.
 
 Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629). Parent: [theme_audit plan](../../../plans/theme_audit.md).
 
@@ -10,6 +10,12 @@ PR: draft [#155](https://github.com/bindinc/kiwi/pull/155).
 Initial base: `codex/align-theme-operational-states` at `31056b4e4d7eae9010defc2e8b8c0a9e7d0ffe5c`.
 
 Finish slice09 and adopt its accepted source before implementing this refinement. Keep application edits sequential. Complete the icon refinement before final slice10 integration so the final whole-interface review includes the approved icon language. The additional PR retains one Unreleased changelog entry and does not authorize merging, deployment or worktree cleanup.
+
+## Accepted dependency adoption — 2026-11-16
+
+Accepted slice09 source `2c193b25770506321d3b85bf9e5954deb159c2ef` is adopted in this branch before application changes. Preparation head `40a334757a2f8165981e19efac4a51a5fe0d12b9` preserves the existing single icon changelog entry and the completed09 entry. The earlier source inventory remains a historical orientation; current implementation and evidence need their own exact source identities.
+
+Implementation, independent review and Compose validation have separate owners. The user-authorized work window ends at11:55 Europe/Amsterdam; unfinished gates remain explicit at pause. Current guidance and evidence are retained under `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-16/icon-refinement/`. Context7 MDN documentation confirms decorative SVG hiding and accessible names on containing controls. The retrieved icons guide is applied with self-contained inline SVG to retain faithful isolated screenshot capture.
 
 ## Approved direction
 
@@ -58,4 +64,12 @@ This classification is preparation, not implementation or rendered acceptance. S
 
 ## Checks so far
 
-Read-only source orientation and repository instructions only. No application/runtime changes, browser validation, merge, deployment or cleanup.
+Implementation checkpoint on2026-11-16: all142 frontend tests, three guardrails,18 changed-JavaScript syntax checks and whitespace pass. Container lint passes all five Twig files. The frozen candidate manifest is `5f523181109aeb4c545f87a679af3fd22463a3c67fe649b537e23b2e656b0365`; independent source and actual Chromium/Firefox/private-capture gates are in progress. No rendered acceptance is inferred from these checks.
+
+## Implementation checkpoint — 2026-11-16
+
+A trusted40-glyph self-contained SVG catalogue and matching Twig macro replace the active demo pictograms across forms, customer/service actions, history decoration, calls/queue, article/catalogue/cart and feedback controls. Dynamic captions use separate translated leaf nodes; the readonly customer action keeps its View state through NL/EN/NL. Icon-only subscription controls receive localized accessible names.
+
+Known call/queue notifications carry explicit separate presentation metadata; stored raw history/messages, shared business translations, delivery presets and provider/user text stay unchanged. The outbox save-notice override clears optional presentation so status stays authoritative. Caption output is escaped and icons remain decorative, nonfocusable and pointer-inert. No new public/privacy annotation or SDK/fidelity change is introduced.
+
+Intentional exceptions are existing approved SVGs, source logos/avatars and unused scaffold favicon, native controls/confirmation text, presence/recording/ACW indicators, ordinary arrows/check notation and an inactive commented demo action. These are distinct from remaining validation gates. The inventory and exact protected-value checks remain in the frozen candidate archive; the complete interface still needs final slice10 acceptance after this refinement.

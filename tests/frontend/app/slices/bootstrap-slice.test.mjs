@@ -14,7 +14,9 @@ function createElement(initialValue = '') {
         style: {
             display: ''
         },
-        textContent: ''
+        textContent: '',
+        get innerHTML() { return this.markup || ''; },
+        set innerHTML(value) { this.markup = value; this.textContent = value.replace(/<[^>]*>/g, '').trim(); }
     };
 }
 

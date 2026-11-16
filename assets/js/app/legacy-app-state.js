@@ -1,3 +1,4 @@
+import { interfaceIcon, iconLabel } from './interface-icons.js';
 import { renderAddressFields } from './address-fields.js';
 import { endAddressSessions } from './address-completion.js';
 // State and utility functions previously in app.js.
@@ -622,6 +623,7 @@ export function applyBootstrapData(initializedState) {
 export function installLegacyAppState() {
     const globalScope = getGlobalScope();
     if (!globalScope) return;
+    globalScope.kiwiInterfaceIcons = Object.freeze({ interfaceIcon, iconLabel });
 
     // Mutable state — use defineProperty so that classic-script assignments
     // like `customers = [...]` update the canonical state object.

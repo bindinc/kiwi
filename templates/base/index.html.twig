@@ -1,3 +1,4 @@
+{% import 'components/interface-icons.html.twig' as icons %}
 <!DOCTYPE html>
 <html lang="nl"
       data-kiwi-base-path="{{ app.request ? app.request.basePath : '' }}"
@@ -194,14 +195,14 @@
                     <div class="queue-info-content">
                         <!-- Volgende beller informatie -->
                         <div class="queue-next-caller">
-                            <span class="queue-icon">👤</span>
+                            <span class="queue-icon">{{ icons.icon('person') }}</span>
                             <span class="queue-label" data-i18n="indexHtml.text.volgende_beller_d50d542b">Volgende beller:</span>
                             <span id="queueNextCallerName" class="queue-next-name" data-feedback-sensitive="name" data-i18n="indexHtml.text.jan_jansen_b34aeb2f">Jan Jansen</span>
                         </div>
                         
                         <!-- Service nummer -->
                         <div class="queue-service">
-                            <span class="service-icon">📞</span>
+                            <span class="service-icon">{{ icons.icon('phone') }}</span>
                             <span id="queueNextService" data-i18n="indexHtml.text.avrobode_service_6d7c87d2">AVROBODE SERVICE</span>
                         </div>
                         
@@ -214,7 +215,7 @@
                         
                         <!-- Queue lengte indicator -->
                         <div class="queue-length">
-                            <span class="queue-length-icon">📋</span>
+                            <span class="queue-length-icon">{{ icons.icon('clipboard') }}</span>
                             <span data-i18n="indexHtml.text.in_wachtrij_9677218e">In wachtrij: </span>
                             <span id="queueLength" class="queue-count">8</span>
                         </div>
@@ -224,10 +225,7 @@
                             <button id="acceptCallBtn" 
                                     class="btn-accept-call" 
                                     data-action="queue.accept-next"
-                                    data-action-event="click"
-                                    data-i18n="indexHtml.text.gesprek_starten_79f484da">
-                                📞 Gesprek Starten
-                            </button>
+                                    data-action-event="click">{{ icons.icon('phone') }} <span data-i18n="indexHtml.text.gesprek_starten_79f484da">Gesprek Starten</span></button>
                         </div>
                     </div>
                 </div>
@@ -236,7 +234,7 @@
                 <div id="sessionInfo" class="session-info" style="display: none;">
                     <div class="session-info-content">
                         <div class="session-service">
-                            <span class="service-icon">📞</span>
+                            <span class="service-icon">{{ icons.icon('phone') }}</span>
                             <span id="sessionServiceNumber" class="service-number" data-i18n="indexHtml.text.avrobode_service_6d7c87d2">AVROBODE SERVICE</span>
                         </div>
                         <div class="session-wait">
@@ -249,7 +247,7 @@
                             <span id="sessionCallerName" data-feedback-sensitive="name" data-i18n="indexHtml.text.anonieme_beller_0c3daeaf">Anonieme Beller</span>
                         </div>
                         <div class="session-duration">
-                            <span class="duration-icon">⏱️</span>
+                            <span class="duration-icon">{{ icons.icon('clock') }}</span>
                             <span id="sessionDuration">00:00:00</span>
                         </div>
                         
@@ -265,15 +263,11 @@
                                     class="btn-hold-call" 
                                     data-action="call-session.toggle-hold"
                                     data-action-event="click"
-                                    style="display: none;" data-i18n="indexHtml.text.in_wacht_52bc255e">
-                                ⏸️ In Wacht
-                            </button>
+                                    style="display: none;">{{ icons.icon('pause') }} <span data-i18n="indexHtml.text.in_wacht_52bc255e">In Wacht</span></button>
                             <button id="endCallBtn" class="btn-end-call" 
                                     data-action="call-session.end"
                                     data-action-event="click"
-                                    style="display: none;" data-i18n="indexHtml.text.beeindig_gesprek_0ca90bd2">
-                                📞 Beëindig Gesprek
-                            </button>
+                                    style="display: none;">{{ icons.icon('phone') }} <span data-i18n="indexHtml.text.beeindig_gesprek_0ca90bd2">Beëindig Gesprek</span></button>
                         </div>
                     </div>
                 </div>
@@ -285,9 +279,7 @@
                         <span class="acw-label" data-i18n="indexHtml.text.nabewerkingstijd_a424f04e">Nabewerkingstijd</span>
                         <span class="acw-timer" id="acwTimer">0:00</span>
                         <span class="acw-instruction" data-i18n="indexHtml.text.vul_het_nabewerkingsscherm_in_om_klaar_te_zijn_voor_het_volgende_gesprek_230eaff9">Vul het nabewerkingsscherm in om klaar te zijn voor het volgende gesprek</span>
-                        <button class="btn-finish-acw" data-action="acw.manual-finish" data-action-event="click" data-i18n="indexHtml.text.klaar_91863a41">
-                            ✅ Klaar
-                        </button>
+                        <button class="btn-finish-acw" data-action="acw.manual-finish" data-action-event="click">{{ icons.icon('check') }} <span data-i18n="indexHtml.text.klaar_91863a41">Klaar</span></button>
                     </div>
                 </div>
             </div>
@@ -455,9 +447,7 @@
                                     <option value="postal" data-i18n="indexHtml.text.postcode_e7a57d06">Postcode</option>
                                     <option value="subscriptions" data-i18n="indexHtml.text.actieve_abonnementen_bd7c947c">Actieve abonnementen</option>
                                 </select>
-                                <button class="btn btn-small btn-close-results" type="button" data-action="clear-search-results" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">
-                                    ✕
-                                </button>
+                                <button class="btn btn-small btn-close-results" type="button" data-action="clear-search-results" title="Sluiten" data-i18n-title="indexHtml.title.sluiten_dc802a5b">{{ icons.icon('close') }}</button>
                             </div>
                         </div>
                         <div class="results-table-wrapper" role="group" tabindex="0" aria-labelledby="resultsTitle">
@@ -496,7 +486,7 @@
                         <div class="card">
                             <div class="form-header">
                                 <h2 id="sessionOutboxEditorTitle">Opgeslagen wijziging</h2>
-                                <button type="button" class="btn-close" data-session-outbox-editor-close aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b">✕</button>
+                                <button type="button" class="btn-close" data-session-outbox-editor-close aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b">{{ icons.icon('close') }}</button>
                             </div>
                             <form>
                                 <p>Voorlopige gegevens. De sessie blijft gepauzeerd na opslaan.</p>
@@ -522,13 +512,11 @@
                                             class="btn btn-small btn-primary"
                                             type="button"
                                             data-action="call-session.identify-current-customer"
-                                            style="display: none;" data-i18n="indexHtml.text.dit_is_de_persoon_die_belt_8096cd3d">
-                                        👤 Dit is de persoon die belt
-                                    </button>
-                                    <button id="editCustomerBtn" class="btn btn-small btn-secondary" type="button" data-action="edit-customer" data-i18n="indexHtml.text.bewerken_69177f14">✏️ Bewerken</button>
-                                    <button id="resendMagazineBtn" class="btn btn-small btn-secondary" type="button" data-action="show-resend-magazine" data-i18n="indexHtml.text.editie_verzenden_f7f6196d">📮 Editie Verzenden</button>
+                                            style="display: none;">{{ icons.icon('person') }} <span data-i18n="indexHtml.text.dit_is_de_persoon_die_belt_8096cd3d">Dit is de persoon die belt</span></button>
+                                    <button id="editCustomerBtn" class="btn btn-small btn-secondary" type="button" data-action="edit-customer">{{ icons.icon('edit') }} <span data-i18n="indexHtml.text.bewerken_69177f14">Bewerken</span></button>
+                                    <button id="resendMagazineBtn" class="btn btn-small btn-secondary" type="button" data-action="show-resend-magazine">{{ icons.icon('mail') }} <span data-i18n="indexHtml.text.editie_verzenden_f7f6196d">Editie Verzenden</span></button>
                                     <!-- <button id="winbackFlowBtn" class="btn btn-small btn-secondary" onclick="showWinbackFlow()">🎯 Winback/Opzegging</button> -->
-                                    <button id="editorialComplaintBtn" class="btn btn-small btn-secondary" type="button" data-action="show-editorial-complaint-form" data-i18n="indexHtml.text.klacht_redactie_45bd08ef">✍️ Klacht Redactie</button>
+                                    <button id="editorialComplaintBtn" class="btn btn-small btn-secondary" type="button" data-action="show-editorial-complaint-form">{{ icons.icon('edit') }} <span data-i18n="indexHtml.text.klacht_redactie_45bd08ef">Klacht Redactie</span></button>
                                 </div>
                             </div>
                             <dl class="customer-meta">
@@ -557,7 +545,7 @@
                     <div class="card onepager-container">
                         <div class="form-header">
                             <h2 data-i18n="indexHtml.text.nieuw_abonnement_aanmaken_a7bddc25">Nieuw Abonnement Aanmaken</h2>
-                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="newSubscriptionForm">✕</button>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="newSubscriptionForm">{{ icons.icon('close') }}</button>
                         </div>
                         <form id="subscriptionForm" class="form-section" data-action="create-subscription" data-action-event="submit" data-action-prevent-default="true">
                             <input type="hidden" id="subscriptionSubmissionId" data-feedback-sensitive="id">
@@ -767,7 +755,7 @@
                                         <div class="payment-option">
                                             <input type="radio" id="subPaymentInstruction" name="subPayment" value="AC">
                                             <label for="subPaymentInstruction">
-                                                <span class="payment-icon" aria-hidden="true">🧾</span>
+                                                <span class="payment-icon" aria-hidden="true">{{ icons.icon('receipt') }}</span>
                                                 <span class="payment-text" data-i18n="indexHtml.text.betaalinstructie_7fb08411">Factuur</span>
                                             </label>
                                         </div>
@@ -823,8 +811,8 @@
                 <div id="articleSaleForm" class="form-container" style="display: none;">
                     <div class="card onepager-container article-sale-container">
                         <div class="form-header">
-                            <h2 data-i18n="indexHtml.text.artikel_verkoop_baa29866">🛒 Artikel Verkoop</h2>
-                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-article-sale-form">✕</button>
+                            <h2>{{ icons.icon('cart') }} <span data-i18n="indexHtml.text.artikel_verkoop_baa29866">Artikel Verkoop</span></h2>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-article-sale-form">{{ icons.icon('close') }}</button>
                         </div>
                         <form id="articleForm"
                               class="form-section"
@@ -917,40 +905,22 @@
                                     <div class="delivery-remarks-shortcuts">
                                         <button type="button" class="remark-shortcut" 
                                                 data-action="add-delivery-remark"
-                                                data-arg-remark-key="delivery.remarkPresets.deliverToNeighbors"
-                                                data-i18n="indexHtml.text.bij_buren_06561e94">
-                                            👥 Bij buren
-                                        </button>
+                                                data-arg-remark-key="delivery.remarkPresets.deliverToNeighbors">{{ icons.icon('people') }} <span data-i18n="indexHtml.text.bij_buren_06561e94">Bij buren</span></button>
                                         <button type="button" class="remark-shortcut" 
                                                 data-action="add-delivery-remark"
-                                                data-arg-remark-key="delivery.remarkPresets.useBackOrSideDoor"
-                                                data-i18n="indexHtml.text.achterdeur_a788c6f5">
-                                            🚪 Achterdeur
-                                        </button>
+                                                data-arg-remark-key="delivery.remarkPresets.useBackOrSideDoor">{{ icons.icon('door') }} <span data-i18n="indexHtml.text.achterdeur_a788c6f5">Achterdeur</span></button>
                                         <button type="button" class="remark-shortcut" 
                                                 data-action="add-delivery-remark"
-                                                data-arg-remark-key="delivery.remarkPresets.deliverAfterNoon"
-                                                data-i18n="indexHtml.text.na_12_00_c38dd76a">
-                                            🕐 Na 12:00
-                                        </button>
+                                                data-arg-remark-key="delivery.remarkPresets.deliverAfterNoon">{{ icons.icon('clock') }} <span data-i18n="indexHtml.text.na_12_00_c38dd76a">Na 12:00</span></button>
                                         <button type="button" class="remark-shortcut" 
                                                 data-action="add-delivery-remark"
-                                                data-arg-remark-key="delivery.remarkPresets.callBeforeDelivery"
-                                                data-i18n="indexHtml.text.bel_eerst_0178f6be">
-                                            📞 Bel eerst
-                                        </button>
+                                                data-arg-remark-key="delivery.remarkPresets.callBeforeDelivery">{{ icons.icon('phone') }} <span data-i18n="indexHtml.text.bel_eerst_0178f6be">Bel eerst</span></button>
                                         <button type="button" class="remark-shortcut" 
                                                 data-action="add-delivery-remark"
-                                                data-arg-remark-key="delivery.remarkPresets.packageMailboxAvailable"
-                                                data-i18n="indexHtml.text.brievenbus_2528e649">
-                                            📮 Brievenbus
-                                        </button>
+                                                data-arg-remark-key="delivery.remarkPresets.packageMailboxAvailable">{{ icons.icon('mail') }} <span data-i18n="indexHtml.text.brievenbus_2528e649">Brievenbus</span></button>
                                         <button type="button" class="remark-shortcut" 
                                                 data-action="add-delivery-remark"
-                                                data-arg-remark-key="delivery.remarkPresets.handleWithCareFragile"
-                                                data-i18n="indexHtml.text.breekbaar_ccaf32b5">
-                                            ⚠️ Breekbaar
-                                        </button>
+                                                data-arg-remark-key="delivery.remarkPresets.handleWithCareFragile">{{ icons.icon('warning') }} <span data-i18n="indexHtml.text.breekbaar_ccaf32b5">Breekbaar</span></button>
                                     </div>
                                     <textarea id="articleNotes" placeholder="Bezorginstructies of opmerkingen (optioneel)" data-feedback-sensitive="free-text" rows="3" data-i18n-placeholder="indexHtml.placeholder.bezorginstructies_of_opmerkingen_optioneel_f8b242bb"></textarea>
                                 </div>
@@ -964,14 +934,14 @@
                                     <div class="payment-option">
                                         <input type="radio" id="articlePaymentIdeal" name="articlePayment" value="iDEAL" checked>
                                         <label for="articlePaymentIdeal">
-                                            <span class="payment-icon">💳</span>
+                                            <span class="payment-icon">{{ icons.icon('card') }}</span>
                                             <span class="payment-text" data-i18n="indexHtml.text.ideal_klant_ontvangt_buckaroo_checkout_link_per_e_mail_20e08246">iDEAL (Klant ontvangt buckaroo checkout link per e-mail)</span>
                                         </label>
                                     </div>
                                     <div class="payment-option">
                                         <input type="radio" id="articlePaymentTransfer" name="articlePayment" value="Bankoverschrijving">
                                         <label for="articlePaymentTransfer">
-                                            <span class="payment-icon">🏦</span>
+                                            <span class="payment-icon">{{ icons.icon('bank') }}</span>
                                             <span class="payment-text" data-i18n="indexHtml.text.bankoverschrijving_klant_ontvangt_factuur_per_post_533945d7">Bankoverschrijving (klant ontvangt factuur per post)</span>
                                         </label>
                                     </div>
@@ -1017,16 +987,14 @@
                             </div>
                             
                             <div class="form-row">
-                                <button type="button" class="btn btn-secondary btn-block" data-action="add-article-to-order" data-i18n="indexHtml.text.artikel_toevoegen_aan_bestelling_d23832ab">
-                                    ➕ Artikel Toevoegen aan Bestelling
-                                </button>
+                                <button type="button" class="btn btn-secondary btn-block" data-action="add-article-to-order">{{ icons.icon('plus') }} <span data-i18n="indexHtml.text.artikel_toevoegen_aan_bestelling_d23832ab">Artikel Toevoegen aan Bestelling</span></button>
                             </div>
                             
                                     </section>
 
                             <!-- Order Items List -->
                             <div id="orderItemsSection" class="order-items-section article-form-block" style="display: none;">
-                                <h3 class="form-subtitle" data-i18n="indexHtml.text.bestelling_overzicht_7d5a38f4">📋 Bestelling Overzicht</h3>
+                                <h3 class="form-subtitle">{{ icons.icon('clipboard') }} <span data-i18n="indexHtml.text.bestelling_overzicht_7d5a38f4">Bestelling Overzicht</span></h3>
                                 <div id="orderItemsList" class="order-items-list">
                                     <!-- Items will be added dynamically -->
                                 </div>
@@ -1082,8 +1050,8 @@
                 <div id="editCustomerForm" class="form-container" style="display: none;">
                     <div class="card onepager-container">
                         <div class="form-header">
-                            <h2 data-i18n="indexHtml.text.klantgegevens_bewerken_de8f3786">✏️ Klantgegevens Bewerken</h2>
-                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="editCustomerForm">✕</button>
+                            <h2>{{ icons.icon('edit') }} <span data-i18n="indexHtml.text.klantgegevens_bewerken_de8f3786">Klantgegevens Bewerken</span></h2>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="editCustomerForm">{{ icons.icon('close') }}</button>
                         </div>
                         <form id="customerEditForm" class="form-section" data-action="save-customer-edit" data-action-event="submit" data-action-prevent-default="true">
                             <input type="hidden" id="editCustomerId" data-feedback-sensitive="id">
@@ -1183,8 +1151,8 @@
                 <div id="editSubscriptionForm" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2 data-i18n="indexHtml.text.abonnement_bewerken_b16c21e3">✏️ Abonnement Bewerken</h2>
-                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="editSubscriptionForm">✕</button>
+                            <h2>{{ icons.icon('edit') }} <span data-i18n="indexHtml.text.abonnement_bewerken_b16c21e3">Abonnement Bewerken</span></h2>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="editSubscriptionForm">{{ icons.icon('close') }}</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1252,8 +1220,8 @@
                 <div id="resendMagazineForm" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2 data-i18n="indexHtml.text.editie_opnieuw_verzenden_3bd3bf34">📮 Editie Opnieuw Verzenden</h2>
-                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="resendMagazineForm">✕</button>
+                            <h2>{{ icons.icon('mail') }} <span data-i18n="indexHtml.text.editie_opnieuw_verzenden_3bd3bf34">Editie Opnieuw Verzenden</span></h2>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="resendMagazineForm">{{ icons.icon('close') }}</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1289,8 +1257,8 @@
                 <div id="editorialComplaintForm" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2 data-i18n="indexHtml.text.klacht_opmerking_voor_redactie_40e9bc48">✍️ Klacht/Opmerking voor Redactie</h2>
-                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="editorialComplaintForm">✕</button>
+                            <h2>{{ icons.icon('edit') }} <span data-i18n="indexHtml.text.klacht_opmerking_voor_redactie_40e9bc48">Klacht/Opmerking voor Redactie</span></h2>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="editorialComplaintForm">{{ icons.icon('close') }}</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1364,8 +1332,8 @@
                 <div id="restitutionTransferForm" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2 id="restitutionTransferTitle" data-i18n="indexHtml.text.abonnement_overzetten_04a00045">🔄 Abonnement Overzetten</h2>
-                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="restitutionTransferForm">✕</button>
+                            <h2 id="restitutionTransferTitle">{{ icons.icon('transfer') }} <span data-i18n="indexHtml.text.abonnement_overzetten_04a00045">Abonnement Overzetten</span></h2>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="restitutionTransferForm">{{ icons.icon('close') }}</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1434,8 +1402,8 @@
                 <div id="winbackFlow" class="form-container service-form" style="display: none;">
                     <div class="card">
                         <div class="form-header">
-                            <h2 data-i18n="indexHtml.text.winback_opzegging_flow_41075f12">🎯 Winback/Opzegging Flow</h2>
-                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="winbackFlow">✕</button>
+                            <h2>{{ icons.icon('target') }} <span data-i18n="indexHtml.text.winback_opzegging_flow_41075f12">Winback/Opzegging Flow</span></h2>
+                            <button class="btn-close" type="button" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="close-form" data-arg-form-id="winbackFlow">{{ icons.icon('close') }}</button>
                         </div>
                         <div class="service-context">
                             <div><span data-i18n="indexHtml.text.klant_e504253b">Klant:</span> <strong data-service-customer data-feedback-sensitive="name"></strong></div>
@@ -1608,11 +1576,11 @@
                                     <div class="radio-group" role="radiogroup" aria-labelledby="winbackResultLabel">
                                         <label class="radio-option">
                                             <input type="radio" name="winbackResult" value="accepted">
-                                            <span data-i18n="indexHtml.text.klant_accepteert_aanbod_8a706bed">✅ Klant accepteert aanbod</span>
+                                            <span>{{ icons.icon('check') }} <span data-i18n="indexHtml.text.klant_accepteert_aanbod_8a706bed">Klant accepteert aanbod</span></span>
                                         </label>
                                         <label class="radio-option">
                                             <input type="radio" name="winbackResult" value="declined">
-                                            <span data-i18n="indexHtml.text.klant_wijst_af_opzeggen_e84bae32">❌ Klant wijst af, opzeggen</span>
+                                            <span>{{ icons.icon('close') }} <span data-i18n="indexHtml.text.klant_wijst_af_opzeggen_e84bae32">Klant wijst af, opzeggen</span></span>
                                         </label>
                                     </div>
                                 </div>
@@ -1659,7 +1627,7 @@
     <div id="editDeliveryRemarksModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 data-i18n="indexHtml.text.bezorgvoorkeuren_bewerken_2cc5cb32">📦 Bezorgvoorkeuren bewerken</h2>
+                <h2>{{ icons.icon('package') }} <span data-i18n="indexHtml.text.bezorgvoorkeuren_bewerken_2cc5cb32">Bezorgvoorkeuren bewerken</span></h2>
                 <button class="modal-close" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" type="button" data-action="close-edit-delivery-remarks-modal">&times;</button>
             </div>
             <div class="modal-body">
@@ -1669,40 +1637,22 @@
                 <div class="delivery-remarks-shortcuts">
                     <button type="button" class="remark-shortcut" 
                             data-action="add-delivery-remark-modal"
-                            data-arg-remark-key="delivery.remarkPresets.deliverToNeighbors"
-                            data-i18n="indexHtml.text.bij_buren_06561e94">
-                        👥 Bij buren
-                    </button>
+                            data-arg-remark-key="delivery.remarkPresets.deliverToNeighbors">{{ icons.icon('people') }} <span data-i18n="indexHtml.text.bij_buren_06561e94">Bij buren</span></button>
                     <button type="button" class="remark-shortcut" 
                             data-action="add-delivery-remark-modal"
-                            data-arg-remark-key="delivery.remarkPresets.useBackOrSideDoor"
-                            data-i18n="indexHtml.text.achterdeur_a788c6f5">
-                        🚪 Achterdeur
-                    </button>
+                            data-arg-remark-key="delivery.remarkPresets.useBackOrSideDoor">{{ icons.icon('door') }} <span data-i18n="indexHtml.text.achterdeur_a788c6f5">Achterdeur</span></button>
                     <button type="button" class="remark-shortcut" 
                             data-action="add-delivery-remark-modal"
-                            data-arg-remark-key="delivery.remarkPresets.deliverAfterNoon"
-                            data-i18n="indexHtml.text.na_12_00_c38dd76a">
-                        🕐 Na 12:00
-                    </button>
+                            data-arg-remark-key="delivery.remarkPresets.deliverAfterNoon">{{ icons.icon('clock') }} <span data-i18n="indexHtml.text.na_12_00_c38dd76a">Na 12:00</span></button>
                     <button type="button" class="remark-shortcut" 
                             data-action="add-delivery-remark-modal"
-                            data-arg-remark-key="delivery.remarkPresets.callBeforeDelivery"
-                            data-i18n="indexHtml.text.bel_eerst_0178f6be">
-                        📞 Bel eerst
-                    </button>
+                            data-arg-remark-key="delivery.remarkPresets.callBeforeDelivery">{{ icons.icon('phone') }} <span data-i18n="indexHtml.text.bel_eerst_0178f6be">Bel eerst</span></button>
                     <button type="button" class="remark-shortcut" 
                             data-action="add-delivery-remark-modal"
-                            data-arg-remark-key="delivery.remarkPresets.packageMailboxAvailable"
-                            data-i18n="indexHtml.text.brievenbus_2528e649">
-                        📮 Brievenbus
-                    </button>
+                            data-arg-remark-key="delivery.remarkPresets.packageMailboxAvailable">{{ icons.icon('mail') }} <span data-i18n="indexHtml.text.brievenbus_2528e649">Brievenbus</span></button>
                     <button type="button" class="remark-shortcut" 
                             data-action="add-delivery-remark-modal"
-                            data-arg-remark-key="delivery.remarkPresets.handleWithCareFragile"
-                            data-i18n="indexHtml.text.breekbaar_ccaf32b5">
-                        ⚠️ Breekbaar
-                    </button>
+                            data-arg-remark-key="delivery.remarkPresets.handleWithCareFragile">{{ icons.icon('warning') }} <span data-i18n="indexHtml.text.breekbaar_ccaf32b5">Breekbaar</span></button>
                 </div>
                 
                 <label class="form-label" for="editCustomerDeliveryRemarks" data-i18n="indexHtml.text.standaard_bezorginstructies_f4fae7a1">Standaard bezorginstructies</label>
@@ -1724,23 +1674,23 @@
     <div id="dispositionModal" class="modal">
         <div class="modal-content disposition-modal">
             <div class="modal-header">
-                <h2 data-i18n="indexHtml.text.gesprek_afronden_273bd847">📋 Gesprek Afronden</h2>
+                <h2>{{ icons.icon('clipboard') }} <span data-i18n="indexHtml.text.gesprek_afronden_273bd847">Gesprek Afronden</span></h2>
                 <p class="modal-subtitle" data-i18n="indexHtml.text.de_gegevens_hieronder_zijn_automatisch_ingevuld_op_basis_van_de_acties_t_d0fef57c">De gegevens hieronder zijn automatisch ingevuld op basis van de acties tijdens het gesprek</p>
-                <button type="button" class="modal-close" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="disposition.cancel" data-action-event="click">✕</button>
+                <button type="button" class="modal-close" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="disposition.cancel" data-action-event="click">{{ icons.icon('close') }}</button>
             </div>
             <div class="modal-body">
                 <!-- Call Information (Prominent at top) -->
                 <div class="disposition-info">
                     <div class="info-row">
-                        <span data-i18n="indexHtml.text.service_nummer_ad4a39bf">📞 Service nummer:</span>
+                        <span>{{ icons.icon('phone') }} <span data-i18n="indexHtml.text.service_nummer_ad4a39bf">Service nummer:</span></span>
                         <span id="dispServiceNumber">-</span>
                     </div>
                     <div class="info-row">
-                        <span data-i18n="indexHtml.text.gespreksduur_0059cf73">⏱️ Gespreksduur:</span>
+                        <span>{{ icons.icon('clock') }} <span data-i18n="indexHtml.text.gespreksduur_0059cf73">Gespreksduur:</span></span>
                         <span id="dispCallDuration">-</span>
                     </div>
                     <div class="info-row">
-                        <span data-i18n="indexHtml.text.klant_347973e2">👤 Klant:</span>
+                        <span>{{ icons.icon('person') }} <span data-i18n="indexHtml.text.klant_347973e2">Klant:</span></span>
                         <span id="dispCustomerName" data-feedback-sensitive="name">-</span>
                     </div>
                 </div>
@@ -1800,13 +1750,13 @@
     <div id="debugModal" class="modal">
         <div class="modal-content debug-modal-content">
             <div class="modal-header">
-                <h2 data-i18n="indexHtml.text.debug_mode_e4f999e9">🔧 Debug Mode</h2>
+                <h2>{{ icons.icon('wrench') }} <span data-i18n="indexHtml.text.debug_mode_e4f999e9">Debug Mode</span></h2>
                 <button class="modal-close" aria-label="Sluiten" data-i18n-aria-label="indexHtml.title.sluiten_dc802a5b" data-action="debug.close-modal" data-action-event="click">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- PHASE 3: Call Simulation Section -->
                 <div class="debug-section">
-                    <h3 data-i18n="indexHtml.text.call_simulation_811cb3d1">📞 Call Simulation</h3>
+                    <h3>{{ icons.icon('phone') }} <span data-i18n="indexHtml.text.call_simulation_811cb3d1">Call Simulation</span></h3>
                     
                     <div class="debug-row">
                         <label class="form-label" for="debugServiceNumber" data-i18n="indexHtml.text.service_nummer_2a497cde">Service Nummer:</label>
@@ -1846,22 +1796,18 @@
                     </div>
                     
                     <div class="debug-actions">
-                        <button class="btn btn-success btn-block" data-action="debug.start-call" data-action-event="click" data-i18n="indexHtml.text.start_gesprek_simulatie_b219f5d2">
-                            � Start Gesprek Simulatie
-                        </button>
+                        <button class="btn btn-success btn-block" data-action="debug.start-call" data-action-event="click">{{ icons.icon('phone') }} <span data-i18n="indexHtml.text.start_gesprek_simulatie_b219f5d2">Start Gesprek Simulatie</span></button>
                         <button id="debugEndCallBtn" 
                                 class="btn btn-danger btn-block" 
                                 data-action="debug.end-call"
                                 data-action-event="click"
-                                style="display: none;" data-i18n="indexHtml.text.beeindig_telefoongesprek_96bdb1c7">
-                            ❌ Beëindig Telefoongesprek
-                        </button>
+                                style="display: none;">{{ icons.icon('close') }} <span data-i18n="indexHtml.text.beeindig_telefoongesprek_96bdb1c7">Beëindig Telefoongesprek</span></button>
                     </div>
                 </div>
                 
                 <!-- PHASE 6: Queue Simulation Section -->
                 <div class="debug-section">
-                    <h3 data-i18n="indexHtml.text.wachtrij_simulatie_227ad37c">📋 Wachtrij Simulatie</h3>
+                    <h3>{{ icons.icon('clipboard') }} <span data-i18n="indexHtml.text.wachtrij_simulatie_227ad37c">Wachtrij Simulatie</span></h3>
                     
                     <div class="debug-row">
                         <label data-i18n="indexHtml.text.queue_status_26750750">Queue status:</label>
@@ -1888,16 +1834,10 @@
                     <div class="debug-actions">
                         <button class="btn btn-primary btn-block" 
                                 data-action="queue.debug-generate"
-                                data-action-event="click"
-                                data-i18n="indexHtml.text.genereer_wachtrij_822024eb">
-                            🎯 Genereer Wachtrij
-                        </button>
+                                data-action-event="click">{{ icons.icon('target') }} <span data-i18n="indexHtml.text.genereer_wachtrij_822024eb">Genereer Wachtrij</span></button>
                         <button class="btn btn-secondary btn-block" 
                                 data-action="queue.debug-clear"
-                                data-action-event="click"
-                                data-i18n="indexHtml.text.wis_wachtrij_08792565">
-                            🗑️ Wis Wachtrij
-                        </button>
+                                data-action-event="click">{{ icons.icon('trash') }} <span data-i18n="indexHtml.text.wis_wachtrij_08792565">Wis Wachtrij</span></button>
                     </div>
                     
                     <!-- Queue preview -->
@@ -1912,9 +1852,7 @@
                 
                 <div class="debug-section">
                     <h3 data-i18n="indexHtml.text.system_reset_4c107353">System Reset</h3>
-                    <button class="btn btn-danger btn-block" data-action="debug.full-reset" data-action-event="click" data-i18n="indexHtml.text.purge_localstorage_full_reset_eedef037">
-                        🗑️ Purge Localstorage & Full Reset
-                    </button>
+                    <button class="btn btn-danger btn-block" data-action="debug.full-reset" data-action-event="click">{{ icons.icon('trash') }} <span data-i18n="indexHtml.text.purge_localstorage_full_reset_eedef037">Purge Localstorage & Full Reset</span></button>
                 </div>
             </div>
         </div>

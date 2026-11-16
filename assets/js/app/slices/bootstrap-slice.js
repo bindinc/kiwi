@@ -1,3 +1,5 @@
+import { translate } from './localization-slice.js';
+import { iconLabel } from '../interface-icons.js';
 import { getGlobalScope } from '../services.js';
 
 const DEFAULT_SEARCH_STATE = Object.freeze({
@@ -232,7 +234,10 @@ export function createBootstrapSlice(options = {}) {
 
         if (editCustomerButton) {
             editCustomerButton.style.display = hasCustomer ? 'inline-flex' : 'none';
-            editCustomerButton.textContent = hasCustomer && !hasLegacyCustomer ? 'Gegevens bekijken' : 'Bewerken';
+            const readonly = hasCustomer && !hasLegacyCustomer;
+            const key = readonly ? 'customerEditorRecords.viewDetails' : 'customerEditorRecords.edit';
+            editCustomerButton.removeAttribute?.('data-i18n');
+            editCustomerButton.innerHTML = iconLabel(readonly ? 'search' : 'edit', translate(key, {}, readonly ? 'Gegevens bekijken' : 'Bewerken'), key);
         }
         if (editorialComplaintButton) {
             editorialComplaintButton.style.display = hasLegacyCustomer ? 'inline-flex' : 'none';
