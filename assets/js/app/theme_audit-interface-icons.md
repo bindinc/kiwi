@@ -1,6 +1,6 @@
 # theme_audit — Unify interface icons
 
-Status: implementation in progress from 2026-11-16. The user-approved reference is the existing quiet header icon family. Source review and actual rendered acceptance remain required; this draft is not accepted.
+Status: implementation checkpoint pushed on2026-11-16; independent source and scoped rendered reviews pass. Broader Chromium, visibly populated history and remaining advanced-state/privacy/native acceptance are still pending. Keep PR155 draft; full refinement acceptance is not claimed.
 
 Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629). Parent: [theme_audit plan](../../../plans/theme_audit.md).
 
@@ -73,3 +73,12 @@ A trusted40-glyph self-contained SVG catalogue and matching Twig macro replace t
 Known call/queue notifications carry explicit separate presentation metadata; stored raw history/messages, shared business translations, delivery presets and provider/user text stay unchanged. The outbox save-notice override clears optional presentation so status stays authoritative. Caption output is escaped and icons remain decorative, nonfocusable and pointer-inert. No new public/privacy annotation or SDK/fidelity change is introduced.
 
 Intentional exceptions are existing approved SVGs, source logos/avatars and unused scaffold favicon, native controls/confirmation text, presence/recording/ACW indicators, ordinary arrows/check notation and an inactive commented demo action. These are distinct from remaining validation gates. The inventory and exact protected-value checks remain in the frozen candidate archive; the complete interface still needs final slice10 acceptance after this refinement.
+
+## Scoped rendered checkpoint — 2026-11-16
+
+- Implementation `32db2641dcfe85f5816a69fee1dce3202ff7652d`:142 frontend tests,3 guardrails,18 syntax checks and full source review `c7afcb93` pass. The complete production inventory is216 files (two new,193 old bodies unchanged); all216 runtime bodies match the committed source.
+- Firefox after03 on that source passes171 checks with84 application frames across1440/390/320 and390-short, plus three isolated full-SDK specimen images. The isolated specimen reports zero fidelity/outside-private differences and1182 private pixels with unchanged live fields; it does not replace the full original or affected-record privacy suites.
+- Whole-image review found two remaining active wait-hourglass literals. Final code `b782eb32e1733af97d839aeafdc33b6659316e57` replaces only those Twig glyphs with the existing clock macro; a whitespace-only follow-up normalizes those changed lines. Final Chromium and Firefox call-only390 supplements each pass23 checks/8 frames, with all216 Git/current/runtime bodies, servedJS/fiveCSS and all five Twig lints verified. No source changes occurred during capture.
+- Independent scoped review `115588ba6c063c2de936c5e7d744ffa94e9916e6bd6e69ffb2acf6861dce78d8` personally reviewed103 whole images and verifies the tiny final-source carry. No additional concrete geometry/spacing issue was found in that scope.
+- Remaining: complete the broad Chromium matrix, capture visibly populated contact-history glyphs (the current history-named frame is empty), and finish remaining inventory/advanced/native/full privacy gates. Historical broad Chromium attempts remain failed/incomplete because of explicitly recorded driver readiness expectations; a scoped pass does not promote them. Native browser confirmation text, brand/identity assets and preserved raw business/user/provider content retain documented intentional exceptions.
+- Durable source/attempt/report/image hashes and handoff: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-16/icon-refinement/validation-handoff-01.json` (253 artifact pins). All browsers were terminal by10:48:04UTC. The user-requested pause is11:55 Europe/Amsterdam. No merge, deployment or cleanup is included.
