@@ -345,7 +345,8 @@ async function inspectNewAddress(page, driver, meta, kind) {
     const choices = page.locator(`[id="${prefix}AddressChoices"]`);
     await choices.waitFor({ state: 'visible' });
     await observe(page, driver, meta, 'create-address-candidates', `[id="${prefix}AddressChoices"]`, kind + ' Exact synthetic shared address protocol, no save.');
-    await choices.selectOption('0');
+    await (await import('./compose-smoke-theme-audit-customer-acceptance.mjs')).inspectAddressChoiceWrapping(page, driver, meta, `[id="${prefix}AddressChoices"]`);
+    await choices.locator('button[value="0"]').press('Enter');
     const countValidation = () => driver.report.subscriptionEvidence.fixtureRequests.filter(request => request.path.endsWith('/addresses/validate')
         && request.address?.postalCode === '1223CK' && request.address?.houseNumber === '2A').length;
     const beforeValidation = countValidation();

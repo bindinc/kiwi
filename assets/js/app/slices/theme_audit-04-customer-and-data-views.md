@@ -113,3 +113,8 @@ Do not expose private values merely to create prettier screenshots. Use known lo
 - Run relevant customer search/detail/editor/address and work-session suites plus palette guardrails when touched. Browser setup from existing smoke scripts may be reused, but do not execute their business mutations against real records.
 
 Record which states used actual application data versus isolated fixtures. Complete only when both visual consistency and retained critical interactions have evidence.
+
+
+## Final integration follow-up - 2026-11-17
+
+PR #144 source review identified one real Firefox320 deviation: native multirow address SELECT labels clipped the city suffix even though the original layout assertions passed. Only the ambiguous-candidate renderer now uses a native fieldset/legend and source-ordered secondary button actions with complete wrapping. Candidate values, same-index selection, validation/session guards and the separate house-addition SELECT remain unchanged. Whole private labels retain address sensitivity; the legend is public. Existing smoke interactions now use the actual native button action, and numeric text-line containment checks strengthen the existing wrapped-address-selection criterion. All47 address tests and independent source review pass. Fresh current wrapping, keyboard, draft and screenshot-privacy acceptance remain pending. The failed native SELECT image remains preserved.

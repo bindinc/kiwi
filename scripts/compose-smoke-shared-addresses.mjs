@@ -124,7 +124,7 @@ async function complete(prefix) {
     await page.fill(`#${prefix}PostalCode`, '1223 ck');
     await page.locator(`#${prefix}AddressChoices`).waitFor({ state: 'visible' });
     const count = searches.length;
-    await page.selectOption(`#${prefix}AddressChoices`, '0');
+    await page.locator(`#${prefix}AddressChoices button[value="0"]`).press('Enter');
     await page.selectOption(`#${prefix}HouseExtChoices`, '2');
     assert.equal(searches.length, count, 'addition selection reuses the buffer');
     assert.equal(await page.inputValue(`#${prefix}HouseNumber`), '2A');
@@ -199,7 +199,7 @@ try {
     unavailable = false;
     await page.locator('#editAddressStatus button').click();
     await page.locator('#editAddressChoices').waitFor({ state: 'visible' });
-    await page.locator('#editAddressChoices').focus();
+    await page.locator('#editAddressChoices button[value="0"]').focus();
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#editAddressStatus').isVisible(), false);
     console.log('PASS failure/retry and keyboard dismissal');

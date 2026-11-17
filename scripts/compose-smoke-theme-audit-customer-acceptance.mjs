@@ -180,6 +180,39 @@ export function customerPresentationChecks(data, reference, state) {
     return checks;
 }
 
+export async function inspectAddressChoiceWrapping(page, driver, meta, selector) {
+    await registerCustomerAcceptance(driver.report);
+    await driver.painted(page);
+    const geometry = await page.locator(selector).evaluate(group => {
+        const bounds = node => {
+            const r = node.getBoundingClientRect();
+            return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
+        };
+        return { tag: group.tagName, bounds: bounds(group), viewportWidth: innerWidth,
+            labelled: group.firstElementChild?.tagName === 'LEGEND' && Boolean(group.firstElementChild.textContent.trim()),
+            choices: [...group.querySelectorAll('button')].map(button => {
+                const range = document.createRange(); range.selectNodeContents(button);
+                const lines = [...range.getClientRects()].map(r => ({ x: r.x, y: r.y, right: r.right, bottom: r.bottom }));
+                return { type: button.type, bounds: bounds(button), lineCount: lines.length, lines,
+                    scrollWidth: button.scrollWidth, clientWidth: button.clientWidth,
+                    scrollHeight: button.scrollHeight, clientHeight: button.clientHeight,
+                    privateAddress: button.getAttribute('data-feedback-sensitive') === 'address' && !button.closest('[data-feedback-public]') };
+            }) };
+    });
+    const groupContained = geometry.bounds.x >= -1 && geometry.bounds.right <= geometry.viewportWidth + 1;
+    const choicesContained = geometry.choices.length > 0 && geometry.choices.every(choice => {
+        const box = choice.bounds;
+        const completeLines = choice.lineCount > 0 && choice.lines.every(line => line.x >= box.x - 1
+            && line.right <= box.right + 1 && line.y >= box.y - 1 && line.bottom <= box.bottom + 1);
+        return choice.type === 'button' && choice.privateAddress && box.height >= 40
+            && box.x >= geometry.bounds.x - 1 && box.right <= geometry.bounds.right + 1
+            && choice.scrollWidth <= choice.clientWidth + 1 && choice.scrollHeight <= choice.clientHeight + 1 && completeLines;
+    });
+    driver.check('actual address choices show complete wrapping text in contained native actions',
+        geometry.tag === 'FIELDSET' && geometry.labelled && groupContained && choicesContained, true, { ...meta, geometry }, 4);
+    (driver.report.customerAcceptance.addressChoices ||= []).push({ ...meta, geometry });
+}
+
 export async function checkCustomerState(page, driver, meta, state) {
     await registerCustomerAcceptance(driver.report);
     const data = await readCustomerPresentation(page);

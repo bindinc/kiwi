@@ -4527,15 +4527,33 @@ dialog.form-lightbox::backdrop {
     min-width: 0;
 }
 .address-completion-choices {
+    display: grid;
+    gap: var(--space-2);
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
     font: inherit;
 }
-.address-completion-choices option {
-    padding: .45rem .6rem;
+.address-completion-choices[hidden] { display: none; }
+.address-completion-choices legend {
+    margin-block-end: var(--space-2);
+    padding: 0;
+    font: inherit;
+}
+.address-completion-choices .address-completion-choice {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    margin: 0;
+    justify-content: flex-start;
+    text-align: start;
     white-space: normal;
     overflow-wrap: anywhere;
+    border-radius: 0;
 }
 .address-completion-status select[hidden],
 .address-completion-status label[hidden] { display: none; }

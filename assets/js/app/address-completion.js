@@ -340,14 +340,15 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
         retry.className = 'btn btn-secondary btn-sm';
         retry.textContent = text('retry');
         retry.hidden = true;
-        const choicesLabel = documentRef.createElement('label');
-        choicesLabel.htmlFor = `${prefix}AddressChoices`;
-        choicesLabel.textContent = text('choose');
-        const choicesSelect = documentRef.createElement('select');
-        choicesSelect.id = `${prefix}AddressChoices`;
-        choicesSelect.className = 'address-completion-choices';
-        choicesSelect.hidden = choicesLabel.hidden = true;
-        status.append(label, retry, choicesLabel, choicesSelect);
+        const choicesGroup = documentRef.createElement('fieldset');
+        choicesGroup.id = `${prefix}AddressChoices`;
+        choicesGroup.className = 'address-completion-choices';
+        choicesGroup.hidden = true;
+        const choicesLegend = documentRef.createElement('legend');
+        choicesLegend.textContent = text('choose');
+        choicesLegend.setAttribute('data-feedback-public', '');
+        choicesGroup.append(choicesLegend);
+        status.append(label, retry, choicesGroup);
         const additionSelect = documentRef.createElement('select');
         additionSelect.id = `${prefix}HouseExtChoices`;
         additionSelect.setAttribute('aria-label', text('additionLabel'));
@@ -387,25 +388,24 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
                 status.setAttribute('data-state', value);
                 status.hidden = !value || value === 'matched';
                 retry.hidden = !['unavailable', 'unconfirmed'].includes(value);
-                choicesSelect.hidden = choicesLabel.hidden = !candidates.length;
-                choicesSelect.replaceChildren();
+                choicesGroup.hidden = !candidates.length;
+                choicesGroup.replaceChildren(choicesLegend);
                 if (!candidates.length) return;
-                const prompt = documentRef.createElement('option');
-                prompt.textContent = text('choose');
-                prompt.setAttribute('data-feedback-public', '');
-                prompt.value = '';
-                prompt.disabled = true;
-                prompt.selected = true;
-                choicesSelect.append(prompt);
                 candidates.forEach((candidate, index) => {
-                    const option = documentRef.createElement('option');
-                    option.value = String(index);
-                    option.setAttribute('data-feedback-sensitive', 'address');
+                    const button = documentRef.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn btn-secondary address-completion-choice';
+                    button.value = String(index);
+                    button.setAttribute('data-feedback-sensitive', 'address');
                     const suffix = candidate.houseNumberAddition === null ? ` (${text('unknownAddition')})` : candidate.houseNumberAddition ? ` ${candidate.houseNumberAddition}` : '';
-                    option.textContent = `${candidate.street} ${candidate.houseNumber}${suffix} — ${candidate.postalCode} ${candidate.city}`;
-                    choicesSelect.append(option);
+                    button.textContent = `${candidate.street} ${candidate.houseNumber}${suffix} — ${candidate.postalCode} ${candidate.city}`;
+                    button.addEventListener('click', () => {
+                        const wasVisible = !choicesGroup.hidden;
+                        form.select(index);
+                        if (wasVisible && choicesGroup.hidden) fields.city.focus();
+                    });
+                    choicesGroup.append(button);
                 });
-                choicesSelect.size = Math.min(5, candidates.length + 1);
             }
         });
         status.addEventListener('keydown', (event) => {
@@ -416,7 +416,6 @@ export function initAddressCompletion({ documentRef = document, windowRef = wind
                 event.stopPropagation();
             }
         });
-        choicesSelect.addEventListener('change', () => { if (choicesSelect.value !== '') form.select(Number(choicesSelect.value)); });
         additionSelect.addEventListener('change', () => form.selectAddition(additionSelect.value));
         retry.addEventListener('click', () => form.retry());
         forms.set(prefix, form);

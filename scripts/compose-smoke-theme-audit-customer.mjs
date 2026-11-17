@@ -176,7 +176,8 @@ async function sourceEditorFixtures(page, driver, meta, fixtures) {
     }
     await address.locator(`[id="${prefix}AddressChoices"]`).waitFor({ state: 'visible' });
     await observe(page, driver, { ...meta, kind }, 'source-address-candidates', '.customer-editor[open]');
-    await address.locator(`[id="${prefix}AddressChoices"]`).selectOption('0');
+    await (await import('./compose-smoke-theme-audit-customer-acceptance.mjs')).inspectAddressChoiceWrapping(page, driver, meta, `[id="${prefix}AddressChoices"]`);
+    await address.locator(`[id="${prefix}AddressChoices"] button[value="0"]`).press('Enter');
     await observe(page, driver, { ...meta, kind }, 'source-address-selected', '.customer-editor[open]');
     if (phase === 'after') {
         const validated = await address.evaluate(node => window.kiwiAddressCompletion.validate(node));
@@ -204,7 +205,8 @@ async function sourceEditorFixtures(page, driver, meta, fixtures) {
             await address.locator(`[id="${prefix}AddressStatus"] button`).press('Enter');
             await address.locator(`[id="${prefix}AddressChoices"]`).waitFor({ state: 'visible' });
             await observe(page, driver, { ...meta, kind }, 'source-address-retry', '.customer-editor[open]');
-            await address.locator(`[id="${prefix}AddressChoices"]`).selectOption('0');
+            await (await import('./compose-smoke-theme-audit-customer-acceptance.mjs')).inspectAddressChoiceWrapping(page, driver, meta, `[id="${prefix}AddressChoices"]`);
+            await address.locator(`[id="${prefix}AddressChoices"] button[value="0"]`).press('Enter');
         }
     }
 
@@ -224,7 +226,8 @@ async function sourceEditorFixtures(page, driver, meta, fixtures) {
         await secondAddress.locator(`[id="${secondPrefix}HouseNumber"]`).fill('2A');
         await secondAddress.locator(`[id="${secondPrefix}PostalCode"]`).fill('1223CK');
         await secondAddress.locator(`[id="${secondPrefix}AddressChoices"]`).waitFor({ state: 'visible' });
-        await secondAddress.locator(`[id="${secondPrefix}AddressChoices"]`).selectOption('1');
+        await (await import('./compose-smoke-theme-audit-customer-acceptance.mjs')).inspectAddressChoiceWrapping(page, driver, meta, `[id="${secondPrefix}AddressChoices"]`);
+        await secondAddress.locator(`[id="${secondPrefix}AddressChoices"] button[value="1"]`).press('Enter');
         const isolation = await page.evaluate(({ first, second, previousSession }) => {
             const firstPostal = document.getElementById(first + 'PostalCode'), secondPostal = document.getElementById(second + 'PostalCode');
             return { distinctPrefixes: first !== second, ownFields: firstPostal !== secondPostal,
