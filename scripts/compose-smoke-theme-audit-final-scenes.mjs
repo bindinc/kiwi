@@ -737,8 +737,14 @@ async function restoreEditableCustomer(handle) {
     // Do not force article/subscription opening or clear a readonly business guard.
     handle.state.suite = 'feedback'; handle.recordMode = false;
     const customer = handle.helpers.operational.operationalCustomerFixture('after');
-    await handle.page.evaluate(async sourceCustomer => window.kiwiCustomerDetailSlice.selectCustomer(sourceCustomer.id,
-        { sourceCustomer, requireFresh: true }), customer);
+    const originalFamily = handle.activeFamily;
+    handle.activeFamily = 'operational';
+    try {
+        await handle.page.evaluate(async sourceCustomer => window.kiwiCustomerDetailSlice.selectCustomer(sourceCustomer.id,
+            { sourceCustomer, requireFresh: true }), customer);
+    } finally {
+        handle.activeFamily = originalFamily;
+    }
     const actual = await handle.page.evaluate(() => String(window.currentCustomer?.id));
     handle.child.check('Restore exact locally editable owner through actual selection controller', actual, String(customer.id), metaFor(handle), 10);
 }
