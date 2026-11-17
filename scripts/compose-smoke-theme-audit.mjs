@@ -145,7 +145,7 @@ function git(...args) {
 
 // Final source, immutable AFTER phases and concrete hook membership are checked BEFORE Xvfb/browser launch.
 const finalConfiguration = finalOnly ? await prepareFinalDriver({ env: process.env, sourceRoot,
-    toolingRoot: fileURLToPath(new URL('..', import.meta.url)), baseUrl }) : null;
+    toolingRoot: path.resolve(fileURLToPath(new URL('..', import.meta.url))), baseUrl }) : null;
 
 await mkdir(evidenceDir, { recursive: true });
 let displayProcess;
