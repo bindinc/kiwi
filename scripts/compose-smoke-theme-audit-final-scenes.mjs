@@ -578,7 +578,7 @@ async function genderAliases(handle) {
         handle.child.check('Readonly source capability preserved ' + index, await field.evaluate(node => node.readOnly), true, metaFor(handle), 10);
         const label = await field.evaluate(node => node.closest('label').childNodes[0].textContent.trim());
         handle.child.check('Readonly gender caption is the source-owned role', label, 'Geslacht', metaFor(handle), 10);
-        await checkpoint(handle, 'readonly-gender-' + index, 'input[name=salutation]'); await closeCustomerEditor(handle);
+        await checkpoint(handle, 'readonly-gender-' + index, '.customer-editor[open] input[name=salutation]'); await closeCustomerEditor(handle);
     }
     handle.child.check('All raw fixture inputs remain unchanged', JSON.stringify(handle.state.feedbackFixtures), before, metaFor(handle), 10);
 }
