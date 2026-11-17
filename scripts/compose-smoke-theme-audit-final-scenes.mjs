@@ -516,7 +516,7 @@ async function shellScene(handle) {
         await helpers.shell.checkShellGeometry(page, child, child.contract, { ...meta, state: 'selected-long-context' }, { ordinary: false });
     });
     await criterion(handle, 'profile-exit-and-focus', 'Profile keyboard traversal and Escape return', async () => {
-        await helpers.shell.inspectProfileAppearance(page, child, child.contract, meta);
+        await helpers.shell.inspectProfileAppearance(page, child, child.contract, meta, { native: meta.native });
         await helpers.shell.inspectProfileInteractions(page, child, child.contract, meta, { native: meta.native });
     });
 }
