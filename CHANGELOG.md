@@ -10,7 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
-- Add source-bound showcase and workflow acceptance tooling, controlled application states, operational, icon/locale/SVG, capture-restoration and per-record privacy checks, genuine native zoom/input validation, reference-bound native DATE focus classification and explicit final coverage tracking; final integrated acceptance remains pending (`theme_audit` slice 10). [sc-206629]
+- Add source-bound showcase and workflow acceptance tooling, controlled application states, operational, icon/locale/SVG, capture-restoration and per-record privacy checks, genuine native zoom/input validation, reference-bound native DATE focus classification and explicit final coverage tracking; preserve visible history focus and full-width subscription/article dialogs with overlapping feedback entry; final integrated acceptance remains pending (`theme_audit` slice 10). [sc-206629]
 
 ## [v1.0.38] - 2026-11-17
 

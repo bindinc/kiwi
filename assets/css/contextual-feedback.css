@@ -117,7 +117,7 @@
 
 /* Keep the floating entry outside legacy task content and both focus outlines. */
 @media (max-width: 1560px) {
-    body:has(> #contextualFeedbackButton:not([hidden])) :is(.modal, div.form-container):not(dialog):not(dialog *) {
+    body:has(> #contextualFeedbackButton:not([hidden])) :is(.modal, div.form-container):not(#newSubscriptionForm, #articleSaleForm):not(dialog):not(dialog *) {
         padding-inline-end: max(var(--panel-padding), calc(60px + env(safe-area-inset-right, 0px)));
     }
 

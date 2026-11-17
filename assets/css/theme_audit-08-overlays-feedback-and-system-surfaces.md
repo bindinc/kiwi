@@ -166,3 +166,8 @@ The approved datepicker remains a distinct popover with its existing tested keyb
 - Capture representative dialogs and permission/account states alongside their surrounding app context. Clearly label fixture-only states and do not claim complete privacy or accessibility acceptance from screenshots alone.
 
 Implement in a separate PR/worktree, serialize shared CSS/template edits, and retain a single changelog entry. Done requires visual, keyboard and applicable privacy evidence, with no unresolved high-impact regression.
+
+
+## Final integration follow-up - 2026-11-17
+
+Status: implementation prepared in draft PR #144; current rendered acceptance pending. The requester explicitly allows the floating feedback entry to overlap the New subscription and Article sale dialogs on mobile. Those two existing form containers are therefore excluded from the extra feedback gutter, allowing their normal available width. Other legacy dialogs retain their existing clearance. This changes layout only; feedback privacy, capture shielding, modal behavior, business rules and form state remain unchanged. Actual Chromium/Firefox narrow-width geometry, whole images, action reachability and the existing final privacy gates must verify this correction before final slice10 acceptance.

@@ -2422,7 +2422,7 @@ dialog.form-lightbox::backdrop {
     cursor: pointer;
 }
 .timeline-header:hover { background: var(--surface-subdued); }
-.timeline-header:focus-visible { outline-offset: -3px; }
+.contact-history .timeline-header:focus-visible { outline-offset: -3px; }
 .timeline-type { font-size: var(--font-size-action); font-weight: var(--weight-medium); line-height: var(--line-height-body); overflow-wrap: anywhere; }
 .timeline-date { grid-column: 1 / -1; font-size: var(--font-size-label); line-height: var(--line-height-label); font-variant-numeric: tabular-nums; color: var(--text-muted); }
 .timeline-content { display: none; padding: var(--space-2); font-size: var(--font-size-body); line-height: var(--line-height-body); color: var(--text); overflow-wrap: anywhere; }
