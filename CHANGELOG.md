@@ -8,6 +8,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+### Fixed
+
+- Show the confirmed `Geachte heer, mevrouw` source variant as `Anders` in readonly customer gender displays while preserving writable salutations and raw source values (`theme_audit`). [sc-206629]
+
 ## [v1.0.37] - 2026-11-17
 
 ### Changed

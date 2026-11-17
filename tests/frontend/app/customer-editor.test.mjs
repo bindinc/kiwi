@@ -15,6 +15,7 @@ test('readonly gender is an exact display mapping and leaves source data and unk
     const previousDocument = globalThis.document;
     const examples = [
         ['Geachte heer', 'Man'], ['Geachte mevrouw', 'Vrouw'], ['Geachte heer/mevrouw', 'Anders'],
+        ['Geachte heer, mevrouw', 'Anders'],
         ['  gEaChTe HeEr/MeVrOuW  ', 'Anders'], ['__proto__', '__proto__'],
         ['constructor', 'constructor'], ['Geachte heer en familie', 'Geachte heer en familie'],
         ['', ''], ['   ', '   ']
@@ -48,7 +49,7 @@ test('readonly gender is an exact display mapping and leaves source data and unk
 test('writable salutation keeps its raw summary, reset, draft, no-op and versioned PATCH values', async () => {
     const previousDocument = globalThis.document;
     globalThis.document = createEditorDocument();
-    const raw = 'Geachte heer/mevrouw';
+    const raw = 'Geachte heer, mevrouw';
     const model = { capabilities: { roleCanWrite: true, operations: { 'person.update': { enabled: true } } },
         version: 'original-version', sections: { person: [{ id: 'synthetic-person', fields: { firstName: 'Synthetic', salutation: raw } }] } };
     const original = structuredClone(model);
