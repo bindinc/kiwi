@@ -152,6 +152,7 @@ export async function inspectSubscriptionKeyboard(page, driver, meta) {
             const css = getComputedStyle(node);
             return { id: node.id, tag: node.tagName, type: node.type, name: node.getAttribute('name'),
                 withinForm: Boolean(node.closest('#newSubscriptionForm')), focusVisible: node.matches(':focus-visible'),
+                offerToggle: node.matches('button.subscription-offer-toggle'),
                 focused: node.matches(':focus'), focusWithin: node.matches(':focus-within'), outline: css.outline,
                 outlineWidth: parseFloat(css.outlineWidth), outlineStyle: css.outlineStyle,
                 bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height, right: rect.right, bottom: rect.bottom },
@@ -160,6 +161,10 @@ export async function inspectSubscriptionKeyboard(page, driver, meta) {
                 cancel: Boolean(node.matches('#subscriptionForm .form-actions [data-action="close-form"]')) };
         });
         path.push(item);
+        if (driver.report.slice === 10 && item.offerToggle && item.focusVisible) {
+            await driver.capture(page, (meta.native ? 'native-200-' : 'after-') + 'subscription-offer-focus-step-' + step, undefined,
+                'Actual offer button at its existing keyboard stop; whole-frame evidence of the visible focus perimeter.');
+        }
         if (item.reachable === false) {
             await driver.capture(page, (meta.native ? 'native-200-' : 'after-') + 'subscription-unreachable-focus-step-' + step, undefined,
                 'Actual focused control is outside the visible viewport after the existing painted wait; whole-page diagnostic, reachability assertion unchanged.');

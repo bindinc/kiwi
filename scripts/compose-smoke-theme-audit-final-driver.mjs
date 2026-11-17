@@ -144,7 +144,8 @@ export async function verifyFinalNativeDateFocus(release, source) {
             { path: 'assets/css/styles.css', sha256: 'e7c56422ae52abf7ada3c66a3af363b131c5f87a99a004e8e8e1f1498f5981cd', bytes: 130535 },
             { path: 'assets/css/contextual-feedback.css', sha256: 'e62e7a222b8a74942438c41306fe0a69f9ac7cf76f6bc2b193e5580fcbf43ad8', bytes: 19560 },
             { path: 'assets/js/app/address-completion.js', sha256: '9aa8d91097237a03ebcd6d09a13450ed52999ec77f2fc9d9078cd63778721663', bytes: 28019 },
-            { path: 'assets/js/app/slices/app-shell-slice.js', sha256: 'cba493b2046fa16a9c39dc8fa68b3b42d6e61cbaf00297570e0481a7de17a211', bytes: 23436 }
+            { path: 'assets/js/app/slices/app-shell-slice.js', sha256: 'cba493b2046fa16a9c39dc8fa68b3b42d6e61cbaf00297570e0481a7de17a211', bytes: 23436 },
+            { path: 'assets/js/app/call-agent-runtime.js', sha256: '52b162b987c7906105bdd28b97faa64b111b2edb034a365b3be54d9642f0a593', bytes: 67631 }
         ];
         for (const entry of approvedBodies) {
             const body = await physicalFile(path.join(source.worktree, entry.path));

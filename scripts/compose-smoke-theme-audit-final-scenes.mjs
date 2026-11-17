@@ -942,6 +942,7 @@ async function systemScene(handle, { accountPages = true } = {}) {
         await inspectCancelConfirmation(handle);
     });
     await criterion(handle, 'eligible-dialog-layered-exit-and-return', 'Actual eligible developer dialog native Escape exit', async () => {
+        await child.keyboardFocus(page, '#agentProfileTrigger', 'Stable live invoker before the developer dialog');
         const opener = await page.evaluateHandle(() => document.activeElement);
         await page.evaluate(() => window.kiwiCallAgentRuntime.openDebugModal());
         const field = await visible(handle, '#debugQueueSize', 'Actual eligible developer field is visible');
