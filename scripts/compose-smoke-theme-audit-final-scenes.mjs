@@ -445,7 +445,7 @@ async function checkpoint(handle, name, selector) {
 
 function collectedImages(handle, captureStart, observationStart) {
     return [
-        ...handle.child.report.captures.slice(captureStart).map(item => item.absolute),
+        ...handle.child.report.captures.slice(captureStart).map(item => item.absolute || path.join(handle.child.evidenceDir, item.filename)),
         ...handle.child.report.observations.slice(observationStart).filter(item => item.filename).map(item => path.join(handle.child.evidenceDir, item.filename))
     ];
 }
