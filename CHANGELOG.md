@@ -8,15 +8,21 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+## [v1.0.37] - 2026-11-17
+
+### Changed
+
+- Package the independently accepted operational and interface refinements for the Kiwi Preview release; retain the separate final integrated acceptance work in draft PR144. [sc-206629]
+
+- Unify interface icons with the header's quiet line style, provide translated icon-only control names and keep short-screen annotations reachable and restore page styling after captures while preserving identity, privacy and business behavior (`theme_audit` icon refinement). [sc-206629]
+
+- Align operational states, reachable menus, modal controls, focus and search feedback; show all customer source records with direct actions while preserving permissions, identities, drafts, privacy and original values (`theme_audit` slice 09). [sc-206629]
+
 ## [v1.0.36] - 2026-11-12
 
 - Use Abel’s next delivery date per guide and selected edition during subscription signup, revalidate before staging an order, and keep ATV/ATL/ATM/STKN memberships independent of delivery dates. [sc-203456]
 
 ### Changed
-
-- Unify interface icons with the header's quiet line style, provide translated icon-only control names and keep short-screen annotations reachable and restore page styling after captures while preserving identity, privacy and business behavior (`theme_audit` icon refinement). [sc-206629]
-
-- Align operational states, reachable menus, modal controls, focus and search feedback; show all customer source records with direct actions while preserving permissions, identities, drafts, privacy and original values (`theme_audit` slice 09). [sc-206629]
 
 - Align shared dialogs, feedback and access surfaces with Light & Shadow, using consistent ordinary backdrops, preserved screenshot-review shielding, reachable controls and contextual error notices while retaining privacy, drafts and request behavior (`theme_audit` slice 08). [sc-206629]
 
@@ -507,7 +513,9 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 - Configure cert-manager values for CRDs, add Gateway API ACME issuers, and install the issuer chart during addons
 - Update deploy-app to wait for all kiwi deployments after applying kustomize overlays
 
-[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.35...HEAD
+[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.37...HEAD
+[v1.0.37]: https://github.com/bindinc/kiwi/compare/v1.0.36...v1.0.37
+[v1.0.36]: https://github.com/bindinc/kiwi/compare/v1.0.35...v1.0.36
 [v1.0.35]: https://github.com/bindinc/kiwi/compare/v1.0.34...v1.0.35
 [v1.0.34]: https://github.com/bindinc/kiwi/compare/v1.0.33...v1.0.34
 [v1.0.33]: https://github.com/bindinc/kiwi/compare/v1.0.32...v1.0.33
