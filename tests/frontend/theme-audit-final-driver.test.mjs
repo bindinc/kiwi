@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { fileURLToPath } from 'node:url';
+import { inspectSubscriptionKeyboard } from '../../scripts/compose-smoke-theme-audit-subscription-acceptance.mjs';
 import { createFinalDriver, finalContextOptions, finalNativeGroups, prepareFinalDriver, loadVerifiedFinalHooks, validateFinalMode, validateFinalSourceInventory, verifyFinalRelease } from '../../scripts/compose-smoke-theme-audit-final-driver.mjs';
 import { finalAuditAreas, finalReleaseIdentity } from '../../scripts/compose-smoke-theme-audit-final.mjs';
 
@@ -397,4 +399,49 @@ test('viewport preserves the exact measured contract unless a verified native DA
             assert.equal(Object.hasOwn(measured, 'nativeDateFocus'), false, 'The measured reference remains untouched.');
         } else assert.equal(driver.contract, measured, 'Legacy owners must receive the original measured contract object.');
     }
+});
+
+test('native DATE classification requires the exact proved area and width in the existing baseline matrix', async () => {
+    const stop = { id: 'subStartDate', tag: 'INPUT', type: 'date', focused: false, focusVisible: false, focusWithin: true };
+    const proof = area => ({ area, width: 1440, height: 1000, step: 3, applicationStop: stop });
+    async function run({ entries, area = 'A08', width = 1440, extraFocusLoss = false }) {
+        let step = -1; const checks = [];
+        const page = { locator: () => ({ focus: async () => {} }), keyboard: { press: async key => { assert.equal(key, 'Tab'); step++; } },
+            evaluate: async probe => {
+                const date = step === 3, cancel = step === 6;
+                const hostFocused = !date && !(extraFocusLoss && step === 2);
+                const node = { id: step === 0 ? 'werfsleutelInput' : date ? 'subStartDate' : 'unit-' + step,
+                    tagName: 'INPUT', type: date ? 'date' : 'text', getAttribute: () => null, closest: () => ({}),
+                    getBoundingClientRect: () => ({ width: 30, height: 20, x: 0, right: 30, y: 0, bottom: 20 }),
+                    matches(selector) {
+                        if (selector === ':focus-within') return true;
+                        if (selector === ':focus-visible' || selector === ':focus') return hostFocused;
+                        return selector === '#subscriptionForm .form-actions [data-action="close-form"]' && cancel;
+                    } };
+                return runInNewContext('(' + probe.toString() + ')()', {
+                    document: { activeElement: node }, innerWidth: width, innerHeight: 1000, devicePixelRatio: 1,
+                    visualViewport: { scale: 1 }, getComputedStyle: () => ({ outline: 'none', outlineWidth: '0px', outlineStyle: 'none' })
+                });
+            } };
+        const driver = { browserName: 'chromium', contract: { nativeDateFocus: { sourceCommit: commit, browserVersion: 'synthetic-browser', entries } },
+            report: { slice: 10, phase: 'after', application: { commit }, environment: { browserVersion: 'synthetic-browser' }, subscriptionAcceptance: { interactions: [] } },
+            // The test source supplies synthetic capture bytes, never visual evidence.
+            capture: async () => fileURLToPath(import.meta.url),
+            check: (name, actual, expected, detail) => { checks.push({ name, actual, detail }); assert.equal(actual, expected, name); } };
+        await inspectSubscriptionKeyboard(page, driver, { native: false, locale: 'nl', prefix: `${area}-chromium-${width}x1000-` });
+        return { check: checks[0], interaction: driver.report.subscriptionAcceptance.interactions[0] };
+    }
+    const result = await run({ entries: [{ ...proof('A05'), step: 2 }, proof('A08')] });
+    assert.equal(result.check.detail.legacyHostFocusPassed, false);
+    assert.equal(result.check.detail.nativeInternalFocus.actual.focusVisible, false);
+    assert.equal(result.interaction.keyboardPath[3].focused, false);
+    assert.match(result.check.detail.nativeInternalFocus.independentCurrentWholeImageReview, /^not reviewed/);
+    await run({ entries: [proof('A05')], area: 'A05' });
+    for (const options of [
+        { entries: [proof('A05')] },
+        { entries: [proof('A08')], area: 'A05' },
+        { entries: [proof('A07')], area: 'A07' },
+        { entries: [proof('A08')], width: 390 },
+        { entries: [proof('A08')], extraFocusLoss: true }
+    ]) await assert.rejects(run(options), /final-only Tab route/);
 });

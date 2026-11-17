@@ -177,11 +177,15 @@ export async function inspectSubscriptionKeyboard(page, driver, meta) {
         const geometry = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, dpr: devicePixelRatio,
             scale: visualViewport?.scale ?? 1 }));
         const nonHostStops = path.flatMap((item, step) => item.focusVisible ? [] : [step]);
-        const entry = nativeContract.entries.find(entry => entry.width === geometry.width && entry.height === geometry.height);
+        const entry = nativeContract.entries.find(entry => {
+            const area = entry.area ?? 'A05';
+            const matchesArea = ['A05', 'A08'].includes(area) && meta.prefix === `${area}-chromium-${entry.width}x${entry.height}-`;
+            return matchesArea && entry.width === geometry.width && entry.height === geometry.height;
+        });
         const step = entry?.step, item = path[step];
         const sameStop = item && Object.entries(entry.applicationStop).every(([key, value]) => item[key] === value);
         const image = nativeFocusImages.find(image => image.step === step);
-        if (entry && meta.prefix === `A05-chromium-${entry.width}x${entry.height}-` && geometry.dpr === 1 && geometry.scale === 1
+        if (entry && geometry.dpr === 1 && geometry.scale === 1
             && nonHostStops.length === 1 && nonHostStops[0] === step && sameStop && image) {
             classification = { kind: 'reference-bound-native-calendar-internal-focus', step, control: '#subStartDate',
                 contract: nativeContract, actual: item, image, legacyHostFocusPassed,

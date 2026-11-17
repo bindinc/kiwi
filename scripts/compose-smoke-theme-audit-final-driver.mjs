@@ -125,7 +125,7 @@ export async function verifyFinalHelperFiles(toolingRoot, helpers) {
     return paths;
 }
 
-// This is a single independently classified observation, not a DATE/focus-within policy.
+// Each entry is an independently classified area/width observation, not a DATE/focus-within policy.
 // Missing metadata keeps the historical host-only criterion strict.
 export async function verifyFinalNativeDateFocus(release, source) {
     const proof = release.reference.nativeDateFocus;
@@ -133,20 +133,46 @@ export async function verifyFinalNativeDateFocus(release, source) {
     assert.equal(proof.observedSource.sha256, '5f56e7d3102e3c20ccd1393f7799b8d1fd3709e4ed5bd07175c64fc879db0cc8');
     const observedSource = JSON.parse(await artifact(proof.observedSource, 'Native DATE observed application source'));
     assert.equal(observedSource.head, '754bb51001bb94b7472c8dfdfbce631eda73b2d9');
-    // Carry every production body. The sole allowed delta is the exact user-confirmed
-    // readonly gender alias from b554f5b; date CSS and subscription renderers stay identical.
-    const expected = observedSource.source.map(entry => entry.path === 'assets/js/app/customer-editor.js'
-        ? { ...entry, sha256: '99f3e6d8cde221ba5c84581c4ce5181d87a99cad971bd022e39b3ce52e6db25b', bytes: 23574 }
-        : entry);
+    // Carry every body, allowing only the confirmed gender alias and two exact selector fixes.
+    const cssChanges = [
+        { path: 'assets/css/styles.css', sha256: '38e31eb269625d745fc40c9ba7e58c391afd9f237f6a6b17fd6a3958773047ba', bytes: 130111,
+            original: '.timeline-header:focus-visible { outline-offset: -3px; }',
+            corrected: '.contact-history .timeline-header:focus-visible { outline-offset: -3px; }' },
+        { path: 'assets/css/contextual-feedback.css', sha256: 'e62e7a222b8a74942438c41306fe0a69f9ac7cf76f6bc2b193e5580fcbf43ad8', bytes: 19560,
+            original: ':is(.modal, div.form-container):not(dialog):not(dialog *) {',
+            corrected: ':is(.modal, div.form-container):not(#newSubscriptionForm, #articleSaleForm):not(dialog):not(dialog *) {' }
+    ];
+    const carriedCss = new Map();
+    for (const change of cssChanges) {
+        const current = source.source.find(entry => entry.path === change.path);
+        if (current?.sha256 !== change.sha256) continue;
+        const original = observedSource.source.find(entry => entry.path === change.path);
+        const body = await physicalFile(path.join(source.worktree, change.path));
+        assert.equal(body.length, change.bytes); assert.equal(sha256(body), change.sha256);
+        const text = body.toString('utf8');
+        assert.equal(text.split(change.corrected).length, 2, 'Exactly one approved selector may change per CSS body.');
+        const originalBody = Buffer.from(text.replace(change.corrected, change.original));
+        assert.equal(originalBody.length, original.bytes);
+        assert.equal(sha256(originalBody), original.sha256, 'Native DATE CSS carry contains more than its exact approved selector fix.');
+        carriedCss.set(change.path, change);
+    }
+    const expected = observedSource.source.map(entry => {
+        if (entry.path === 'assets/js/app/customer-editor.js')
+            return { ...entry, sha256: '99f3e6d8cde221ba5c84581c4ce5181d87a99cad971bd022e39b3ce52e6db25b', bytes: 23574 };
+        const css = carriedCss.get(entry.path);
+        return css ? { ...entry, sha256: css.sha256, bytes: css.bytes } : entry;
+    });
     assert.equal(observedSource.productionCount, 216);
-    assert.deepEqual(canonical(source.source), canonical(expected), 'Native DATE source carry differs beyond the exact confirmed alias.');
+    assert.deepEqual(canonical(source.source), canonical(expected), 'Native DATE source carry differs beyond the exact confirmed alias/selector changes.');
     assert.ok(Array.isArray(proof.entries) && proof.entries.length > 0);
     const entries = [];
     for (const entry of proof.entries) {
         const pair = JSON.parse(await artifact(entry.paired, 'Paired native DATE observation'));
         const review = JSON.parse(await artifact(entry.review, 'Independent native DATE classification'));
         assert.equal(pair.marker, 'theme_audit'); assert.equal(review.marker, 'theme_audit');
-        assert.equal(review.status, 'MATCHED_REFERENCE_NATIVE_INTERNAL_FOCUS_BEHAVIOR; ORIGINAL_A05_GATE_REMAINS_FAILED');
+        const area = pair.applicationArea ?? 'A05';
+        assert.ok(['A05', 'A08'].includes(area), 'Native DATE proof requires an explicitly supported area.');
+        assert.equal(review.status, `MATCHED_REFERENCE_NATIVE_INTERNAL_FOCUS_BEHAVIOR; ORIGINAL_${area}_GATE_REMAINS_FAILED`);
         assert.ok(typeof review.reviewer === 'string' && review.reviewer.trim());
         assert.deepEqual(review.pairedArtifact, entry.paired);
         for (const key of ['applicationReport', 'referenceReport']) assert.deepEqual(review[key], pair[key]);
@@ -154,7 +180,8 @@ export async function verifyFinalNativeDateFocus(release, source) {
         const reference = JSON.parse(await artifact(pair.referenceReport, 'Observed reference report'));
         await artifact(reference.reference, 'Native DATE approved reference body');
         assert.equal(reference.reference.sha256, refinedReference);
-        assert.ok([observedSource.head, release.source.commit].includes(application.application.commit));
+        assert.ok([observedSource.head, 'a8d8cce2cb81ef1e985b7dd4273c87401d102964', release.source.commit].includes(application.application.commit),
+            'Native DATE observation must come from the exact observed source, confirmed alias source or current release.');
         assert.equal(reference.browser.name, 'chromium'); assert.equal(reference.browser.version, '157.0.8103.38');
         assert.equal(application.environment.browser, 'chromium');
         assert.equal(application.environment.browserVersion, reference.browser.version);
@@ -165,11 +192,11 @@ export async function verifyFinalNativeDateFocus(release, source) {
         }
         const { width, height, dpr } = stop.state.viewport;
         assert.ok([1440, 390, 320].includes(width)); assert.equal(height, 1000); assert.equal(dpr, 1);
-        assert.ok(!entries.some(item => item.width === width), 'Duplicate native DATE proof width.');
+        assert.ok(!entries.some(item => item.area === area && item.width === width), 'Duplicate native DATE proof area/width.');
         assert.equal(pair.applicationStop.length, 1);
         assert.equal(pair.applicationStop[0].id, 'subStartDate');
         assert.equal(pair.applicationStop[0].tag, 'INPUT'); assert.equal(pair.applicationStop[0].type, 'date');
-        const prefix = `A05-chromium-${width}x1000-`;
+        const prefix = `${area}-chromium-${width}x1000-`;
         const keyboard = application.checks.find(check => check.name === prefix + 'actual native Tab traverses subscription controls to Cancel within the visible viewport')
             || application.checks.find(check => check.name === prefix + 'final-only Tab route and reference-bound DATE internal-stop classification; current visual review required'
                 && check.legacyHostFocusPassed === false && check.nativeInternalFocus === null);
@@ -186,7 +213,7 @@ export async function verifyFinalNativeDateFocus(release, source) {
         assert.equal(capture.name, prefix + 'after-subscription-native-date-focus-step-' + step);
         assert.deepEqual([capture.geometry.viewportWidth, capture.geometry.viewportHeight, capture.geometry.devicePixelRatio,
             capture.geometry.visualViewportScale], [width, height, 1, 1]);
-        entries.push({ width, height, step, applicationStop: pair.applicationStop[0], paired: entry.paired, review: entry.review });
+        entries.push({ area, width, height, step, applicationStop: pair.applicationStop[0], paired: entry.paired, review: entry.review });
     }
     return { kind: 'final-only-reference-bound-native-calendar-internal-focus', sourceCommit: release.source.commit,
         referenceSha256: refinedReference, browserVersion: '157.0.8103.38', entries,
