@@ -24,20 +24,20 @@ const knownLegacySource = { path: 'scripts/compose-smoke-theme-audit-operational
 
 // Execute the actual private function body. No browser/controller implementation is
 // replaced in production; these finite VM seams isolate orchestration regressions.
-function declaration(name) {
+function declaration(name, body = source) {
     const expression = new RegExp('^(?:export )?(?:async )?function ' + name + '\\(', 'm');
-    const start = expression.exec(source); assert.ok(start, 'Actual source function: ' + name);
-    const remainder = source.slice(start.index + start[0].length);
+    const start = expression.exec(body); assert.ok(start, 'Actual source function: ' + name);
+    const remainder = body.slice(start.index + start[0].length);
     const next = /\n(?:export )?(?:async )?function \w+\(/.exec(remainder);
-    const end = next ? start.index + start[0].length + next.index : source.length;
-    return source.slice(start.index, end).replace(/^export /, '');
+    const end = next ? start.index + start[0].length + next.index : body.length;
+    return body.slice(start.index, end).replace(/^export /, '');
 }
-function actualFunction(name, globals) {
+function actualFunction(name, globals, body = source) {
     const realmAssert = { ...assert, deepEqual(actual, expected, message) {
         assert.deepEqual(JSON.parse(JSON.stringify(actual)), JSON.parse(JSON.stringify(expected)), message);
     } };
     const context = vm.createContext({ assert: realmAssert, path, Buffer, URL, ...globals });
-    vm.runInContext(declaration(name) + '\nglobalThis.actual = ' + name + ';', context);
+    vm.runInContext(declaration(name, body) + '\nglobalThis.actual = ' + name + ';', context);
     return context.actual;
 }
 function lifecycleRelease() {
@@ -309,4 +309,136 @@ test('A11 composes closed-panel helpers and restores only initial intercepted re
     await run(handle);
     assert.deepEqual(events, ['initial', 'operational', 'close-queue', 'close-changes', 'async', 'close-queue', 'fallback']);
     assert.equal(changesOpen, true, 'Fallback composition leaves the actual async customer disclosure state intact');
+});
+
+const shellSource = await readFile(new URL('../../scripts/compose-smoke-theme-audit-shell-acceptance.mjs', import.meta.url), 'utf8');
+const operationalSource = await readFile(new URL('../../scripts/compose-smoke-theme-audit-operational.mjs', import.meta.url), 'utf8');
+
+function profileClickHarness(width, { covered = true, workControl = false, blocked = false } = {}) {
+    const checks = [], captures = [], clicks = [];
+    const rect = (left, top, right, bottom) => ({ x: left, y: top, left, top, right, bottom, width: right - left, height: bottom - top });
+    const element = (id, tagName, bounds) => ({ id, tagName, disabled: false,
+        getBoundingClientRect: () => bounds, contains(other) { return other === this; }, closest: () => null });
+    const menu = element('agentStatusMenu', 'DIV', rect(covered ? 8 : width - 328, 60, covered ? Math.min(width - 8, 328) : width - 8, 760));
+    const trigger = element('agentProfileTrigger', 'BUTTON', rect(width - 150, 12, width - 110, 52));
+    const postal = element('searchPostalCode', 'INPUT', covered ? rect(33, 311, 281, 351) : rect(37, 160, 160, 200));
+    const house = element('searchHouseNumber', 'INPUT', rect(width - 50, 311, width - 20, 351));
+    const workspace = element('', 'DIV', rect(16, 80, width - 16, 1100));
+    const body = element('', 'BODY', rect(0, 0, width, 1000));
+    menu.hidden = true;
+    trigger.getAttribute = () => String(!menu.hidden);
+    workspace.querySelectorAll = selector => selector === '.card' ? [] : workControl ? [postal, house] : [postal];
+    const nodes = { '.main-content': workspace, '#agentStatusMenu': menu, '#agentProfileTrigger': trigger, '#searchPostalCode': postal };
+    const inside = (node, x, y) => { const r = node.getBoundingClientRect(); return x >= r.left && x < r.right && y >= r.top && y < r.bottom; };
+    const document = { activeElement: trigger, querySelector: selector => nodes[selector],
+        elementFromPoint(x, y) {
+            if (blocked || !menu.hidden && inside(menu, x, y)) return menu;
+            if (inside(postal, x, y)) return postal;
+            if (workControl && inside(house, x, y)) return house;
+            return inside(workspace, x, y) ? workspace : body;
+        } };
+    const evaluate = (probe, argument) => vm.runInNewContext('(' + probe.toString() + ')(argument)', {
+        document, argument, innerWidth: width, innerHeight: 1000
+    });
+    const page = { evaluate, viewportSize: () => ({ width, height: 1000 }),
+        locator(selector) {
+            return { async press() { assert.equal(selector, '#agentProfileTrigger'); menu.hidden = false; },
+                async waitFor() { assert.equal(menu.hidden, false); },
+                async evaluate(probe, argument) { return vm.runInNewContext('(' + probe.toString() + ')(node, argument)', { node: postal, argument, document }); } };
+        },
+        keyboard: { async press(key) { if (key === 'Escape') { menu.hidden = true; document.activeElement = trigger; } } },
+        mouse: { async click(x, y) {
+            const hit = document.elementFromPoint(x, y); assert.notEqual(hit, menu, 'Never click a point covered by the profile menu');
+            clicks.push({ x, y, id: hit.id, tag: hit.tagName }); menu.hidden = true;
+            document.activeElement = hit.tagName === 'INPUT' ? hit : body;
+        } } };
+    const report = { shellAcceptance: { interactions: [] } };
+    let focusReads = 0;
+    const run = actualFunction('inspectProfileInteractions', {
+        checkMenuGeometry: async () => ({ ...menu.getBoundingClientRect(), scrollHeight: 700, clientHeight: 700 }),
+        menuBounds: async () => ({}), withinBounds: () => true,
+        focusState: async () => {
+            focusReads++;
+            return { inMenu: focusReads <= 10, logout: focusReads === 9, locale: 'en', focusVisible: true,
+                outlineWidth: '3px', outlineColor: focusReads <= 10 ? 'blue' : 'white' };
+        },
+        captureAfter: async (page, driver, name) => { captures.push(name); },
+        profileOutsideTarget: actualFunction('profileOutsideTarget', {}, shellSource)
+    }, shellSource);
+    const driver = { report, check: (name, actual, expected, detail) => checks.push({ name, passed: actual === expected, detail }) };
+    return { run: () => run(page, driver, { primary: { backgroundColor: 'blue', color: 'white' } }, { prefix: 'unit-' }), report, checks, captures, clicks };
+}
+
+test('A01 retains the exact desktop postcode click and fails if that desktop point is covered', async () => {
+    const desktop = profileClickHarness(1440, { covered: false }); await desktop.run();
+    assert.deepEqual(desktop.clicks, [{ x: 45, y: 168, id: 'searchPostalCode', tag: 'INPUT' }]);
+    assert.ok(desktop.checks.every(check => check.passed));
+    assert.equal(desktop.report.shellAcceptance.interactions[0].outsideClick.clicked.active, 'searchPostalCode');
+    const covered = profileClickHarness(1440);
+    await assert.rejects(covered.run(), /No verified outside input point/);
+    assert.equal(covered.clicks.length, 0);
+});
+
+test('A01 narrow outside click prefers an actual uncovered work input and otherwise records only background closure', async () => {
+    const control = profileClickHarness(390, { workControl: true }); await control.run();
+    assert.ok(control.checks.every(check => check.passed));
+    const focused = control.report.shellAcceptance.interactions[0].outsideClick;
+    assert.equal(focused.kind, 'work-control'); assert.equal(focused.target.id, 'searchHouseNumber');
+    assert.equal(focused.clicked.active, 'searchHouseNumber');
+    assert.equal(control.clicks[0].id, 'searchHouseNumber');
+    const background = profileClickHarness(320); await background.run();
+    assert.ok(background.checks.every(check => check.passed));
+    const closed = background.report.shellAcceptance.interactions[0].outsideClick;
+    assert.equal(closed.kind, 'workspace-background'); assert.equal(closed.clicked.activeTag, 'BODY');
+    assert.equal(closed.clicked.closed, true); assert.equal(closed.clicked.focusInMenu, false);
+    assert.ok(background.checks.some(check => check.detail.focusClaim === 'Background closure only; no work-control focus claim.'));
+    assert.ok(background.captures.some(name => name.endsWith('profile-outside-click-workspace-background')));
+    const blocked = profileClickHarness(320, { blocked: true });
+    await assert.rejects(blocked.run(), /No verified narrow outside work point/);
+    assert.equal(blocked.clicks.length, 0);
+});
+
+function asyncOutboxHarness({ freshPoll = true, loseFocusAfterPoll = false } = {}) {
+    const stop = new Error('Stop after the first complete actual poll observation');
+    const state = { report: { observations: [], checks: [] } }, reads = [], control = {
+        reads: 0, items: [{ id: 1, customerReference: {} }, { id: 2 }], release() {}
+    };
+    let active = '', keyboardModality = false, manualRefreshes = 0, measurements = 0;
+    const page = {
+        keyboard: { async press(key) { keyboardModality = true; active = key === 'Shift+Tab' ? 'second-title' : 'another keyboard stop'; } },
+        locator: selector => ({ async focus() { active = selector; }, async press() {} }),
+        async waitForFunction() {}, async evaluate() { throw new Error('No write-map probe belongs before this failure boundary'); }
+    };
+    const run = actualFunction('inspectAsyncOutbox', {
+        structuredClone,
+        measureAsyncOutboxFocus: async (actualPage, selector) => {
+            assert.equal(actualPage, page);
+            if (selector.endsWith('[data-outbox-control="customer"]')) throw stop;
+            measurements++;
+            return { expectedOwnsFocus: active === selector && !(loseFocusAfterPoll && measurements > 1), focusVisible: keyboardModality,
+                fullPaintedPerimeterInsideAllClips: true, pointerTarget: true, scrollY: 0, listScrollTop: 0 };
+        },
+        observe: async (actualPage, actualState, name, selectors, detail) => { state.report.observations.push({ name, ...detail }); },
+        save: async () => {}, refresh: async () => { manualRefreshes++; control.reads++; },
+        setTimeout: resolve => { reads.push(control.reads); if (freshPoll) control.reads++; resolve(); }
+    }, operationalSource);
+    return { run: () => run(page, state, control), stop, state, reads, get manualRefreshes() { return manualRefreshes; } };
+}
+
+test('A11 actual async helper establishes the exact action focus before observing a fresh timer read', async () => {
+    const h = asyncOutboxHarness(); await assert.rejects(h.run(), error => error === h.stop);
+    assert.deepEqual(h.state.report.checks.map(check => check.passed), [true, true]);
+    const [before, after] = h.state.report.observations;
+    assert.equal(before.focus.expectedOwnsFocus, true); assert.equal(before.focus.focusVisible, true);
+    assert.equal(after.name, 'async-second-trigger-after-poll'); assert.ok(after.read.after > after.read.before);
+    assert.equal(h.manualRefreshes, 1, 'The poll boundary cannot be replaced by a second manual refresh');
+});
+
+test('A11 actual async helper still rejects a missing timer GET and lost focus after a fresh GET', async () => {
+    const stale = asyncOutboxHarness({ freshPoll: false });
+    await assert.rejects(stale.run(), /actual five-second interval must consume a fresh exact GET/);
+    assert.equal(stale.state.report.observations.length, 1); assert.equal(stale.manualRefreshes, 1);
+    const lost = asyncOutboxHarness({ loseFocusAfterPoll: true });
+    await assert.rejects(lost.run(), /Async outbox second-trigger-after-poll must preserve/);
+    assert.equal(lost.state.report.checks.at(-1).passed, false);
 });

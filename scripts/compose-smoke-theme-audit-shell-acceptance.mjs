@@ -386,6 +386,48 @@ export async function inspectProfileAppearance(page, driver, contract, meta, { n
     driver.report.shellAcceptance.interactions.push({ ...meta, rest, focus, scope: 'Unfocused/unhovered rest, separate pointer hover and genuine Tab/ShiftTab focus; circular profile identity exception.' });
 }
 
+async function profileOutsideTarget(page) {
+    return page.evaluate(() => {
+        const workspace = document.querySelector('.main-content');
+        const menu = document.querySelector('#agentStatusMenu');
+        const trigger = document.querySelector('#agentProfileTrigger');
+        if (!workspace || !menu || !trigger) return null;
+        const points = node => {
+            const bounds = node.getBoundingClientRect();
+            const left = Math.max(0, bounds.left), right = Math.min(innerWidth, bounds.right);
+            const top = Math.max(0, bounds.top), bottom = Math.min(innerHeight, bounds.bottom);
+            if (right <= left || bottom <= top) return [];
+            const insetX = Math.min(8, (right - left) / 2), insetY = Math.min(8, (bottom - top) / 2);
+            const xs = [left + insetX, (left + right) / 2, right - insetX];
+            const ys = [top + insetY, (top + bottom) / 2, bottom - insetY];
+            return ys.flatMap(y => xs.map(x => ({ x, y })));
+        };
+        const target = (node, kind) => {
+            if (node.disabled || node.closest('[hidden], [inert]')) return null;
+            for (const viewportPoint of points(node)) {
+                const hit = document.elementFromPoint(viewportPoint.x, viewportPoint.y);
+                if (hit !== node || menu.contains(hit) || trigger.contains(hit)) continue;
+                return { kind, target: { id: node.id, tag: node.tagName }, viewportPoint,
+                    hit: { id: hit.id, tag: hit.tagName } };
+            }
+            return null;
+        };
+        // A work input receives focus without activating a business action.
+        const textControls = 'input:not([type]), input[type="text"], input[type="search"], input[type="email"], input[type="tel"], input[type="url"], textarea';
+        for (const node of workspace.querySelectorAll(textControls)) {
+            if (!node.id) continue;
+            const found = target(node, 'work-control');
+            if (found) return found;
+        }
+        for (const node of [workspace, ...workspace.querySelectorAll('.card')]) {
+            if (node.closest('button, a, input, select, textarea, summary, label, [tabindex], [data-action]')) continue;
+            const found = target(node, 'workspace-background');
+            if (found) return found;
+        }
+        return null;
+    });
+}
+
 export async function inspectProfileInteractions(page, driver, contract, meta, { native = false, outside = true } = {}) {
     const { check, report } = driver;
     await page.locator('#agentProfileTrigger').press('Enter');
@@ -428,6 +470,7 @@ export async function inspectProfileInteractions(page, driver, contract, meta, {
     const trigger = await focusState(page);
     check('dark-header trigger has visible inverse focus', trigger.focusVisible && trigger.outlineWidth === '3px' && trigger.outlineColor === contract.primary.color, true, { ...meta, trigger }, 3);
     if (!escaped.hidden) await page.locator('#agentProfileTrigger').press('Enter');
+    let outsideClick = null;
     if (outside && !native) {
         await page.locator('#agentProfileTrigger').press('Space');
         const input = page.locator('#searchPostalCode');
@@ -438,13 +481,33 @@ export async function inspectProfileInteractions(page, driver, contract, meta, {
             return { hit: document.elementFromPoint(viewportPoint.x, viewportPoint.y) === node, viewportPoint,
                 bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } };
         }, point);
-        check('outside-click work point is visibly uncovered by menu', uncovered.hit, true, { ...meta, point, ...uncovered }, 3);
-        if (!uncovered.hit) throw new Error('No verified outside input point; do not click through the menu.');
-        await page.mouse.click(uncovered.viewportPoint.x, uncovered.viewportPoint.y);
-        const clicked = await page.evaluate(() => ({ closed: document.querySelector('#agentStatusMenu').hidden, active: document.activeElement?.id }));
-        check('outside click closes menu without stealing work focus', clicked.closed && clicked.active === 'searchPostalCode', true, { ...meta, clicked }, 3);
+        const narrow = [390, 320].includes(page.viewportSize().width);
+        if (uncovered.hit || !narrow) {
+            check('outside-click work point is visibly uncovered by menu', uncovered.hit, true, { ...meta, point, ...uncovered }, 3);
+            if (!uncovered.hit) throw new Error('No verified outside input point; do not click through the menu.');
+            await page.mouse.click(uncovered.viewportPoint.x, uncovered.viewportPoint.y);
+            const clicked = await page.evaluate(() => ({ closed: document.querySelector('#agentStatusMenu').hidden, active: document.activeElement?.id }));
+            check('outside click closes menu without stealing work focus', clicked.closed && clicked.active === 'searchPostalCode', true, { ...meta, clicked }, 3);
+            outsideClick = { kind: 'postcode-input', point, ...uncovered, clicked };
+        } else {
+            const target = await profileOutsideTarget(page);
+            check('narrow outside click has a verified uncovered work target', Boolean(target), true, { ...meta, coveredPostcodePoint: uncovered, target }, 3);
+            if (!target) throw new Error('No verified narrow outside work point; do not click through the menu.');
+            await page.mouse.click(target.viewportPoint.x, target.viewportPoint.y);
+            const clicked = await page.evaluate(() => {
+                const menu = document.querySelector('#agentStatusMenu'), active = document.activeElement;
+                return { closed: menu.hidden, expanded: document.querySelector('#agentProfileTrigger').getAttribute('aria-expanded'),
+                    active: active?.id, activeTag: active?.tagName, focusInMenu: menu.contains(active) };
+            });
+            const expectedFocus = target.kind === 'work-control'
+                ? clicked.active === target.target.id : clicked.active !== 'agentProfileTrigger' && !clicked.focusInMenu;
+            check('narrow outside click closes menu without stealing work focus', clicked.closed && clicked.expanded === 'false' && expectedFocus,
+                true, { ...meta, target, clicked, focusClaim: target.kind === 'work-control' ? 'Actual clicked work control owns focus.' : 'Background closure only; no work-control focus claim.' }, 3);
+            outsideClick = { ...target, clicked, coveredPostcodePoint: uncovered };
+        }
+        await captureAfter(page, driver, meta.prefix + 'profile-outside-click-' + outsideClick.kind, meta.kind);
     }
-    report.shellAcceptance.interactions.push({ ...meta, menu, wheel, traversal, escaped,
+    report.shellAcceptance.interactions.push({ ...meta, menu, wheel, traversal, escaped, outsideClick,
         scope: native ? 'Actual keyboard menu navigation under OS browser zoom; wheel/outside-click covered separately at default zoom.' : 'Actual Enter/Space, native Tab/ShiftTab/Escape and wheel/outside-click.' });
 }
 

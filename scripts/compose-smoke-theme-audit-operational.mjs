@@ -1378,8 +1378,8 @@ async function inspectAsyncOutbox(page, state, control) {
         assert.ok(passed, 'Async outbox ' + name + ' must preserve the actual focused target, visible perimeter and declared state.');
     };
     const focusWithKeyboard = async selector => {
+        await page.keyboard.press('Tab');
         await page.locator(selector).focus();
-        await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
         return measureAsyncOutboxFocus(page, selector);
     };
     const waitForPoll = async () => {
