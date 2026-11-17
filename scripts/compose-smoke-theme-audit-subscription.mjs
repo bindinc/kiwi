@@ -572,3 +572,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === modulePath) {
         env: { ...process.env, KIWI_THEME_AUDIT_SUBSCRIPTION_ONLY: '1', KIWI_THEME_AUDIT_SLICE: process.env.KIWI_THEME_AUDIT_SLICE || '5' } });
     if (result.error) throw result.error; process.exitCode = result.status ?? 1;
 }
+
+// theme_audit: final page scenes reuse these exact accepted bodies; legacy dispatch stays unchanged.
+export { observe as observeSubscription, selectPerson, inspectNewAddress };

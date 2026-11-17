@@ -1205,3 +1205,6 @@ export async function prepareLegacyOverlayPrivacy({ baseUrl, evidenceDir }) {
 }
 
 export { readFeedbackMultipart, register, validateLocalUrl };
+
+// theme_audit: final page scenes reuse these exact accepted bodies; legacy dispatch stays unchanged.
+export { inspectPrivateErrorCapture, inspectRetainedCaptureCallbackError, enableVisibleFeedback, pairedOrdinaryDialogs, inspectImageLifecycle, inspectSettingsRecovery, inspectFeedbackRecovery, inspectFocusedActions, openFeedback, closeFeedback, closeSettings, inspectDialog, inspectTabContainment, inspectInlineNotice };

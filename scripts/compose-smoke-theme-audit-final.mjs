@@ -309,3 +309,6 @@ export function summarizeFinalAudit(registry) {
         finalAcceptance: false, pendingExternalGates: [...finalAuditSupplements],
         limitation: 'This registry cannot accept the full interface, native zoom, privacy or supplemental gates; those require separately reviewed actual evidence.' });
 }
+
+// Shared canonical receipt identity; no new verification or I/O occurs on import.
+export { releaseId as finalReleaseIdentity };

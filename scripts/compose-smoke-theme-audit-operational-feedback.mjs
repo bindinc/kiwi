@@ -781,3 +781,6 @@ export async function inspectAffectedRecordPrivacy(page, state, { observe }) {
         } finally { await before.dispose(); }
     } finally { await baseline?.dispose(); await identity.dispose(); }
 }
+
+// theme_audit: final page scenes reuse these exact accepted bodies; legacy dispatch stays unchanged.
+export { searchSummaries, sourceEditors, feedbackAndSettings };

@@ -2327,3 +2327,6 @@ async function main() {
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
     main().catch(error => { console.error('[theme_audit09] ' + error.message.replace(/https?:\/\/\S+/g, '[local URL]').slice(0, 1000)); process.exitCode = 1; });
 }
+
+// theme_audit: final page scenes reuse these exact accepted bodies; legacy dispatch stays unchanged.
+export { fixtureCustomer as operationalCustomerFixture, login as loginOperationalSession, trackSources as trackOperationalSources, observe as observeOperational, calls as inspectOperationalCalls, history as inspectOperationalHistory, initialOutbox, outbox as inspectOperationalOutbox, inspectAsyncOutbox, inspectOutboxFallbackFocus, inspectOutboxEditorHeader, inspectCompactCall };

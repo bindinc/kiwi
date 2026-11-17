@@ -1,5 +1,11 @@
 # theme_audit 10 — Complete visual acceptance against the showcase
 
+## Final integration adoption — 2026-11-17
+
+PR155 was explicitly authorized and merged into the open PR154 dependency at `706c004e0bf0a54079dc5ab6b465ad2808eaaaab`. This tooling branch now includes that accepted application without changing its 216 production bodies or six declared public runtime/configuration files. The exact accepted original privacy runner and source-bound theme/address adapters are retained; the main v1.0.36 changelog boundary is preserved. All nine accepted icon producer/test paths remain exact.
+
+The independently reviewed final-driver02, complete scene02 and helper-inventory followup patches are adopted in their documented order. The 68 relevant registry, driver, inventory, scene and regression tests pass; the initial restricted-shell child-process EPERM is retained as an execution limitation, not a changed test predicate. Existing four helper exports preserve their complete prior bodies. A bounded followup supplies the already accepted source-generated calendar prerequisite through one strict local owner, preserving the article calendar owner. Its three additional dispatcher regressions and the existing scene/regression suites pass (26 checks); no application code changes. Independent adoption/followup review and the actual source-bound final matrix remain pending. This checkpoint does not accept rendered results; PR144 stays draft. No deployment or additional merge is authorized.
+
 Status: in progress. Scoped evidence through slices01–09 is recorded separately from final integrated acceptance. Final10 follows the additional interface-icon refinement PR155 and the complete matrix below. This is the verification slice for [theme_audit](../plans/theme_audit.md).
 
 ## Delivery checkpoint — 2026-11-13

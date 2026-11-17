@@ -5,6 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createFinalDriver, finalContextOptions, finalNativeGroups, prepareFinalDriver } from './compose-smoke-theme-audit-final-driver.mjs';
 
 // theme_audit: measurements support visual review; they do not replace it.
 const require = createRequire(import.meta.url);
@@ -15,6 +16,7 @@ const baseUrl = new URL(process.env.KIWI_SMOKE_BASE_URL || 'https://bdc.rtvmedia
 const browserName = process.env.KIWI_SMOKE_BROWSER || 'chromium';
 const slice = Number(process.env.KIWI_THEME_AUDIT_SLICE || '1');
 const finalSource = process.env.KIWI_THEME_AUDIT_FINAL_SOURCE === '1';
+const finalOnly = process.env.KIWI_THEME_AUDIT_FINAL_ONLY === '1';
 const finalReference = '67f2532069054f48f0bc703b0a54b64edf655678ff8ae48bfb19f125e0cb5ccb';
 const nativeZoomOnly = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM_ONLY === '1';
 const nativeZoom = process.env.KIWI_THEME_AUDIT_NATIVE_ZOOM === '1' || nativeZoomOnly;
@@ -85,6 +87,7 @@ const viewports = process.env.KIWI_THEME_AUDIT_VIEWPORTS
         const [width, height = 1000] = value.split('x').map(Number);
         return { width, height };
     })
+    : finalOnly ? [1440, 390, 320].map(width => ({ width, height: 1000 }))
     : overlayOnly && overlayPhase === 'after' ? overlayViewports()
     : shellOnly ? shellViewports()
         : (articleOnly || serviceOnly) ? [1440, 390, 320].map(width => ({ width, height: 1000 }))
@@ -139,6 +142,10 @@ function sha256(value) {
 function git(...args) {
     return execFileSync('git', ['-C', sourceRoot, ...args], { encoding: 'utf8' }).trim();
 }
+
+// Final source, immutable AFTER phases and concrete hook membership are checked BEFORE Xvfb/browser launch.
+const finalConfiguration = finalOnly ? await prepareFinalDriver({ env: process.env, sourceRoot,
+    toolingRoot: fileURLToPath(new URL('..', import.meta.url)), baseUrl }) : null;
 
 await mkdir(evidenceDir, { recursive: true });
 let displayProcess;
@@ -215,6 +222,16 @@ const report = {
         'Shared states not reached through real workflows remain explicitly unverified; unit/class fixtures are separate evidence.'
     ]
 };
+
+if (finalOnly) {
+    report.environment.scenarioSet = nativeZoomOnly ? 'Explicit final10 five-group actual native zoom supplement' : 'Explicit final10 thirteen-area baseline; independent per-cell review required';
+    report.limitations[1] = 'Only exact owner-armed fixture operations may be answered locally; no business write is forwarded.';
+    report.finalRelease = { path: process.env.KIWI_THEME_FINAL_RELEASE, sha256: process.env.KIWI_THEME_FINAL_RELEASE_SHA256, verification: finalConfiguration.verification };
+}
+
+const finalDriver = finalOnly ? createFinalDriver(finalConfiguration, { baseUrl, browserName, sourceRoot, capture, check,
+    compositedTextContrast, controlChecks, actionChecks, keyboardFocus, paymentChecks, choiceStyleChecks, consentStateChecks,
+    evidenceDir, newFinalContext, normalizeMappedCssUrls, painted, report, saveReport, trackStylesheets, unverified }) : null;
 
 function normalizeMappedCssUrls(css, source) {
     const references = [...source.matchAll(/url\(([^)]+)\)/g)].map(match => match[1].trim().replace(/^['"]|['"]$/g, ''));
@@ -340,6 +357,10 @@ async function newContext(viewport, readOnly = true, deviceScaleFactor = 1) {
     return context;
 }
 
+async function newFinalContext(descriptor) {
+    return browser.newContext(finalContextOptions(descriptor));
+}
+
 async function login(page, username = 'kiwi-admin') {
     await page.goto(baseUrl.href);
     await page.locator('[name="username"]').fill(username);
@@ -353,7 +374,8 @@ async function login(page, username = 'kiwi-admin') {
     await page.locator('[data-locale-option="nl"]').click();
 }
 
-async function referenceContract(viewport) {
+async function referenceContract(viewport, finalGroup = null) {
+    const referencePrefix = finalGroup ? finalGroup + '-' : '';
     const context = await newContext(viewport, false);
     const page = await context.newPage();
     try {
@@ -411,6 +433,42 @@ async function referenceContract(viewport) {
                 throw new Error('The actual focused reference must retain its approved single flush2px text-entry boundary.');
             }
         }
+        if (finalOnly) {
+            contract.referenceSha256 = sha256(await readFile(referencePath));
+            if (contract.referenceSha256 !== finalReference) throw new Error('Final reference differs from approved ref67.');
+            for (const [key, selector] of [['inputFocus', '#showcase-search'], ['selectFocus', '#demo-channel']]) {
+                const target = page.locator(selector);
+                const before = await target.boundingBox();
+                let reached = false;
+                for (let step = 0; step < 200; step++) {
+                    await page.keyboard.press('Tab');
+                    if (await target.evaluate(node => document.activeElement === node)) { reached = true; break; }
+                }
+                if (!reached) throw new Error('Reference focus target is not naturally keyboard reachable.');
+                await painted(page);
+                contract[key] = await target.evaluate(node => {
+                    const style = getComputedStyle(node), bounds = node.getBoundingClientRect();
+                    return { active: document.activeElement === node, focusVisible: node.matches(':focus-visible'),
+                        tag: node.tagName, outlineWidth: style.outlineWidth, outlineOffset: style.outlineOffset,
+                        outlineColor: style.outlineColor, boxShadow: style.boxShadow,
+                        width: bounds.width, height: bounds.height, top: bounds.top, bottom: bounds.bottom,
+                        viewportHeight: innerHeight };
+                });
+                const focus = contract[key];
+                if (!focus.active || !focus.focusVisible || focus.outlineWidth !== '2px' || focus.outlineOffset !== '0px'
+                    || focus.boxShadow !== 'none' || focus.outlineColor !== contract.primary.backgroundColor
+                    || focus.width !== before.width || focus.height !== before.height
+                    || focus.top < 2 || focus.bottom > focus.viewportHeight - 2) {
+                    throw new Error('Actual reference text-entry focus must retain the approved complete flush2px boundary.');
+                }
+                await capture(page, `${referencePrefix}final-reference-${key}`, undefined, 'Actual approved reference; natural Tab focus, whole viewport.');
+            }
+            contract.textareaFocus = { kind: 'source-derived-approved-shared-role', actualReferenceSpecimen: null,
+                referenceSha256: contract.referenceSha256, outlineWidth: contract.inputFocus.outlineWidth,
+                outlineOffset: contract.inputFocus.outlineOffset, outlineColor: contract.inputFocus.outlineColor,
+                boxShadow: contract.inputFocus.boxShadow,
+                limitation: 'Reference67 has no textarea specimen. Its verified shared ordinary-text-entry CSS includes textarea; actual application textarea focus must still be checked.' };
+        }
         contract.choiceStates = {};
         for (const [state, selector] of [
             ['checked', '.subscription-choice:has(input:checked)'],
@@ -432,13 +490,13 @@ async function referenceContract(viewport) {
         contract.quietHover = await measure(page, '#themeAuditQuietReference');
         await page.locator('#themeAuditQuietReference').evaluate(sample => sample.remove());
         await page.mouse.move(0, 0);
-        if (shellOnly || (nativeZoom && slice >= 3)) {
+        if (finalOnly || shellOnly || (nativeZoom && slice >= 3)) {
             contract.shell = {};
             for (const selector of ['.preview-topbar', '.preview-body', '.preview-sidebar', '.preview-main', '.preview-brand']) {
                 contract.shell[selector] = await measure(page, selector);
             }
         }
-        if (subscriptionOnly || nativeSubscription || articleOnly || nativeArticle || serviceOnly || nativeService || (overlayOnly && overlayPhase === 'after')) {
+        if (finalOnly || subscriptionOnly || nativeSubscription || articleOnly || nativeArticle || serviceOnly || nativeService || (overlayOnly && overlayPhase === 'after')) {
             contract.subscription = {};
             for (const selector of ['.subscription-workspace', '.subscription-form-grid', '.subscription-form-block', '.subscription-selected-person', '.subscription-choice', '.subscription-consent-row', '.subscription-form-actions']) contract.subscription[selector] = await measure(page, selector);
             contract.subscriptionTitle = await measure(page, '.subscription-form-header h3');
@@ -446,7 +504,7 @@ async function referenceContract(viewport) {
             contract.subscriptionInput = await measure(page, '.subscription-field input');
             contract.subscriptionCaption = await measure(page, '.subscription-field > label');
         }
-        if (customerOnly || nativeCustomer) {
+        if (finalOnly || customerOnly || nativeCustomer) {
             contract.customer = {};
             for (const selector of ['.sidebar-result', '.customer-header', '.customer-header p', '.customer-grid', '.customer-grid .detail', '.detail span', '.detail strong', '.preview-actions']) {
                 contract.customer[selector] = await measure(page, selector);
@@ -457,9 +515,9 @@ async function referenceContract(viewport) {
             canvas: '--preview-canvas', data: '--preview-data-surface', label: '--preview-label-surface',
             selected: '--preview-selected-surface', info: '--preview-info-surface', attention: '--preview-attention-surface', group: '--preview-workflow-surface'
         });
-        await capture(page, 'reference-customer', '.preview-shell', 'standalone showcase reference');
-        await capture(page, 'reference-subscription', '.subscription-preview', 'standalone showcase reference');
-        await writeFile(path.join(evidenceDir, `${viewport.width}x${viewport.height}-reference-contract.json`), JSON.stringify(contract, null, 2));
+        await capture(page, referencePrefix + 'reference-customer', '.preview-shell', 'standalone showcase reference');
+        await capture(page, referencePrefix + 'reference-subscription', '.subscription-preview', 'standalone showcase reference');
+        await writeFile(path.join(evidenceDir, `${referencePrefix}${viewport.width}x${viewport.height}-reference-contract.json`), JSON.stringify(contract, null, 2));
         return contract;
     } finally {
         await context.close();
@@ -1212,7 +1270,7 @@ x11.XCloseDisplay(display)
     execFileSync('python3', ['-'], { input: script, env: launchEnvironment });
 }
 
-async function waitForNativeHeaderUncovered(page) {
+async function waitForNativeHeaderUncovered(page, finalGroup = null) {
     const probe = await page.evaluate(() => {
         const header = document.querySelector('.header'), bounds = header.getBoundingClientRect();
         const color = getComputedStyle(header).backgroundColor.match(/[\d.]+/g).map(Number);
@@ -1245,7 +1303,7 @@ async function waitForNativeHeaderUncovered(page) {
         const clear = colors.every(color => color[3] === 255 && probe.color.slice(0, 3).every((value, index) => color[index] === value));
         frames.push({ elapsedMs: Date.now() - started, sha256: sha256(bytes), colors, clear });
         for (const name of [frames.length === 1 ? 'native-header-ui-first-frame' : null, clear ? 'native-header-ui-clear-frame' : null].filter(Boolean)) {
-            const filename = name + '.png'; await writeFile(path.join(evidenceDir, filename), bytes);
+            const filename = (finalGroup ? finalGroup + '-' : '') + name + '.png'; await writeFile(path.join(evidenceDir, filename), bytes);
             report.captures.push({ name, filename, viewport: { width: probe.window.innerWidth, height: probe.window.innerHeight },
                 kind: 'Actual native OS desktop browser-UI readiness probe; not a workflow acceptance image.',
                 captureMethod: 'actual1600x1200 X11desktop via ffmpeg x11grab; canvas only reads original PNG pixels',
@@ -1256,12 +1314,14 @@ async function waitForNativeHeaderUncovered(page) {
     throw new Error('Actual native header remains obscured: ' + JSON.stringify({ probe, frames }));
 }
 
-async function nativeZoomChecks() {
-    const contract = slice >= 2 ? await referenceContract({ width: 1440, height: 1000 }) : null;
+async function nativeZoomChecks(finalGroup = null) {
+    const contract = slice >= 2 ? await referenceContract({ width: 1440, height: 1000 }, finalGroup) : null;
     const context = await browser.newContext({
         ...((nativeSubscription || nativeArticle || nativeService || nativeOverlay) ? { serviceWorkers: 'block' } : {}),
         viewport: null, ignoreHTTPSErrors: true, locale: 'nl-NL',
-        timezoneId: 'Europe/Amsterdam', reducedMotion: 'reduce'
+        timezoneId: 'Europe/Amsterdam', reducedMotion: 'reduce',
+        ...(finalGroup ? finalContextOptions({ locale: 'nl', role: 'kiwi-admin', hasTouch: false,
+            reducedMotion: 'reduce', native: true, viewport: { width: 1440, height: 1000 } }) : {})
     });
     await context.route('**/*', async route => {
         const request = route.request();
@@ -1271,6 +1331,7 @@ async function nativeZoomChecks() {
         return route.abort('blockedbyclient');
     });
     const page = await context.newPage();
+    const finalSession = finalGroup ? await finalDriver.prepareNative(page, context, finalGroup, contract) : null;
     const nativeDriver = { baseUrl, sourceRoot, capture, check, evidenceDir, login, newContext, normalizeMappedCssUrls, painted, report, saveReport, trackStylesheets, contract };
     const overlayModule = nativeOverlay ? await import('./compose-smoke-theme-audit-overlays-acceptance.mjs') : null;
     const overlaySession = nativeOverlay ? await overlayModule.prepareNativeOverlay(page, nativeDriver) : null;
@@ -1288,18 +1349,19 @@ async function nativeZoomChecks() {
     const finishArticleEvidence = nativeArticle
         ? await articleModule.trackArticleBehavior(page, nativeDriver, { state: 'native article window' }) : async () => {};
     const articleFixtures = nativeArticle ? await articleModule.installArticleFixtures(page, nativeDriver) : null;
-    const finishAssetEvidence = trackStylesheets(page, 'native window');
+    const finishAssetEvidence = finalOnly ? async () => {} : trackStylesheets(page, 'native window');
     const finishCustomerEvidence = nativeCustomer
         ? await (await import('./compose-smoke-theme-audit-customer.mjs')).trackCustomerBehavior(page, { sourceRoot, baseUrl, check, report }, { state: 'native customer window' })
         : async () => {};
-    const finishBehaviorEvidence = slice >= 3
+    const finishBehaviorEvidence = !finalOnly && slice >= 3
         ? await (await import('./compose-smoke-theme-audit-shell-acceptance.mjs')).trackShellBehaviorAssets(page, { sourceRoot, baseUrl, check, evidenceDir, report }, { state: 'native window' })
         : async () => {};
-    page.on('pageerror', error => report.errors.push({ scenario: 'native browser runtime', message: error.message }));
+    if (!finalOnly) page.on('pageerror', error => report.errors.push({ scenario: 'native browser runtime', message: error.message }));
     page.setDefaultTimeout(10000);
     const geometry = () => page.evaluate(() => ({ innerWidth, innerHeight, outerWidth, outerHeight, dpr: devicePixelRatio, pinchScale: visualViewport?.scale }));
     try {
-        await login(page);
+        if (finalSession) await finalSession.login();
+        else await login(page);
         await page.bringToFront();
         sendNativeZoomKey(true);
         const before = await geometry();
@@ -1320,7 +1382,10 @@ async function nativeZoomChecks() {
         check('native 200% browser zoom verified', native200 && widthHalved && outerStable && noPinch, true, {
             state: 'native zoom', before, zoomed, increments, kind: 'actual OS browser shortcut'
         });
-        if (!native200 || !widthHalved || !outerStable || !noPinch) return;
+        if (!native200 || !widthHalved || !outerStable || !noPinch) {
+            if (finalGroup) throw new Error('Actual final native geometry failed; stop remaining groups.');
+            return;
+        }
         if (browserName === 'chromium' && slice >= 3) {
             report.nativeBrowserUI = {
                 action: 'Two actual XTest Escape inputs at empty OS200% baseline dismiss Translate; actual X11 pixels gate subsequent browser-popup clearance.' };
@@ -1329,16 +1394,30 @@ async function nativeZoomChecks() {
                 selectedCustomer: Boolean(window.kiwiCustomerWorkSession?.getRequestContext?.()?.customerReference),
                 scrollX, scrollY, width: innerWidth, height: innerHeight, dpr: devicePixelRatio }));
             const beforePopup = await appState();
-            await capture(page, 'native-popup-before-dismissal', undefined, 'Actual OS200% Chrome browser-popup diagnostic before dismissal; uncropped desktop.');
+            await capture(page, finalGroup ? finalGroup + '-native-popup-before-dismissal' : 'native-popup-before-dismissal', undefined, 'Actual OS200% Chrome browser-popup diagnostic before dismissal; uncropped desktop.');
             dismissNativeBrowserPopup();
-            report.nativeBrowserUI.headerReadiness = await waitForNativeHeaderUncovered(page);
+            report.nativeBrowserUI.headerReadiness = await waitForNativeHeaderUncovered(page, finalGroup);
             check('native browser UI leaves actual header strip uncovered', true, true, { state: 'native browser UI', evidence: report.nativeBrowserUI.headerReadiness });
-            await capture(page, 'native-popup-after-dismissal', undefined, 'Actual OS200% Chrome browser-popup diagnostic after real XTest Escape; uncropped desktop.');
+            await capture(page, finalGroup ? finalGroup + '-native-popup-after-dismissal' : 'native-popup-after-dismissal', undefined, 'Actual OS200% Chrome browser-popup diagnostic after real XTest Escape; uncropped desktop.');
             const afterPopup = await appState();
             report.nativeBrowserUI.applicationBefore = beforePopup;
             report.nativeBrowserUI.applicationAfter = afterPopup;
             report.nativeBrowserUI.scope = 'Browser UI preparation before the complete native200% application suite; uncropped visual review remains required.';
+            if (finalGroup) {
+                report.finalNativeBrowserUI ||= {};
+                report.finalNativeBrowserUI[finalGroup] = structuredClone(report.nativeBrowserUI);
+            }
             check('actual browser-popup dismissal retains empty application state', JSON.stringify(afterPopup), JSON.stringify(beforePopup), { state: 'native browser UI' });
+        }
+        if (finalSession) {
+            await finalSession.inspect({ contract, before, zoomed, viewport: { width: zoomed.innerWidth, height: zoomed.innerHeight } });
+            sendNativeZoomKey(true);
+            const reset = await geometry();
+            const resetValid = Math.abs(reset.dpr - before.dpr) < 0.03 && Math.abs(reset.innerWidth - before.innerWidth) < 3;
+            check('final native group reset restored100%', resetValid, true, { group: finalGroup, before, reset });
+            await capture(page, `final-native-${finalGroup}-100-reset`, undefined, 'Actual OS100% reset; uncropped X11 desktop.');
+            if (!resetValid) throw new Error('Actual final native100% reset failed; stop remaining groups.');
+            return;
         }
         if (nativeOverlay) {
             await overlayModule.inspectNativeOverlay(page, nativeDriver, overlaySession, { viewport: { width: zoomed.innerWidth, height: zoomed.innerHeight }, native: true, locale: 'nl', phase: 'after' });
@@ -1441,7 +1520,10 @@ async function nativeZoomChecks() {
         await finishCustomerEvidence();
         await finishBehaviorEvidence();
         await finishAssetEvidence();
-        await context.close();
+        if (finalSession) {
+            try { await finalSession.finish(); }
+            finally { await context.close(); }
+        } else await context.close();
     }
 }
 
@@ -1449,7 +1531,9 @@ try {
     if (!nativeZoomOnly) {
         for (const viewport of viewports) {
             const contract = await referenceContract(viewport);
-            if (overlayOnly) {
+            if (finalOnly) {
+                await finalDriver.viewport(viewport, contract);
+            } else if (overlayOnly) {
                 const { inspectOverlays } = await import('./compose-smoke-theme-audit-overlays.mjs');
                 await inspectOverlays({ baseUrl, sourceRoot, capture, check, evidenceDir, login, newContext, normalizeMappedCssUrls, painted, report, saveReport, trackStylesheets }, viewport, contract);
             } else if (serviceOnly) {
@@ -1480,14 +1564,24 @@ try {
         }
     }
     if (nativeZoom) {
-        try {
-            await nativeZoomChecks();
-        } catch (error) {
-            report.errors.push({ scenario: 'native-200-percent', message: error.message.slice(0, 1200) });
+        if (finalOnly) {
+            for (const group of finalNativeGroups) {
+                try { await nativeZoomChecks(group); }
+                catch (error) {
+                    report.errors.push({ scenario: 'final-native-200-percent', group, message: 'Final native group failed; the attempt remains unverified.' });
+                    break;
+                }
+            }
+        } else {
+            try {
+                await nativeZoomChecks();
+            } catch (error) {
+                report.errors.push({ scenario: 'native-200-percent', message: error.message.slice(0, 1200) });
+            }
         }
     }
 } catch (error) {
-    report.errors.push({ scenario: 'runner', message: error.message.slice(0, 1200) });
+    report.errors.push({ scenario: 'runner', message: finalOnly ? 'Final runner failed; raw exception text is not persisted.' : error.message.slice(0, 1200) });
 } finally {
     if (!report.checks.length || !report.captures.some(capture => capture.kind.toLowerCase().includes('actual'))) {
         report.errors.push({ scenario: 'runner coverage', message: 'Unexpected empty run: checks and actual application captures are mandatory.' });

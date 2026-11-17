@@ -1,5 +1,9 @@
 # theme_audit — Unify interface icons
 
+## Authorized merge — 2026-11-17
+
+PR155 merged at `706c004e0bf0a54079dc5ab6b465ad2808eaaaab` into its existing base `codex/align-theme-operational-states` after explicit user authorization. All 216 production bodies equal accepted documentation head `754bb510` and tested source `769a9eee`. PR154 remains open to main; no deployment or cleanup occurred. The final integrated slice10 continues in PR144. The scoped acceptance and retained limits below remain unchanged.
+
 Status: application implementation and independent acceptance pass on 2026-11-17 at production source `769a9eee8192a7032ca63ec78d4351a71dfe18e2`. The finite icon, layout, naming and capture-restoration findings are resolved. PR155 is reviewable; complete integrated interface acceptance remains the final slice10 gate. No merge or deployment is included.
 
 Story: [SC-206629](https://app.shortcut.com/bindincit/story/206629). Parent: [theme_audit plan](../../../plans/theme_audit.md).
