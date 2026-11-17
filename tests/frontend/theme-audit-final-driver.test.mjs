@@ -404,15 +404,21 @@ test('viewport preserves the exact measured contract unless a verified native DA
 test('native DATE classification requires the exact proved area and width in the existing baseline matrix', async () => {
     const stop = { id: 'subStartDate', tag: 'INPUT', type: 'date', focused: false, focusVisible: false, focusWithin: true };
     const proof = area => ({ area, width: 1440, height: 1000, step: 3, applicationStop: stop });
-    async function run({ entries, area = 'A08', width = 1440, extraFocusLoss = false }) {
-        let step = -1; const checks = [];
-        const page = { locator: () => ({ focus: async () => {} }), keyboard: { press: async key => { assert.equal(key, 'Tab'); step++; } },
+    async function run({ entries, area = 'A08', width = 1440, extraFocusLoss = false, unreachable = false }) {
+        let step = -1, paintedStep = -2; const checks = [], captures = [];
+        const page = { locator: () => ({ focus: async () => {} }), keyboard: { press: async key => {
+            assert.equal(key, 'Tab');
+            if (unreachable && step === 4) assert.ok(captures.some(capture => capture.step === 4
+                && capture.name === 'after-subscription-unreachable-focus-step-4'), 'Capture the failed whole frame before the next Tab.');
+            step++;
+        } },
             evaluate: async probe => {
+                assert.equal(paintedStep, step, 'Measure only after painting the current Tab stop.');
                 const date = step === 3, cancel = step === 6;
                 const hostFocused = !date && !(extraFocusLoss && step === 2);
                 const node = { id: step === 0 ? 'werfsleutelInput' : date ? 'subStartDate' : 'unit-' + step,
                     tagName: 'INPUT', type: date ? 'date' : 'text', getAttribute: () => null, closest: () => ({}),
-                    getBoundingClientRect: () => ({ width: 30, height: 20, x: 0, right: 30, y: 0, bottom: 20 }),
+                    getBoundingClientRect: () => ({ width: 30, height: 20, x: unreachable && step === 4 ? -5 : 0, right: 30, y: 0, bottom: 20 }),
                     matches(selector) {
                         if (selector === ':focus-within') return true;
                         if (selector === ':focus-visible' || selector === ':focus') return hostFocused;
@@ -426,8 +432,17 @@ test('native DATE classification requires the exact proved area and width in the
         const driver = { browserName: 'chromium', contract: { nativeDateFocus: { sourceCommit: commit, browserVersion: 'synthetic-browser', entries } },
             report: { slice: 10, phase: 'after', application: { commit }, environment: { browserVersion: 'synthetic-browser' }, subscriptionAcceptance: { interactions: [] } },
             // The test source supplies synthetic capture bytes, never visual evidence.
-            capture: async () => fileURLToPath(import.meta.url),
-            check: (name, actual, expected, detail) => { checks.push({ name, actual, detail }); assert.equal(actual, expected, name); } };
+            capture: async (actualPage, name) => { assert.equal(actualPage, page); captures.push({ step, name }); return fileURLToPath(import.meta.url); },
+            painted: async actualPage => { assert.equal(actualPage, page); paintedStep = step; },
+            check: (name, actual, expected, detail) => {
+                checks.push({ name, actual, detail });
+                if (unreachable) {
+                    assert.deepEqual({ ...detail.path[4].bounds }, { x: -5, y: 0, width: 30, height: 20, right: 30, bottom: 20 });
+                    assert.deepEqual({ ...detail.path[4].viewport }, { width, height: 1000 });
+                    assert.equal(detail.path[4].reachable, false);
+                }
+                assert.equal(actual, expected, name);
+            } };
         await inspectSubscriptionKeyboard(page, driver, { native: false, locale: 'nl', prefix: `${area}-chromium-${width}x1000-` });
         return { check: checks[0], interaction: driver.report.subscriptionAcceptance.interactions[0] };
     }
@@ -442,6 +457,7 @@ test('native DATE classification requires the exact proved area and width in the
         { entries: [proof('A08')], area: 'A05' },
         { entries: [proof('A07')], area: 'A07' },
         { entries: [proof('A08')], width: 390 },
-        { entries: [proof('A08')], extraFocusLoss: true }
+        { entries: [proof('A08')], extraFocusLoss: true },
+        { entries: [proof('A08')], unreachable: true }
     ]) await assert.rejects(run(options), /final-only Tab route/);
 });

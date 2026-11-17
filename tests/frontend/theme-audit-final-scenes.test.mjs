@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
 import { createFinalSceneHooks, createFinalTransport, selectFinalRequestOwner, serverRoleEvidence,
-    validateFinalSceneInputs, validateOwnerVerification, nativeTaskIdentity, finishFinalSceneSession, trackFinalServedSources, withCallControlReadiness } from '../../scripts/compose-smoke-theme-audit-final-scenes.mjs';
+    validateFinalSceneInputs, validateOwnerVerification, nativeTaskIdentity, finishFinalSceneSession, trackFinalServedSources, withCallControlReadiness, verifiedCriterionChecks } from '../../scripts/compose-smoke-theme-audit-final-scenes.mjs';
 import { inspectSubscriptionKeyboard } from '../../scripts/compose-smoke-theme-audit-subscription-acceptance.mjs';
 import { finalAuditAreas, finalReleaseIdentity } from '../../scripts/compose-smoke-theme-audit-final.mjs';
 
@@ -349,6 +349,7 @@ function subscriptionKeyboardFixture(image, { classification = true, extraFocusL
         report: { slice: 10, phase: 'after', application: { commit: 'a'.repeat(40) }, environment: { browserVersion: 'synthetic-unit-browser' },
             subscriptionAcceptance: { interactions: [] } },
         capture: async () => image,
+        painted: async actualPage => assert.equal(actualPage, page),
         check: (name, actual, expected, detail) => { checks.push({ name, actual, detail }); assert.equal(actual, expected, name); } };
     return { driver, checks, run: () => inspectSubscriptionKeyboard(page, driver, { native: false, prefix: 'A05-chromium-1440x1000-', locale: 'nl' }) };
 }
@@ -373,5 +374,30 @@ test('native DATE classification retains raw false host focus and requires curre
     } finally {
         await rm(directory, { recursive: true, force: true });
         await rmdir(parent).catch(error => { if (error.code !== 'ENOTEMPTY') throw error; });
+    }
+});
+
+test('legacy focus checks require either exact reviewed helper body and preserve all strict assertions', () => {
+    const record = { name: 'Actual five-second first trigger focus is retained and visible', matches: true, visible: true };
+    const hashes = [
+        '6d312cd304824f9117434ed7e84ba2bc437883d0b87963b826e3b94b092f05a9',
+        '6d92de17eec977297856200774f70f1abfed45ba37aee703c31d7afd6e342287'
+    ];
+    for (const sha256 of hashes) {
+        const source = { path: 'scripts/compose-smoke-theme-audit-operational.mjs', sha256, verified: true };
+        const [check] = verifiedCriterionChecks([record], source);
+        assert.equal(check.passed, true);
+        assert.equal(check.evidenceType, 'reviewed-legacy-focus-assertion');
+        assert.deepEqual(check.assertionSource, { path: source.path, sha256 });
+        assert.equal(Object.hasOwn(record, 'passed'), false, 'The raw source assertion stays unchanged.');
+        for (const invalid of [{ ...record, matches: false }, { ...record, visible: false },
+            { ...record, matches: 1 }, { ...record, visible: 1 }, { ...record, extra: true },
+            { ...record, name: 'Another assertion' }, { ...record, passed: false }]) {
+            assert.throws(() => verifiedCriterionChecks([invalid], source));
+        }
+        for (const invalid of [{ ...source, sha256: '0'.repeat(64) }, { ...source, verified: false },
+            { ...source, path: 'scripts/another-helper.mjs' }, null]) {
+            assert.throws(() => verifiedCriterionChecks([record], invalid));
+        }
     }
 });

@@ -1134,7 +1134,10 @@ export function withCallControlReadiness(page) {
 }
 
 const legacyFocusPath = 'scripts/compose-smoke-theme-audit-operational.mjs';
-const legacyFocusSha256 = '6d312cd304824f9117434ed7e84ba2bc437883d0b87963b826e3b94b092f05a9';
+const legacyFocusSha256s = [
+    '6d312cd304824f9117434ed7e84ba2bc437883d0b87963b826e3b94b092f05a9',
+    '6d92de17eec977297856200774f70f1abfed45ba37aee703c31d7afd6e342287'
+];
 const legacyFocusName = 'Actual five-second first trigger focus is retained and visible';
 
 // Called after the source operation returned, so its original assert.ok has already run.
@@ -1147,7 +1150,8 @@ export function verifiedCriterionChecks(records, source) {
         }
         assert.equal(record.name, legacyFocusName, 'Unknown missing-pass source record.');
         assert.deepEqual(Object.keys(record).sort(), ['matches', 'name', 'visible'], 'The legacy focus shape must stay exact.');
-        assert.equal(source?.verified, true); assert.equal(source.path, legacyFocusPath); assert.equal(source.sha256, legacyFocusSha256);
+        assert.equal(source?.verified, true); assert.equal(source.path, legacyFocusPath);
+        assert.ok(legacyFocusSha256s.includes(source.sha256), 'Legacy focus requires an exact independently reviewed helper body.');
         assert.equal(record.matches, true); assert.equal(record.visible, true);
         return { ...record, passed: true, evidenceType: 'reviewed-legacy-focus-assertion', assertionSource: { path: source.path, sha256: source.sha256 } };
     });

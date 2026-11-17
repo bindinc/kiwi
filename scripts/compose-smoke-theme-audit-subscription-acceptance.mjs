@@ -146,6 +146,7 @@ export async function inspectSubscriptionKeyboard(page, driver, meta) {
     const nativeContract = driver.contract?.nativeDateFocus;
     for (let step = 0; step < 120; step++) {
         await page.keyboard.press('Tab');
+        await driver.painted(page);
         const item = await page.evaluate(() => {
             const node = document.activeElement, rect = node.getBoundingClientRect();
             const css = getComputedStyle(node);
@@ -153,10 +154,16 @@ export async function inspectSubscriptionKeyboard(page, driver, meta) {
                 withinForm: Boolean(node.closest('#newSubscriptionForm')), focusVisible: node.matches(':focus-visible'),
                 focused: node.matches(':focus'), focusWithin: node.matches(':focus-within'), outline: css.outline,
                 outlineWidth: parseFloat(css.outlineWidth), outlineStyle: css.outlineStyle,
+                bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height, right: rect.right, bottom: rect.bottom },
+                viewport: { width: innerWidth, height: innerHeight },
                 reachable: rect.width > 0 && rect.height > 0 && rect.x >= -1 && rect.right <= innerWidth + 1 && rect.y >= -1 && rect.bottom <= innerHeight + 1,
                 cancel: Boolean(node.matches('#subscriptionForm .form-actions [data-action="close-form"]')) };
         });
         path.push(item);
+        if (item.reachable === false) {
+            await driver.capture(page, (meta.native ? 'native-200-' : 'after-') + 'subscription-unreachable-focus-step-' + step, undefined,
+                'Actual focused control is outside the visible viewport after the existing painted wait; whole-page diagnostic, reachability assertion unchanged.');
+        }
         if (item.withinForm && item.type === 'date' && !item.focusVisible) {
             const image = await driver.capture(page, (meta.native ? 'native-200-' : 'after-') + 'subscription-native-date-focus-step-' + step, undefined,
                 nativeContract ? 'Actual native DATE internal Tab stop; unchanged host state and whole image. Final classification still requires independent current-image review.'

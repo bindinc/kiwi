@@ -180,8 +180,10 @@ export async function verifyFinalNativeDateFocus(release, source) {
         const reference = JSON.parse(await artifact(pair.referenceReport, 'Observed reference report'));
         await artifact(reference.reference, 'Native DATE approved reference body');
         assert.equal(reference.reference.sha256, refinedReference);
-        assert.ok([observedSource.head, 'a8d8cce2cb81ef1e985b7dd4273c87401d102964', release.source.commit].includes(application.application.commit),
-            'Native DATE observation must come from the exact observed source, confirmed alias source or current release.');
+        const reviewedCommits = [observedSource.head, 'a8d8cce2cb81ef1e985b7dd4273c87401d102964',
+            '54d409eb008aaad00de7b62b7345a167bdbe54a7', release.source.commit];
+        assert.ok(reviewedCommits.includes(application.application.commit),
+            'Native DATE observation must come from an exact reviewed source or the current release.');
         assert.equal(reference.browser.name, 'chromium'); assert.equal(reference.browser.version, '157.0.8103.38');
         assert.equal(application.environment.browser, 'chromium');
         assert.equal(application.environment.browserVersion, reference.browser.version);
