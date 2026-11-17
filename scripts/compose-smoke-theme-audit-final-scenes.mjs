@@ -846,6 +846,46 @@ async function outboxScene(handle) {
     });
 }
 
+export async function inspectRetainedCaptureInFreshDocument(handle) {
+    const { child, context, driver } = handle, meta = metaFor(handle);
+    const measure = () => ({ width: innerWidth, height: innerHeight, dpr: devicePixelRatio,
+        zoom: visualViewport?.scale, locale: document.documentElement.lang });
+    const originalEnvironment = await handle.page.evaluate(measure);
+    const page = await context.newPage();
+    // Keep this document's served-body receipt distinct from the retained application page.
+    const tracking = { ...handle, page, child: { ...child, report: { servedSources: [], sourceErrors: [] } }, cleanup: [] };
+    const runtimeError = error => child.report.errors.push({ kind: 'retained capture component runtime', name: error.name });
+    try {
+        assert.equal(page.context(), context, 'The component document must share the actual authenticated context.');
+        const finishSources = trackFinalServedSources(tracking, { artifactName: 'retained-component-served-source.json' });
+        page.on('pageerror', runtimeError); tracking.cleanup.push(() => page.off('pageerror', runtimeError));
+        const response = await page.goto(driver.baseUrl.href, { waitUntil: 'domcontentloaded' });
+        assert.equal(response?.url(), driver.baseUrl.href, 'The component must load the exact same-origin application document.');
+        const role = serverRoleEvidence(await response.text(), handle.descriptor.role, response.status());
+        await page.waitForFunction(() => window.kiwiCustomerDetailSlice && window.kiwiCustomerWorkSession);
+        const environment = await page.evaluate(measure);
+        assert.deepEqual(environment, originalEnvironment, 'The fresh component document must retain the current viewport, zoom and locale.');
+        assert.deepEqual((await page.locator('.profile-menu-role').allTextContents()).map(value => value.trim()), role.roles);
+        const receipt = child.report.retainedCaptureComponent = { boundary: 'Existing dialog-controller component fixture in a fresh authenticated document; original application dialog and draft remain retained.',
+            sourceBefore: await finishSources(),
+            role: await writeArtifact(path.join(child.evidenceDir, 'retained-component-server-role.json'), {
+                marker: 'theme_audit', sourceCommit: handle.release.source.commit, ...role }),
+            environment: await writeArtifact(path.join(child.evidenceDir, 'retained-component-environment.json'), {
+                marker: 'theme_audit', sourceCommit: handle.release.source.commit, environment }) };
+        await handle.helpers.overlays.inspectRetainedCaptureCallbackError(page, child, meta);
+        for (const name of ['dialog', 'screenshot', 'selector']) assert.ok(tracking.child.report.servedSources.some(item =>
+            item.path === `assets/js/app/contextual-feedback/${name}.js`), 'Missing actual served component source: ' + name);
+        receipt.sourceAfter = await finishSources();
+    } catch (error) {
+        await child.capture(page, 'retained-capture-component-failure', undefined,
+            'Actual failed fresh-document component setup or assertion; retained diagnostic, never accepted.').catch(() => {});
+        throw error;
+    } finally {
+        try { if (!page.isClosed()) await page.close(); }
+        finally { for (const cleanup of tracking.cleanup.splice(0).reverse()) await cleanup(); }
+    }
+}
+
 async function feedbackScene(handle) {
     const { helpers, page, child } = handle, meta = metaFor(handle);
     await criterion(handle, 'visible-task-entry-and-ordinary-settings', 'Production visible trigger and matched ordinary/settings native dialogs', async () => {
@@ -857,10 +897,10 @@ async function feedbackScene(handle) {
         await helpers.overlays.inspectFeedbackRecovery(page, child, meta, handle.overlay, true);
         child.check('Actual controlled feedback request was captured', handle.overlay.feedbackRequests.length > 0, true, meta, 10);
         child.check('No feedback request left the fixture owner', child.report.deniedRequests.length, 0, meta, 10);
+        await inspectRetainedCaptureInFreshDocument(handle);
         handle.privateError = true;
         try { await helpers.overlays.inspectPrivateErrorCapture(page, child, meta, handle.privateOverlay); }
         finally { handle.privateError = false; }
-        await helpers.overlays.inspectRetainedCaptureCallbackError(page, child, meta);
         child.check('Actual opaque private-error PNG and metadata checks were retained', child.report.overlayAcceptance.privacy.length > 0, true, meta, 10);
     });
     await criterion(handle, 'quiet-close-and-return', 'Native feedback close returns to its actual visible invoker', async () => {

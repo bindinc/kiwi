@@ -133,37 +133,58 @@ export async function verifyFinalNativeDateFocus(release, source) {
     assert.equal(proof.observedSource.sha256, '5f56e7d3102e3c20ccd1393f7799b8d1fd3709e4ed5bd07175c64fc879db0cc8');
     const observedSource = JSON.parse(await artifact(proof.observedSource, 'Native DATE observed application source'));
     assert.equal(observedSource.head, '754bb51001bb94b7472c8dfdfbce631eda73b2d9');
-    // Carry every body, allowing only the confirmed gender alias and two exact selector fixes.
-    const cssChanges = [
-        { path: 'assets/css/styles.css', sha256: '38e31eb269625d745fc40c9ba7e58c391afd9f237f6a6b17fd6a3958773047ba', bytes: 130111,
-            original: '.timeline-header:focus-visible { outline-offset: -3px; }',
-            corrected: '.contact-history .timeline-header:focus-visible { outline-offset: -3px; }' },
-        { path: 'assets/css/contextual-feedback.css', sha256: 'e62e7a222b8a74942438c41306fe0a69f9ac7cf76f6bc2b193e5580fcbf43ad8', bytes: 19560,
-            original: ':is(.modal, div.form-container):not(dialog):not(dialog *) {',
-            corrected: ':is(.modal, div.form-container):not(#newSubscriptionForm, #articleSaleForm):not(dialog):not(dialog *) {' }
-    ];
-    const carriedCss = new Map();
-    for (const change of cssChanges) {
-        const current = source.source.find(entry => entry.path === change.path);
-        if (current?.sha256 !== change.sha256) continue;
-        const original = observedSource.source.find(entry => entry.path === change.path);
-        const body = await physicalFile(path.join(source.worktree, change.path));
-        assert.equal(body.length, change.bytes); assert.equal(sha256(body), change.sha256);
-        const text = body.toString('utf8');
-        assert.equal(text.split(change.corrected).length, 2, 'Exactly one approved selector may change per CSS body.');
-        const originalBody = Buffer.from(text.replace(change.corrected, change.original));
-        assert.equal(originalBody.length, original.bytes);
-        assert.equal(sha256(originalBody), original.sha256, 'Native DATE CSS carry contains more than its exact approved selector fix.');
-        carriedCss.set(change.path, change);
+    // This complete source variant admits only the independently reviewed UI repairs.
+    // Every other production body still has to match the immutable observed application.
+    const correctedChoices = source.source.find(entry => entry.path === 'assets/js/app/address-completion.js')?.sha256
+        === '9aa8d91097237a03ebcd6d09a13450ed52999ec77f2fc9d9078cd63778721663';
+    let expected;
+    if (correctedChoices) {
+        const approvedBodies = [
+            { path: 'assets/js/app/customer-editor.js', sha256: '99f3e6d8cde221ba5c84581c4ce5181d87a99cad971bd022e39b3ce52e6db25b', bytes: 23574 },
+            { path: 'assets/css/styles.css', sha256: 'e7c56422ae52abf7ada3c66a3af363b131c5f87a99a004e8e8e1f1498f5981cd', bytes: 130535 },
+            { path: 'assets/css/contextual-feedback.css', sha256: 'e62e7a222b8a74942438c41306fe0a69f9ac7cf76f6bc2b193e5580fcbf43ad8', bytes: 19560 },
+            { path: 'assets/js/app/address-completion.js', sha256: '9aa8d91097237a03ebcd6d09a13450ed52999ec77f2fc9d9078cd63778721663', bytes: 28019 },
+            { path: 'assets/js/app/slices/app-shell-slice.js', sha256: 'cba493b2046fa16a9c39dc8fa68b3b42d6e61cbaf00297570e0481a7de17a211', bytes: 23436 }
+        ];
+        for (const entry of approvedBodies) {
+            const body = await physicalFile(path.join(source.worktree, entry.path));
+            assert.equal(body.length, entry.bytes); assert.equal(sha256(body), entry.sha256);
+        }
+        const approved = new Map(approvedBodies.map(entry => [entry.path, entry]));
+        expected = observedSource.source.map(entry => approved.get(entry.path) || entry);
+    } else {
+        const cssChanges = [
+            { path: 'assets/css/styles.css', sha256: '38e31eb269625d745fc40c9ba7e58c391afd9f237f6a6b17fd6a3958773047ba', bytes: 130111,
+                original: '.timeline-header:focus-visible { outline-offset: -3px; }',
+                corrected: '.contact-history .timeline-header:focus-visible { outline-offset: -3px; }' },
+            { path: 'assets/css/contextual-feedback.css', sha256: 'e62e7a222b8a74942438c41306fe0a69f9ac7cf76f6bc2b193e5580fcbf43ad8', bytes: 19560,
+                original: ':is(.modal, div.form-container):not(dialog):not(dialog *) {',
+                corrected: ':is(.modal, div.form-container):not(#newSubscriptionForm, #articleSaleForm):not(dialog):not(dialog *) {' }
+        ];
+        const carriedCss = new Map();
+        for (const change of cssChanges) {
+            const current = source.source.find(entry => entry.path === change.path);
+            if (current?.sha256 !== change.sha256) continue;
+            const original = observedSource.source.find(entry => entry.path === change.path);
+            const body = await physicalFile(path.join(source.worktree, change.path));
+            assert.equal(body.length, change.bytes); assert.equal(sha256(body), change.sha256);
+            const text = body.toString('utf8');
+            assert.equal(text.split(change.corrected).length, 2, 'Exactly one approved selector may change per CSS body.');
+            const originalBody = Buffer.from(text.replace(change.corrected, change.original));
+            assert.equal(originalBody.length, original.bytes);
+            assert.equal(sha256(originalBody), original.sha256, 'Native DATE CSS carry contains more than its exact approved selector fix.');
+            carriedCss.set(change.path, change);
+        }
+        expected = observedSource.source.map(entry => {
+            if (entry.path === 'assets/js/app/customer-editor.js')
+                return { ...entry, sha256: '99f3e6d8cde221ba5c84581c4ce5181d87a99cad971bd022e39b3ce52e6db25b', bytes: 23574 };
+            const css = carriedCss.get(entry.path);
+            return css ? { ...entry, sha256: css.sha256, bytes: css.bytes } : entry;
+        });
+        assert.equal(observedSource.productionCount, 216);
     }
-    const expected = observedSource.source.map(entry => {
-        if (entry.path === 'assets/js/app/customer-editor.js')
-            return { ...entry, sha256: '99f3e6d8cde221ba5c84581c4ce5181d87a99cad971bd022e39b3ce52e6db25b', bytes: 23574 };
-        const css = carriedCss.get(entry.path);
-        return css ? { ...entry, sha256: css.sha256, bytes: css.bytes } : entry;
-    });
     assert.equal(observedSource.productionCount, 216);
-    assert.deepEqual(canonical(source.source), canonical(expected), 'Native DATE source carry differs beyond the exact confirmed alias/selector changes.');
+    assert.deepEqual(canonical(source.source), canonical(expected), 'Native DATE source carry differs beyond the exact reviewed application bodies.');
     assert.ok(Array.isArray(proof.entries) && proof.entries.length > 0);
     const entries = [];
     for (const entry of proof.entries) {
@@ -181,7 +202,7 @@ export async function verifyFinalNativeDateFocus(release, source) {
         await artifact(reference.reference, 'Native DATE approved reference body');
         assert.equal(reference.reference.sha256, refinedReference);
         const reviewedCommits = [observedSource.head, 'a8d8cce2cb81ef1e985b7dd4273c87401d102964',
-            '54d409eb008aaad00de7b62b7345a167bdbe54a7', release.source.commit];
+            '54d409eb008aaad00de7b62b7345a167bdbe54a7', 'd26dd822be6e6375dfbf13035683a1b300693230', release.source.commit];
         assert.ok(reviewedCommits.includes(application.application.commit),
             'Native DATE observation must come from an exact reviewed source or the current release.');
         assert.equal(reference.browser.name, 'chromium'); assert.equal(reference.browser.version, '157.0.8103.38');

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
 import { createFinalSceneHooks, createFinalTransport, selectFinalRequestOwner, serverRoleEvidence,
-    validateFinalSceneInputs, validateOwnerVerification, nativeTaskIdentity, finishFinalSceneSession, trackFinalServedSources, withCallControlReadiness, verifiedCriterionChecks } from '../../scripts/compose-smoke-theme-audit-final-scenes.mjs';
+    validateFinalSceneInputs, validateOwnerVerification, nativeTaskIdentity, finishFinalSceneSession, trackFinalServedSources, withCallControlReadiness, verifiedCriterionChecks, inspectRetainedCaptureInFreshDocument } from '../../scripts/compose-smoke-theme-audit-final-scenes.mjs';
 import { inspectSubscriptionKeyboard } from '../../scripts/compose-smoke-theme-audit-subscription-acceptance.mjs';
 import { finalAuditAreas, finalReleaseIdentity } from '../../scripts/compose-smoke-theme-audit-final.mjs';
 
@@ -400,4 +400,57 @@ test('legacy focus checks require either exact reviewed helper body and preserve
             assert.throws(() => verifiedCriterionChecks([record], invalid));
         }
     }
+});
+
+
+test('retained callback fixture owns a fresh authenticated document and preserves the original retained draft', async () => {
+    const parent = fileURLToPath(new URL('./.theme-audit-final-scenes-unit/', import.meta.url)); await mkdir(parent, { recursive: true });
+    const directory = await mkdtemp(path.join(parent, 'fresh-component-'));
+    try {
+        for (const failure of [null, 'role', 'source', 'callback']) {
+            const events = [], listeners = new Map(), drafts = new WeakMap();
+            const geometry = { width: 390, height: 1000, dpr: 1, zoom: 1, locale: 'nl' };
+            const original = { evaluate: async () => geometry };
+            const draft = { comment: 'Synthetic retained application draft' }; drafts.set(original, draft);
+            const paths = ['styles.css', 'article-search.css', 'delivery-date-picker.css', 'contextual-feedback.css', 'session-outbox.css'].map(name => 'assets/css/' + name);
+            const modules = ['dialog', 'screenshot', 'selector'].map(name => `assets/js/app/contextual-feedback/${name}.js`);
+            const bodies = new Map([...paths, ...modules].map(relative => [relative, 'Synthetic source bytes: ' + relative]));
+            const emit = relative => listeners.get('response')({ url: () => new URL(relative, base).href,
+                body: async () => Buffer.from(failure === 'source' && relative === paths[0] ? 'Changed source bytes' : bodies.get(relative)) });
+            const context = { newPage: async () => { events.push('new-page'); return page; } };
+            const page = { closed: false, context: () => context, on: (name, callback) => listeners.set(name, callback),
+                off: name => { events.push('off-' + name); listeners.delete(name); },
+                goto: async url => {
+                    assert.equal(url, base.href); events.push('navigate'); paths.forEach(emit);
+                    return { url: () => base.href, status: () => 200,
+                        text: async () => '<div class="profile-menu-role">KIWI ' + (failure === 'role' ? 'view' : 'admin') + '</div>' };
+                },
+                waitForFunction: async () => events.push('ready'), evaluate: async () => geometry,
+                locator: selector => { assert.equal(selector, '.profile-menu-role'); return { allTextContents: async () => ['KIWI admin'] }; },
+                isClosed: () => page.closed, close: async () => { events.push('close'); page.closed = true; } };
+            const report = { errors: [] }, child = { evidenceDir: directory, report,
+                capture: async actualPage => { assert.equal(actualPage, page); events.push('failure-capture'); } };
+            const handle = { page: original, context, child, descriptor: { id: 'A12/chromium/390x1000', viewport: { width: 390, height: 1000 }, locale: 'nl', role: 'kiwi-admin', native: false },
+                driver: { baseUrl: base, normalizeMappedCssUrls: value => value },
+                source: { source: [...bodies].map(([path, body]) => ({ path, sha256: createHash('sha256').update(body).digest('hex') })) }, sourceBodies: bodies,
+                release: { source: { commit: 'a'.repeat(40), runtime: artifact('2') } },
+                helpers: { overlays: { inspectRetainedCaptureCallbackError: async (actualPage, actualChild) => {
+                    assert.equal(actualPage, page); assert.equal(actualChild, child); assert.equal(drafts.has(page), false);
+                    assert.ok(report.retainedCaptureComponent.sourceBefore); assert.ok(report.retainedCaptureComponent.role);
+                    assert.ok(events.includes('ready')); events.push('component'); modules.forEach(emit);
+                    if (failure === 'callback') throw new Error('Synthetic component rejection');
+                } } } };
+            if (failure) await assert.rejects(inspectRetainedCaptureInFreshDocument(handle));
+            else {
+                await inspectRetainedCaptureInFreshDocument(handle);
+                assert.ok(report.retainedCaptureComponent.sourceAfter);
+                assert.deepEqual(events.slice(0, 4), ['new-page', 'navigate', 'ready', 'component']);
+            }
+            assert.equal(drafts.get(original), draft); assert.equal(draft.comment, 'Synthetic retained application draft');
+            assert.equal(page.closed, true); assert.equal(listeners.size, 0);
+            if (failure === 'role' || failure === 'source') assert.equal(events.includes('component'), false);
+            if (failure) assert.ok(events.indexOf('failure-capture') < events.indexOf('close'));
+        }
+    } finally { await rm(directory, { recursive: true, force: true });
+        await rmdir(parent).catch(error => { if (error.code !== 'ENOTEMPTY') throw error; }); }
 });
