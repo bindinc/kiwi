@@ -438,7 +438,7 @@ async function referenceContract(viewport, finalGroup = null) {
             if (contract.referenceSha256 !== finalReference) throw new Error('Final reference differs from approved ref67.');
             for (const [key, selector] of [['inputFocus', '#showcase-search'], ['selectFocus', '#demo-channel']]) {
                 const target = page.locator(selector);
-                const before = await target.boundingBox();
+                const before = await target.evaluate(node => { const { width, height } = node.getBoundingClientRect(); return { width, height }; });
                 let reached = false;
                 for (let step = 0; step < 200; step++) {
                     await page.keyboard.press('Tab');

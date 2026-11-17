@@ -510,7 +510,8 @@ async function shellScene(handle) {
     await criterion(handle, 'empty-and-selected-context', 'Empty shell followed by actual selected long customer', async () => {
         await helpers.shell.checkShellGeometry(page, child, child.contract, meta);
         await checkpoint(handle, 'shell-empty'); await selectCustomer(handle);
-        await helpers.shell.checkShellGeometry(page, child, child.contract, meta);
+        await checkpoint(handle, 'shell-selected-long');
+        await helpers.shell.checkShellGeometry(page, child, child.contract, { ...meta, state: 'selected-long-context' }, { ordinary: false });
     });
     await criterion(handle, 'profile-exit-and-focus', 'Profile keyboard traversal and Escape return', async () => {
         await helpers.shell.inspectProfileAppearance(page, child, child.contract, meta);
