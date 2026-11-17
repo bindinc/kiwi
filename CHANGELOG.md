@@ -8,6 +8,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+## [v1.0.38] - 2026-11-17
+
 ### Fixed
 
 - Show the confirmed `Geachte heer, mevrouw` source variant as `Anders` in readonly customer gender displays while preserving writable salutations and raw source values (`theme_audit`). [sc-206629]
@@ -517,7 +519,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 - Configure cert-manager values for CRDs, add Gateway API ACME issuers, and install the issuer chart during addons
 - Update deploy-app to wait for all kiwi deployments after applying kustomize overlays
 
-[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.37...HEAD
+[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.38...HEAD
+[v1.0.38]: https://github.com/bindinc/kiwi/compare/v1.0.37...v1.0.38
 [v1.0.37]: https://github.com/bindinc/kiwi/compare/v1.0.36...v1.0.37
 [v1.0.36]: https://github.com/bindinc/kiwi/compare/v1.0.35...v1.0.36
 [v1.0.35]: https://github.com/bindinc/kiwi/compare/v1.0.34...v1.0.35
