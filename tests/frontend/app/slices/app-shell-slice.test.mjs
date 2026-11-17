@@ -313,6 +313,102 @@ function testLiveToastRevealsOnlyAnOverlappingShortCallActionAndKeepsItsLifecycl
     });
 }
 
+function legacyOverlayFocusFixture(options = {}) {
+    const scrolls = [];
+    const position = { top: 814.7833251953125, height: 190.75, ...options.position };
+    const overlayStyle = { overflowY: 'auto', scrollPaddingTop: '16px', scrollPaddingBottom: '16px', ...options.overlayStyle };
+    const outline = { outlineStyle: 'solid', outlineWidth: '3px', outlineOffset: '3px', ...options.outline };
+    const overlay = {
+        clientTop: 0, clientHeight: 1000, scrollHeight: 5804, scrollTop: 0, scrollLeft: 29,
+        ...options.overlay,
+        getBoundingClientRect: () => ({ top: options.overlayTop || 0 }),
+        scrollBy(value) { scrolls.push(value); this.scrollTop += value.top; position.top -= value.top; }
+    };
+    const control = {
+        id: '', tagName: options.tagName || 'BUTTON', value: 'unchanged draft', checked: true,
+        focus() { throw new Error('Revealing an overlay control must never refocus it'); },
+        matches(selector) {
+            if (selector === ':focus-visible') return options.keyboard !== false;
+            return selector === 'button.subscription-offer-toggle:focus-visible'
+                && this.tagName === 'BUTTON' && options.offerToggle !== false && options.keyboard !== false;
+        },
+        closest: selector => selector === 'dialog' ? options.nativeDialog || null : options.noOverlay ? null : overlay,
+        getBoundingClientRect: () => ({ top: position.top, bottom: position.top + position.height, height: position.height })
+    };
+    const documentStub = createDocumentStub();
+    documentStub.activeElement = control;
+    documentStub.defaultView = { innerHeight: 1000,
+        getComputedStyle: node => node === overlay ? overlayStyle : outline,
+        scrollBy() { throw new Error('The document must not scroll for an overlay control'); } };
+    globalThis.document = documentStub;
+    registerAppShellSlice(createRouter(documentStub));
+    return { documentStub, overlay, control, position, scrolls, focus: () => documentStub.listeners.focusin() };
+}
+
+function testLegacyOverlayKeyboardFocusRevealsTheObservedBetaButtonWithoutChangingFocusOrDraft() {
+    withGlobalState(() => {
+        const h = legacyOverlayFocusFixture();
+        const installedListener = h.documentStub.listeners.focusin;
+        registerAppShellSlice(createRouter(h.documentStub));
+        assert.equal(h.documentStub.listeners.focusin, installedListener, 'reuse the existing single focus listener');
+        h.focus();
+        assert.deepEqual(h.scrolls, [{ top: 27.5333251953125, behavior: 'instant' }]);
+        assert.equal(h.position.top + h.position.height + 6, 984, 'contain the full outline inside the existing 16px scroll padding');
+        assert.equal(h.overlay.scrollLeft, 29, 'only vertical overlay scroll changes');
+        assert.equal(h.documentStub.activeElement, h.control);
+        assert.equal(h.control.value, 'unchanged draft');
+        assert.equal(h.control.checked, true);
+        h.focus();
+        assert.equal(h.scrolls.length, 1, 'the contained target stays still on another focus event');
+        __appShellTestUtils.uninstallGlobalListeners();
+        assert.equal(h.documentStub.listeners.focusin, undefined);
+        registerAppShellSlice(createRouter(h.documentStub));
+        h.focus();
+        assert.equal(h.scrolls.length, 1, 'clean reinstallation preserves containment');
+    });
+}
+
+function testLegacyOverlayKeyboardFocusUsesTheActualClipForTopAndOutlineOnlyOverflow() {
+    withGlobalState(() => {
+        const h = legacyOverlayFocusFixture({ position: { top: 3, height: 40 }, overlay: { scrollTop: 100 } });
+        h.focus();
+        assert.deepEqual(h.scrolls, [{ top: -19, behavior: 'instant' }]);
+        assert.equal(h.position.top - 6, 16);
+    });
+    withGlobalState(() => {
+        const h = legacyOverlayFocusFixture({ position: { top: 858, height: 40 }, overlayTop: 100, overlay: { clientHeight: 800 } });
+        h.focus();
+        assert.deepEqual(h.scrolls, [{ top: 20, behavior: 'instant' }], 'the outline exceeds the 900px overlay clip even though the control itself fits');
+    });
+}
+
+function testSubscriptionOfferFocusLeavesUnrelatedAndUnrevealableTargetsStill() {
+    const cases = [
+        { name: 'already contained, including its outline', position: { top: 950, height: 40 } },
+        { name: 'pointer focus', keyboard: false },
+        { name: 'other native button', offerToggle: false },
+        { name: 'text input with visible focus', tagName: 'INPUT' },
+        { name: 'custom focusable node', tagName: 'DIV' },
+        { name: 'outside a legacy overlay', noOverlay: true },
+        { name: 'native dialog', nativeDialog: {} },
+        { name: 'non-scrollable overflow', overlayStyle: { overflowY: 'visible' } },
+        { name: 'no scroll range', overlay: { scrollHeight: 1000 } },
+        { name: 'already at maximum scroll', overlay: { scrollTop: 4804 } },
+        { name: 'cannot scroll upward', position: { top: -10, height: 40 } },
+        { name: 'taller than available viewport', position: { top: 20, height: 980 } },
+        { name: 'no rendered target area', position: { top: -10, height: 0 } }
+    ];
+    for (const example of cases) withGlobalState(() => {
+        const h = legacyOverlayFocusFixture(example); h.focus();
+        if (example.tagName === 'INPUT' || example.offerToggle === false) {
+            assert.equal(h.control.matches(':focus-visible'), true, example.name);
+        }
+        assert.deepEqual(h.scrolls, [], example.name);
+        assert.equal(h.documentStub.activeElement, h.control, example.name);
+        assert.equal(h.overlay.scrollLeft, 29, example.name);
+    });
+}
+
 function testGlobalListenersHandleKeyboardClickAndChangeEvents() {
     withGlobalState(() => {
         const searchInput = {
@@ -556,6 +652,9 @@ function run() {
     testShowToastUsesContactHistoryAndDeduplicatesRecentSuccessToast();
     testShowToastFallsBackToVisualToastForSubscriptionApiCustomer();
     testLiveToastRevealsOnlyAnOverlappingShortCallActionAndKeepsItsLifecycle();
+    testLegacyOverlayKeyboardFocusRevealsTheObservedBetaButtonWithoutChangingFocusOrDraft();
+    testLegacyOverlayKeyboardFocusUsesTheActualClipForTopAndOutlineOnlyOverflow();
+    testSubscriptionOfferFocusLeavesUnrelatedAndUnrevealableTargetsStill();
     testGlobalListenersHandleKeyboardClickAndChangeEvents();
     testCustomerWorkspaceResetDoesNotEndTheCallSession();
     console.log('app shell slice tests passed');

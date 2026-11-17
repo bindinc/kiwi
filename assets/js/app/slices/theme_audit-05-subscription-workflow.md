@@ -158,3 +158,10 @@ Keep `subPayment` values `B`/`AC`, conditional IBAN visibility/requiredness, exi
 ## Remaining unknowns and completion evidence
 
 The completed evidence above covers the declared representative conditional states and failure/recovery fixtures. It does not claim every possible product/person combination, live provider health, server permission behavior or a real subscription transaction. Existing orchestration and identity/payment/date/consent semantics remain protected by exact-source inventories and focused regression tests. Remaining renderer/test-contract limits are explicitly recorded above and in the PR; there is no deferred slice 05 implementation work.
+
+
+## Final integration follow-up - 2026-11-17
+
+PR #144 corrects the actual Firefox320 offer-focus finding with a minimal vertical scroll of the containing legacy overlay for a clipped, keyboard-focused subscription-offer button. The existing CSS scroll-padding and actual outline extent determine the inset; focus, values, Tab order and window/horizontal position are retained. Non-offer controls and native dialogs remain outside this fallback. The original2-second diagnostic proved stable clipping with available scroll; longer waiting did not resolve it. App-shell tests and independent source review pass; fresh actual keyboard and privacy acceptance remain pending.
+
+The separately requested full-width New subscription and Article sale presentation with the floating feedback button visible is independently accepted at390/320 in both engines:8 contexts,32 whole PNGs, unchanged card widths358/288px, no horizontal overflow and retained input/draft and usable actions. Evidence review b1717ba1f109fc0d23d0247132e4d10d912fd8a61f7def7fe5cb1869506126b7 retains the Firefox forward-Tab limitation and records the successful Shift+Tab close route. These scoped corrections are pushed in PR #144 and do not establish final slice10 acceptance or deployment.
