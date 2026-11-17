@@ -185,3 +185,14 @@ Preserve recipient/address validation, payment options, delivery-date eligibilit
 ## Original unknowns and required completion evidence
 
 The initial plan established the competing component recipes; it does not establish which catalog layouts and large-order states are reachable for every role or data source. Confirm those entry paths and controlled fixtures before removing an apparently unused selector. Runtime coupon failures, slow searches and submission failures need explicit fixtures or a recorded coverage gap. The implementation PR must include visual comparisons, calculation/interaction results and remaining limitations; this plan is not runtime acceptance.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+A07 article/cart and A08 calendar. Matching row paint/load order is observed; narrow cart review requires explicit evidence that inner scrolling reveals the second line item. The intentional 300px scrollport is not classified as a CSS defect.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

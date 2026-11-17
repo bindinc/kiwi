@@ -143,3 +143,12 @@ The confirmed desktop grid measures `320px 770px 380px` tracks plus gutters; its
 Source-level and representative visual evaluation is complete for planning. Exhaustive runtime state coverage, screen-reader checks, native browser zoom and full cross-browser acceptance remain the explicit gates in slice 10. No new WCAG conformance claim is made. No business forms were submitted and no production version was inspected or changed.
 
 The evaluation above records the original planning baseline. Current implementation and acceptance status are tracked in the progress table and each adjacent slice document. Approval or merge of the original documentation PR does not imply application acceptance.
+
+
+## Current integrated acceptance checkpoint — 2026-11-17
+
+Slices 01–09 and icon refinement 155 retain their accepted scoped results and existing merges. PR144 is pushed on `codex/validate-theme-showcase-alignment` in `/home/bartdeijkers/_worktrees/validate-theme-showcase-alignment`; it remains draft and has no merge/deployment authorization.
+
+Baseline 17 now completes all 78 original browser/width/area cells (216 criteria, 4986 criterion checks) without automated deviations, errors or blocked writes. The strict debug Escape return passes in all six environments. Current address wrapping, offer reachability and visible-feedback mobile width corrections have independent scoped review. Automated completion does not establish full visual acceptance: independent whole-image review, the already agreed finite supplements and genuine five-group OS200% acceptance remain incomplete. Narrow cart rows use an intentional locally scrollable300px list; explicit second-row reveal evidence is required before accepting that scope, rather than inferring a layout defect from a clipped resting image.
+
+Production commit 052029b2 and tooling-only 7b6d6406 have the same216 public application bodies and six public configurations. The latter forwards the existing native profile flag; failed native17/18 reports remain failed. Source/role/reference/privacy and historical renderer limitations remain separate. Evidence is durable beside the worktrees, including baseline 17 manifest2509db6d and final-release-18. These PR144 changes are not included in deployed v1.0.38. Every adjacent audit retains its `theme_audit` marker and current scope/remaining gate.

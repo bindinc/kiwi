@@ -181,3 +181,14 @@ Do not alter accepted/declined winback behavior, offer selection, deceased-subsc
 ## Remaining unknowns and completion evidence
 
 The listed branches and service-form criteria have controlled local rendered, request, draft and address evidence above. There is no remaining implementation finding owned by slice 07. Final complete-interface acceptance under slice 10 and the shared toast/overlay gates owned by slice 08 remain distinct. Pushed closure and exact-head CI metadata are recorded in the PR and durable `closure-provenance.json`. No upstream persistence, merge or deployment is claimed; final regression must include later shared overlay changes.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+A06 service flows and A08 source/native dates; locally fulfilled fixtures do not establish upstream business persistence.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

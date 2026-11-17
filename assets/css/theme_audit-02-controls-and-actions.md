@@ -139,3 +139,14 @@ Done means one reviewable PR contains the coherent shared-control implementation
 Live local Compose Firefox evidence is retained under `/tmp/kiwi-styling-evaluation-2026-11-09/firefox/`: `control-measurements.json`, `recipient-controls.png`, `subscription-payment-and-consent.png`, and `profile-menu.png`. Measured enabled consent radios are 14px with a permanent 1px outline; enabled payment radios are `display:none` and cannot receive focus. Recipient mode and same-person controls were intentionally disabled before product selection; the report records that distinction. No form was submitted.
 
 Isolated current-CSS comparison screenshots are `/tmp/kiwi-style-audit-native-controls.png` and `/tmp/kiwi-style-audit-native-controls-firefox.png`. These support the browser-specific cascade finding, not claims of full application accessibility or completed remediation. Screenshot evidence remains outside the repository. This paragraph records the original planning audit. Its temporary images were lost after the environment restart; current implementation, retained evidence and acceptance status are recorded above.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+Native controls and action hierarchy across A01–A13; ordinary Chromium DATE host-focus negatives retain their exact paired-reference qualification.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

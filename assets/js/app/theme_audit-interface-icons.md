@@ -144,3 +144,14 @@ The current correction is independently verified against both sealed actual bund
 No icon-refinement finding remains open. Current product restrictions such as unavailable per-record validity/read-only source capabilities are inherited, explicitly approved constraints, not new functionality. All prior failed attempts and diagnostic-only runs retain their actual verdicts and source boundaries. The final ten-slice matrix, integrated coexistence/reference/cascade review and whole-interface conclusion belong to PR144; they are not inferred from this refinement's finite acceptance.
 
 Final finite acceptance is sealed in `independent-review/icons155-final-finite-acceptance-review-01.json` (`b26e5e438ce9ea731c8625205c07ae1ca468f7367efe9774a8485f0cbe783530`). Current restoration/privacy review is `ac3f6ba2278dbee210bbbc2635814c8c2448ad5df44f8eb21bae2e144a7feca0`. The decision binds41 current artifact pins and12 prior independent seals, all20 required current images and all six declared groups. The inherited live-head finding is closed on769a; no further browser work is required for this PR. Documentation-only delivery must retain all216 production bodies exactly.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+Quiet line icons retain the accepted PR155 scope. Current public runtime changes are limited to six reviewed bodies; existing privacy/source and renderer limitations remain explicit.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

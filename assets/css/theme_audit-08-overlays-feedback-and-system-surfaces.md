@@ -174,3 +174,14 @@ Status: implementation prepared in draft PR #144; current rendered acceptance pe
 
 
 The explicit visible-feedback width supplement is independently accepted (review b1717ba1f109fc0d23d0247132e4d10d912fd8a61f7def7fe5cb1869506126b7): all32 whole PNGs across8 original narrow form contexts were viewed. At390/320, both forms retain358/288px card widths when feedback becomes visible; padding stays16px and overflow stays zero. Actual source/role, focus and draft restoration checks pass. The original Firefox forward-Tab attempt remains failed; successful close access uses actual Shift+Tab. PR #144 is still unmerged/undeployed.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+A12–A13 overlays and feedback. The requested subscription/article width correction is independently accepted in all 8 actual visible-feedback contexts (b1717ba1); cards stay 358px at 390 and 288px at 320. Feedback may overlap those two forms.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

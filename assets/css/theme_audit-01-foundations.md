@@ -101,3 +101,14 @@ Done means a reviewable PR contains one Unreleased changelog entry, the finalize
 Source review and isolated Chromium/Firefox specimen rendering were completed on 2026-11-09. The specimen used current application CSS without modifying it. It confirmed 8px button corners, filled secondary actions, and browser-dependent native control geometry. Live Firefox on the local Compose app additionally confirmed the control findings recorded in [slice 02](theme_audit-02-controls-and-actions.md).
 
 Local evidence: `/tmp/kiwi-style-audit-native-controls.png`, `/tmp/kiwi-style-audit-native-controls-firefox.png`, and `/tmp/kiwi-styling-evaluation-2026-11-09/firefox/control-measurements.json`. These historical planning artifacts predate the implementation recorded above; they are not repository assets or proof of a full accessibility certification.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+Shared surfaces, typography and spacing across A01–A13; the loss of the original temporary baseline images remains an explicit historical limitation.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.
