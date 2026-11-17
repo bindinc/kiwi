@@ -142,7 +142,8 @@ export function subscriptionDraftPreservation(before, after) {
 
 export async function inspectSubscriptionKeyboard(page, driver, meta) {
     await page.locator('#newSubscriptionForm .btn-close').focus();
-    const path = [];
+    const path = [], nativeFocusImages = [];
+    const nativeContract = driver.contract?.nativeDateFocus;
     for (let step = 0; step < 120; step++) {
         await page.keyboard.press('Tab');
         const item = await page.evaluate(() => {
@@ -156,14 +157,45 @@ export async function inspectSubscriptionKeyboard(page, driver, meta) {
                 cancel: Boolean(node.matches('#subscriptionForm .form-actions [data-action="close-form"]')) };
         });
         path.push(item);
-        if (item.withinForm && item.type === 'date' && !item.focusVisible)
-            await driver.capture(page, (meta.native ? 'native-200-' : 'after-') + 'subscription-native-date-focus-step-' + step, undefined,
-                'Actual native DATE internal Tab stop diagnostic; full focus path and computed host outline recorded, no native-focus exemption.');
+        if (item.withinForm && item.type === 'date' && !item.focusVisible) {
+            const image = await driver.capture(page, (meta.native ? 'native-200-' : 'after-') + 'subscription-native-date-focus-step-' + step, undefined,
+                nativeContract ? 'Actual native DATE internal Tab stop; unchanged host state and whole image. Final classification still requires independent current-image review.'
+                    : 'Actual native DATE internal Tab stop diagnostic; full focus path and computed host outline recorded, no native-focus exemption.');
+            if (nativeContract && typeof image === 'string') nativeFocusImages.push({ step, path: image,
+                sha256: createHash('sha256').update(await readFile(image)).digest('hex') });
+        }
         if (item.cancel || !item.withinForm) break;
     }
-    driver.check('actual native Tab traverses subscription controls to Cancel within the visible viewport', path.length > 5
-        && path[0].id === 'werfsleutelInput' && path.at(-1).cancel && path.every(item => item.withinForm && item.reachable && item.focusVisible), true, { ...meta, path }, 5);
-    driver.report.subscriptionAcceptance.interactions.push({ ...meta, keyboardPath: path });
+    const legacyHostFocusPassed = path.every(item => item.focusVisible);
+    const routePassed = path.length > 5 && path[0].id === 'werfsleutelInput' && path.at(-1).cancel
+        && path.every(item => item.withinForm && item.reachable);
+    let classification = null;
+    if (nativeContract && driver.report.slice === 10 && driver.report.phase === 'after' && !meta.native
+        && meta.locale === 'nl'
+        && driver.report.application.commit === nativeContract.sourceCommit
+        && driver.browserName === 'chromium' && driver.report.environment.browserVersion === nativeContract.browserVersion) {
+        const geometry = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, dpr: devicePixelRatio,
+            scale: visualViewport?.scale ?? 1 }));
+        const nonHostStops = path.flatMap((item, step) => item.focusVisible ? [] : [step]);
+        const entry = nativeContract.entries.find(entry => entry.width === geometry.width && entry.height === geometry.height);
+        const step = entry?.step, item = path[step];
+        const sameStop = item && Object.entries(entry.applicationStop).every(([key, value]) => item[key] === value);
+        const image = nativeFocusImages.find(image => image.step === step);
+        if (entry && meta.prefix === `A05-chromium-${entry.width}x${entry.height}-` && geometry.dpr === 1 && geometry.scale === 1
+            && nonHostStops.length === 1 && nonHostStops[0] === step && sameStop && image) {
+            classification = { kind: 'reference-bound-native-calendar-internal-focus', step, control: '#subStartDate',
+                contract: nativeContract, actual: item, image, legacyHostFocusPassed,
+                independentCurrentWholeImageReview: 'not reviewed; visible native calendar indicator must be confirmed before cell acceptance' };
+        }
+    }
+    const finalClassification = Boolean(nativeContract);
+    driver.check(finalClassification
+        ? 'final-only Tab route and reference-bound DATE internal-stop classification; current visual review required'
+        : 'actual native Tab traverses subscription controls to Cancel within the visible viewport',
+    routePassed && (legacyHostFocusPassed || Boolean(classification)), true,
+    { ...meta, path, ...(finalClassification ? { legacyHostFocusPassed, nativeInternalFocus: classification } : {}) }, 5);
+    driver.report.subscriptionAcceptance.interactions.push({ ...meta, keyboardPath: path,
+        ...(finalClassification ? { legacyHostFocusPassed, nativeInternalFocus: classification } : {}) });
     await driver.capture(page, (meta.native ? 'native-200-' : 'after-') + 'subscription-keyboard-cancel', undefined,
         'Actual native Tab traversal; no form activation, DOM focus reorder, save or transaction.');
 }

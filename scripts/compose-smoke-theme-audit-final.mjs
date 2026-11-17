@@ -119,11 +119,22 @@ function validateRegistry(registry) {
     }
 }
 
+export function finalNativeDateFocusBinding(release) {
+    const proof = release.reference.nativeDateFocus;
+    if (!proof) return null;
+    return { observedSource: { path: proof.observedSource.path, sha256: proof.observedSource.sha256 },
+        entries: proof.entries.map(({ paired, review }) => ({
+            paired: { path: paired.path, sha256: paired.sha256 }, review: { path: review.path, sha256: review.sha256 }
+        })) };
+}
+
 function releaseId(release) {
     // A deterministic identity of the declared proofs; it does not verify their files or contents.
-    return [release.source.commit, release.source.manifest.sha256, release.source.runtime.sha256,
+    const identity = [release.source.commit, release.source.manifest.sha256, release.source.runtime.sha256,
         release.source.helpers.sha256, release.slice09.evidence.sha256,
         release.reference.original.sha256, release.reference.refined.sha256, release.sdk.sha256].join(':');
+    const nativeDateFocus = finalNativeDateFocusBinding(release);
+    return nativeDateFocus ? identity + ':nativeDateFocus:' + JSON.stringify(nativeDateFocus) : identity;
 }
 
 function validateRelease(release) {

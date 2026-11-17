@@ -23,7 +23,7 @@ const descriptor = () => ({ id: 'synthetic-session', locale: 'nl', role: 'kiwi-a
 const contract = () => Object.fromEntries(['shell', 'customer', 'subscription', 'subscriptionTitle', 'subscriptionHeading',
     'subscriptionInput', 'subscriptionCaption', 'inputFocus', 'selectFocus'].map(key => [key, { syntheticUnitContract: true }]));
 
-function setup({ fail, outcome = 'verified', omitCriterion = false, navigateDuringPrepare = false } = {}) {
+function setup({ fail, outcome = 'verified', omitCriterion = false, navigateDuringPrepare = false, verification } = {}) {
     const calls = [], contexts = [], declaration = release();
     const operationalAfter = { phase: 'after', sourceCommit: commit, evidence: artifact('operational-after.json') };
     declaration.operationalAfter = operationalAfter;
@@ -74,7 +74,7 @@ function setup({ fail, outcome = 'verified', omitCriterion = false, navigateDuri
         }]))
     };
     const ownerVerification = { releaseId: finalReleaseIdentity(declaration), evidence: artifact('owner-prelaunch-verification.json') };
-    return { calls, contexts, hooks, driver, declaration, ownerVerification, bridge: createFinalDriver({ release: declaration, hooks, ownerVerification }, driver) };
+    return { calls, contexts, hooks, driver, declaration, ownerVerification, bridge: createFinalDriver({ release: declaration, hooks, ownerVerification, verification }, driver) };
 }
 
 test('safe driver import ignores executable runner configuration', async () => {
@@ -383,5 +383,18 @@ test('native inspection requires a validated current-source actual-server-role p
         assert.throws(() => native.inspect({ contract: contract() }), /session proof must precede/);
         assert.equal(fixture.calls.some(value => value.startsWith('native:')), false);
         await native.finish(); await context.close();
+    }
+});
+
+test('viewport preserves the exact measured contract unless a verified native DATE classification is supplied', async () => {
+    for (const verification of [undefined, {}, { nativeDateFocus: { syntheticUnitClassification: true } }]) {
+        const { bridge, driver } = setup({ verification }), measured = contract();
+        await bridge.viewport({ width: 1440, height: 1000 }, measured);
+        if (verification?.nativeDateFocus) {
+            assert.notEqual(driver.contract, measured);
+            assert.equal(driver.contract.nativeDateFocus, verification.nativeDateFocus);
+            for (const key of Object.keys(measured)) assert.equal(driver.contract[key], measured[key]);
+            assert.equal(Object.hasOwn(measured, 'nativeDateFocus'), false, 'The measured reference remains untouched.');
+        } else assert.equal(driver.contract, measured, 'Legacy owners must receive the original measured contract object.');
     }
 });

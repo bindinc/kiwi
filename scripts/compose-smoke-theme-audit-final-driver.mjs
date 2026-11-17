@@ -125,6 +125,75 @@ export async function verifyFinalHelperFiles(toolingRoot, helpers) {
     return paths;
 }
 
+// This is a single independently classified observation, not a DATE/focus-within policy.
+// Missing metadata keeps the historical host-only criterion strict.
+export async function verifyFinalNativeDateFocus(release, source) {
+    const proof = release.reference.nativeDateFocus;
+    if (!proof) return null;
+    assert.equal(proof.observedSource.sha256, '5f56e7d3102e3c20ccd1393f7799b8d1fd3709e4ed5bd07175c64fc879db0cc8');
+    const observedSource = JSON.parse(await artifact(proof.observedSource, 'Native DATE observed application source'));
+    assert.equal(observedSource.head, '754bb51001bb94b7472c8dfdfbce631eda73b2d9');
+    // Carry every production body. The sole allowed delta is the exact user-confirmed
+    // readonly gender alias from b554f5b; date CSS and subscription renderers stay identical.
+    const expected = observedSource.source.map(entry => entry.path === 'assets/js/app/customer-editor.js'
+        ? { ...entry, sha256: '99f3e6d8cde221ba5c84581c4ce5181d87a99cad971bd022e39b3ce52e6db25b', bytes: 23574 }
+        : entry);
+    assert.equal(observedSource.productionCount, 216);
+    assert.deepEqual(canonical(source.source), canonical(expected), 'Native DATE source carry differs beyond the exact confirmed alias.');
+    assert.ok(Array.isArray(proof.entries) && proof.entries.length > 0);
+    const entries = [];
+    for (const entry of proof.entries) {
+        const pair = JSON.parse(await artifact(entry.paired, 'Paired native DATE observation'));
+        const review = JSON.parse(await artifact(entry.review, 'Independent native DATE classification'));
+        assert.equal(pair.marker, 'theme_audit'); assert.equal(review.marker, 'theme_audit');
+        assert.equal(review.status, 'MATCHED_REFERENCE_NATIVE_INTERNAL_FOCUS_BEHAVIOR; ORIGINAL_A05_GATE_REMAINS_FAILED');
+        assert.ok(typeof review.reviewer === 'string' && review.reviewer.trim());
+        assert.deepEqual(review.pairedArtifact, entry.paired);
+        for (const key of ['applicationReport', 'referenceReport']) assert.deepEqual(review[key], pair[key]);
+        const application = JSON.parse(await artifact(pair.applicationReport, 'Observed application report'));
+        const reference = JSON.parse(await artifact(pair.referenceReport, 'Observed reference report'));
+        await artifact(reference.reference, 'Native DATE approved reference body');
+        assert.equal(reference.reference.sha256, refinedReference);
+        assert.ok([observedSource.head, release.source.commit].includes(application.application.commit));
+        assert.equal(reference.browser.name, 'chromium'); assert.equal(reference.browser.version, '157.0.8103.38');
+        assert.equal(application.environment.browser, 'chromium');
+        assert.equal(application.environment.browserVersion, reference.browser.version);
+        const stop = reference.steps[3];
+        assert.deepEqual(stop.state.active, { id: 'demo-start-date', tag: 'INPUT', type: 'date' });
+        for (const [key, value] of Object.entries({ focused: false, focusVisible: false, focusWithin: true })) {
+            assert.equal(stop.state.host[key], value); assert.equal(pair.applicationStop[0][key], value);
+        }
+        const { width, height, dpr } = stop.state.viewport;
+        assert.ok([1440, 390, 320].includes(width)); assert.equal(height, 1000); assert.equal(dpr, 1);
+        assert.ok(!entries.some(item => item.width === width), 'Duplicate native DATE proof width.');
+        assert.equal(pair.applicationStop.length, 1);
+        assert.equal(pair.applicationStop[0].id, 'subStartDate');
+        assert.equal(pair.applicationStop[0].tag, 'INPUT'); assert.equal(pair.applicationStop[0].type, 'date');
+        const prefix = `A05-chromium-${width}x1000-`;
+        const keyboard = application.checks.find(check => check.name === prefix + 'actual native Tab traverses subscription controls to Cancel within the visible viewport')
+            || application.checks.find(check => check.name === prefix + 'final-only Tab route and reference-bound DATE internal-stop classification; current visual review required'
+                && check.legacyHostFocusPassed === false && check.nativeInternalFocus === null);
+        assert.ok(keyboard && keyboard.actual === false && keyboard.status === 'deviation');
+        assert.deepEqual(keyboard.viewport, { width, height });
+        const step = keyboard.path.findIndex(item => !item.focusVisible);
+        assert.equal(keyboard.path.filter(item => !item.focusVisible).length, 1);
+        for (const [key, value] of Object.entries(pair.applicationStop[0])) assert.equal(keyboard.path[step][key], value);
+        for (const image of review.personallyViewedWholeImages) await artifact(image, 'Independently viewed native DATE whole image');
+        assert.deepEqual(review.personallyViewedWholeImages, [pair.applicationImage, stop.image]);
+        const capture = application.captures.find(item => item.filename === path.basename(pair.applicationImage.path));
+        assert.ok(capture && capture.captureMethod === 'browser protocol screenshot');
+        assert.equal(pair.applicationImage.path, path.join(path.dirname(pair.applicationReport.path), capture.filename));
+        assert.equal(capture.name, prefix + 'after-subscription-native-date-focus-step-' + step);
+        assert.deepEqual([capture.geometry.viewportWidth, capture.geometry.viewportHeight, capture.geometry.devicePixelRatio,
+            capture.geometry.visualViewportScale], [width, height, 1, 1]);
+        entries.push({ width, height, step, applicationStop: pair.applicationStop[0], paired: entry.paired, review: entry.review });
+    }
+    return { kind: 'final-only-reference-bound-native-calendar-internal-focus', sourceCommit: release.source.commit,
+        referenceSha256: refinedReference, browserVersion: '157.0.8103.38', entries,
+        observedSource: proof.observedSource, originalHostGate: 'failed; preserved historical observation',
+        visualBoundary: 'Each current native-focus capture still needs independent whole-image review.' };
+}
+
 export async function verifyFinalRelease(release, { sourceRoot, toolingRoot, baseUrl }) {
     assert.equal(release.marker, 'theme_audit'); assert.equal(release.slice, 10); assert.equal(release.phase, 'after');
     assert.equal(release.slice09?.phase, 'after'); assert.equal(release.slice09?.status, 'accepted');
@@ -170,7 +239,9 @@ export async function verifyFinalRelease(release, { sourceRoot, toolingRoot, bas
     assert.ok(adapter && adapter.sha256 === release.adapters.sha256, 'Final scene entry must belong to the frozen helper inventory.');
     assert.equal(release.operationalAfter?.phase, 'after'); assert.equal(release.operationalAfter?.sourceCommit, head);
     await artifact(release.operationalAfter.evidence, 'Owner released operational AFTER bridge');
-    return { productionFiles: source.source.length, helperFiles: helpers.files.length, sourceCommit: head };
+    const nativeDateFocus = await verifyFinalNativeDateFocus(release, source);
+    return { productionFiles: source.source.length, helperFiles: helpers.files.length, sourceCommit: head,
+        ...(nativeDateFocus ? { nativeDateFocus } : {}) };
 }
 
 function validateArtifactMetadata(value, label) {
@@ -270,7 +341,8 @@ export function createFinalDriver(configuration, driver) {
             } });
             const contracts = ['shell', 'customer', 'subscription', 'subscriptionTitle', 'subscriptionHeading', 'subscriptionInput', 'subscriptionCaption', 'inputFocus', 'selectFocus'];
             for (const name of contracts) assert.ok(contract[name], `Missing measured reference contract: ${name}`);
-            driver.contract = contract;
+            driver.contract = configuration.verification?.nativeDateFocus
+                ? { ...contract, nativeDateFocus: configuration.verification.nativeDateFocus } : contract;
             const cells = adapter.snapshot().cells.filter(cell => cell.environment.browser === driver.browserName
                 && cell.environment.width === viewport.width && cell.environment.height === viewport.height);
             assert.equal(cells.length, 13, 'A final viewport must dispatch all13 areas.');

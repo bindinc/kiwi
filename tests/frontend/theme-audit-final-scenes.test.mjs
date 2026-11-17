@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, mkdir, mkdtemp, rm, rmdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp, rm, rmdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
 import { createFinalSceneHooks, createFinalTransport, selectFinalRequestOwner, serverRoleEvidence,
     validateFinalSceneInputs, validateOwnerVerification, nativeTaskIdentity, finishFinalSceneSession, trackFinalServedSources, withCallControlReadiness } from '../../scripts/compose-smoke-theme-audit-final-scenes.mjs';
-import { finalAuditAreas } from '../../scripts/compose-smoke-theme-audit-final.mjs';
+import { inspectSubscriptionKeyboard } from '../../scripts/compose-smoke-theme-audit-subscription-acceptance.mjs';
+import { finalAuditAreas, finalReleaseIdentity } from '../../scripts/compose-smoke-theme-audit-final.mjs';
 
 const base = new URL('https://bdc.rtvmedia.org.local:9444/kiwi/');
 const token = digit => digit.repeat(64);
@@ -286,4 +287,91 @@ test('hold/resume observes both actual model and installed painted glyph before 
     assert.equal(adapted.locator('#other'), ordinary);
     await adapted.locator('#holdCallBtn').press('Enter'); await adapted.locator('#holdCallBtn').press('Enter');
     assert.deepEqual(calls, ['Enter', 'wait-true', 'Enter', 'wait-false']);
+});
+
+test('optional native DATE proof is an exact owner binding and cannot be added, removed or substituted', () => {
+    const value = release(), legacy = ownerProof(value);
+    assert.equal(Object.hasOwn(legacy.bindings, 'nativeDateFocus'), false);
+    validateOwnerVerification(legacy, value, legacy.releaseId);
+    value.reference.nativeDateFocus = {
+        observedSource: artifact('a'), entries: [{ paired: artifact('b'), review: artifact('c') }]
+    };
+    const bound = ownerProof(value); bound.releaseId = finalReleaseIdentity(value);
+    bound.bindings.nativeDateFocus = structuredClone(value.reference.nativeDateFocus);
+    validateOwnerVerification(bound, value, bound.releaseId);
+    assert.throws(() => validateOwnerVerification(legacy, value, legacy.releaseId), /bind every/);
+    for (const mutate of [
+        r => { r.reference.nativeDateFocus.observedSource.sha256 = token('d'); },
+        r => { r.reference.nativeDateFocus.observedSource.path += '.changed'; },
+        r => { r.reference.nativeDateFocus.entries[0].paired.sha256 = token('d'); },
+        r => { r.reference.nativeDateFocus.entries[0].paired.path += '.changed'; },
+        r => { r.reference.nativeDateFocus.entries[0].review.sha256 = token('d'); },
+        r => { r.reference.nativeDateFocus.entries[0].review.path += '.changed'; },
+        r => { r.reference.nativeDateFocus.entries.pop(); },
+        r => { r.reference.nativeDateFocus.entries.push(structuredClone(r.reference.nativeDateFocus.entries[0])); },
+        r => { delete r.reference.nativeDateFocus; }
+    ]) {
+        const changed = structuredClone(value); mutate(changed);
+        assert.throws(() => validateOwnerVerification(bound, changed, finalReleaseIdentity(changed)));
+        assert.throws(() => validateOwnerVerification(bound, changed, bound.releaseId), /bind every/,
+            'Reusing the old release ID cannot bypass the owner binding.');
+    }
+    const missing = structuredClone(bound); delete missing.bindings.nativeDateFocus;
+    assert.throws(() => validateOwnerVerification(missing, value, bound.releaseId), /bind every/);
+});
+
+// Executes the real browser probe against synthetic nodes; no browser or visual acceptance.
+function subscriptionKeyboardFixture(image, { classification = true, extraFocusLoss = false } = {}) {
+    const nodes = Array.from({ length: 7 }, (_, step) => {
+        const date = step === 3, cancel = step === 6;
+        const hostFocused = !date && !(extraFocusLoss && step === 2);
+        return { id: step === 0 ? 'werfsleutelInput' : date ? 'subStartDate' : 'unit-control-' + step,
+            tagName: 'INPUT', type: date ? 'date' : 'text',
+            getAttribute: () => null, closest: () => ({}),
+            getBoundingClientRect: () => ({ width: 100, height: 30, x: 0, right: 100, y: 0, bottom: 30 }),
+            matches(selector) {
+                if (selector === ':focus-within') return true;
+                if (selector === ':focus-visible' || selector === ':focus') return hostFocused;
+                return selector === '#subscriptionForm .form-actions [data-action="close-form"]' && cancel;
+            } };
+    });
+    const realm = vm.createContext({ document: { activeElement: null }, innerWidth: 1440, innerHeight: 1000,
+        devicePixelRatio: 1, visualViewport: { scale: 1 },
+        getComputedStyle: () => ({ outline: 'none', outlineWidth: '0px', outlineStyle: 'none' }) });
+    let step = -1;
+    const page = { locator: () => ({ focus: async () => {} }),
+        keyboard: { press: async key => { assert.equal(key, 'Tab'); realm.document.activeElement = nodes[++step]; } },
+        evaluate: async probe => vm.runInContext('(' + probe.toString() + ')()', realm) };
+    const checks = [], nativeDateFocus = { sourceCommit: 'a'.repeat(40), browserVersion: 'synthetic-unit-browser',
+        entries: [{ width: 1440, height: 1000, step: 3, applicationStop: {
+            id: 'subStartDate', tag: 'INPUT', type: 'date', focused: false, focusVisible: false, focusWithin: true } }] };
+    const driver = { browserName: 'chromium', contract: classification ? { nativeDateFocus } : {},
+        report: { slice: 10, phase: 'after', application: { commit: 'a'.repeat(40) }, environment: { browserVersion: 'synthetic-unit-browser' },
+            subscriptionAcceptance: { interactions: [] } },
+        capture: async () => image,
+        check: (name, actual, expected, detail) => { checks.push({ name, actual, detail }); assert.equal(actual, expected, name); } };
+    return { driver, checks, run: () => inspectSubscriptionKeyboard(page, driver, { native: false, prefix: 'A05-chromium-1440x1000-', locale: 'nl' }) };
+}
+
+test('native DATE classification retains raw false host focus and requires current image review', async () => {
+    const parent = fileURLToPath(new URL('./.theme-audit-final-scenes-unit/', import.meta.url)); await mkdir(parent, { recursive: true });
+    const directory = await mkdtemp(path.join(parent, 'keyboard-')), image = path.join(directory, 'synthetic-capture.txt');
+    try {
+        await writeFile(image, 'Synthetic capture fixture, contains no pixels.');
+        const fixture = subscriptionKeyboardFixture(image); await fixture.run();
+        const check = fixture.checks[0], interaction = fixture.driver.report.subscriptionAcceptance.interactions[0];
+        assert.equal(check.actual, true);
+        assert.equal(check.detail.legacyHostFocusPassed, false);
+        assert.equal(check.detail.path[3].focusVisible, false);
+        assert.equal(check.detail.nativeInternalFocus.actual.focused, false);
+        assert.match(check.detail.nativeInternalFocus.independentCurrentWholeImageReview, /^not reviewed/);
+        assert.equal(interaction.legacyHostFocusPassed, false);
+        assert.equal(interaction.keyboardPath[3].focusVisible, false);
+        await assert.rejects(subscriptionKeyboardFixture(image, { classification: false }).run(), /actual native Tab/);
+        await assert.rejects(subscriptionKeyboardFixture(image, { extraFocusLoss: true }).run(), /final-only Tab route/);
+        await assert.rejects(subscriptionKeyboardFixture(undefined).run(), /final-only Tab route/);
+    } finally {
+        await rm(directory, { recursive: true, force: true });
+        await rmdir(parent).catch(error => { if (error.code !== 'ENOTEMPTY') throw error; });
+    }
 });

@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
     createFinalAuditRegistry, createFinalAuditAdapter, finalAuditAreas,
-    finalAuditSupplements, reviewFinalAuditCell, summarizeFinalAudit
+    finalAuditSupplements, finalReleaseIdentity, reviewFinalAuditCell, summarizeFinalAudit
 } from '../../scripts/compose-smoke-theme-audit-final.mjs';
 
 // These are pure synthetic receipts. No test below claims source, browser or image verification.
@@ -255,4 +255,38 @@ test('even all 78 manually reviewed synthetic baseline cells cannot accept nativ
     assert.equal(summary.baselineAccepted, true, 'Synthetic metadata exercise only; no browser or actual image was checked.');
     assert.equal(summary.finalAcceptance, false);
     assert.deepEqual(summary.pendingExternalGates, finalAuditSupplements);
+});
+
+test('optional native DATE evidence changes invalidate a previously verified release ledger', async () => {
+    const { options } = setup();
+    const legacyIdentity = [options.release.source.commit, hash, hash, hash, hash,
+        options.release.reference.original.sha256, options.release.reference.refined.sha256, options.release.sdk.sha256].join(':');
+    assert.equal(finalReleaseIdentity(options.release), legacyIdentity, 'Absent optional proof preserves the existing release identity.');
+    const legacy = createFinalAuditAdapter(options); await legacy.runCell(firstId);
+    options.release.reference.nativeDateFocus = {
+        observedSource: artifact('native-observed-source.json'),
+        entries: [{ paired: artifact('native-pair.json'), review: artifact('native-review.json') }]
+    };
+    const adapter = createFinalAuditAdapter(options); await adapter.runCell(firstId);
+    const registry = adapter.snapshot(), identity = finalReleaseIdentity(registry.release);
+    assert.notEqual(identity, legacyIdentity);
+    const added = structuredClone(legacy.snapshot()); added.release.reference.nativeDateFocus = options.release.reference.nativeDateFocus;
+    assert.throws(() => summarizeFinalAudit(added), /source verification differs/);
+    for (const mutate of [
+        proof => { proof.observedSource.sha256 = 'c'.repeat(64); },
+        proof => { proof.observedSource.path += '.changed'; },
+        proof => { proof.entries[0].paired.sha256 = 'c'.repeat(64); },
+        proof => { proof.entries[0].paired.path += '.changed'; },
+        proof => { proof.entries[0].review.sha256 = 'c'.repeat(64); },
+        proof => { proof.entries[0].review.path += '.changed'; },
+        proof => { proof.entries.pop(); },
+        proof => { proof.entries.push(structuredClone(proof.entries[0])); }
+    ]) {
+        const changed = structuredClone(registry); mutate(changed.release.reference.nativeDateFocus);
+        assert.notEqual(finalReleaseIdentity(changed.release), identity);
+        assert.throws(() => summarizeFinalAudit(changed), /source verification differs/);
+    }
+    const removed = structuredClone(registry); delete removed.release.reference.nativeDateFocus;
+    assert.equal(finalReleaseIdentity(removed.release), legacyIdentity);
+    assert.throws(() => summarizeFinalAudit(removed), /source verification differs/);
 });

@@ -603,3 +603,12 @@ The outbox, marketing and some customer/address/subscription smoke scripts creat
 - [ ] The review identifies what is implemented, reviewed, merged, deployed and accepted without treating those stages as interchangeable.
 - [ ] The PR/story evidence links point to accessible artifacts. A failed image upload is not reported as an attachment.
 - [ ] No unchanged green test, screenshot count or palette declaration is used as a substitute for the complete visual evaluation.
+
+
+## Final integration checkpoint — 2026-11-17
+
+PR #144 remains draft. Thirteen of the original78 baseline cells have independent acceptance; the remaining cells and the finite existing supplements remain open. Release v1.0.37 and the separate confirmed gender-alias correction in PR #157/v1.0.38 do not establish final slice10 acceptance.
+
+The final-only tooling now distinguishes the independently observed Chromium native DATE calendar-indicator focus from its false host `:focus-visible` state. This is limited to the exact reviewed source bodies, browser, control, viewport and paired showcase evidence. The historical host-only gate remains failed; its raw booleans are preserved. Every current whole-image capture still requires independent visual review. Without the optional physical proof, the original strict contract, release identity and owner schema remain unchanged. Both release identity and owner bindings include the consumed proof, preventing stale receipts after evidence changes. The initial physical pair covers1440px only;390/320px retain strict behavior until their own existing-width observations are reviewed.
+
+Independent candidate review passed (`3b2453e1269a252c974cd54eef80fa97931bd7c827009e3a0a96338891403957`). Four meaningful regressions were added to the existing test files;66 focused tests passed. The frozen local final-release09 hashes all216 public application bodies, six public configuration files and44 existing helpers. Its actual app includes exactly the accepted readonly comma-alias correction; other production bodies match accepted754bb510. No application focus CSS, native appearance, privacy threshold, renderer, business behavior, launcher or coverage matrix changed. Evidence remains beside the worktrees under `.kiwi-theme-audit/evidence/2026-11-17/slice-10`; no screenshot upload or full-interface acceptance is claimed.

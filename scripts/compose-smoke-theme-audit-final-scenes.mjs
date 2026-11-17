@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { copyFile, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { finalAuditAreas } from './compose-smoke-theme-audit-final.mjs';
+import { finalAuditAreas, finalNativeDateFocusBinding } from './compose-smoke-theme-audit-final.mjs';
 import { privacy09CalendarQuery, createPrivacy09Calendar } from './compose-smoke-theme-audit-operational-privacy.mjs';
 import { normalizeKnownJsImports } from './compose-smoke-theme-audit-shell-acceptance.mjs';
 
@@ -61,7 +61,9 @@ export function validateOwnerVerification(proof, release, releaseId) {
     assert.equal(proof.kind, 'owner-verified-final-environment');
     assert.equal(proof.releaseId, releaseId); assert.equal(proof.sourceCommit, release.source.commit);
     assert.ok(typeof proof.reviewer === 'string' && proof.reviewer.trim());
+    const nativeDateFocus = finalNativeDateFocusBinding(release);
     const expected = {
+        ...(nativeDateFocus ? { nativeDateFocus } : {}),
         source: release.source.manifest.sha256, runtime: release.source.runtime.sha256,
         helpers: release.source.helpers.sha256, accepted09: release.slice09.evidence.sha256,
         accepted155: release.icons.evidence.sha256, operationalAfter: release.operationalAfter.evidence.sha256,
