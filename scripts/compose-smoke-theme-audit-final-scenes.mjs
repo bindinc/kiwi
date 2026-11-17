@@ -606,7 +606,7 @@ async function addressScene(handle) {
         await handle.helpers.feedback.inspectRecordListsAfter(handle.page, handle.state, {
             observe: handle.helpers.operational.observeOperational, control: handle.control });
         handle.child.check('Source model exposes separate masked bank records', handle.state.recordFixture.model.sections.bank.length, 2, metaFor(handle), 10);
-        await closeCustomerEditor(handle); await restoreEditableCustomer(handle);
+        await closeCustomerEditor(handle); handle.recordMode = false;
     });
     await criterion(handle, 'wrapped-address-selection', 'Actual candidate-address selection and validation in the shared form host', async () => {
         await handle.page.locator('[data-action=show-new-subscription]').first().press('Enter');
