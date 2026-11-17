@@ -236,3 +236,77 @@ test('F04 actual A02/A03 scene bodies explicitly request their matching prior sc
     assert.deepEqual(attached.map(item => item.prior), ['summary-zero-one-three', 'long-record-and-editable-editor']);
     assert.ok(attached[0].names.includes('feedback-search-summary-1-en') && attached[1].names.includes('records-after-email-1'));
 });
+
+test('A10 establishes keyboard modality before Enter and keeps actual disclosure and exact focus checks', async () => {
+    let keyboardFocused = false, expanded = false;
+    const events = [], checks = [];
+    const button = {
+        first() { return this; },
+        async scrollIntoViewIfNeeded() { events.push('scroll'); },
+        async getAttribute(name) { assert.equal(name, 'aria-expanded'); return String(expanded); },
+        async press(key) { assert.equal(key, 'Enter'); assert.equal(keyboardFocused, true); events.push('Enter'); expanded = !expanded; },
+        async evaluate(probe) {
+            const node = { matches: selector => keyboardFocused && selector === ':focus-visible' };
+            return vm.runInNewContext('(' + probe.toString() + ')(node)', {
+                node, document: { activeElement: node }, getComputedStyle: () => ({ outlineWidth: '3px' })
+            });
+        }
+    };
+    const page = { locator: selector => { assert.equal(selector, '.timeline-header'); return button; }, evaluate: async () => {} };
+    const handle = { page, helpers: { operational: { operationalCustomerFixture: () => ({}) } }, child: {
+        keyboardFocus: async (actualPage, selector) => {
+            assert.equal(actualPage, page); assert.equal(selector, '.timeline-header'); events.push('keyboard'); keyboardFocused = true;
+        },
+        check: (name, actual, expected) => { assert.equal(actual, expected, name); checks.push(name); }
+    } };
+    const run = actualFunction('historyScene', { metaFor: () => ({}),
+        criterion: async (h, id, state, action) => { if (id === 'native-disclosure-and-focus') await action(); } });
+    await run(handle);
+    assert.deepEqual(events, ['scroll', 'keyboard', 'Enter']);
+    assert.deepEqual(checks, ['Native timeline Enter changes actual aria-expanded', 'Native history action retains exact3px focus']);
+});
+
+test('A11 composes closed-panel helpers and restores only initial intercepted read fixtures before fallback', async () => {
+    let queueOpen = true, changesOpen = false;
+    const events = [], initialItems = [
+        { id: 1, revision: 3, capabilities: { edit: true }, customerReference: { personId: 'synthetic-1' } },
+        { id: 2, revision: 7, capabilities: { edit: true } }
+    ];
+    const expectedItems = structuredClone(initialItems), control = { items: initialItems };
+    const report = { observations: [], captures: [], outboxReads: [], deniedRequests: [] };
+    const page = { locator(selector) {
+        if (selector === '[data-action="toggle-subscription-queue-info"]') return {
+            async getAttribute(name) { assert.equal(name, 'aria-expanded'); return String(queueOpen); },
+            async press(key) { assert.equal(key, 'Enter'); queueOpen = !queueOpen; events.push('close-queue'); }
+        };
+        if (selector === '#customerSessionChanges') return { async evaluate(read) { return read({ open: changesOpen }); } };
+        assert.equal(selector, '#customerSessionChanges > summary');
+        return { async press(key) { assert.equal(key, 'Enter'); changesOpen = !changesOpen; events.push('close-changes'); } };
+    } };
+    const enterHelper = name => {
+        assert.equal(queueOpen, false, name + ' starts with a closed queue'); queueOpen = true; events.push(name);
+    };
+    const handle = { page, control, state: {}, child: { report,
+        check: (name, actual, expected) => assert.equal(actual, expected, name) }, helpers: { operational: {
+        initialOutbox: async () => { queueOpen = false; events.push('initial'); },
+        inspectOperationalOutbox: async () => {
+            enterHelper('operational'); changesOpen = true;
+            control.items[0].capabilities.edit = false;
+            report.outboxReads.push({ locallyFulfilled: true });
+            report.observations.push({ name: 'outbox-native-editor' }, { name: 'outbox-native-editor-escape' });
+        },
+        inspectAsyncOutbox: async () => {
+            enterHelper('async'); assert.equal(changesOpen, false, 'Native summary must open its customer changes'); changesOpen = true;
+            control.items = [{ id: 992910, revision: 99, capabilities: { edit: false, pause: false, resume: false, delete: false } }];
+        },
+        inspectOutboxFallbackFocus: async () => {
+            enterHelper('fallback'); assert.deepEqual(control.items, expectedItems);
+            assert.notEqual(control.items, initialItems); assert.notEqual(control.items[0].capabilities, initialItems[0].capabilities);
+        }
+    } } };
+    const run = actualFunction('outboxScene', { structuredClone, metaFor: () => ({}),
+        criterion: async (h, id, state, action) => { if (id !== 'menu-disclosure-and-editor') await action(); } });
+    await run(handle);
+    assert.deepEqual(events, ['initial', 'operational', 'close-queue', 'close-changes', 'async', 'close-queue', 'fallback']);
+    assert.equal(changesOpen, true, 'Fallback composition leaves the actual async customer disclosure state intact');
+});

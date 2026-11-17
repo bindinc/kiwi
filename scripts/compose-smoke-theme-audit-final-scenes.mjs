@@ -801,6 +801,7 @@ async function historyScene(handle) {
         customer.contactHistory = [{ id: 'synthetic-final-disclosure', type: 'synthetic_unknown', date: '2026-11-17T10:00:00Z', description: 'Synthetic final long history disclosure with complete contextual text.' }];
         await handle.page.evaluate(customer => { window.currentCustomer = customer; window.customers = [customer]; window.kiwiContactHistorySlice.displayContactHistory(); }, customer);
         const button = handle.page.locator('.timeline-header').first(); await button.scrollIntoViewIfNeeded();
+        await handle.child.keyboardFocus(handle.page, '.timeline-header', 'Native history disclosure');
         const before = await button.getAttribute('aria-expanded'); await button.press('Enter');
         handle.child.check('Native timeline Enter changes actual aria-expanded', await button.getAttribute('aria-expanded') !== before, true, metaFor(handle), 10);
         const focus = await button.evaluate(node => ({ focused: node === document.activeElement, visible: node.matches(':focus-visible'), width: getComputedStyle(node).outlineWidth }));
@@ -809,8 +810,15 @@ async function historyScene(handle) {
 }
 
 async function outboxScene(handle) {
+    const fallbackItems = structuredClone(handle.control.items);
+    const closeQueue = async () => {
+        const toggle = handle.page.locator('[data-action="toggle-subscription-queue-info"]');
+        if (await toggle.getAttribute('aria-expanded') === 'true') await toggle.press('Enter');
+        assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'Each outbox helper requires a closed queue before its opening toggle.');
+    };
     await criterion(handle, 'empty-long-and-restricted', 'Actual installed outbox reads/long/status/capability fixtures', async () => {
         await handle.helpers.operational.initialOutbox(handle.page, handle.state, handle.control);
+        await closeQueue();
         await handle.helpers.operational.inspectOperationalOutbox(handle.page, handle.state, handle.control);
         handle.child.check('Outbox reads remained locally owned', handle.child.report.outboxReads.length > 0, true, metaFor(handle), 10);
     });
@@ -823,7 +831,14 @@ async function outboxScene(handle) {
         }
     });
     await criterion(handle, 'real-refresh-focus-and-fallback', 'Actual five-second refresh and source-owned focus fallback', async () => {
+        await closeQueue();
+        if (await handle.page.locator('#customerSessionChanges').evaluate(node => node.open)) {
+            await handle.page.locator('#customerSessionChanges > summary').press('Enter');
+        }
         await handle.helpers.operational.inspectAsyncOutbox(handle.page, handle.state, handle.control);
+        await closeQueue();
+        // Async checks finish with a restricted row; fallback needs the original declared read fixture.
+        handle.control.items = structuredClone(fallbackItems);
         await handle.helpers.operational.inspectOutboxFallbackFocus(handle.page, handle.state, handle.control);
         handle.child.check('Async refresh did not forward a business request', handle.child.report.deniedRequests.length, 0, metaFor(handle), 10);
     });
