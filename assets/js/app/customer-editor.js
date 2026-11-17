@@ -21,6 +21,7 @@ function readonlyGenderLabel(value) {
     switch (String(value || '').trim().toLowerCase()) {
     case 'geachte heer': return 'Man';
     case 'geachte mevrouw': return 'Vrouw';
+    case 'geachte heer, mevrouw':
     case 'geachte heer/mevrouw': return 'Anders';
     default: return value;
     }
