@@ -599,7 +599,6 @@ async function customerScene(handle) {
         handle.child.check('Actual null source record stays readonly', observations.some(item => item.readonly === true), true, metaFor(handle), 10);
     });
     await criterion(handle, 'exact-gender-aliases-and-controls', 'Three exact aliases plus unknown and blank through actual read renderer', () => genderAliases(handle));
-    await restoreEditableCustomer(handle);
 }
 
 async function addressScene(handle) {
