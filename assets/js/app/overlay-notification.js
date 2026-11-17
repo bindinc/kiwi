@@ -1,3 +1,4 @@
+import { iconLabel } from './interface-icons.js';
 const notifications = new WeakMap();
 const observedDocuments = new WeakSet();
 const overlaySelector = 'dialog[open], .form-container, .modal';
@@ -36,7 +37,7 @@ function observeAttempts(documentRef) {
     }, true);
 }
 
-export function renderOverlayNotification(documentRef, message, type) {
+export function renderOverlayNotification(documentRef, message, type, presentation) {
     const overlay = activeOverlay(documentRef);
     if (!overlay) return false;
     const actions = overlay.querySelector('.form-actions, .modal-actions, .contextual-feedback-actions');
@@ -49,7 +50,8 @@ export function renderOverlayNotification(documentRef, message, type) {
     notice.setAttribute('role', type === 'error' ? 'alert' : 'status');
     notice.setAttribute('aria-atomic', 'true');
     notice.setAttribute('data-feedback-sensitive', 'opaque-text');
-    notice.textContent = message;
+    if (presentation) notice.innerHTML = iconLabel(presentation.icon, presentation.message);
+    else notice.textContent = message;
     host.prepend(notice);
     const current = { notice, observer: null, timeout: null };
     notifications.set(overlay, current);

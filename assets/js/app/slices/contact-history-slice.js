@@ -1,3 +1,4 @@
+import { interfaceIcon, iconLabel } from '../interface-icons.js';
 import { getGlobalScope } from '../services.js';
 
 const CONTACT_HISTORY_SLICE_NAMESPACE = 'kiwiContactHistorySlice';
@@ -11,28 +12,28 @@ export function configureContactHistorySliceDependencies(dependenciesResolver) {
 }
 
 const contactTypeLabelConfig = {
-    call_started_anonymous: { key: 'contactHistory.type.callStartedAnonymous', fallback: 'Anonieme call gestart', icon: '📞', tone: 'warning' },
-    call_started_identified: { key: 'contactHistory.type.callStartedIdentified', fallback: 'Call gestart', icon: '📞', tone: 'info' },
-    call_identified: { key: 'contactHistory.type.callIdentified', fallback: 'Beller geïdentificeerd', icon: '👤', tone: 'success' },
-    call_ended_by_agent: { key: 'contactHistory.type.callEndedByAgent', fallback: 'Call beëindigd (agent)', icon: '📞', tone: 'muted' },
-    call_ended_by_customer: { key: 'contactHistory.type.callEndedByCustomer', fallback: 'Call beëindigd (klant)', icon: '📞', tone: 'danger' },
-    call_disposition: { key: 'contactHistory.type.callDisposition', fallback: 'Gesprek afgerond', icon: '📋', tone: 'info' },
-    call_hold: { key: 'contactHistory.type.callHold', fallback: 'Gesprek in wacht', icon: '⏸️', tone: 'warning' },
-    call_resumed: { key: 'contactHistory.type.callResumed', fallback: 'Gesprek hervat', icon: '▶️', tone: 'success' },
-    recording_started: { key: 'contactHistory.type.recordingStarted', fallback: 'Opname gestart', icon: '🔴', tone: 'danger' },
-    acw_completed: { key: 'contactHistory.type.acwCompleted', fallback: 'Nabewerking voltooid', icon: '✅', tone: 'success' },
-    follow_up_scheduled: { key: 'contactHistory.type.followUpScheduled', fallback: 'Follow-up gepland', icon: '📅', tone: 'group' },
-    agent_status_change: { key: 'contactHistory.type.agentStatusChange', fallback: 'Agent status gewijzigd', icon: '🔄', tone: 'muted' },
-    subscription_created: { key: 'contactHistory.type.subscriptionCreated', fallback: 'Abonnement aangemaakt', icon: '➕', tone: 'success' },
-    subscription_changed: { key: 'contactHistory.type.subscriptionChanged', fallback: 'Abonnement gewijzigd', icon: '✏️', tone: 'info' },
-    subscription_cancelled: { key: 'contactHistory.type.subscriptionCancelled', fallback: 'Abonnement opgezegd', icon: '❌', tone: 'danger' },
-    article_sold: { key: 'contactHistory.type.articleSold', fallback: 'Artikel verkocht', icon: '🛒', tone: 'success' },
-    magazine_resent: { key: 'contactHistory.type.magazineResent', fallback: 'Editie opnieuw verzonden', icon: '📬', tone: 'info' },
-    notification_success: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '✅', tone: 'success' },
-    notification_info: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: 'ℹ️', tone: 'info' },
-    notification_warning: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '⚠️', tone: 'warning' },
-    notification_error: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: '❗', tone: 'danger' },
-    default: { key: 'contactHistory.type.default', fallback: 'Contact', icon: '📝', tone: 'muted' }
+    call_started_anonymous: { key: 'contactHistory.type.callStartedAnonymous', fallback: 'Anonieme call gestart', icon: 'phone', tone: 'warning' },
+    call_started_identified: { key: 'contactHistory.type.callStartedIdentified', fallback: 'Call gestart', icon: 'phone', tone: 'info' },
+    call_identified: { key: 'contactHistory.type.callIdentified', fallback: 'Beller geïdentificeerd', icon: 'person', tone: 'success' },
+    call_ended_by_agent: { key: 'contactHistory.type.callEndedByAgent', fallback: 'Call beëindigd (agent)', icon: 'phone', tone: 'muted' },
+    call_ended_by_customer: { key: 'contactHistory.type.callEndedByCustomer', fallback: 'Call beëindigd (klant)', icon: 'phone', tone: 'danger' },
+    call_disposition: { key: 'contactHistory.type.callDisposition', fallback: 'Gesprek afgerond', icon: 'clipboard', tone: 'info' },
+    call_hold: { key: 'contactHistory.type.callHold', fallback: 'Gesprek in wacht', icon: 'pause', tone: 'warning' },
+    call_resumed: { key: 'contactHistory.type.callResumed', fallback: 'Gesprek hervat', icon: 'play', tone: 'success' },
+    recording_started: { key: 'contactHistory.type.recordingStarted', fallback: 'Opname gestart', icon: 'record', tone: 'danger' },
+    acw_completed: { key: 'contactHistory.type.acwCompleted', fallback: 'Nabewerking voltooid', icon: 'check', tone: 'success' },
+    follow_up_scheduled: { key: 'contactHistory.type.followUpScheduled', fallback: 'Follow-up gepland', icon: 'calendar', tone: 'group' },
+    agent_status_change: { key: 'contactHistory.type.agentStatusChange', fallback: 'Agent status gewijzigd', icon: 'transfer', tone: 'muted' },
+    subscription_created: { key: 'contactHistory.type.subscriptionCreated', fallback: 'Abonnement aangemaakt', icon: 'plus', tone: 'success' },
+    subscription_changed: { key: 'contactHistory.type.subscriptionChanged', fallback: 'Abonnement gewijzigd', icon: 'edit', tone: 'info' },
+    subscription_cancelled: { key: 'contactHistory.type.subscriptionCancelled', fallback: 'Abonnement opgezegd', icon: 'close', tone: 'danger' },
+    article_sold: { key: 'contactHistory.type.articleSold', fallback: 'Artikel verkocht', icon: 'cart', tone: 'success' },
+    magazine_resent: { key: 'contactHistory.type.magazineResent', fallback: 'Editie opnieuw verzonden', icon: 'mail', tone: 'info' },
+    notification_success: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: 'check', tone: 'success' },
+    notification_info: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: 'info', tone: 'info' },
+    notification_warning: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: 'warning', tone: 'warning' },
+    notification_error: { key: 'contactHistory.type.notification', fallback: 'Melding', icon: 'warning', tone: 'danger' },
+    default: { key: 'contactHistory.type.default', fallback: 'Contact', icon: 'edit', tone: 'muted' }
 };
 
 let contactHistoryHighlightTimer = null;
@@ -168,6 +169,7 @@ export function getContactTypeInfo(type) {
     return {
         label: translateLabel(dependencies, config.key, config.fallback),
         icon: config.icon,
+        key: config.key,
         tone: config.tone
     };
 }
@@ -387,13 +389,13 @@ export function displayContactHistory() {
         return `
         <div class="timeline-item timeline-item--${typeInfo.tone}${highlightClass}" data-contact-id="${rawItemId}">
             <div class="timeline-dot"></div>
-            <div class="timeline-header" data-action="toggle-timeline-item" data-arg-entry-dom-id="${entryDomId}">
+            <button type="button" id="toggle-${entryDomId}" class="timeline-header" aria-expanded="true" aria-controls="content-${entryDomId}" data-action="toggle-timeline-item" data-arg-entry-dom-id="${entryDomId}">
                 <span class="timeline-type">
-                    ${typeInfo.icon} ${typeInfo.label}
+                    ${iconLabel(typeInfo.icon, typeInfo.label, typeInfo.key)}
                 </span>
                 <span class="timeline-expand expanded" id="expand-${entryDomId}">▼</span>
                 <span class="timeline-date">${formatDateTime(item.date)}</span>
-            </div>
+            </button>
             <div class="timeline-content expanded" id="content-${entryDomId}" data-feedback-sensitive="free-text">
                 ${descriptionHtml}
             </div>
@@ -423,6 +425,7 @@ export function toggleTimelineItem(entryDomId) {
 
     const isExpanded = content.classList.toggle('expanded');
     expand.classList.toggle('expanded', isExpanded);
+    document.getElementById(`toggle-${entryDomId}`)?.setAttribute('aria-expanded', String(isExpanded));
 }
 
 export function changeContactHistoryPage(newPage) {

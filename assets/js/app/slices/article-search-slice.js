@@ -1,3 +1,4 @@
+import { interfaceIcon, iconLabel } from '../interface-icons.js';
 import { resumeFormDraft } from '../lightbox-drafts.js';
 import { getGlobalScope } from '../services.js';
 
@@ -330,8 +331,8 @@ export function renderArticleDropdown(filteredArticles, query) {
     });
 
     let html = '';
-    const browseAll = translateArticle('articleSearch.browseAll', {}, '📚 Blader door alle artikelen');
-    html += `<div class="article-browse-all"><button type="button" data-action="show-all-articles" class="browse-all-link">${browseAll}</button></div>`;
+    const browseAll = translateArticle('articleSearch.browseAll', {}, 'Blader door alle artikelen');
+    html += `<div class="article-browse-all"><button type="button" data-action="show-all-articles" class="browse-all-link">${iconLabel('newspaper', browseAll, 'articleSearch.browseAll')}</button></div>`;
 
     Object.keys(groupedByMagazine).forEach((magazine) => {
         html += `<div class="article-category">${magazine}</div>`;
@@ -437,7 +438,7 @@ function createAllArticlesModal() {
         return;
     }
 
-    const modalTitle = translateArticle('articleSearch.modalTitle', {}, '📚 Alle Artikelen');
+    const modalTitle = translateArticle('articleSearch.modalTitle', {}, 'Alle Artikelen');
     const searchPlaceholder = translateArticle('articleSearch.searchPlaceholder', {}, 'Zoek artikel...');
     const searchLabel = translateArticle('articleSearch.searchLabel', {}, 'Artikel zoeken');
     const closeLabel = translateArticle('articleSearch.closeLabel', {}, 'Artikeloverzicht sluiten');
@@ -451,8 +452,8 @@ function createAllArticlesModal() {
         <div id="allArticlesModal" class="modal" style="display: none;">
             <div class="modal-content modal-large">
                 <div class="modal-header">
-                    <h3>${modalTitle}</h3>
-                    <button class="btn-close" type="button" data-action="close-all-articles-modal" aria-label="${closeLabel}">✕</button>
+                    <h3>${iconLabel('newspaper', modalTitle, 'articleSearch.modalTitle')}</h3>
+                    <button class="btn-close" type="button" data-action="close-all-articles-modal" aria-label="${closeLabel}">${interfaceIcon('close')}</button>
                 </div>
                 <div class="modal-body">
                     <div class="article-search-in-modal">
@@ -556,7 +557,7 @@ function renderArticleGrid(articles) {
                  data-arg-article-id="${article.id}">
                 <div class="article-card-header">
                     <span class="article-card-magazine">${article.magazine}</span>
-                    ${article.popular ? '<span class="article-card-badge">⭐</span>' : ''}
+                    ${article.popular ? `<span class="article-card-badge">${interfaceIcon('star')}<span class="sr-only" data-i18n="articleSearch.tabPopular">${translateArticle('articleSearch.tabPopular', {}, 'Populair')}</span></span>` : ''}
                 </div>
                 <div class="article-card-body">
                     <div class="article-card-name">${article.name}</div>
@@ -860,7 +861,7 @@ export async function renderOrderItems() {
                     <div class="order-item-details">
                         <div class="order-item-name"${isPublicCatalogItem(item) ? ' data-feedback-public' : ''}>${item.name}</div>
                         <div class="order-item-meta">${item.code} • ${item.magazine} • ${asCurrency(item.unitPrice)} per stuk</div>
-                        ${hasVolumeDiscount ? '<div class="order-item-discount">✨ Stapelkorting actief (10%)<span class="order-item-discount-badge">KORTING</span></div>' : ''}
+                        ${hasVolumeDiscount ? `<div class="order-item-discount">${interfaceIcon('coins')} Stapelkorting actief (10%)<span class="order-item-discount-badge">KORTING</span></div>` : ''}
                     </div>
                     <div class="order-item-quantity">${item.quantity}x</div>
                     <div class="order-item-price">${asCurrency(itemTotal)}</div>
@@ -868,7 +869,7 @@ export async function renderOrderItems() {
                             aria-label="${removeOrderItemLabel}" title="${removeOrderItemLabel}"
                             data-action="remove-article-from-order"
                             data-arg-article-id="${item.articleId}"
-                            type="button">🗑️</button>
+                            type="button">${interfaceIcon('trash')}</button>
                 </div>
             `;
         });
@@ -885,7 +886,7 @@ export async function renderOrderItems() {
                     <div class="discount-item">
                         <div>
                             <div class="discount-item-label">
-                                <span class="discount-icon">${isCoupon ? '🎟️' : '💰'}</span>
+                                <span class="discount-icon">${interfaceIcon(isCoupon ? 'ticket' : 'coins')}</span>
                                 <span class="discount-type">${discount.type}</span>
                                 <span class="discount-badge ${isCoupon ? 'coupon-applied' : ''}">${isCoupon ? 'COUPON' : 'ACTIE'}</span>
                             </div>
@@ -893,7 +894,7 @@ export async function renderOrderItems() {
                         </div>
                         <div class="discount-item-amount">
                             -${asCurrency(discount.amount)}
-                            ${isCoupon ? `<button data-action="remove-coupon" type="button" class="coupon-remove" aria-label="${removeCouponLabel}" title="${removeCouponLabel}">✕</button>` : ''}
+                            ${isCoupon ? `<button data-action="remove-coupon" type="button" class="coupon-remove" aria-label="${removeCouponLabel}" title="${removeCouponLabel}">${interfaceIcon('close')}</button>` : ''}
                         </div>
                     </div>
                 `;

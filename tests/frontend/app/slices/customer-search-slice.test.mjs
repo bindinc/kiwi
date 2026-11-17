@@ -1,8 +1,256 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import en from '../../../../assets/js/i18n/en.js';
 import nl from '../../../../assets/js/i18n/nl.js';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
-import { registerCustomerSearchSlice, __customerSearchTestUtils } from '../../../../assets/js/app/slices/customer-search-slice.js';
+import i18n from '../../../../assets/js/i18n/index.js';
+import { setAppLocale } from '../../../../assets/js/app/slices/localization-slice.js';
+import { displaySearchResults, displayPaginatedResults, refreshSearchResultLabels, goToPage, scrollToResults, searchCustomer, registerCustomerSearchSlice, __customerSearchTestUtils } from '../../../../assets/js/app/slices/customer-search-slice.js';
+
+function createSearchMetadataFixture() {
+    const ids = ['searchSummary', 'resultCount', 'resultCountLabel', 'searchResultsView', 'welcomeMessage',
+        'customerDetail', 'resultsTitle', 'resultsRange', 'paginatedResults', 'pagination', 'searchPostalCode',
+        'searchHouseNumber', 'searchName', 'searchCustomerNumber', 'searchEmail', 'searchIban', 'searchBirthDate', 'searchPhone'];
+    const writes = [];
+    const scrolls = [];
+    const nodes = Object.fromEntries(ids.map(id => [id, {
+        id, textContent: '', value: '', style: {}, attributes: {}, markup: '',
+        set innerHTML(value) { this.markup = value; writes.push(id); },
+        get innerHTML() { return this.markup; },
+        setAttribute(name, value) { this.attributes[name] = value; },
+        getAttribute(name) { return this.attributes[name] ?? null; },
+        contains(node) {
+            for (let current = node; current; current = current.parentNode) {
+                if (current === this) return true;
+            }
+            return false;
+        },
+        scrollIntoView() { scrolls.push(id); }
+    }]));
+    // Read the real annotations so a static translation cannot silently replace populated metadata.
+    const template = readFileSync(new URL('../../../../templates/base/index.html.twig', import.meta.url), 'utf8');
+    for (const id of ['resultsTitle', 'resultsRange']) {
+        const tag = template.match(new RegExp(`<[^>]+id="${id}"[^>]*>`))[0];
+        for (const match of tag.matchAll(/([\w-]+)="([^"]*)"/g)) nodes[id].setAttribute(match[1], match[2]);
+    }
+    const mandants = [{ value: 'HMC', checked: true }];
+    const activeElement = { name: 'retained form input' };
+    const document = {
+        documentElement: { lang: 'nl' }, activeElement,
+        getElementById: id => nodes[id] || null,
+        querySelectorAll(selector) {
+            if (selector === '[data-i18n]') return Object.values(nodes).filter(node => node.getAttribute('data-i18n'));
+            if (selector === 'input[name="searchMandants"]:checked') return mandants.filter(input => input.checked);
+            return [];
+        }
+    };
+    return { document, nodes, mandants, writes, scrolls, activeElement };
+}
+
+function syntheticSearchCustomers(count, prefix = 'synthetic') {
+    return Array.from({ length: count }, (_, index) => ({ id: `${prefix}-${index}`, firstName: 'Synthetic',
+        lastName: `Customer ${index}`, postalCode: '1231AA', address: 'Synthetic street 1', city: 'Synthetic city', subscriptions: [] }));
+}
+
+async function withSearchMetadataFixture(run) {
+    const names = ['document', 'i18n', 'refreshSearchResultLabels', 'kiwiApi', 'kiwiLegacyCustomerSearchBridge'];
+    const previous = Object.fromEntries(names.map(name => [name, globalThis[name]]));
+    const previousLocale = i18n.getLocale();
+    const fixture = createSearchMetadataFixture();
+    Object.assign(globalThis, { document: fixture.document, i18n, refreshSearchResultLabels });
+    try { await run(fixture); }
+    finally {
+        __customerSearchTestUtils.resetSearchStateForTests();
+        i18n.setLocale(previousLocale);
+        for (const name of names) {
+            if (previous[name] === undefined) delete globalThis[name];
+            else globalThis[name] = previous[name];
+        }
+    }
+}
+
+async function testNativeLocaleRefreshKeepsRealSearchMetadataAndRetainedWorkspace() {
+    await withSearchMetadataFixture(async ({ document, nodes, mandants, writes, scrolls, activeElement }) => {
+        let requests = 0;
+        globalThis.kiwiApi = { get() { requests++; }, post() { requests++; }, request() { requests++; } };
+        for (const count of [0, 1, 3, 25]) {
+            nodes.searchPostalCode.value = '1231AA'; nodes.searchHouseNumber.value = '1'; nodes.searchName.value = 'MixedCase';
+            mandants[0].checked = true;
+            const customers = syntheticSearchCustomers(count);
+            const selectedCustomer = customers.at(-1) || { id: 'selected-outside-results' };
+            globalThis.kiwiLegacyCustomerSearchBridge = { getCurrentCustomer: () => selectedCustomer };
+            setAppLocale('nl');
+            displaySearchResults(customers);
+            if (count > 20) goToPage(2);
+            const expectedStart = count ? (count > 20 ? 21 : 1) : 0;
+            const expectedEnd = count > 20 ? 25 : count;
+            assert.equal(nodes.resultsRange.textContent, `Toont ${expectedStart}-${expectedEnd} van ${count}`);
+            const rowMarkup = nodes.paginatedResults.innerHTML;
+            if (count > 20) assert.ok(rowMarkup.includes('aria-current="true"'));
+            nodes.searchName.value = 'Unsent draft'; nodes.searchPostalCode.value = '9999ZZ'; mandants[0].checked = false;
+            nodes.customerDetail.style.display = 'block'; nodes.searchResultsView.style.display = 'none';
+            const stateBefore = __customerSearchTestUtils.getSearchStateSnapshot();
+            const writesBefore = writes.length;
+            const scrollsBefore = scrolls.length;
+            for (const locale of ['en', 'nl']) {
+                setAppLocale(locale);
+                const query = locale === 'en' ? '1231AA 1 • Name: MixedCase • Mandant: TROS' : '1231AA 1 • Naam: MixedCase • Mandant: TROS';
+                assert.equal(nodes.resultsTitle.textContent, `${locale === 'en' ? 'Search results' : 'Zoekresultaten'}: "${query}"`);
+                assert.equal(nodes.resultsRange.textContent, locale === 'en'
+                    ? `Showing ${expectedStart}-${expectedEnd} of ${count}` : `Toont ${expectedStart}-${expectedEnd} van ${count}`);
+                assert.equal(nodes.resultCount.textContent, String(count));
+                assert.equal(nodes.resultCountLabel.textContent, locale === 'en' ? (count === 1 ? 'customer found' : 'customers found') : (count === 1 ? 'klant gevonden' : 'klanten gevonden'));
+                assert.equal(nodes.paginatedResults.innerHTML, rowMarkup);
+                assert.equal(writes.length, writesBefore, 'locale changes do not rebuild rows, pagination, welcome or retained detail');
+                assert.equal(scrolls.length, scrollsBefore);
+                assert.equal(document.activeElement, activeElement);
+                assert.equal(nodes.customerDetail.style.display, 'block');
+                assert.equal(nodes.searchResultsView.style.display, 'none');
+                assert.equal(globalThis.kiwiLegacyCustomerSearchBridge.getCurrentCustomer(), selectedCustomer);
+                assert.deepEqual(__customerSearchTestUtils.getSearchStateSnapshot(), stateBefore);
+                assert.equal(nodes.searchName.value, 'Unsent draft');
+                assert.equal(nodes.searchPostalCode.value, '9999ZZ');
+                assert.equal(mandants[0].checked, false);
+                assert.equal(nodes.resultsTitle.getAttribute('data-i18n-params'), null);
+            }
+        }
+        assert.equal(requests, 0, 'locale changes cannot search or load subscription summaries');
+    });
+}
+
+async function testAcceptedQuerySnapshotSurvivesPendingAndOutOfOrderSearches() {
+    await withSearchMetadataFixture(async ({ nodes }) => {
+        const pending = [];
+        let posts = 0;
+        globalThis.kiwiApi = {
+            get(url) { return new Promise(resolve => pending.push({ url, resolve })); },
+            post() { posts++; }
+        };
+        nodes.searchName.value = 'Accepted MixedCase';
+        displaySearchResults(syntheticSearchCustomers(1, 'accepted'));
+        nodes.searchName.value = 'Older MixedCase';
+        const olderSearch = searchCustomer();
+        nodes.searchName.value = 'Latest MixedCase';
+        const latestSearch = searchCustomer();
+        nodes.searchName.value = 'Unsent draft';
+        setAppLocale('en');
+        assert.ok(nodes.resultsTitle.textContent.includes('Name: Accepted MixedCase'), 'pending requests do not replace accepted query metadata');
+        pending[1].resolve({ items: syntheticSearchCustomers(3, 'latest') });
+        await latestSearch;
+        assert.ok(nodes.resultsTitle.textContent.includes('Name: Latest MixedCase'));
+        assert.equal(nodes.resultsRange.textContent, 'Showing 1-3 of 3');
+        const accepted = __customerSearchTestUtils.getSearchStateSnapshot();
+        pending[0].resolve({ items: syntheticSearchCustomers(2, 'older') });
+        await olderSearch;
+        assert.deepEqual(__customerSearchTestUtils.getSearchStateSnapshot(), accepted);
+        assert.ok(nodes.resultsTitle.textContent.includes('Name: Latest MixedCase'));
+        setAppLocale('nl');
+        assert.ok(nodes.resultsTitle.textContent.includes('Naam: Latest MixedCase'));
+        assert.equal(nodes.resultsRange.textContent, 'Toont 1-3 van 3');
+        assert.equal(nodes.searchName.value, 'Unsent draft');
+        assert.equal(new URL(pending[1].url, 'https://synthetic.invalid').searchParams.get('name'), 'latest mixedcase', 'business query normalization remains unchanged');
+        assert.equal(pending.length, 2);
+        assert.equal(posts, 0);
+    });
+}
+
+async function testSubscriptionRefreshKeepsFocusedSummaryWithoutBlockingResultsNavigation() {
+    await withSearchMetadataFixture(async ({ document, nodes, writes, scrolls, activeElement }) => {
+        setAppLocale('nl');
+        const customer = { ...syntheticSearchCustomers(1)[0], personId: '1', credentialKey: 'tvk', sourceSystem: 'subscription-api' };
+        let resolveSummary;
+        const requests = [];
+        globalThis.kiwiApi = {
+            post(url, payload) {
+                requests.push({ url, payload });
+                return new Promise(resolve => { resolveSummary = resolve; });
+            }
+        };
+        __customerSearchTestUtils.setSearchResultsForTests([customer]);
+        const generation = __customerSearchTestUtils.getSearchStateSnapshot().generation;
+        const pendingSummary = __customerSearchTestUtils.loadVisibleSubscriptionSummaries(generation);
+        displayPaginatedResults();
+        assert.deepEqual(scrolls, ['searchResultsView'], 'initial results retain automatic scrolling from other focus');
+        assert.match(nodes.paginatedResults.innerHTML, /Abonnementstatus laden/);
+
+        const summaryLink = { parentNode: nodes.searchSummary };
+        const focusedLinkContent = { parentNode: summaryLink };
+        document.activeElement = focusedLinkContent;
+        const writesBefore = writes.length;
+        resolveSummary({ items: [{ personId: '1', credentialKey: 'tvk', state: 'loaded', activeCount: 1,
+            activeSubscriptions: [{ magazine: 'Mikrogids' }], inactiveSubscription: null }] });
+        await pendingSummary;
+
+        assert.equal(document.activeElement, focusedLinkContent);
+        assert.deepEqual(scrolls, ['searchResultsView'], 'background summary completion must not scroll retained summary focus away');
+        assert.match(nodes.paginatedResults.innerHTML, /Mikrogids/);
+        assert.doesNotMatch(nodes.paginatedResults.innerHTML, /Abonnementstatus laden/);
+        assert.equal(nodes.resultCount.textContent, '1');
+        assert.equal(nodes.resultCountLabel.textContent, 'klant gevonden');
+        assert.equal(nodes.resultsRange.textContent, 'Toont 1-1 van 1');
+        assert.match(nodes.resultsTitle.textContent, /^Zoekresultaten:/);
+        assert.deepEqual(writes.slice(writesBefore), ['paginatedResults', 'pagination'], 'rows and pagination still redraw');
+        assert.equal(nodes.searchResultsView.style.display, 'block');
+        assert.deepEqual(requests, [{ url: '/api/v1/persons/subscription-summaries',
+            payload: { persons: [{ personId: '1', credentialKey: 'tvk' }] } }]);
+
+        document.activeElement = nodes.searchSummary;
+        displayPaginatedResults();
+        assert.equal(scrolls.length, 1, 'the summary itself also retains its position');
+        document.activeElement = activeElement;
+        displayPaginatedResults();
+        assert.equal(scrolls.length, 2, 'focus outside the summary retains automatic result scrolling');
+        document.activeElement = focusedLinkContent;
+        scrollToResults();
+        assert.equal(scrolls.length, 3, 'explicit results navigation still scrolls from the summary');
+        assert.equal(document.activeElement, focusedLinkContent, 'neither path moves focus');
+    });
+}
+
+function testSearchSummaryCountsAndLiveLocaleChange() {
+    const previousDocument = globalThis.document;
+    const previousI18n = globalThis.i18n;
+    const previousLocale = i18n.getLocale();
+    const ids = ['searchSummary', 'resultCount', 'resultCountLabel', 'searchResultsView', 'welcomeMessage',
+        'customerDetail', 'resultsTitle', 'resultsRange', 'paginatedResults'];
+    const nodes = Object.fromEntries(ids.map(id => [id, {
+        textContent: '', style: {}, attributes: {},
+        setAttribute(name, value) { this.attributes[name] = value; },
+        getAttribute(name) { return this.attributes[name]; },
+        contains(node) { return node === this; }
+    }]));
+    globalThis.document = {
+        documentElement: { lang: 'nl' },
+        getElementById: id => nodes[id] || null,
+        querySelectorAll: selector => selector === '[data-i18n]' ? [nodes.resultCountLabel] : []
+    };
+    globalThis.i18n = i18n;
+    try {
+        for (const count of [0, 1, 3]) {
+            const customers = Array.from({ length: count }, (_, index) => ({
+                id: `synthetic-${index}`, firstName: 'Synthetic', lastName: 'Customer', subscriptions: []
+            }));
+            __customerSearchTestUtils.setSearchResultsForTests(customers);
+            setAppLocale('nl');
+            displayPaginatedResults();
+            const generation = __customerSearchTestUtils.getSearchStateSnapshot().generation;
+            assert.equal(nodes.resultCount.textContent, String(count), 'the count node stays numeric-only');
+            assert.equal(nodes.resultCountLabel.textContent, count === 1 ? 'klant gevonden' : 'klanten gevonden');
+            assert.equal(nodes.searchSummary.style.display, count > 0 ? 'block' : 'none', 'zero-result visibility is unchanged');
+            setAppLocale('en');
+            assert.equal(nodes.resultCountLabel.textContent, count === 1 ? 'customer found' : 'customers found');
+            assert.equal(nodes.resultCount.textContent, String(count));
+            assert.equal(__customerSearchTestUtils.getSearchStateSnapshot().generation, generation, 'changing language does not rerun or replace the search');
+            setAppLocale('nl');
+            assert.equal(nodes.resultCountLabel.textContent, count === 1 ? 'klant gevonden' : 'klanten gevonden');
+        }
+    } finally {
+        __customerSearchTestUtils.resetSearchStateForTests();
+        i18n.setLocale(previousLocale);
+        globalThis.document = previousDocument;
+        globalThis.i18n = previousI18n;
+    }
+}
 
 function createRouter() {
     const root = {
@@ -530,6 +778,10 @@ function testSelectedCustomerKeepsSourceIdentity() {
 }
 
 async function run() {
+    testSearchSummaryCountsAndLiveLocaleChange();
+    await testNativeLocaleRefreshKeepsRealSearchMetadataAndRetainedWorkspace();
+    await testAcceptedQuerySnapshotSurvivesPendingAndOutOfOrderSearches();
+    await testSubscriptionRefreshKeepsFocusedSummaryWithoutBlockingResultsNavigation();
     testSelectedCustomerKeepsSourceIdentity();
     testRegistersItemFiveActions();
     testInstallsLegacyCompatibilityExports();

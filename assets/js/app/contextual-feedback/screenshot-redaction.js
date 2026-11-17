@@ -85,8 +85,14 @@ export function redactScreenshotDom(documentRef = document, {
     }
 
     const restores = [];
-    const elements = collectElements(root);
     installRedactionStyles(documentRef, restores);
+    restores.push(redactScreenshotRoot(root, context, pseudonymizeText));
+    return () => restoreAll(restores);
+}
+
+function redactScreenshotRoot(root, context, pseudonymizeText) {
+    const restores = [];
+    const elements = collectElements(root);
 
     for (const element of elements) {
         if (isIgnored(element)) {
@@ -110,12 +116,9 @@ export function redactScreenshotDom(documentRef = document, {
 }
 
 export function pseudonymizeScreenshotClone(clonedRoot, context = createPseudonymContext()) {
-    const documentRef = clonedRoot?.ownerDocument || globalThis.document;
-    redactScreenshotDom(documentRef, {
-        root: clonedRoot,
-        context,
-        pseudonymizeText: true
-    });
+    // SDK clones retain the live ownerDocument, so mask styles must stay on the detached tree.
+    redactScreenshotRoot(clonedRoot, context, true);
+    applyCloneMaskStyles(clonedRoot);
     auditPseudonymizedClone(clonedRoot, context);
 
     return context.privacySummary;
@@ -685,6 +688,20 @@ function maskElement(element, restores, context = null) {
     setStyleProperty(element, 'color', 'transparent', restores);
     setStyleProperty(element, 'overflow', 'hidden', restores);
     setStyleProperty(element, 'textShadow', 'none', restores);
+}
+
+function applyCloneMaskStyles(root) {
+    for (const element of collectElements(root)) {
+        if (isIgnored(element) || !isRedactedElement(element)) continue;
+
+        element.style.setProperty('background', '#d9dde3', 'important');
+        element.style.setProperty('color', 'transparent', 'important');
+        element.style.setProperty('overflow', 'hidden', 'important');
+        element.style.setProperty('text-shadow', 'none', 'important');
+        for (const descendant of element.querySelectorAll('*')) {
+            descendant.style?.setProperty('visibility', 'hidden', 'important');
+        }
+    }
 }
 
 function describeMaskedElementType(element) {

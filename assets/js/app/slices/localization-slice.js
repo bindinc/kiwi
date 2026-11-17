@@ -290,6 +290,7 @@ export function applyLocaleToUi(options = {}) {
     const shouldCloseMenu = options.closeMenu === true;
     setDocumentLocale(getAppLocale());
     applyIndexHtmlTranslations();
+    invokeLegacyUiUpdate('refreshSearchResultLabels');
     invokeLegacyUiUpdate('refreshAgentStatusLabels');
     invokeLegacyUiUpdate('updateAgentStatusDisplay');
     updateLocaleMenuSelection();

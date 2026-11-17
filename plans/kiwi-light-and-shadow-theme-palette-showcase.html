@@ -1879,6 +1879,12 @@
         :target { scroll-margin-top: 96px; }
         :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
         .page-header :focus-visible { outline-color: var(--white); }
+        /* User refinement 2026-11-12: text entry uses one flush 2px focus boundary. */
+        :is(input:not([type="radio"], [type="checkbox"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="range"], [type="color"], [type="image"]), select, textarea):focus-visible {
+            outline: 2px solid var(--focus);
+            outline-offset: 0;
+            box-shadow: none;
+        }
         .demo-controls { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-4); margin: 0 0 var(--space-4); padding: var(--space-4) 0; border-block: 1px solid var(--decorative-line); }
         .demo-controls label { display: block; margin-bottom: var(--space-2); font-weight: 600; font-size: 0.875rem; }
         .demo-controls select { min-height: 40px; max-width: 100%; border: 1px solid var(--control-border); background: var(--surface); color: var(--text); padding: var(--space-2); }

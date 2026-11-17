@@ -1,3 +1,4 @@
+{% import 'components/interface-icons.html.twig' as icons %}
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -8,7 +9,7 @@
 </head>
 <body class="access-denied-page">
     <div class="access-denied-card">
-        <div class="access-denied-icon">🚫</div>
+        <div class="access-denied-icon">{{ icons.icon('ban') }}</div>
         <h1 data-i18n="accessDeniedPage.heading">Geen toegang tot Kiwi</h1>
         <p>
             <span data-i18n="accessDeniedPage.greeting">Hallo</span> {{ user_full_name }},

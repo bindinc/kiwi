@@ -1,3 +1,4 @@
+import { iconLabel } from '../interface-icons.js';
 import { getGlobalScope } from '../services.js';
 import { translate } from './localization-slice.js';
 
@@ -97,7 +98,7 @@ function updateHoldButton(documentRef) {
     }
 
     holdBtn.style.display = 'inline-block';
-    holdBtn.innerHTML = translate('calls.holdButtonLabel', {}, '⏸️ In Wacht Zetten');
+    holdBtn.innerHTML = iconLabel('pause', translate('calls.holdButtonLabel', {}, 'In Wacht Zetten'), 'calls.holdButtonLabel');
     holdBtn.classList.remove('on-hold');
 }
 

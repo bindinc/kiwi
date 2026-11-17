@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createActionRouter } from '../../../../assets/js/app/actions.js';
+import { createEditorDocument } from '../../support/editor-dom.mjs';
 import {
     __contactHistoryTestUtils,
     addContactMoment,
@@ -9,6 +10,41 @@ import {
     registerContactHistorySlice,
     resetContactHistoryViewState
 } from '../../../../assets/js/app/slices/contact-history-slice.js';
+
+function testNativeTimelineDisclosureUpdatesAccessibleState() {
+    withGlobalState(() => {
+        globalThis.document = createEditorDocument();
+        const container = document.createElement('div'); container.id = 'contactHistory';
+        document.body.append(container);
+        document.getElementById = id => document.body.querySelector(`#${id}`);
+        const history = [{ id: 'synthetic-entry', type: 'unknown', date: '2026-01-01T12:00:00Z', description: 'Synthetic details' }];
+        configureContactHistorySliceDependencies(() => ({
+            getCurrentCustomer: () => ({ id: 'synthetic-customer', contactHistory: history }),
+            getContactHistoryState: () => ({ currentPage: 1, itemsPerPage: 6, highlightId: null })
+        }));
+        const router = createRouter();
+        registerContactHistorySlice(router);
+        displayContactHistory();
+        const toggle = container.querySelector('button');
+        assert.equal(toggle.getAttribute('type'), 'button', 'native button supplies Enter and Space activation');
+        assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+        assert.equal(toggle.getAttribute('aria-controls'), 'content-ch-synthetic-entry');
+        const expanded = new Set(['expanded']);
+        const content = document.getElementById('content-ch-synthetic-entry');
+        const indicator = document.getElementById('expand-ch-synthetic-entry');
+        const classList = () => ({ toggle(name, forced) {
+            const value = forced ?? !expanded.has(name);
+            value ? expanded.add(name) : expanded.delete(name);
+            return value;
+        } });
+        content.classList = classList(); indicator.classList = classList();
+        globalThis.kiwiContactHistorySlice.toggleTimelineItem('ch-synthetic-entry');
+        assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+        globalThis.kiwiContactHistorySlice.toggleTimelineItem('ch-synthetic-entry');
+        assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+        assert.deepEqual(history[0].description, 'Synthetic details');
+    });
+}
 
 function createRouter() {
     const root = {
@@ -400,6 +436,7 @@ function testResetContactHistoryViewStateClearsTimerAndState() {
 }
 
 async function run() {
+    testNativeTimelineDisclosureUpdatesAccessibleState();
     testRegistersItemSixteenActionsAndNamespace();
     testPushContactHistoryTracksHighlightAndPersistsViaSaveCustomers();
     await testPushContactHistoryPersistsViaApiWhenAvailable();

@@ -1,3 +1,4 @@
+import { interfaceIcon, iconLabel } from '../interface-icons.js';
 import { getGlobalScope } from '../services.js';
 import { getSubscriptionDurationDisplay } from '../subscription-shared-helpers.js';
 import { displayContactHistory, formatDate } from './contact-history-slice.js';
@@ -219,8 +220,8 @@ function renderActiveSubscriptions(subscriptions, dependencies) {
         const actionsMarkup = isReadOnlySubscription(subscription)
             ? ''
             : `
-                <button class="icon-btn" type="button" data-action="edit-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.editTitle', 'Bewerken')}">✏️</button>
-                <button class="icon-btn" type="button" data-action="cancel-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.cancelTitle', 'Opzeggen')}">🚫</button>
+                <button class="icon-btn" type="button" data-action="edit-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.editTitle', 'Bewerken')}" aria-label="${translateLabel(dependencies, 'subscription.editTitle', 'Bewerken')}">${interfaceIcon('edit')}</button>
+                <button class="icon-btn" type="button" data-action="cancel-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.cancelTitle', 'Opzeggen')}" aria-label="${translateLabel(dependencies, 'subscription.cancelTitle', 'Opzeggen')}">${interfaceIcon('ban')}</button>
             `;
 
         return `
@@ -267,7 +268,7 @@ function renderEndedSubscriptions(subscriptions, dependencies) {
             ? ''
             : `
                 <button class="btn btn-small btn-secondary btn-winback" type="button" data-action="start-winback-for-subscription" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.winbackTitle', 'Winback/Opzegging')}">
-                    ${translateLabel(dependencies, 'subscription.winbackAction', '🎯 Winback/Opzegging')}
+                    ${iconLabel('target', translateLabel(dependencies, 'subscription.winbackAction', 'Winback/Opzegging'), 'subscription.winbackAction')}
                 </button>
             `;
 
@@ -315,7 +316,7 @@ function renderRestitutedSubscriptions(subscriptions, dependencies) {
             ? ''
             : `
                 <button class="btn btn-small btn-secondary" type="button" data-action="revert-restitution" data-arg-sub-id="${subscription.id}" title="${translateLabel(dependencies, 'subscription.transferToOtherTitle', 'Overzetten naar andere persoon')}">
-                    ${translateLabel(dependencies, 'subscription.transferAction', '🔄 Overzetten')}
+                    ${iconLabel('transfer', translateLabel(dependencies, 'subscription.transferAction', 'Overzetten'), 'subscription.transferAction')}
                 </button>
             `;
 
@@ -426,7 +427,7 @@ export function displayDeceasedStatusBanner() {
     const banner = document.createElement('div');
     banner.className = 'deceased-status-banner';
     banner.innerHTML = `
-        <div class="deceased-banner-icon">⚠️</div>
+        <div class="deceased-banner-icon">${interfaceIcon('warning')}</div>
         <div class="deceased-banner-content">
             <strong>${translateLabel(dependencies, 'customer.deceasedBannerTitle', 'Deze klant is overleden')}</strong>
             <p>${translateLabel(dependencies, 'customer.deceasedBannerDescription', 'Let op bij het verwerken van abonnementen en bestellingen')}</p>

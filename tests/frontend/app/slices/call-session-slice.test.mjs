@@ -223,7 +223,8 @@ function testStartCallSessionUpdatesUiAndOwnsDurationTimer() {
         assert.equal(sessionCallerName.textContent, 'Anonieme testbeller');
         assert.equal(endCallBtn.style.display, 'inline-block');
         assert.equal(holdCallBtn.style.display, 'inline-block');
-        assert.equal(holdCallBtn.innerHTML, 'In wacht zetten');
+        assert.match(holdCallBtn.innerHTML, /data-interface-icon="pause"/);
+        assert.match(holdCallBtn.innerHTML, /data-i18n="calls.holdButtonLabel">In wacht zetten<\/span>/);
         assert.equal(holdCallBtn.classList.contains('on-hold'), false);
         assert.equal(debugEndCallBtn.style.display, 'block');
         assert.equal(recordingIndicator.style.display, 'flex');

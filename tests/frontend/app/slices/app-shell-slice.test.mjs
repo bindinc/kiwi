@@ -205,6 +205,114 @@ function testShowToastFallsBackToVisualToastForSubscriptionApiCustomer() {
     });
 }
 
+function testLiveToastRevealsOnlyAnOverlappingShortCallActionAndKeepsItsLifecycle() {
+    withGlobalState(() => {
+        const previousSetTimeout = globalThis.setTimeout;
+        const timers = [];
+        globalThis.setTimeout = (callback, delay) => { timers.push({ callback, delay }); return timers.length; };
+        try {
+            let toastVisible = false;
+            const toast = {
+                textContent: '', className: '', offsetHeight: 45,
+                classList: { contains(name) { return name === 'show' && toastVisible; },
+                    add(name) { if (name === 'show') toastVisible = true; },
+                    remove(name) { if (name === 'show') toastVisible = false; } },
+                // The entrance transform is still outside the viewport; layout height and bottom are final.
+                getBoundingClientRect() { return { left: 149, right: 374, top: 700, bottom: 745 }; }
+            };
+            const positions = { holdCallBtn: 231, endCallBtn: 231 };
+            const horizontal = { left: 207, right: 374 };
+            const hold = { id: 'holdCallBtn', getBoundingClientRect() {
+                return { ...horizontal, top: positions.holdCallBtn, bottom: positions.holdCallBtn + 40 };
+            } };
+            const end = { id: 'endCallBtn', getBoundingClientRect() {
+                return { ...horizontal, top: positions.endCallBtn, bottom: positions.endCallBtn + 40 };
+            } };
+            const scrolls = [];
+            let outlineStyle = 'solid';
+            const view = {
+                innerHeight: 320,
+                getComputedStyle(node) { return node === toast ? { bottom: '16px' }
+                    : { outlineStyle, outlineWidth: '3px', outlineOffset: '3px' }; },
+                scrollBy(options) {
+                    scrolls.push(options);
+                    for (const id of Object.keys(positions)) positions[id] -= options.top;
+                }
+            };
+            const documentStub = createDocumentStub({ elementsById: { toast } });
+            documentStub.defaultView = view;
+            documentStub.activeElement = hold;
+            let focusListenerInstalls = 0;
+            const addListener = documentStub.addEventListener.bind(documentStub);
+            documentStub.addEventListener = (type, listener) => {
+                if (type === 'focusin') focusListenerInstalls++;
+                addListener(type, listener);
+            };
+            globalThis.document = documentStub;
+            registerAppShellSlice(createRouter(documentStub));
+            registerAppShellSlice(createRouter(documentStub));
+            assert.equal(focusListenerInstalls, 1, 'the existing listener lifecycle prevents duplicate focus handlers');
+
+            showToast('Gesprek hervat (wacht: 0:00)', 'success');
+            assert.equal(toast.textContent, 'Gesprek hervat (wacht: 0:00)');
+            assert.equal(toast.className, 'toast success');
+            assert.deepEqual(scrolls, [{ top: 19, behavior: 'instant' }], 'clear the entire 3px+3px focus perimeter, using final toast layout');
+            assert.equal(documentStub.activeElement, hold, 'revealing feedback never moves focus');
+            documentStub.listeners.focusin();
+            assert.equal(scrolls.length, 1, 'an already clear call action stays still');
+            assert.equal(timers.length, 1);
+            assert.equal(timers[0].delay, 3000);
+
+            positions.holdCallBtn = 231; positions.endCallBtn = 231;
+            documentStub.activeElement = end;
+            toast.offsetHeight = 80;
+            const wrappedMessage = 'Volledige langere gespreksmelding die over meerdere regels wordt weergegeven.';
+            showToast(wrappedMessage, 'info');
+            assert.equal(toast.textContent, wrappedMessage, 'measuring wrapped feedback preserves every character');
+            assert.deepEqual(scrolls[1], { top: 54, behavior: 'instant' }, 'a taller live message supplies its own clearance');
+            assert.equal(documentStub.activeElement, end);
+            assert.equal(timers.length, 2, 'only the existing notification expiry is scheduled');
+            assert.ok(timers.every(timer => timer.delay === 3000));
+
+            positions.holdCallBtn = 180;
+            documentStub.activeElement = hold;
+            documentStub.listeners.focusin();
+            assert.deepEqual(scrolls[2], { top: 3, behavior: 'instant' }, 'native focus accounts for an outline overlapping beyond an uncovered control');
+            assert.equal(documentStub.activeElement, hold);
+            const clearedCount = scrolls.length;
+            documentStub.listeners.focusin();
+            assert.equal(scrolls.length, clearedCount);
+
+            positions.holdCallBtn = 180; outlineStyle = 'none';
+            documentStub.listeners.focusin();
+            assert.equal(scrolls.length, clearedCount, 'an absent outline is not treated as an obstruction');
+            outlineStyle = 'solid'; horizontal.left = 10; horizontal.right = 100;
+            documentStub.listeners.focusin();
+            assert.equal(scrolls.length, clearedCount, 'a horizontally clear target does not move');
+            horizontal.left = 207; horizontal.right = 374;
+            view.innerHeight = 1000; positions.holdCallBtn = 900;
+            documentStub.listeners.focusin();
+            assert.equal(scrolls.length, clearedCount, 'desktop call positioning is untouched');
+            view.innerHeight = 320;
+            documentStub.activeElement = { id: 'unrelated-input', getBoundingClientRect() { throw new Error('unrelated target must not be measured'); } };
+            documentStub.listeners.focusin();
+            assert.equal(scrolls.length, clearedCount);
+
+            timers[0].callback();
+            assert.equal(toastVisible, false, 'the original notification expiry policy is unchanged');
+            assert.equal(toast.textContent, wrappedMessage);
+            documentStub.activeElement = end; positions.endCallBtn = 231;
+            documentStub.listeners.focusin();
+            assert.equal(scrolls.length, clearedCount, 'a hidden notification never scrolls a call action');
+            assert.equal(timers.length, 2, 'focus changes never schedule notification timers');
+            __appShellTestUtils.uninstallGlobalListeners();
+            assert.equal(documentStub.listeners.focusin, undefined);
+            registerAppShellSlice(createRouter(documentStub));
+            assert.equal(focusListenerInstalls, 2, 'reinstallation owns exactly one fresh focus listener');
+        } finally { globalThis.setTimeout = previousSetTimeout; }
+    });
+}
+
 function testGlobalListenersHandleKeyboardClickAndChangeEvents() {
     withGlobalState(() => {
         const searchInput = {
@@ -447,6 +555,7 @@ function run() {
     testCloseFormPreservesDuplicateStateForNewSubscriptionForm();
     testShowToastUsesContactHistoryAndDeduplicatesRecentSuccessToast();
     testShowToastFallsBackToVisualToastForSubscriptionApiCustomer();
+    testLiveToastRevealsOnlyAnOverlappingShortCallActionAndKeepsItsLifecycle();
     testGlobalListenersHandleKeyboardClickAndChangeEvents();
     testCustomerWorkspaceResetDoesNotEndTheCallSession();
     console.log('app shell slice tests passed');
