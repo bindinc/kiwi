@@ -1,3 +1,4 @@
+import { interfaceIcon, iconLabel } from '../interface-icons.js';
 import { resumeFormDraft, clearFormDraft, registerDraftCleanup } from '../lightbox-drafts.js';
 import { getAddressSubmission } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
@@ -691,7 +692,7 @@ export function winbackHandleDeceased() {
     const subscriptionCardsMarkup = activeSubscriptions.map((subscription) => `
         <div class="deceased-subscription-card" data-sub-id="${subscription.id}">
             <div class="deceased-sub-header">
-                <h4>📰 ${escapeHtml(subscription.magazine)}</h4>
+                <h4>${interfaceIcon('newspaper')} ${escapeHtml(subscription.magazine)}</h4>
                 <span class="sub-start-date">Start: ${formatDate(subscription.startDate)}</span>
             </div>
             <fieldset class="form-group deceased-action-group">
@@ -765,7 +766,7 @@ export function showDeceasedRefundForm() {
     const listHtml = `
         <p><strong>Op te zeggen abonnementen:</strong></p>
         <ul>
-            ${refundActions.map((subscriptionAction) => `<li>📰 ${escapeHtml(subscriptionAction.subscription.magazine)}</li>`).join('')}
+            ${refundActions.map((subscriptionAction) => `<li>${interfaceIcon('newspaper')} ${escapeHtml(subscriptionAction.subscription.magazine)}</li>`).join('')}
         </ul>
     `;
 
@@ -785,7 +786,7 @@ export function showDeceasedTransferForm() {
     const listHtml = `
         <p><strong>Over te zetten abonnementen:</strong></p>
         <ul>
-            ${transferActions.map((subscriptionAction) => `<li>📰 ${escapeHtml(subscriptionAction.subscription.magazine)}</li>`).join('')}
+            ${transferActions.map((subscriptionAction) => `<li>${interfaceIcon('newspaper')} ${escapeHtml(subscriptionAction.subscription.magazine)}</li>`).join('')}
         </ul>
     `;
 
@@ -828,14 +829,14 @@ export function showDeceasedCombinedForm() {
     const transferListHtml = `
         <p><strong>Over te zetten abonnementen:</strong></p>
         <ul>
-            ${transferActions.map((subscriptionAction) => `<li>📰 ${escapeHtml(subscriptionAction.subscription.magazine)}</li>`).join('')}
+            ${transferActions.map((subscriptionAction) => `<li>${interfaceIcon('newspaper')} ${escapeHtml(subscriptionAction.subscription.magazine)}</li>`).join('')}
         </ul>
     `;
 
     const refundListHtml = `
         <p><strong>Op te zeggen abonnementen:</strong></p>
         <ul>
-            ${refundActions.map((subscriptionAction) => `<li>📰 ${escapeHtml(subscriptionAction.subscription.magazine)}</li>`).join('')}
+            ${refundActions.map((subscriptionAction) => `<li>${interfaceIcon('newspaper')} ${escapeHtml(subscriptionAction.subscription.magazine)}</li>`).join('')}
         </ul>
     `;
 
@@ -898,11 +899,11 @@ export function showRestitutionTransferForm(subscription) {
 
     const titleElement = getElementById('restitutionTransferTitle');
     if (titleElement) {
-        titleElement.textContent = translateKey(
+        titleElement.innerHTML = iconLabel('transfer', translateKey(
             'subscription.transferTitleWithMagazine',
             { magazine: subscription.magazine },
             `${subscription.magazine} Overzetten`
-        );
+        ));
     }
 
     const sameAddressCheckbox = getElementById('restitutionTransferSameAddress');

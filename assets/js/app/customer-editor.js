@@ -1,3 +1,4 @@
+import { interfaceIcon } from './interface-icons.js';
 import { renderAddressFields, sourceAddressValues, sourceAddressChanges, sourceAddressInputName } from './address-fields.js';
 import { endAddressSessions } from './address-completion.js';
 import { registerDraftCleanup } from './lightbox-drafts.js';
@@ -81,7 +82,8 @@ export async function openCustomerEditor(customer, { api, refresh, isCurrent = (
     const source = element('span', customer.mandant || '');
     source.setAttribute('data-feedback-public', '');
     context.append(name, reference, source);
-    const close = element('button', '✕', 'btn-close');
+    const close = element('button', '', 'btn-close');
+    close.innerHTML = interfaceIcon('close');
     close.setAttribute('aria-label', 'Sluiten');
     close.type = 'button';
     const status = element('p', 'Klantgegevens laden…', 'customer-editor-status');

@@ -1,3 +1,4 @@
+import { interfaceIcon } from '../interface-icons.js';
 import { feedbackApiError, feedbackText } from './i18n.js';
 import { registerDraftCleanup } from '../lightbox-drafts.js';
 import { showFeedbackModal, hideFeedbackModal, syncFeedbackModalState } from './modal-surface.js';
@@ -69,7 +70,7 @@ function renderSettingsModal(documentRef) {
         <div class="contextual-feedback-settings-panel">
             <header class="contextual-feedback-panel-header">
                 <h2 id="contextualFeedbackSettingsTitle">${escapeHtml(feedbackText('settings.title'))}</h2>
-                <button type="button" class="contextual-feedback-close" data-feedback-settings-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">✕</button>
+                <button type="button" class="contextual-feedback-close" data-feedback-settings-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">${interfaceIcon('close')}</button>
             </header>
             <div class="contextual-feedback-settings-form">
                 <p data-feedback-settings-load-status role="status">${escapeHtml(feedbackText('settings.loading'))}</p>
@@ -257,7 +258,7 @@ export function buildFeedbackSettingsHtml(settings) {
                     <h2 id="contextualFeedbackSettingsTitle">${escapeHtml(feedbackText('settings.title'))}</h2>
                     <p>${escapeHtml(feedbackText('settings.subtitle'))}</p>
                 </div>
-                <button type="button" class="contextual-feedback-close" data-feedback-settings-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">✕</button>
+                <button type="button" class="contextual-feedback-close" data-feedback-settings-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">${interfaceIcon('close')}</button>
             </header>
             <form class="contextual-feedback-settings-form" data-feedback-settings-form>
                 <section>

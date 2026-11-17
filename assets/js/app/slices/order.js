@@ -1,3 +1,4 @@
+import { iconLabel } from '../interface-icons.js';
 import { resumeFormDraft, clearFormDraft, registerDraftCleanup } from '../lightbox-drafts.js';
 import { splitAddressHouseNumber } from '../address-fields.js';
 import { getAddressSubmission } from '../address-completion.js';
@@ -390,7 +391,7 @@ function renderOrder(order, dependencies) {
     return `
         <div class="article-item">
             <div class="article-info">
-                <div class="article-name">${translateLabel(dependencies, 'articleOrders.orderNumber', { id: order.id }, `🛒 Bestelling #${order.id}`)}</div>
+                <div class="article-name">${iconLabel('cart', translateLabel(dependencies, 'articleOrders.orderNumber', { id: order.id }, `Bestelling #${order.id}`))}</div>
                 <div class="article-details">
                     <strong>${translateLabel(dependencies, 'articleOrders.itemsLabel', {}, 'Artikelen')}:</strong><br>${orderItemsDisplay.itemsHtml}<br>
                     ${orderItemsDisplay.pricingHtml}<br>

@@ -40,7 +40,7 @@ export function createEditorDocument() {
                         if (match[1] === 'id') child.id = match[2];
                     }
                     parents.at(-1).append(child);
-                    if (!['input', 'br'].includes(tag)) parents.push(child);
+                    if (!['input', 'br'].includes(tag) && !part.endsWith('/>')) parents.push(child);
                 }
             }
         };

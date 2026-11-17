@@ -366,6 +366,8 @@ body.contextual-feedback-reviewing > :not(.contextual-feedback-modal):not([data-
     overflow: auto;
     background: var(--surface-subdued);
     display: grid;
+    /* Wrapped privacy controls must keep their full height above the annotation canvas. */
+    grid-auto-rows: max-content;
     align-content: start;
     gap: 10px;
     padding: 12px;

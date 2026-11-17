@@ -1,3 +1,4 @@
+import { iconLabel } from '../interface-icons.js';
 import { resetLightboxDrafts, resumeFormDraft, clearFormDraft } from '../lightbox-drafts.js';
 import { endAddressSessions } from '../address-completion.js';
 import { getGlobalScope } from '../services.js';
@@ -263,7 +264,7 @@ function revealCallActionAboveToast(documentRef, toast) {
 export function showToast(message, type = 'success', options = {}) {
     if (type === 'success' && globalThis.window?.kiwiOutbox?.consumeSaveNotice?.()) {
         message = 'Opgeslagen in outbox. Nog niet verwerkt.';
-        options = { ...options, recordContactHistory: false };
+        options = { ...options, recordContactHistory: false, presentation: undefined };
     }
     const dependencies = resolveDependencies();
     const currentCustomer = dependencies && typeof dependencies.getCurrentCustomer === 'function'
@@ -302,11 +303,13 @@ export function showToast(message, type = 'success', options = {}) {
         return;
     }
 
-    if (renderOverlayNotification(getDocumentRef(), message, type)) {
+    const presentation = options.presentation;
+    if (renderOverlayNotification(getDocumentRef(), message, type, presentation)) {
         toast.classList.remove('show');
         return;
     }
-    toast.textContent = message;
+    if (presentation) toast.innerHTML = iconLabel(presentation.icon, presentation.message);
+    else toast.textContent = message;
     toast.className = `toast ${type}`;
     toast.classList.add('show');
     revealCallActionAboveToast(getDocumentRef(), toast);

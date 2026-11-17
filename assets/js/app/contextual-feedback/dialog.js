@@ -1,3 +1,4 @@
+import { interfaceIcon } from '../interface-icons.js';
 import { AnnotationCanvas } from './annotation-canvas.js';
 import { feedbackText } from './i18n.js';
 import { registerDraftCleanup } from '../lightbox-drafts.js';
@@ -6,12 +7,12 @@ import { showFeedbackModal, hideFeedbackModal, syncFeedbackModalState } from './
 const dialogsByDocument = new WeakMap();
 
 const TOOLS = [
-    ['hand', '✥'],
-    ['rectangle', '□'],
-    ['arrow', '↗'],
+    ['hand', 'move'],
+    ['rectangle', 'rectangle'],
+    ['arrow', 'arrow-up-right'],
     ['pin', '!'],
     ['text', 'T'],
-    ['blur', '■']
+    ['blur', 'blur']
 ];
 
 export async function openFeedbackDialog({
@@ -348,7 +349,7 @@ export function buildFeedbackDialogHtml() {
         const title = feedbackText(`tools.${tool}`);
 
         return `
-        <button type="button" class="contextual-feedback-tool${index === 0 ? ' is-active' : ''}" data-feedback-tool="${tool}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(label)}</button>
+        <button type="button" class="contextual-feedback-tool${index === 0 ? ' is-active' : ''}" data-feedback-tool="${tool}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${interfaceIcon(label) || escapeHtml(label)}</button>
     `;
     }).join('');
 
@@ -359,7 +360,7 @@ export function buildFeedbackDialogHtml() {
                     <h2 id="contextualFeedbackTitle">${escapeHtml(feedbackText('dialog.title'))}</h2>
                     <p data-feedback-selection-summary>${escapeHtml(feedbackText('dialog.noScreenshot'))}</p>
                 </div>
-                <button type="button" class="contextual-feedback-close" data-feedback-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">✕</button>
+                <button type="button" class="contextual-feedback-close" data-feedback-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">${interfaceIcon('close')}</button>
             </header>
             <div class="contextual-feedback-workspace" data-feedback-workspace hidden>
                 <div class="contextual-feedback-toolbar">${toolButtons}</div>
