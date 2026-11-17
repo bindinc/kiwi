@@ -12,7 +12,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
-- Unify interface icons with the header's quiet line style, provide translated icon-only control names and keep short-screen annotations reachable while preserving identity, privacy and business behavior (`theme_audit` icon refinement). [sc-206629]
+- Unify interface icons with the header's quiet line style, provide translated icon-only control names and keep short-screen annotations reachable and restore page styling after captures while preserving identity, privacy and business behavior (`theme_audit` icon refinement). [sc-206629]
 
 - Align operational states, reachable menus, modal controls, focus and search feedback; show all customer source records with direct actions while preserving permissions, identities, drafts, privacy and original values (`theme_audit` slice 09). [sc-206629]
 

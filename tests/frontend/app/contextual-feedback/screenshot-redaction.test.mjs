@@ -761,3 +761,117 @@ testOpaqueMessagesReplaceAllUnknownPiiAndRestoreOriginalText();
 testOpaqueCloneReplacesNameOnlyAndNestedText();
 testOpaqueReplacementCacheWhitespaceAndPlaceholderIdentity();
 testDirectlySelectedOpaqueNoticePseudonymizesItsMetadata();
+
+function createHeadBearingDocument(body) {
+    const existingStyle = { textContent: '.existing-avatar { visibility: visible; }' };
+    const stylesheets = [existingStyle];
+    const documentRef = {
+        body,
+        head: { append(stylesheet) {
+            stylesheets.push(stylesheet);
+            stylesheet.remove = () => stylesheets.splice(stylesheets.indexOf(stylesheet), 1);
+        } },
+        createElement(tagName) {
+            assert.equal(tagName, 'style');
+            return { dataset: {}, textContent: '' };
+        }
+    };
+    return { documentRef, stylesheets, existingStyle };
+}
+
+function addStyleDeclarationMethods(element) {
+    const priorities = new Map();
+    const camelCase = property => property.replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+    Object.defineProperties(element.style, {
+        setProperty: { value(property, value, priority = '') {
+            this[camelCase(property)] = value;
+            priorities.set(property, priority);
+        } },
+        getPropertyPriority: { value(property) { return priorities.get(property) || ''; } }
+    });
+}
+
+function testScreenshotCloneUsesOnlyLocalMaskStylesWithSharedLiveDocument() {
+    for (const includeMasks of [false, true]) {
+        const avatarText = new FakeText('KA');
+        const avatar = new FakeElement('div', { 'data-feedback-mask': '' }, {
+            style: { background: 'navy' }, children: [new FakeElement('span', {}, { children: [avatarText] })]
+        });
+        const live = new FakeElement('main', {}, { children: [avatar] });
+        const { documentRef, stylesheets, existingStyle } = createHeadBearingDocument(live);
+        const customerName = new FakeText('Jane Sensitive');
+        const publicLogo = new FakeElement('img', { 'data-feedback-public': '', src: 'synthetic-public-logo.svg' }, {
+            style: { visibility: 'visible', background: 'white' }
+        });
+        const publicSvg = new FakeElement('svg', { 'aria-hidden': 'true' }, {
+            children: [new FakeElement('path', { d: 'M2 2h20' })]
+        });
+        const privateChild = new FakeElement('img', { src: 'synthetic-private-image.png' });
+        const privateNestedChild = new FakeElement('span', {}, { children: [new FakeText('Private initials')] });
+        const maskedRegion = new FakeElement('section', { 'data-feedback-mask': '' }, {
+            children: [privateChild, new FakeElement('div', {}, { children: [privateNestedChild] })]
+        });
+        const maskedVoidRoot = new FakeElement('img', { 'data-feedback-mask': '', src: 'synthetic-marked-image.png' });
+        const clone = new FakeElement('main', {}, { children: [
+            new FakeElement('h2', { 'data-feedback-sensitive': 'name' }, { children: [customerName] }), publicLogo, publicSvg,
+            ...(includeMasks ? [maskedRegion] : [])
+        ] });
+        for (const element of [clone, ...clone.querySelectorAll('*'), maskedVoidRoot]) {
+            element.ownerDocument = documentRef;
+            addStyleDeclarationMethods(element);
+        }
+        if (includeMasks) {
+            privateChild.style.setProperty('visibility', 'visible', 'important');
+            privateNestedChild.style.setProperty('visibility', 'visible', 'important');
+        }
+        const publicStyle = { ...publicLogo.style };
+        const summary = pseudonymizeScreenshotClone(clone);
+        assert.deepEqual(stylesheets, [existingStyle], 'Detached screenshot clones must never add styles to their shared live document head.');
+        assert.equal(avatarText.nodeValue, 'KA');
+        assert.equal(avatar.style.background, 'navy');
+        assert.equal(live.childNodes[0], avatar);
+        assert.equal(avatar.childNodes[0].childNodes[0], avatarText);
+        assert.equal(customerName.nodeValue, 'Sophie de Vries');
+        assert.equal(summary.verified, true);
+        assert.deepEqual(publicLogo.style, publicStyle);
+        assert.equal(publicLogo.getAttribute('src'), 'synthetic-public-logo.svg');
+        assert.equal(publicSvg.childNodes[0].getAttribute('d'), 'M2 2h20');
+        if (includeMasks) {
+            assert.equal(summary.maskedElements, 1);
+            for (const [property, value] of [['background', '#d9dde3'], ['color', 'transparent'], ['overflow', 'hidden'], ['text-shadow', 'none']]) {
+                const camelCase = property.replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+                assert.equal(maskedRegion.style[camelCase], value);
+                assert.equal(maskedRegion.style.getPropertyPriority(property), 'important');
+            }
+            for (const descendant of maskedRegion.querySelectorAll('*')) {
+                assert.equal(descendant.style.visibility, 'hidden', 'Mask descendants must stay hidden despite copied visible!important declarations.');
+                assert.equal(descendant.style.getPropertyPriority('visibility'), 'important');
+            }
+        }
+        pseudonymizeScreenshotClone(maskedVoidRoot);
+        assert.deepEqual(stylesheets, [existingStyle]);
+        assert.equal(maskedVoidRoot.childNodes.length, 0, 'A void capture root must not receive a style child.');
+        assert.equal(maskedVoidRoot.style.background, '#d9dde3');
+        assert.equal(maskedVoidRoot.style.getPropertyPriority('background'), 'important');
+        assert.equal(maskedVoidRoot.style.visibility, undefined, 'Preserve the existing root mask policy; only descendants are hidden.');
+    }
+}
+
+function testLiveRedactionStillRestoresItsStylesheetAndMaskedContent() {
+    const name = new FakeText('Jane Sensitive');
+    const mask = new FakeElement('section', { 'data-feedback-mask': '' }, { style: { background: 'navy', color: 'white' } });
+    const root = new FakeElement('main', {}, { children: [new FakeElement('h2', { 'data-feedback-sensitive': 'name' }, { children: [name] }), mask] });
+    const { documentRef, stylesheets, existingStyle } = createHeadBearingDocument(root);
+    const restore = redactScreenshotDom(documentRef);
+    assert.equal(stylesheets.length, 2);
+    assert.equal(name.nodeValue, 'Sophie de Vries');
+    assert.equal(mask.style.background, '#d9dde3');
+    restore();
+    assert.deepEqual(stylesheets, [existingStyle]);
+    assert.equal(name.nodeValue, 'Jane Sensitive');
+    assert.equal(mask.style.background, 'navy');
+    assert.equal(mask.style.color, 'white');
+}
+
+testScreenshotCloneUsesOnlyLocalMaskStylesWithSharedLiveDocument();
+testLiveRedactionStillRestoresItsStylesheetAndMaskedContent();
