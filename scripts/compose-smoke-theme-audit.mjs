@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createFinalDriver, finalContextOptions, finalNativeGroups, prepareFinalDriver } from './compose-smoke-theme-audit-final-driver.mjs';
+import { nativePointerComparison } from './compose-smoke-theme-audit-operational.mjs';
 
 // theme_audit: measurements support visual review; they do not replace it.
 const require = createRequire(import.meta.url);
@@ -231,7 +232,14 @@ if (finalOnly) {
 
 const finalDriver = finalOnly ? createFinalDriver(finalConfiguration, { baseUrl, browserName, sourceRoot, capture, check,
     compositedTextContrast, controlChecks, actionChecks, keyboardFocus, paymentChecks, choiceStyleChecks, consentStateChecks,
-    evidenceDir, newFinalContext, normalizeMappedCssUrls, painted, report, saveReport, trackStylesheets, unverified }) : null;
+    evidenceDir, newFinalContext, normalizeMappedCssUrls, painted, report, saveReport, trackStylesheets, unverified, nativePointer: finalNativePointer() }) : null;
+
+function finalNativePointer() {
+    if (!nativeZoom || browserName !== 'firefox') return null;
+    return { display: displayName, compare(action, parameters) {
+        return nativePointerComparison({ launchEnvironment }, action, parameters);
+    } };
+}
 
 function normalizeMappedCssUrls(css, source) {
     const references = [...source.matchAll(/url\(([^)]+)\)/g)].map(match => match[1].trim().replace(/^['"]|['"]$/g, ''));

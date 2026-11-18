@@ -126,7 +126,7 @@ export function inputProfileRecordsFixture(sourceRoot) {
     return fixture;
 }
 
-export async function inspectRecordListsAfter(page, state, { observe, control, mutationSection = 'email', validityLabel = 'Geldigheid niet beschikbaar', touch = false, openNativeReadonlyEditor = null, nativeKeyboardOpening = false }) {
+export async function inspectRecordListsAfter(page, state, { observe, control, mutationSection = 'email', validityLabel = 'Geldigheid niet beschikbaar', touch = false, openNativeReadonlyEditor = null, nativeKeyboardOpening = false, prepareNativeContent = null }) {
     assert.equal(state.phase, 'after');
     const fixture = state.recordFixture;
     await page.evaluate(async customer => window.kiwiCustomerDetailSlice.selectCustomer(customer.id,
@@ -151,6 +151,7 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
         assert.equal(state.suite, 'records-after-component'); assert.equal(fixture.componentOnly, true);
         assert.equal(state.report.environment.browser, 'firefox'); assert.equal(state.report.environment.native, true);
         assert.ok(state.nativeKernel); assert.equal(touch, false);
+        assert.equal(typeof prepareNativeContent, 'function'); await prepareNativeContent();
         const invoker = page.locator('#editCustomerBtn');
         const focus = await keyboardFocus(page, invoker, 'after', async stage => {
             const focusStage = await invoker.evaluate(node => {

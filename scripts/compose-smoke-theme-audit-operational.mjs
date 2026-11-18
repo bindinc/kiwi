@@ -1949,7 +1949,7 @@ export function physicalClientPoint(windowBox, viewport, point) {
         origin: { x: windowBox.x + borderWidth / 2, y: windowBox.y + chromeHeight } };
 }
 
-function nativePointerComparison(kernel, action, parameters) {
+export function nativePointerComparison(kernel, action, parameters) {
     assert.ok(['query', 'move', 'click'].includes(action));
     const script = `import ctypes, json, sys, time
 x = ctypes.CDLL('libX11.so.6'); t = ctypes.CDLL('libXtst.so.6')

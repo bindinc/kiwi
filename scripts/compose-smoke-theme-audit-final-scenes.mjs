@@ -599,7 +599,9 @@ async function customerScene(handle) {
     await criterion(handle, 'long-record-and-editable-editor', 'Accepted all-records renderer with local pending/error and retained raw writable draft', async () => {
         await handle.helpers.feedback.inspectRecordListsAfter(handle.page, handle.state, {
             observe: handle.helpers.operational.observeOperational, control: handle.control, mutationSection: 'person',
-            nativeKeyboardOpening: handle.descriptor.native === true && handle.driver.browserName === 'firefox' });
+            nativeKeyboardOpening: handle.descriptor.native === true && handle.driver.browserName === 'firefox',
+            prepareNativeContent: handle.descriptor.native === true && handle.driver.browserName === 'firefox'
+                ? () => prepareFirefoxNativeContent(handle) : null });
         handle.child.check('Only the explicitly armed component write was locally rejected', handle.control.recordMutationGate.used(), true, metaFor(handle), 10);
         await closeCustomerEditor(handle);
     });
@@ -612,6 +614,73 @@ async function customerScene(handle) {
         handle.child.check('Actual null source record stays readonly', observations.some(item => item.readonly === true), true, metaFor(handle), 10);
     });
     await criterion(handle, 'exact-gender-aliases-and-controls', 'Three exact aliases plus unknown and blank through actual read renderer', () => genderAliases(handle));
+}
+
+
+async function prepareFirefoxNativeContent(handle) {
+    const { page, state, child, helpers } = handle;
+    assert.equal(handle.sessionVerified, true); assert.equal(handle.nativeGroup, 'shell-search-customer-history');
+    assert.equal(handle.descriptor.native, true); assert.equal(handle.descriptor.role, 'kiwi-admin'); assert.equal(handle.descriptor.locale, 'nl');
+    assert.equal(handle.driver.browserName, 'firefox'); assert.equal(state.report.environment.browserVersion, '150.0.2');
+    assert.equal(state.suite, 'records-after-component'); assert.equal(state.recordFixture.id, 990970);
+    assert.equal(state.recordFixture.recordCount, 2); assert.equal(state.recordFixture.componentOnly, true);
+    const pointer = state.nativeKernel?.pointer;
+    assert.equal(pointer?.display, ':96'); assert.equal(typeof pointer.compare, 'function');
+    assert.equal(child.report.nativeFirefoxContentFocus, undefined, 'Only one bounded native content-focus preparation is allowed.');
+    const selector = '#customerDetail .subscriptions-section > h3[data-i18n="indexHtml.text.abonnementen_ba5e4d7c"]';
+    await page.locator(selector).scrollIntoViewIfNeeded();
+    const proof = await page.evaluateHandle(selector => {
+        const target = document.querySelector(selector), events = [], controller = new AbortController();
+        const read = () => JSON.stringify({ customer: window.currentCustomer,
+            context: window.kiwiCustomerWorkSession.getRequestContext(),
+            fields: [...document.querySelectorAll('input:not([type=hidden]):not([type=password]),select,textarea')]
+                .map(node => [node.id, node.value, node.checked, node.disabled, node.readOnly]) });
+        const before = read();
+        const measure = () => {
+            const r = target.getBoundingClientRect();
+            const x = r.left + r.width / 2, y = r.top + r.height / 2, hit = document.elementFromPoint(x, y);
+            return { connected: target.isConnected, sameTarget: target === document.querySelector(selector), tag: target.tagName,
+                publicSource: target.getAttribute('data-i18n') === 'indexHtml.text.abonnementen_ba5e4d7c' && target.textContent.trim() === 'Abonnementen',
+                noninteractive: !target.closest('button,a,summary,[data-action],[contenteditable],[role=button]') && target.tabIndex < 0,
+                ownedCenter: Boolean(hit && (hit === target || target.contains(hit))),
+                bounds: { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height },
+                viewport: { innerWidth, innerHeight, outerWidth, outerHeight, dpr: devicePixelRatio, pinchScale: visualViewport?.scale } };
+        };
+        for (const type of ['pointermove', 'click']) addEventListener(type, event => events.push({ type, trusted: event.isTrusted,
+            ownsExpectedTarget: event.target === target || target.contains(event.target), clientX: event.clientX, clientY: event.clientY }),
+        { capture: true, signal: controller.signal });
+        return { events, controller, read, before, measure };
+    }, selector);
+    const result = child.report.nativeFirefoxContentFocus = { method: 'Existing genuine XTest physical content focus', selector, display: pointer.display };
+    try {
+        const measured = await proof.evaluate(value => value.measure()), bounds = measured.bounds;
+        assert.ok(measured.connected && measured.sameTarget && measured.publicSource && measured.noninteractive && measured.ownedCenter);
+        assert.equal(measured.tag, 'H3');
+        assert.deepEqual(measured.viewport, { innerWidth: 720, innerHeight: 500, outerWidth: 720, outerHeight: 543, dpr: 2, pinchScale: 1 });
+        assert.ok(bounds.width > 0 && bounds.height > 0 && bounds.left >= 0 && bounds.top >= 0 && bounds.right <= 720 && bounds.bottom <= 500);
+        result.before = measured;
+        await observeOperational(handle, 'native-firefox-public-content-ready', [selector], { nativeContentFocus: result });
+        assert.deepEqual(await proof.evaluate(value => value.measure()), measured);
+        const parameters = { expectedWidth: measured.viewport.outerWidth * 2, expectedHeight: measured.viewport.outerHeight * 2 };
+        result.window = pointer.compare('query', parameters);
+        const point = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+        result.physicalPoint = helpers.operational.physicalClientPoint(result.window.window, measured.viewport, point);
+        result.motion = pointer.compare('move', { ...parameters, point: result.physicalPoint });
+        await page.waitForFunction(value => value.events.some(event => event.type === 'pointermove'), proof, { timeout: 1000 });
+        result.motionEvent = await proof.evaluate(value => value.events.filter(event => event.type === 'pointermove').at(-1));
+        assert.ok(helpers.operational.nativeReadonlyMotionOwnsTarget(result.motionEvent, point));
+        assert.deepEqual(await proof.evaluate(value => value.measure()), measured);
+        assert.equal(await proof.evaluate(value => value.before === value.read()), true);
+        result.click = pointer.compare('click', { ...parameters, point: result.physicalPoint });
+        await page.waitForFunction(value => value.events.some(event => event.type === 'click'), proof, { timeout: 1000 });
+        result.clickEvent = await proof.evaluate(value => value.events.filter(event => event.type === 'click').at(-1));
+        assert.ok(result.clickEvent.trusted && result.clickEvent.ownsExpectedTarget);
+        result.sameTaskIdentity = await proof.evaluate(value => value.before === value.read()); assert.equal(result.sameTaskIdentity, true);
+        result.documentFocused = await page.evaluate(() => document.hasFocus()); assert.equal(result.documentFocused, true);
+        await observeOperational(handle, 'native-firefox-public-content-focused', [selector], { nativeContentFocus: result });
+    } finally {
+        await proof.evaluate(value => value.controller.abort()).catch(() => {}); await proof.dispose();
+    }
 }
 
 async function addressScene(handle) {
@@ -718,6 +787,7 @@ async function articleRowPaint(handle) {
                 return found;
             }) };
     });
+    if (handle.descriptor.native === true) await row.scrollIntoViewIfNeeded();
     await page.mouse.move(0, 0); const resting = await read(); await checkpoint(handle, 'article-matched-row-rest');
     await row.hover(); const hovered = await read(); await checkpoint(handle, 'article-matched-row-hover');
     await page.locator('#articleSearch').press('ArrowDown'); const keyboard = await read(); await checkpoint(handle, 'article-matched-row-keyboard');
@@ -1054,7 +1124,7 @@ export async function createFinalSceneHooks({ release, verification }) {
             const roleArtifact = await writeArtifact(path.join(handle.child.evidenceDir, 'actual-server-role.json'), { marker: 'theme_audit', sourceCommit: release.source.commit, ...role });
             handle.roleProof = roleArtifact; handle.initialEnvironment = environment; handle.sessionVerified = true; handle.state.report.environment = environment;
             if (handle.descriptor.native) {
-                handle.state.nativeKernel = { async captureWholeDesktop(filename) {
+                handle.state.nativeKernel = { pointer: handle.driver.nativePointer, async captureWholeDesktop(filename) {
                     await handle.child.capture(handle.page, filename, undefined, 'Actual uncropped X11 frame from existing final driver OS engine.');
                     await copyFile(handle.child.report.captures.at(-1).absolute, path.join(handle.child.evidenceDir, filename));
                 } };
@@ -1107,6 +1177,7 @@ async function buildArticleCart(handle) {
         await page.waitForFunction(count => document.querySelectorAll('#orderItemsList .order-item').length === count, id === '990601' ? 1 : 2);
     }
     await helpers.article.observeArticle(page, child, meta, 'populated-quote', '#orderItemsSection');
+    if (handle.descriptor.native === true) await inspectNativeArticleCart(handle);
     await page.locator('#couponCode').fill('THEME06'); await page.locator('#couponCode').press('Enter');
     await visible(handle, '#couponMessage.success', 'Actual source coupon success is visible');
     await helpers.article.observeArticle(page, child, meta, 'coupon-success-total', '#couponMessage');
@@ -1115,6 +1186,43 @@ async function buildArticleCart(handle) {
     child.check('Actual native transfer radio responds to Space', await page.locator('#articlePaymentTransfer').isChecked(), true, meta, 10);
     await helpers.article.observeArticle(page, child, meta, 'payment-notes-actions', '#articleNotes');
     await helpers.articleAcceptance.inspectArticleCalendar(page, child, meta, helpers.article.observeArticle);
+}
+
+
+async function inspectNativeArticleCart(handle) {
+    assert.equal(handle.descriptor.native, true);
+    const { page, child } = handle, meta = metaFor(handle);
+    const readCart = () => page.evaluate(() => ({ quantities: window.orderItems.map(item => item.quantity),
+        subtotal: document.getElementById('orderSubtotal').textContent, total: document.getElementById('orderTotal').textContent }));
+    const before = await readCart();
+    child.check('Native cart retains the declared two quantities before focus inspection', before.quantities, [5, 2], meta, 10);
+    const list = page.locator('#orderItemsList'), buttons = list.locator('.order-item-remove');
+    await list.scrollIntoViewIfNeeded();
+    await page.keyboard.press('Tab'); await buttons.first().focus();
+    for (const [index, label] of [[0, 'alpha'], [1, 'beta']]) {
+        if (index === 1) await page.keyboard.press('Tab');
+        await child.painted(page);
+        const measured = await buttons.nth(index).evaluate(node => {
+            const list = node.closest('#orderItemsList'), row = node.closest('.order-item');
+            const box = element => { const r = element.getBoundingClientRect();
+                return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height }; };
+            const listBox = box(list), rowBox = box(row), buttonBox = box(node);
+            const clip = { left: Math.max(0, listBox.left + list.clientLeft), right: Math.min(innerWidth, listBox.left + list.clientLeft + list.clientWidth),
+                top: Math.max(0, listBox.top + list.clientTop), bottom: Math.min(innerHeight, listBox.top + list.clientTop + list.clientHeight) };
+            const hit = document.elementFromPoint(buttonBox.left + buttonBox.width / 2, buttonBox.top + buttonBox.height / 2);
+            return { focused: node === document.activeElement, focusVisible: node.matches(':focus-visible'),
+                ownedCenter: Boolean(hit && node.contains(hit)), row: rowBox, clip, scrollTop: list.scrollTop,
+                scrollHeight: list.scrollHeight, clientHeight: list.clientHeight, overflowY: getComputedStyle(list).overflowY,
+                rows: list.querySelectorAll('.order-item').length };
+        });
+        child.check('Native cart ' + label + ' row remains fully painted at its actual keyboard stop',
+            measured.focused && measured.focusVisible && measured.ownedCenter && measured.rows === 2
+                && measured.row.left >= measured.clip.left - 1 && measured.row.right <= measured.clip.right + 1
+                && measured.row.top >= measured.clip.top - 1 && measured.row.bottom <= measured.clip.bottom + 1, true,
+            { ...meta, measured }, 10);
+        await checkpoint(handle, 'native-cart-' + label + '-actual-keyboard-stop');
+    }
+    child.check('Native cart focus inspection preserves both quantities and quote totals', await readCart(), before, meta, 10);
 }
 
 async function inspectCancelConfirmation(handle) {
@@ -1192,7 +1300,8 @@ export function withCallControlReadiness(page) {
 const legacyFocusPath = 'scripts/compose-smoke-theme-audit-operational.mjs';
 const legacyFocusSha256s = [
     '6d312cd304824f9117434ed7e84ba2bc437883d0b87963b826e3b94b092f05a9',
-    '6d92de17eec977297856200774f70f1abfed45ba37aee703c31d7afd6e342287'
+    '6d92de17eec977297856200774f70f1abfed45ba37aee703c31d7afd6e342287',
+    '60a1c5ce3f1f3e64b1b7b8dc1a24fbd299b87b035e55085ca81a8138e22fb686'
 ];
 const legacyFocusName = 'Actual five-second first trigger focus is retained and visible';
 
