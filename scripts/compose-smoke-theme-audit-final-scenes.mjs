@@ -1039,6 +1039,7 @@ async function systemScene(handle, { accountPages = true } = {}) {
         await page.evaluate(text => window.kiwiAppShellSlice.showToast(text, 'error', { recordContactHistory: false }), message);
         await helpers.overlays.inspectInlineNotice(page, child, meta, '#editDeliveryRemarksModal', '[data-action=save-delivery-remarks]', message);
         child.check('Current inline task explanation exists', await page.locator('#editDeliveryRemarksModal .overlay-notification.error').isVisible(), true, meta, 10);
+        if (handle.descriptor.native === true) await checkpoint(handle, 'system-live-inline-error');
         await page.evaluate(() => window.kiwiDeliveryRemarksSlice.closeEditRemarksModal());
         await inspectCancelConfirmation(handle);
     });
@@ -1250,7 +1251,9 @@ async function inspectCancelConfirmation(handle) {
     control.mode = 'ready'; control.release();
     await page.evaluate(() => window.kiwiOutbox.refreshOutbox());
     if (await page.locator('#subscriptionQueueToggle').getAttribute('aria-expanded') !== 'true') await page.locator('#subscriptionQueueToggle').press('Enter');
-    const row = page.locator('.session-outbox-item').first();
+    const item = control.items.find(item => item.capabilities.delete === true);
+    assert.ok(item, 'Confirmation requires an existing declared delete-eligible outbox session.');
+    const row = page.locator('#subscriptionQueueList > .session-outbox-item[data-session-id="' + item.id + '"]');
     await row.locator('[data-outbox-control=actions]').press('Enter');
     const writes = child.report.localCallWrites.length;
     let prompt = null;
@@ -1321,7 +1324,7 @@ const legacyFocusPath = 'scripts/compose-smoke-theme-audit-operational.mjs';
 const legacyFocusSha256s = [
     '6d312cd304824f9117434ed7e84ba2bc437883d0b87963b826e3b94b092f05a9',
     '6d92de17eec977297856200774f70f1abfed45ba37aee703c31d7afd6e342287',
-    '599b9f0b605c3fe21ad89097b7de099f30bca8b329834d56e37bc8ca2a37cd35'
+    '44c20bcb93e6e0f274dc88e3cbb4afa00bb25c8577fef9dea75d11c2b7c512ec'
 ];
 const legacyFocusName = 'Actual five-second first trigger focus is retained and visible';
 

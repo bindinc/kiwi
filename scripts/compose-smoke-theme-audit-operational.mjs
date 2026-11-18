@@ -1097,11 +1097,14 @@ async function initialOutbox(page, state, control) {
     await page.locator('[data-action="toggle-subscription-queue-info"]').press('Enter');
     for (let attempt = 0; attempt < 100 && !control.held.length; attempt++) await new Promise(resolve => setTimeout(resolve, 20));
     assert.equal(control.held.length, 1, 'Actual initial outbox GET is held.');
+    if (state.nativeKernel) await page.locator('#subscriptionQueuePanel').scrollIntoViewIfNeeded();
     await observe(page, state, 'outbox-initial-loading', ['#subscriptionQueuePanel'], { boundary: 'Initial installed controller awaiting real intercepted GET; no fabricated spinner or loading class.' });
     control.mode = 'error'; control.release();
     await page.waitForFunction(() => document.querySelector('#sessionOutboxStatus').textContent.includes('Outbox niet vernieuwd'));
+    if (state.nativeKernel) await page.locator('#subscriptionQueuePanel').scrollIntoViewIfNeeded();
     await observe(page, state, 'outbox-initial-error', ['#subscriptionQueuePanel']);
     control.mode = 'empty'; await refresh(page);
+    if (state.nativeKernel) await page.locator('#subscriptionQueuePanel').scrollIntoViewIfNeeded();
     await observe(page, state, 'outbox-initial-empty', ['#subscriptionQueuePanel']);
     control.mode = 'ready'; await refresh(page);
     await page.locator('[data-action="toggle-subscription-queue-info"]').press('Enter');

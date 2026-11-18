@@ -1067,6 +1067,9 @@ test('actual cart builder adds capture setup only for native context after the u
 });
 
 function restoreOriginalPointerModes(body) {
+    const captureLine = "    if (state.nativeKernel) await page.locator('#subscriptionQueuePanel').scrollIntoViewIfNeeded();\n";
+    assert.equal(body.split(captureLine).length - 1, 3, 'Only three native initial-outbox capture placements changed.');
+    body = body.replaceAll(captureLine, '');
     body = body.replace("    assert.ok(['query', 'move', 'click', 'key'].includes(action));\n    if (action === 'key') {\n        assert.ok(['Tab', 'Shift+Tab', 'Enter'].includes(parameters.key));\n        assert.ok(Number.isSafeInteger(parameters.expectedWindowId) && parameters.expectedWindowId > 0);\n    }", "    assert.ok(['query', 'move', 'click'].includes(action));");
     body = body.replace("x.XKeysymToKeycode.argtypes=[ctypes.c_void_p,ctypes.c_ulong]; x.XKeysymToKeycode.restype=ctypes.c_ubyte\nt.XTestFakeKeyEvent.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_int,ctypes.c_ulong]\n", "");
     body = body.replace(" if mode=='key':\n  if box['windowId']!=p['expectedWindowId']: raise RuntimeError('Native key must stay in the original owned browser window')\n  names={'Tab':[0xff09],'Shift+Tab':[0xffe1,0xff09],'Enter':[0xff0d]}\n  if p['key'] not in names: raise RuntimeError('Only the declared native editor keys are allowed')\n  codes=[x.XKeysymToKeycode(d,keysym) for keysym in names[p['key']]]\n  if not all(codes): raise RuntimeError('Native keycode unavailable')\n  for code in codes: t.XTestFakeKeyEvent(d,code,1,0)\n  for code in reversed(codes): t.XTestFakeKeyEvent(d,code,0,0)\n  x.XFlush(d); time.sleep(0.1)\n elif mode!='query':", " if mode!='query':");
@@ -1127,5 +1130,121 @@ test('native Shift+Tab may return from browser chrome only after the original Ta
     for (const change of ['changeIdentity', 'changeLayout']) {
         const bad = await physicalNativeContentHarness(); await bad.press('Tab'); bad.changeFocus(); bad[change]();
         await assert.rejects(bad.press('Shift+Tab')); assert.equal(bad.report.nativeFirefoxContentFocus.keys.length, 1);
+    }
+});
+
+test('native initial outbox positions the existing panel before all three original observations without changing held/error/empty sequencing', async () => {
+    for (const native of [false, true]) {
+        const events = [], state = { ...(native ? { nativeKernel: {} } : {}) };
+        const control = { mode: 'held', held: [true], release() { events.push('release-' + this.mode); this.held = []; } };
+        const page = { locator: selector => {
+            if (selector === '#subscriptionQueuePanel') return { scrollIntoViewIfNeeded: async () => events.push('scroll-' + control.mode) };
+            assert.equal(selector, '[data-action="toggle-subscription-queue-info"]');
+            return { press: async key => { assert.equal(key, 'Enter'); events.push('toggle-' + control.mode); } };
+        }, waitForFunction: async () => { assert.equal(control.mode, 'error'); events.push('wait-error'); } };
+        const run = actualFunction('initialOutbox', { observe: async (actualPage, actualState, name, roots) => {
+            assert.equal(actualPage, page); assert.equal(actualState, state); assert.deepEqual(Array.from(roots), ['#subscriptionQueuePanel']);
+            events.push('observe-' + name + '-' + control.mode);
+        }, refresh: async () => events.push('refresh-' + control.mode) }, operationalSource);
+        await run(page, state, control);
+        assert.deepEqual(events, ['toggle-held', ...(native ? ['scroll-held'] : []), 'observe-outbox-initial-loading-held',
+            'release-error', 'wait-error', ...(native ? ['scroll-error'] : []), 'observe-outbox-initial-error-error',
+            'refresh-empty', ...(native ? ['scroll-empty'] : []), 'observe-outbox-initial-empty-empty', 'refresh-ready', 'toggle-ready']);
+    }
+});
+
+test('native feedback captures the actual image canvas after unchanged strong privacy/control review and before bitmap read', async () => {
+    const overlaySource = await readFile(new URL('../../scripts/compose-smoke-theme-audit-overlays-acceptance.mjs', import.meta.url), 'utf8');
+    for (const native of [false, true]) {
+        const events = [], comment = 'Synthetic unchanged image comment', feedbackSelector = '.contextual-feedback-modal';
+        const target = { isVisible: async () => !native, scrollIntoViewIfNeeded: async () => events.push('heading-scroll'),
+            boundingBox: async () => ({ x: 10, y: 20, width: 100, height: 24 }),
+            evaluate: async callback => callback.constructor.name === 'AsyncFunction' ? { selector: 'public-heading' } : false };
+        const page = { locator: selector => {
+            if (selector === '#welcomeMessage h2' || selector.startsWith('section.history-card')) return target;
+            if (selector === 'textarea[name=comment]') return { fill: async value => { assert.equal(value, comment); events.push('fill-comment'); }, inputValue: async () => comment };
+            if (selector === '[data-feedback-add-screenshot]') return { press: async key => { assert.equal(key, 'Enter'); events.push('add-screenshot'); } };
+            if (selector === '.contextual-feedback-picker-overlay') return { waitFor: async () => events.push('picker-visible') };
+            if (selector === feedbackSelector) return { evaluate: async () => ({ hidden: true, open: false, display: 'none', reviewing: false, ordinary: false }) };
+            if (selector === '.contextual-feedback-modal.has-screenshot canvas') return { waitFor: async () => events.push('canvas-ready') };
+            assert.equal(selector, '[data-feedback-canvas]'); return { scrollIntoViewIfNeeded: async () => events.push('canvas-scroll'),
+                evaluate: async () => { events.push('bitmap-read'); return { width: 100, height: 24, pixels: 'unchanged-synthetic-png' }; } };
+        }, mouse: { click: async () => events.push('picker-click') }, waitForFunction: async () => events.push('capture-complete') };
+        const driver = { report: { slice: 10 } }, meta = { native, prefix: 'outbox-feedback-image-system-' };
+        const run = actualFunction('captureReviewedHeading', { comment, feedbackSelector, openFeedback: async () => events.push('open-feedback'),
+            check: (d, m, name, passed) => { assert.equal(passed, true, name); events.push('original-check'); },
+            inspectDialog: async () => { events.push('original-control-review'); return { extra: { bodyReviewing: true }, data: {
+                root: { background: 'rgba(15, 23, 42, 0.86)', backdropFilter: 'blur(14px)' }, background: { filter: 'blur(18px)', opacity: '0.08' } } }; },
+            observe: async (p, d, m, name, selector) => { assert.equal(p, page); assert.equal(d, driver); assert.equal(m, meta);
+                if (name === 'image-review-canvas-visible') assert.equal(selector, '[data-feedback-canvas]'); events.push('observe-' + name); }
+        }, overlaySource);
+        const result = await run(page, driver, meta); assert.equal(result.image.pixels, 'unchanged-synthetic-png');
+        assert.deepEqual(events.slice(events.indexOf('original-control-review')), ['original-control-review', 'original-check',
+            ...(native ? ['canvas-scroll', 'observe-image-review-canvas-visible'] : []), 'bitmap-read']);
+        assert.equal(events.filter(event => event === 'observe-capture-suspended').length, 1);
+    }
+});
+
+async function actualConfirmationHarness(options = {}) {
+    const events = [], checks = [], writes = [], items = [
+        { id: 990910, capabilities: { edit: false, pause: false, resume: false, delete: false } },
+        { id: 990911, capabilities: { edit: true, pause: false, resume: true, delete: options.noEligible !== true } }
+    ];
+    const before = JSON.stringify(items); let onDialog;
+    const row = item => ({ locator: selector => ({ press: async key => {
+        assert.equal(key, 'Enter');
+        if (selector === '[data-outbox-control=actions]') {
+            assert.equal(item.capabilities.delete, true, 'The actual restricted first row has no action disclosure.');
+            events.push('actions-' + item.id); return;
+        }
+        assert.equal(selector, '.session-outbox-menu .is-destructive'); events.push('delete-' + item.id);
+        await onDialog({ type: () => options.promptType || 'confirm', message: () => options.badPrompt ? 'Wrong prompt' : 'Alle 1 wijzigingen verwijderen?',
+            dismiss: async () => { events.push('dismiss'); if (options.writeOnCancel) writes.push('unexpected-write'); } });
+    } }) });
+    const page = { evaluate: async callback => vm.runInNewContext('(' + callback.toString() + ')()', {
+        window: { kiwiOutbox: { refreshOutbox: async () => events.push('actual-refresh') } } }),
+        locator: selector => {
+            if (selector === '#subscriptionQueueToggle') return { getAttribute: async () => 'true' };
+            if (selector === '.session-outbox-item') return { first: () => row(items[0]) };
+            const match = /^#subscriptionQueueList > \.session-outbox-item\[data-session-id="(\d+)"\]$/.exec(selector);
+            assert.ok(match, 'Scope the disclosure to the selected declared session identity.');
+            const item = items.find(item => String(item.id) === match[1]); assert.ok(item); return row(item);
+        }, once: (type, handler) => { assert.equal(type, 'dialog'); onDialog = handler; } };
+    const child = { report: { localCallWrites: writes }, check(name, actual, expected) { checks.push(name); assert.equal(actual, expected, name); } };
+    const control = { items, mode: 'held', release() { events.push('release'); } };
+    const run = actualFunction('inspectCancelConfirmation', { metaFor: () => ({}) });
+    let error; try { await run({ page, control, child }); } catch (caught) { error = caught; }
+    assert.equal(JSON.stringify(items), before, 'Existing source capabilities/record identities must remain unchanged.');
+    return { error, events, checks, report: child.report };
+}
+
+test('A13 confirmation selects the existing delete-eligible session after A11 restricted-first fallback and still cancels without write', async () => {
+    const good = await actualConfirmationHarness(); assert.equal(good.error, undefined);
+    assert.deepEqual(good.events, ['release', 'actual-refresh', 'actions-990911', 'delete-990911', 'dismiss']);
+    assert.equal(good.report.confirmation.decision, 'cancel'); assert.equal(good.report.localCallWrites.length, 0);
+    assert.equal(good.checks.length, 2);
+    const missing = await actualConfirmationHarness({ noEligible: true }); assert.ok(missing.error);
+    assert.equal(missing.events.some(event => /actions|delete/.test(event)), false);
+    for (const options of [{ promptType: 'alert' }, { badPrompt: true }, { writeOnCancel: true }]) {
+        const bad = await actualConfirmationHarness(options); assert.ok(bad.error, 'Original prompt and no-write assertions remain strict.');
+    }
+});
+
+test('A13 native-only whole-frame checkpoint retains the actual live inline error before closing its existing form', async () => {
+    for (const native of [false, true]) {
+        const events = [], handle = { descriptor: { native }, child: { check: (name, actual, expected) => assert.equal(actual, expected) },
+            helpers: { overlays: { inspectInlineNotice: async () => events.push('inspect-live-error') } } };
+        handle.page = { evaluate: async (callback, argument) => vm.runInNewContext('(' + callback.toString() + ')(argument)', {
+            argument, window: { kiwiDeliveryRemarksSlice: { editDeliveryRemarks: () => events.push('open'),
+                closeEditRemarksModal: () => events.push('close') }, kiwiAppShellSlice: { showToast: () => events.push('live-error') } } }),
+            locator: selector => { assert.equal(selector, '#editDeliveryRemarksModal .overlay-notification.error'); return { isVisible: async () => true }; } };
+        const field = { fill: async () => events.push('fill'), focus: async () => events.push('focus') };
+        const run = actualFunction('systemScene', { metaFor: () => ({}), restoreEditableCustomer: async () => events.push('restore'),
+            visible: async () => field, criterion: async (h, id, title, action) => { if (id === 'toast-inline-error-and-confirmation') await action(); },
+            checkpoint: async (h, name) => { assert.equal(h, handle); assert.equal(name, 'system-live-inline-error'); events.push('whole-live-error'); },
+            inspectCancelConfirmation: async () => events.push('confirmation') }, source.slice(0, source.indexOf('\nconst implementations =')));
+        await run(handle, { accountPages: false });
+        assert.deepEqual(events, ['restore', 'open', 'fill', 'focus', 'live-error', 'inspect-live-error',
+            ...(native ? ['whole-live-error'] : []), 'close', 'confirmation']);
     }
 });

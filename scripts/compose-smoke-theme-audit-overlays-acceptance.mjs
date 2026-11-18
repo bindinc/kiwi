@@ -467,6 +467,10 @@ async function captureReviewedHeading(page, driver, meta) {
         && review.data.root.background === 'rgba(15, 23, 42, 0.86)' && review.data.root.backdropFilter === 'blur(14px)'
         && review.data.background.filter === 'blur(18px)' && review.data.background.opacity === '0.08'
         && await page.locator('textarea[name=comment]').inputValue() === comment, review);
+    if (meta.native === true) {
+        await page.locator('[data-feedback-canvas]').scrollIntoViewIfNeeded();
+        await observe(page, driver, meta, 'image-review-canvas-visible', '[data-feedback-canvas]');
+    }
     const image = await page.locator('[data-feedback-canvas]').evaluate(canvas => ({ width: canvas.width, height: canvas.height, pixels: canvas.toDataURL() }));
     return { description, box: selectedBox, image };
 }
