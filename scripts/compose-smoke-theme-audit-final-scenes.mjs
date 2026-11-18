@@ -599,9 +599,8 @@ async function customerScene(handle) {
     await criterion(handle, 'long-record-and-editable-editor', 'Accepted all-records renderer with local pending/error and retained raw writable draft', async () => {
         await handle.helpers.feedback.inspectRecordListsAfter(handle.page, handle.state, {
             observe: handle.helpers.operational.observeOperational, control: handle.control, mutationSection: 'person',
-            nativeKeyboardOpening: handle.descriptor.native === true && handle.driver.browserName === 'firefox',
-            prepareNativeContent: handle.descriptor.native === true && handle.driver.browserName === 'firefox'
-                ? () => prepareFirefoxNativeContent(handle) : null });
+            openNativeComponentEditor: handle.descriptor.native === true && handle.driver.browserName === 'firefox'
+                ? () => openFirefoxNativeRecordEditor(handle) : null });
         handle.child.check('Only the explicitly armed component write was locally rejected', handle.control.recordMutationGate.used(), true, metaFor(handle), 10);
         await closeCustomerEditor(handle);
     });
@@ -616,6 +615,79 @@ async function customerScene(handle) {
     await criterion(handle, 'exact-gender-aliases-and-controls', 'Three exact aliases plus unknown and blank through actual read renderer', () => genderAliases(handle));
 }
 
+
+async function openFirefoxNativeRecordEditor(handle) {
+    const { page, state, child, helpers } = handle;
+    assert.equal(handle.sessionVerified, true); assert.equal(handle.nativeGroup, 'shell-search-customer-history');
+    assert.equal(handle.descriptor.native, true); assert.equal(handle.descriptor.role, 'kiwi-admin'); assert.equal(handle.descriptor.locale, 'nl');
+    assert.equal(handle.driver.browserName, 'firefox'); assert.equal(state.report.environment.browserVersion, '150.0.2');
+    assert.equal(state.suite, 'records-after-component'); assert.equal(state.recordFixture.id, 990970);
+    assert.equal(state.recordFixture.recordCount, 2); assert.equal(state.recordFixture.componentOnly, true);
+    const pointer = state.nativeKernel?.pointer;
+    assert.equal(pointer?.display, ':96'); assert.equal(typeof pointer.compare, 'function');
+    assert.equal(child.report.nativeFirefoxRecordOpening, undefined, 'Only one physical component editor opening is allowed.');
+    const selector = '#editCustomerBtn';
+    await page.locator(selector).scrollIntoViewIfNeeded();
+    const proof = await page.evaluateHandle(({ selector, customer }) => {
+        const target = document.querySelector(selector), events = [], controller = new AbortController();
+        const fields = [...document.querySelectorAll('input:not([type=hidden]):not([type=password]),select,textarea')];
+        const read = () => JSON.stringify({ customer: window.currentCustomer,
+            context: window.kiwiCustomerWorkSession.getRequestContext(),
+            fields: fields.map(node => [node.id, node.value, node.checked, node.disabled, node.readOnly]) });
+        const before = read();
+        const measure = () => {
+            const r = target.getBoundingClientRect();
+            const x = r.left + r.width / 2, y = r.top + r.height / 2, hit = document.elementFromPoint(x, y);
+            const current = window.currentCustomer, context = window.kiwiCustomerWorkSession.getRequestContext();
+            return { connected: target.isConnected, sameTarget: target === document.querySelector(selector),
+                exactButton: target.tagName === 'BUTTON' && target.id === 'editCustomerBtn' && target.type === 'button'
+                    && target.getAttribute('data-action') === 'edit-customer' && Boolean(target.closest('#customerDetail .customer-header')),
+                enabled: !target.disabled && target.getAttribute('aria-disabled') !== 'true',
+                sameCanonicalIdentity: String(current?.personId) === customer.personId && current?.credentialKey === customer.credentialKey
+                    && current?.sourceSystem === customer.sourceSystem && context.customerReference?.personId === customer.personId
+                    && context.customerReference?.credentialKey === customer.credentialKey,
+                ownedCenter: Boolean(hit && (hit === target || target.contains(hit))),
+                bounds: { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height },
+                viewport: { innerWidth, innerHeight, outerWidth, outerHeight, dpr: devicePixelRatio, pinchScale: visualViewport?.scale } };
+        };
+        for (const type of ['pointermove', 'click']) addEventListener(type, event => events.push({ type, trusted: event.isTrusted,
+            ownsExpectedTarget: event.target === target || target.contains(event.target), clientX: event.clientX, clientY: event.clientY }),
+        { capture: true, signal: controller.signal });
+        return { events, controller, read, before, measure };
+    }, { selector, customer: state.recordFixture.customer });
+    const result = child.report.nativeFirefoxRecordOpening = { method: 'Original component pointer activation through existing genuine XTest engine', selector, display: pointer.display };
+    try {
+        const measured = await proof.evaluate(value => value.measure()), bounds = measured.bounds;
+        assert.ok(measured.connected && measured.sameTarget && measured.exactButton && measured.enabled && measured.sameCanonicalIdentity && measured.ownedCenter);
+        assert.deepEqual(measured.viewport, { innerWidth: 720, innerHeight: 500, outerWidth: 720, outerHeight: 543, dpr: 2, pinchScale: 1 });
+        assert.ok(bounds.width > 0 && bounds.height > 0 && bounds.left >= 0 && bounds.top >= 0 && bounds.right <= 720 && bounds.bottom <= 500);
+        result.before = measured;
+        await observeOperational(handle, 'native-firefox-record-button-ready', [selector], { nativeRecordOpening: result });
+        assert.deepEqual(await proof.evaluate(value => value.measure()), measured);
+        const parameters = { expectedWidth: measured.viewport.outerWidth * 2, expectedHeight: measured.viewport.outerHeight * 2 };
+        result.window = pointer.compare('query', parameters);
+        const point = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+        result.physicalPoint = helpers.operational.physicalClientPoint(result.window.window, measured.viewport, point);
+        result.motion = pointer.compare('move', { ...parameters, point: result.physicalPoint });
+        assert.equal(result.motion.window.windowId, result.window.window.windowId);
+        await page.waitForFunction(value => value.events.some(event => event.type === 'pointermove'), proof, { timeout: 1000 });
+        result.motionEvent = await proof.evaluate(value => value.events.filter(event => event.type === 'pointermove').at(-1));
+        assert.ok(helpers.operational.nativeReadonlyMotionOwnsTarget(result.motionEvent, point));
+        assert.deepEqual(await proof.evaluate(value => value.measure()), measured);
+        assert.equal(await proof.evaluate(value => value.before === value.read()), true);
+        result.click = pointer.compare('click', { ...parameters, point: result.physicalPoint });
+        assert.equal(result.click.window.windowId, result.window.window.windowId);
+        await page.waitForFunction(value => value.events.some(event => event.type === 'click'), proof, { timeout: 1000 });
+        result.clickEvent = await proof.evaluate(value => value.events.filter(event => event.type === 'click').at(-1));
+        assert.ok(result.clickEvent.trusted && result.clickEvent.ownsExpectedTarget);
+        result.sameTaskAndOriginalFields = await proof.evaluate(value => value.before === value.read());
+        assert.equal(result.sameTaskAndOriginalFields, true, 'Opening may mount editor fields but must retain the exact original task and fields.');
+        result.documentFocused = await page.evaluate(() => document.hasFocus()); assert.equal(result.documentFocused, true);
+        await observeOperational(handle, 'native-firefox-record-button-activated', [selector], { nativeRecordOpening: result });
+    } finally {
+        await proof.evaluate(value => value.controller.abort()).catch(() => {}); await proof.dispose();
+    }
+}
 
 async function prepareFirefoxNativeContent(handle) {
     const { page, state, child, helpers } = handle;

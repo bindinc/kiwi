@@ -126,7 +126,7 @@ export function inputProfileRecordsFixture(sourceRoot) {
     return fixture;
 }
 
-export async function inspectRecordListsAfter(page, state, { observe, control, mutationSection = 'email', validityLabel = 'Geldigheid niet beschikbaar', touch = false, openNativeReadonlyEditor = null, nativeKeyboardOpening = false, prepareNativeContent = null }) {
+export async function inspectRecordListsAfter(page, state, { observe, control, mutationSection = 'email', validityLabel = 'Geldigheid niet beschikbaar', touch = false, openNativeReadonlyEditor = null, nativeKeyboardOpening = false, prepareNativeContent = null, openNativeComponentEditor = null }) {
     assert.equal(state.phase, 'after');
     const fixture = state.recordFixture;
     await page.evaluate(async customer => window.kiwiCustomerDetailSlice.selectCustomer(customer.id,
@@ -143,7 +143,12 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
     assert.equal(await page.locator('#customerWorkSessionBar').isVisible(), true);
     await page.locator('#customerDetail .customer-header').scrollIntoViewIfNeeded();
     await observe(page, state, 'records-after-header', ['#customerDetail .customer-header', '#customerWorkSessionBar'], { identity });
-    if (openNativeReadonlyEditor) {
+    if (openNativeComponentEditor) {
+        assert.equal(state.suite, 'records-after-component'); assert.equal(fixture.componentOnly, true);
+        assert.equal(state.report.environment.browser, 'firefox'); assert.equal(state.report.environment.native, true);
+        assert.ok(state.nativeKernel); assert.equal(touch, false); assert.equal(typeof openNativeComponentEditor, 'function');
+        await openNativeComponentEditor();
+    } else if (openNativeReadonlyEditor) {
         assert.equal(state.phase, 'after'); assert.equal(state.suite, 'native-operational');
         assert.equal(state.report.environment.browser, 'firefox'); assert.ok(state.nativeKernel);
         await openNativeReadonlyEditor();

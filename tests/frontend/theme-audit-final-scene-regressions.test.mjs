@@ -731,7 +731,8 @@ async function recordEditorOpeningHarness(options = {}) {
     const keyboardFocus = actualFunction('keyboardFocus', {}, nativeFeedbackSource);
     const run = actualFunction('inspectRecordListsAfter', { keyboardFocus }, nativeFeedbackSource);
     let caught;
-    try { await run(page, state, { control: {}, nativeKeyboardOpening: options.keyboard !== false, touch: options.touch === true,
+    try { await run(page, state, { control: {},
+        ...(options.physicalComponent ? { openNativeComponentEditor: async () => { opened = true; events.push('original-component-physical-callback'); } } : {}), nativeKeyboardOpening: options.keyboard !== false, touch: options.touch === true,
         prepareNativeContent: options.missingNativePrepare ? null : async () => {
             events.push('prepare-public-content');
             if (options.emptyNativePrepare) return null;
@@ -781,20 +782,21 @@ test('ordinary pointer, coarse touch and existing nativeReadonly opening retain 
     assert.equal(original.opened, false); assert.match(original.caught.message, /reproduced native Firefox pointer timeout/);
 });
 
-test('actual A03 caller opts only genuine native Firefox into the editor keyboard opening', async () => {
+test('actual A03 caller opts only genuine native Firefox into the original component physical pointer opening', async () => {
     for (const [native, browserName, expected] of [[true, 'firefox', true], [true, 'chromium', false], [false, 'firefox', false], [false, 'chromium', false]]) {
         const stop = new Error('Synthetic inspect seam'), options = [];
         const handle = { page: {}, state: {}, descriptor: { native }, driver: { browserName }, control: {},
             helpers: { operational: { observeOperational() {} }, feedback: { inspectRecordListsAfter: async (page, state, input) => {
                 assert.equal(page, handle.page); assert.equal(state, handle.state); options.push(input); throw stop;
             } } } };
-        const run = actualFunction('customerScene', { prepareFirefoxNativeContent: async h => assert.equal(h, handle), criterion: async (h, id, state, action) => {
+        const run = actualFunction('customerScene', { openFirefoxNativeRecordEditor: async h => assert.equal(h, handle), criterion: async (h, id, state, action) => {
             assert.equal(id, 'long-record-and-editable-editor'); await action();
         } });
         await assert.rejects(run(handle), error => error === stop);
-        assert.equal(options.length, 1); assert.equal(options[0].nativeKeyboardOpening, expected);
-        assert.equal(typeof options[0].prepareNativeContent, expected ? 'function' : 'object');
-        if (expected) await options[0].prepareNativeContent(); else assert.equal(options[0].prepareNativeContent, null);
+        assert.equal(options.length, 1); assert.equal(options[0].nativeKeyboardOpening, undefined);
+        assert.equal(options[0].prepareNativeContent, undefined);
+        assert.equal(typeof options[0].openNativeComponentEditor, expected ? 'function' : 'object');
+        if (expected) await options[0].openNativeComponentEditor(); else assert.equal(options[0].openNativeComponentEditor, null);
         assert.equal(options[0].mutationSection, 'person'); assert.equal(options[0].control, handle.control);
         assert.equal(options[0].observe, handle.helpers.operational.observeOperational);
     }
@@ -878,12 +880,16 @@ async function physicalNativeContentHarness(options = {}) {
     const events = [], observations = [], listeners = {};
     let documentFocused = false, disposed = false, aborted = false;
     const bounds = { left: 40, right: 440, top: 100, bottom: 130, width: 400, height: 30 };
-    const target = { isConnected: true, tagName: 'H3', tabIndex: -1, textContent: 'Abonnementen',
-        getBoundingClientRect: () => bounds, getAttribute: () => 'indexHtml.text.abonnementen_ba5e4d7c',
-        closest: () => options.interactive ? {} : null, contains: hit => hit === target };
+    const target = { isConnected: true, tagName: options.recordEditor ? (options.wrongTag ? 'DIV' : 'BUTTON') : 'H3',
+        id: 'editCustomerBtn', type: options.wrongType ? 'submit' : 'button', disabled: options.disabled === true, tabIndex: -1, textContent: 'Abonnementen',
+        getBoundingClientRect: () => ({ ...bounds, ...(options.badBounds ? { right: 721 } : {}) }),
+        getAttribute: key => options.recordEditor ? (key === 'data-action' ? (options.wrongAction ? 'other-action' : 'edit-customer') : null) : 'indexHtml.text.abonnementen_ba5e4d7c',
+        closest: () => options.recordEditor ? (options.outsideHeader ? null : {}) : options.interactive ? {} : null, contains: hit => hit === target };
     const window = { currentCustomer: { personId: '990970', credentialKey: 'synthetic-private-task-marker', sourceSystem: 'subscription-api' },
         kiwiCustomerWorkSession: { getRequestContext: () => ({ customerReference: { personId: '990970', credentialKey: 'synthetic-private-task-marker' } }) } };
-    const document = { querySelector: () => target, querySelectorAll: () => [], elementFromPoint: () => options.covered ? {} : target,
+    const originalField = { id: 'synthetic-private-field', value: 'synthetic-private-field-value', checked: false, disabled: false, readOnly: false };
+    const fields = options.recordEditor ? [originalField] : [];
+    const document = { querySelector: () => target, querySelectorAll: () => fields, elementFromPoint: () => options.covered ? {} : target,
         hasFocus: () => documentFocused };
     const realm = { document, window, innerWidth: 720, innerHeight: 500, outerWidth: 720, outerHeight: 543,
         devicePixelRatio: options.dpr || 2, visualViewport: { scale: 1 }, AbortController: class extends AbortController {
@@ -899,13 +905,18 @@ async function physicalNativeContentHarness(options = {}) {
     const compare = (action, parameters) => {
         events.push(action);
         if (action === 'move' || action === 'click') {
-            if (action === 'click') documentFocused = !options.noDocumentFocus;
+            if (action === 'click') {
+                documentFocused = !options.noDocumentFocus;
+                if (options.recordEditor) fields.push({ id: 'new-mounted-editor-field', value: 'new-synthetic-value' });
+                if (options.mutateTaskAfterClick) window.currentCustomer.credentialKey = 'changed-private-task-marker';
+            }
             const type = action === 'move' ? 'pointermove' : 'click';
             listeners[type]({ target: options.wrongClick && action === 'click' ? {} : target,
-                isTrusted: !(options.untrustedMotion && action === 'move'), clientX: 240, clientY: 115 });
+                isTrusted: !((options.untrustedMotion && action === 'move') || (options.untrustedClick && action === 'click')), clientX: 240, clientY: 115 });
             if (options.mutateTask && action === 'move') window.currentCustomer.credentialKey = 'changed-private-task-marker';
+            if (options.mutateField && action === 'move') originalField.value = 'changed-private-field-value';
         }
-        return { action, window: { windowId: 42, x: 0, y: 0, width: options.badWindow ? 700 : 1440, height: 1086 }, pointer: parameters.point || null };
+        return { action, window: { windowId: options.changedWindow && action === 'move' ? 43 : 42, x: 0, y: 0, width: options.badWindow ? 700 : 1440, height: 1086 }, pointer: parameters.point || null };
     };
     const report = { environment: { browserVersion: '150.0.2' } };
     const handle = { sessionVerified: true, nativeGroup: 'shell-search-customer-history', descriptor: { native: true, role: 'kiwi-admin', locale: 'nl' },
@@ -913,7 +924,7 @@ async function physicalNativeContentHarness(options = {}) {
             recordFixture: { id: 990970, recordCount: 2, componentOnly: true, customer: { personId: '990970', credentialKey: 'synthetic-private-task-marker', sourceSystem: 'subscription-api' } }, nativeKernel: { pointer: { display: options.display || ':96', compare } } },
         helpers: { operational: { physicalClientPoint, nativeReadonlyMotionOwnsTarget } } };
     if (options.changeHandle) options.changeHandle(handle);
-    const run = actualFunction('prepareFirefoxNativeContent', { observeOperational: async (h, name) => {
+    const run = actualFunction(options.recordEditor ? 'openFirefoxNativeRecordEditor' : 'prepareFirefoxNativeContent', { observeOperational: async (h, name) => {
         assert.equal(h, handle); observations.push(name); events.push(name);
     } });
     let error, press;
@@ -1325,4 +1336,42 @@ test('native catalogue action awaits the installed current search busy owner whi
         await assert.rejects(run(handle), error => error === stop);
         assert.deepEqual(events, ['original-fill', ...(native ? ['wait-source-readiness'] : []), 'browse-original-Enter']);
     }
+});
+
+
+test('native component restores the original pointer opening before unchanged record assertions and leaves other paths intact', async () => {
+    const good = await recordEditorOpeningHarness({ physicalComponent: true }); assert.equal(good.caught, good.done);
+    assert.equal(good.opened, true); assert.ok(good.events.includes('original-component-physical-callback'));
+    assert.equal(good.events.some(event => event.startsWith('OS-') || event === 'setup-focus'), false);
+    for (const changeState of [s => { s.suite = 'native-operational'; }, s => { s.recordFixture.componentOnly = false; },
+        s => { s.report.environment.browser = 'chromium'; }, s => { s.report.environment.native = false; }, s => { s.nativeKernel = null; }]) {
+        const bad = await recordEditorOpeningHarness({ physicalComponent: true, changeState }); assert.ok(bad.caught); assert.equal(bad.opened, false);
+    }
+    const touch = await recordEditorOpeningHarness({ physicalComponent: true, touch: true }); assert.ok(touch.caught); assert.equal(touch.opened, false);
+});
+
+test('physical native record button uses existing owned pointer and trusted activation while retaining original fields as editor fields mount', async () => {
+    const good = await physicalNativeContentHarness({ recordEditor: true }); assert.equal(good.error, undefined);
+    assert.deepEqual(good.events, ['scroll-public-heading', 'native-firefox-record-button-ready', 'query', 'move', 'click', 'native-firefox-record-button-activated']);
+    const proof = good.report.nativeFirefoxRecordOpening; assert.equal(proof.before.exactButton, true);
+    assert.equal(proof.before.sameCanonicalIdentity, true); assert.equal(proof.sameTaskAndOriginalFields, true);
+    assert.equal(proof.clickEvent.trusted, true); assert.equal(proof.clickEvent.ownsExpectedTarget, true);
+    assert.equal(good.disposed, true); assert.equal(good.aborted, true);
+    const encoded = JSON.stringify(proof);
+    for (const value of ['credentialKey', 'synthetic-private-task-marker', 'synthetic-private-field', 'synthetic-private-field-value']) assert.equal(encoded.includes(value), false);
+    for (const options of [{ wrongTag: true }, { wrongType: true }, { wrongAction: true }, { outsideHeader: true }, { disabled: true },
+        { badBounds: true }, { covered: true }, { dpr: 1 }, { badWindow: true }, { changedWindow: true }, { untrustedMotion: true },
+        { mutateTask: true }, { mutateField: true }, { wrongClick: true }, { untrustedClick: true }, { mutateTaskAfterClick: true }, { noDocumentFocus: true }]) {
+        const bad = await physicalNativeContentHarness({ recordEditor: true, ...options }); assert.ok(bad.error, JSON.stringify(options));
+        assert.equal(bad.disposed, true); assert.equal(bad.aborted, true);
+        if (!options.wrongClick && !options.untrustedClick && !options.mutateTaskAfterClick && !options.noDocumentFocus) assert.equal(bad.events.includes('click'), false);
+    }
+    for (const changeHandle of [h => { h.sessionVerified = false; }, h => { h.nativeGroup = 'article-cart-custom-calendar'; },
+        h => { h.descriptor.native = false; }, h => { h.descriptor.role = 'kiwi-view'; }, h => { h.descriptor.locale = 'en'; },
+        h => { h.driver.browserName = 'chromium'; }, h => { h.state.report.environment.browserVersion = '149'; },
+        h => { h.state.suite = 'native-operational'; }, h => { h.state.recordFixture.id = 1; },
+        h => { h.state.recordFixture.recordCount = 12; }, h => { h.state.recordFixture.componentOnly = false; }]) {
+        const bad = await physicalNativeContentHarness({ recordEditor: true, changeHandle }); assert.ok(bad.error); assert.deepEqual(bad.events, []);
+    }
+    const display = await physicalNativeContentHarness({ recordEditor: true, display: ':95' }); assert.ok(display.error); assert.deepEqual(display.events, []);
 });
