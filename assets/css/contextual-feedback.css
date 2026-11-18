@@ -82,8 +82,8 @@
 }
 
 .contextual-feedback-button:focus-visible {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
+    outline: 3px solid var(--focus-inverse);
+    outline-offset: -5px;
 }
 
 .contextual-feedback-button svg {
