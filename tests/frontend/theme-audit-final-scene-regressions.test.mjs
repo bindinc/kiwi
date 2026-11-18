@@ -1221,7 +1221,8 @@ test('native initial outbox positions the existing panel before all three origin
 });
 
 test('native feedback captures the actual image canvas after unchanged strong privacy/control review and before bitmap read', async () => {
-    const overlaySource = await readFile(new URL('../../scripts/compose-smoke-theme-audit-overlays-acceptance.mjs', import.meta.url), 'utf8');
+    const overlaySource = await readFile(process.env.KIWI_THEME_MULTIPART_REGRESSION_SOURCE
+        || new URL('../../scripts/compose-smoke-theme-audit-overlays-acceptance.mjs', import.meta.url), 'utf8');
     for (const native of [false, true]) {
         const events = [], comment = 'Synthetic unchanged image comment', feedbackSelector = '.contextual-feedback-modal';
         const target = { isVisible: async () => !native, scrollIntoViewIfNeeded: async () => events.push('heading-scroll'),
@@ -1237,7 +1238,7 @@ test('native feedback captures the actual image canvas after unchanged strong pr
             assert.equal(selector, '[data-feedback-canvas]'); return { scrollIntoViewIfNeeded: async () => events.push('canvas-scroll'),
                 evaluate: async () => { events.push('bitmap-read'); return { width: 100, height: 24, pixels: 'unchanged-synthetic-png' }; } };
         }, mouse: { click: async () => events.push('picker-click') }, waitForFunction: async () => events.push('capture-complete') };
-        const driver = { report: { slice: 10 } }, meta = { native, prefix: 'outbox-feedback-image-system-' };
+        const driver = { report: { slice: 10, environment: { browser: 'chromium' } } }, meta = { native, prefix: 'outbox-feedback-image-system-' };
         const run = actualFunction('captureReviewedHeading', { comment, feedbackSelector, openFeedback: async () => events.push('open-feedback'),
             check: (d, m, name, passed) => { assert.equal(passed, true, name); events.push('original-check'); },
             inspectDialog: async () => { events.push('original-control-review'); return { extra: { bodyReviewing: true }, data: {
@@ -1622,4 +1623,169 @@ test('original call/disposition function selects follow-up by real Space only fo
     }
     const failed = await finalNativeFollowUpHarness({ ineffectiveSpace: true }); assert.notEqual(failed.caught, failed.stop);
     assert.deepEqual(failed.events, ['scroll-checkbox', 'Space']); assert.equal(failed.checked, false);
+});
+
+
+test('actual multipart validator retains strict rejection and emits only fixed safe native diagnosis', async () => {
+    const multipartSource = await readFile(process.env.KIWI_THEME_MULTIPART_REGRESSION_SOURCE
+        || new URL('../../scripts/compose-smoke-theme-audit-overlays-acceptance.mjs', import.meta.url), 'utf8');
+    const { isDeepStrictEqual } = await import('node:util');
+    const parse = new Function('isDeepStrictEqual', 'hash', declaration('readFeedbackMultipart', multipartSource)
+        + '\nreturn readFeedbackMultipart;')(isDeepStrictEqual, sha);
+    const payload = { comment: 'synthetic-private-comment-never-report', severity: 'normal', category: 'bug', selectionKind: 'element',
+        pageUrl: 'https://example.invalid/private', routePath: '/private', userAgent: 'synthetic-private-agent',
+        viewport: { width: 720, height: 500, devicePixelRatio: 2 }, annotations: [], teamsScreenshotVariant: 'pseudonymized',
+        selectedElement: { tag: 'h2', label: 'synthetic-private-label', selector: '#synthetic-private-selector', textSample: null, rect: { x: 1, y: 2, width: 30, height: 40 } } };
+    const png = Buffer.alloc(24); Buffer.from('89504e470d0a1a0a', 'hex').copy(png); png.writeUInt32BE(30, 16); png.writeUInt32BE(40, 20);
+    const expected = { payload, images: true, dimensions: { width: 30, height: 40 } };
+    const request = async (options = {}) => {
+        const form = new FormData(), actual = JSON.parse(JSON.stringify(payload));
+        if (options.changePayload) options.changePayload(actual);
+        form.set('payload', options.badJson ? 'synthetic-private-invalid-json' : JSON.stringify(actual));
+        if (options.extra) form.set('synthetic-private-extra-name', 'synthetic-private-extra-value');
+        for (const [field, name] of [['screenshot', 'kiwi-contextual-feedback-pseudonymized.png'], ['originalScreenshot', 'kiwi-contextual-feedback-original.png']]) {
+            let bytes = Buffer.from(png); if (options.badSignature) bytes[0] = 0; if (options.badDimensions) bytes.writeUInt32BE(31, 16);
+            form.set(field, new Blob([bytes], { type: options.badType ? 'text/plain' : 'image/png' }), options.badName ? 'synthetic-private-file-name' : name);
+        }
+        const response = new Response(form), bytes = Buffer.from(await response.arrayBuffer()), contentType = response.headers.get('content-type');
+        return { postDataBuffer: () => options.noBytes ? null : bytes, headers: () => ({ 'content-type': contentType }) };
+    };
+    const goodDiagnostic = {}, good = await parse(await request(), expected, goodDiagnostic);
+    assert.deepEqual(good.payload, payload); assert.equal(good.files.length, 2); assert.equal(goodDiagnostic.stage, 'original-png-dimensions');
+    assert.deepEqual(goodDiagnostic.png.screenshot, { byteCount: 24, width: 30, height: 40, retainedWidth: 30, retainedHeight: 40 });
+    for (const [options, stage, unequal] of [
+        [{ noBytes: true }, 'multipart-envelope'], [{ extra: true }, 'multipart-fields'], [{ badJson: true }, 'payload-json'],
+        [{ changePayload: p => { p.comment = 'synthetic-private-other-comment'; } }, 'payload-equality', 'comment'],
+        [{ changePayload: p => { p.selectedElement.rect.y = 3; } }, 'payload-equality', 'selectedElement'],
+        [{ changePayload: p => { p.privateUnexpectedKey = 'synthetic-private-extra-value'; } }, 'payload-equality', 'payloadShape'],
+        [{ badName: true }, 'pseudonymized-png-metadata'], [{ badType: true }, 'pseudonymized-png-metadata'],
+        [{ badSignature: true }, 'pseudonymized-png-signature'], [{ badDimensions: true }, 'pseudonymized-png-dimensions']
+    ]) {
+        const diagnostic = {}, req = await request(options);
+        await assert.rejects(parse(req, expected, diagnostic)); assert.equal(diagnostic.stage, stage);
+        if (unequal) assert.equal(diagnostic.equal[unequal], false);
+        if (options.badDimensions) assert.deepEqual(diagnostic.png.screenshot, { byteCount: 24, width: 31, height: 40, retainedWidth: 30, retainedHeight: 40 });
+        const serialized = JSON.stringify(diagnostic); assert.equal(serialized.includes('synthetic-private'), false);
+        for (const forbidden of ['actual', 'expected', 'headers', 'filename', 'message', 'stack', 'payload']) assert.equal(Object.hasOwn(diagnostic, forbidden), false);
+        await assert.rejects(parse(req, expected));
+    }
+    const plain = await parse(await request(), expected); assert.deepEqual(plain, good);
+    assert.match(multipartSource, /driver\.report\.slice === 10 && driver\.report\.environment\.native === true\n\s*&& driver\.report\.environment\.browser === 'firefox' \? \{\} : null/);
+    assert.match(multipartSource, /catch \{\n\s*if \(diagnostic\) \(driver\.report\.feedbackMultipartRejections \|\|= \[\]\)\.push\(diagnostic\);\n\s*return deny\(route, request, url, 'Multipart payload or PNG metadata differs from declared local feedback fixture\.'\);/);
+});
+
+
+async function nativePublicHeadingPickerHarness(options = {}) {
+    const overlaySource = await readFile(process.env.KIWI_THEME_MULTIPART_REGRESSION_SOURCE
+        || new URL('../../scripts/compose-smoke-theme-audit-overlays-acceptance.mjs', import.meta.url), 'utf8');
+    const calls = [], listeners = new Map(); let disposed = 0, aborted = 0, captured = false;
+    const field = { id: 'synthetic-private-picker-field', value: 'synthetic-private-picker-value', checked: false, disabled: false, readOnly: false, closest: () => null };
+    const imageControl = { id: 'synthetic-private-feedback-image-control', value: '', checked: false, disabled: false, readOnly: false, closest: () => ({}) };
+    const customer = { personId: 990970, credentialKey: 'synthetic-private-picker-credential' };
+    const bounds = { left: 20, top: 100, right: 700, bottom: 140, width: 680, height: 40 };
+    if (options.clipped) bounds.bottom = 550;
+    const picker = { nodeType: 1, tagName: 'DIV', isConnected: true, closest: selector => selector === '[data-feedback-ignore]' ? picker : null, contains: node => node === picker };
+    const wrong = { nodeType: 1, tagName: 'P', closest: () => null };
+    const target = { nodeType: 1, tagName: options.wrongTag ? 'P' : 'H2', isConnected: true, tabIndex: -1,
+        textContent: options.wrongHeading ? 'Wrong public heading' : 'Contact Geschiedenis',
+        getAttribute: () => 'indexHtml.text.contact_geschiedenis_7d71e784',
+        closest: selector => options.sensitive && selector === '[data-feedback-sensitive]' ? {} : null,
+        getBoundingClientRect: () => ({ ...bounds }), contains: node => node === target };
+    const selector = 'section.history-card > h2[data-i18n="indexHtml.text.contact_geschiedenis_7d71e784"]';
+    const document = { querySelector: value => value === selector ? target : value === '.contextual-feedback-picker-overlay' ? picker : null,
+        querySelectorAll: value => value === 'script[type=importmap]' ? [{ textContent: JSON.stringify({ imports: {
+            '/contextual-feedback/element-picker.js': new URL('../../assets/js/app/contextual-feedback/element-picker.js', import.meta.url).href } }) }] : [field, imageControl],
+        elementsFromPoint: () => [picker, options.wrongPick ? wrong : target] };
+    const window = { currentCustomer: customer, kiwiCustomerWorkSession: { getRequestContext: () => ({ customerReference: customer }) } };
+    const realm = { document, window, innerWidth: 720, innerHeight: 500, outerWidth: 720, outerHeight: 543,
+        devicePixelRatio: options.wrongDpr ? 1 : 2, visualViewport: { scale: 1 },
+        addEventListener: (type, callback, settings) => {
+            assert.equal(settings.capture, true); listeners.set(type, callback);
+            settings.signal.addEventListener('abort', () => { aborted += 1; listeners.delete(type); });
+        }, AbortController };
+    let proofValue; const proof = { evaluate: async callback => callback(proofValue), dispose: async () => { disposed += 1; } };
+    const page = { evaluateHandle: async (callback, argument) => {
+        const names = Object.keys(realm), values = Object.values(realm);
+        proofValue = await new Function(...names, 'argument', 'return (' + callback.toString() + ')(argument);')(...values, argument);
+        return proof;
+    }, waitForFunction: async (callback, value) => { assert.equal(value, proof); assert.equal(callback(proofValue), true); } };
+    const box = { windowId: 123, x: 0, y: 0, width: 1440, height: 1085 };
+    const pointer = { display: ':96', compare: (action, parameters) => {
+        calls.push(action); assert.deepEqual([parameters.expectedWidth, parameters.expectedHeight], [1440, 1086]);
+        if (action !== 'query') {
+            const type = action === 'move' ? 'pointermove' : 'click';
+            if (options.mutateBefore && action === 'move') field.value = 'synthetic-private-changed';
+            listeners.get(type)?.({ type, isTrusted: !options.untrusted, target: options.wrongOverlay ? wrong : picker, clientX: 360, clientY: 120 });
+        }
+        return { action, window: { ...box, windowId: options.changedWindow && action === 'move' ? 124 : 123 }, pointer: { x: 720, y: 325 } };
+    } };
+    const driver = { nativePointer: pointer, report: { slice: 10, environment: { native: true, browser: 'firefox', browserVersion: '150.0.2', role: 'kiwi-admin', locale: 'nl' } } };
+    if (options.changeDriver) options.changeDriver(driver);
+    const meta = { native: true, prefix: 'outbox-feedback-image-system-' };
+    const run = actualFunction('selectFirefoxNativePublicHeading', { physicalClientPoint, nativeReadonlyMotionOwnsTarget }, overlaySource);
+    let value, error;
+    try { value = await run(page, driver, meta, { scrollIntoViewIfNeeded: async () => calls.push('scroll-after-picker') }, async () => {
+        calls.push('original-canvas-ready'); captured = true; imageControl.checked = true; imageControl.disabled = true;
+        field.value = 'synthetic-private-temporary-sdk-redaction';
+        if (!options.mutateAfter) field.value = 'synthetic-private-picker-value';
+        if (options.captureFailure) throw new Error('Synthetic original SDK failure');
+    }); } catch (caught) { error = caught; }
+    return { value, error, calls, disposed, aborted, captured, report: driver.report };
+}
+
+test('native public-heading picker uses the actual ignored overlay and source pickable target with one owned click', async () => {
+    const good = await nativePublicHeadingPickerHarness(); assert.equal(good.error, undefined);
+    assert.deepEqual(JSON.parse(JSON.stringify(good.value)), { x: 20, y: 100, width: 680, height: 40 });
+    assert.deepEqual(good.calls, ['scroll-after-picker', 'query', 'move', 'click', 'original-canvas-ready']);
+    assert.equal(good.captured, true); assert.equal(good.disposed, 1); assert.equal(good.aborted, 2);
+    assert.equal(good.report.nativeFirefoxPublicHeadingPicker.sameTaskAndOriginalFields, true);
+    assert.equal(good.report.nativeFirefoxPublicHeadingPicker.motionEvent.pickerOverlayTarget, true);
+    assert.equal(JSON.stringify(good.report).includes('synthetic-private'), false);
+    for (const options of [{ wrongPick: true }, { wrongOverlay: true }, { untrusted: true }, { wrongHeading: true }, { wrongTag: true },
+        { sensitive: true }, { clipped: true }, { wrongDpr: true }, { changedWindow: true }, { mutateBefore: true }, { mutateAfter: true }, { captureFailure: true }]) {
+        const bad = await nativePublicHeadingPickerHarness(options); assert.ok(bad.error, JSON.stringify(options));
+        assert.equal(bad.disposed, 1); assert.equal(bad.aborted, 2); assert.equal(bad.report.nativeFirefoxPublicHeadingPicker, undefined);
+        assert.equal(bad.calls.filter(x => x === 'click').length <= 1, true);
+    }
+    for (const changeDriver of [d => { d.report.slice = 9; }, d => { d.report.environment.native = false; },
+        d => { d.report.environment.browser = 'chromium'; }, d => { d.report.environment.role = 'kiwi-view'; }, d => { d.nativePointer.display = ':95'; }]) {
+        const bad = await nativePublicHeadingPickerHarness({ changeDriver }); assert.ok(bad.error); assert.deepEqual(bad.calls, []);
+    }
+});
+
+test('original capture lifecycle uses the owned picker only for selected-customer native Firefox and keeps other paths unchanged', async () => {
+    const overlaySource = await readFile(process.env.KIWI_THEME_MULTIPART_REGRESSION_SOURCE
+        || new URL('../../scripts/compose-smoke-theme-audit-overlays-acceptance.mjs', import.meta.url), 'utf8');
+    const comment = 'Synthetic overlay08 comment retained through capture, dismissal, failure and explicit retry.';
+    for (const options of [{ native: true, browser: 'firefox' }, { native: true, browser: 'chromium' },
+        { native: false, browser: 'firefox' }, { native: true, browser: 'firefox', welcomeVisible: true }]) {
+        const events = [], box = { x: 20, y: 100, width: 680, height: 40 }, image = { width: 680, height: 40, pixels: 'synthetic-image' };
+        const target = { scrollIntoViewIfNeeded: async () => events.push('original-heading-scroll'), boundingBox: async () => box,
+            evaluate: async callback => callback.toString().includes('Boolean(node.closest') ? false : { tag: 'h2', label: 'Public heading', selector: 'h2' } };
+        const environment = { browser: options.browser }, driver = { report: { slice: 10, environment } };
+        const meta = { native: options.native, prefix: 'outbox-feedback-image-system-' };
+        const page = { locator: selector => {
+            if (selector === '#welcomeMessage h2') return { ...target, isVisible: async () => Boolean(options.welcomeVisible) };
+            if (selector.startsWith('section.history-card')) return target;
+            if (selector === '.contextual-feedback-modal') return { evaluate: async () => ({ hidden: true, open: false, display: 'none', reviewing: false, ordinary: false }) };
+            return { fill: async () => {}, press: async () => events.push('original-picker-open'), inputValue: async () => comment,
+                waitFor: async () => events.push(selector.includes('has-screenshot') ? 'original-canvas-visible' : 'original-picker-visible'),
+                scrollIntoViewIfNeeded: async () => events.push('original-canvas-scroll'), evaluate: async () => image };
+        }, mouse: { click: async () => events.push('original-protocol-click') },
+        waitForFunction: async () => events.push('original-canvas-ready') };
+        const capture = actualFunction('captureReviewedHeading', { feedbackSelector: '.contextual-feedback-modal', comment,
+            openFeedback: async () => events.push('original-feedback-open'), observe: async () => {},
+            check: (driver, meta, name, passed) => assert.equal(passed, true),
+            inspectDialog: async () => ({ extra: { bodyReviewing: true }, data: { root: { background: 'rgba(15, 23, 42, 0.86)', backdropFilter: 'blur(14px)' }, background: { filter: 'blur(18px)', opacity: '0.08' } } }),
+            selectFirefoxNativePublicHeading: async (actualPage, actualDriver, actualMeta, actualTarget, ready) => {
+                assert.equal(actualPage, page); assert.equal(actualDriver, driver); assert.equal(actualMeta, meta); assert.equal(actualTarget, target);
+                events.push('owned-native-picker'); await ready(); return box;
+            } }, overlaySource);
+        const result = await capture(page, driver, meta);
+        assert.deepEqual(JSON.parse(JSON.stringify(result.box)), box); assert.equal(result.image, image);
+        const native = options.native && options.browser === 'firefox' && !options.welcomeVisible;
+        assert.equal(events.includes('owned-native-picker'), native); assert.equal(events.includes('original-protocol-click'), !native);
+        assert.equal(events.filter(x => x === 'original-canvas-visible').length, 1); assert.equal(events.filter(x => x === 'original-canvas-ready').length, 1);
+        assert.equal(events.indexOf('original-canvas-ready') > events.indexOf('original-picker-visible'), true);
+    }
 });

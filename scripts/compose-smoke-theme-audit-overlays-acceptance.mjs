@@ -1,9 +1,11 @@
+import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
+import { physicalClientPoint, nativeReadonlyMotionOwnsTarget } from './compose-smoke-theme-audit-operational.mjs';
 import { accountPage, exactObject, observe, safeSettings, trackBehavior, trackRuntimeErrors } from './compose-smoke-theme-audit-overlays.mjs';
 
 // theme_audit: exact local responses exercise real frontend handlers, never upstream writes.
@@ -75,23 +77,48 @@ async function readJson(request) {
     try { return request.postDataJSON(); } catch { return null; }
 }
 
-async function readFeedbackMultipart(request, expected) {
+async function readFeedbackMultipart(request, expected, diagnostic = null) {
+    if (diagnostic) diagnostic.stage = 'multipart-envelope';
     const bytes = request.postDataBuffer(), contentType = request.headers()['content-type'];
     if (!bytes || !contentType?.startsWith('multipart/form-data;')) throw new Error('Expected actual source multipart feedback request.');
+    if (diagnostic) diagnostic.stage = 'multipart-fields';
     const form = await new Response(bytes, { headers: { 'content-type': contentType } }).formData();
     const keys = [...form.keys()].sort(), expectedKeys = expected.images ? ['originalScreenshot', 'payload', 'screenshot'] : ['payload'];
     if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)) throw new Error('Unexpected feedback multipart fields or duplicates.');
+    if (diagnostic) diagnostic.stage = 'payload-json';
     const payload = JSON.parse(form.get('payload'));
+    if (diagnostic) {
+        diagnostic.stage = 'payload-equality';
+        diagnostic.equal = Object.fromEntries(['comment', 'severity', 'category', 'selectionKind', 'pageUrl', 'routePath', 'userAgent',
+            'viewport', 'annotations', 'teamsScreenshotVariant', 'selectedElement'].map(key => [key, isDeepStrictEqual(payload[key], expected.payload[key])]));
+        diagnostic.equal.payloadShape = isDeepStrictEqual(Object.keys(payload).sort(), Object.keys(expected.payload).sort());
+        diagnostic.selectedElementEqual = Object.fromEntries(['tag', 'label', 'selector', 'textSample', 'rect'].map(key =>
+            [key, isDeepStrictEqual(payload.selectedElement?.[key], expected.payload.selectedElement?.[key])]));
+        diagnostic.rectEqual = Object.fromEntries(['x', 'y', 'width', 'height'].map(key =>
+            [key, isDeepStrictEqual(payload.selectedElement?.rect?.[key], expected.payload.selectedElement?.rect?.[key])]));
+    }
     if (!isDeepStrictEqual(payload, expected.payload)) throw new Error('Actual feedback payload differs from the declared source contract.');
     const files = [];
     for (const [field, filename] of [['screenshot', 'kiwi-contextual-feedback-pseudonymized.png'], ['originalScreenshot', 'kiwi-contextual-feedback-original.png']]) {
         if (!expected.images) break;
+        if (diagnostic) diagnostic.stage = field === 'screenshot' ? 'pseudonymized-png-metadata' : 'original-png-metadata';
         const file = form.get(field);
+        if (diagnostic) {
+            diagnostic.png ||= {};
+            diagnostic.png[field] = { byteCount: Number.isSafeInteger(file?.size) && file.size >= 0 ? file.size : null };
+        }
         if (!file || file.name !== filename || file.type !== 'image/png' || file.size <= 0 || file.size > 3145728) throw new Error('Unexpected feedback PNG metadata.');
+        if (diagnostic) diagnostic.stage = field === 'screenshot' ? 'pseudonymized-png-signature' : 'original-png-signature';
         const bytes = Buffer.from(await file.arrayBuffer());
         const png = bytes.length >= 24 && bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
         if (!png) throw new Error('Expected actual PNG screenshot bytes.');
         const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
+        if (diagnostic) {
+            diagnostic.stage = field === 'screenshot' ? 'pseudonymized-png-dimensions' : 'original-png-dimensions';
+            Object.assign(diagnostic.png[field], { width, height,
+                retainedWidth: Number.isInteger(expected.dimensions?.width) && expected.dimensions.width >= 0 && expected.dimensions.width <= 0xffffffff ? expected.dimensions.width : null,
+                retainedHeight: Number.isInteger(expected.dimensions?.height) && expected.dimensions.height >= 0 && expected.dimensions.height <= 0xffffffff ? expected.dimensions.height : null });
+        }
         if (width !== expected.dimensions?.width || height !== expected.dimensions?.height) throw new Error('Feedback PNG dimensions differ from the actual retained canvas.');
         files.push({ field, filename, type: file.type, bytes: file.size, width, height, sha256: hash(bytes) });
     }
@@ -145,9 +172,14 @@ export async function installOverlayTransport(page, driver, mode = 'ordinary') {
         if (method === 'POST' && url.pathname === feedbackPath && !url.search && csrfPresent && mode === 'focused' && controls.feedback) {
             const expected = controls.feedback;
             if (controls.feedbackRequests.length >= expected.limit) return deny(route, request, url, 'Unexpected extra feedback request.');
+            const diagnostic = driver.report.slice === 10 && driver.report.environment.native === true
+                && driver.report.environment.browser === 'firefox' ? {} : null;
             let parsed;
-            try { parsed = await readFeedbackMultipart(request, expected); }
-            catch { return deny(route, request, url, 'Multipart payload or PNG metadata differs from declared local feedback fixture.'); }
+            try { parsed = await readFeedbackMultipart(request, expected, diagnostic); }
+            catch {
+                if (diagnostic) (driver.report.feedbackMultipartRejections ||= []).push(diagnostic);
+                return deny(route, request, url, 'Multipart payload or PNG metadata differs from declared local feedback fixture.');
+            }
             controls.feedbackRequests.push(parsed);
             fixture({ method, path: feedbackPath, kind: 'Actual frontend multipart request; locally held/rejected/retried only.', csrfPresent,
                 payloadKeys: Object.keys(parsed.payload).sort(), files: parsed.files, outcome: expected.outcome });
@@ -454,14 +486,22 @@ async function captureReviewedHeading(page, driver, meta) {
     check(driver, meta, 'actual capture picker suspends native dialog and both ordinary/review layers', suspended.hidden && !suspended.open
         && suspended.display === 'none' && !suspended.reviewing && !suspended.ordinary, suspended);
     await observe(page, driver, meta, 'capture-suspended', '.contextual-feedback-picker-overlay');
-    const selectedBox = await target.boundingBox();
-    if (!selectedBox) throw new Error('Actual picker target must still be visible.');
-    await page.mouse.click(selectedBox.x + selectedBox.width / 2, selectedBox.y + selectedBox.height / 2);
-    await page.locator('.contextual-feedback-modal.has-screenshot canvas').waitFor({ state: 'visible' });
-    await page.waitForFunction(() => {
-        const modal = document.querySelector('.contextual-feedback-modal'), canvas = modal?.querySelector('[data-feedback-canvas]');
-        return modal?.matches(':modal') && !modal.querySelector('[data-feedback-add-screenshot]').disabled && canvas?.width > 0 && canvas?.height > 0;
-    });
+    const waitForCapture = async () => {
+        await page.locator('.contextual-feedback-modal.has-screenshot canvas').waitFor({ state: 'visible' });
+        await page.waitForFunction(() => {
+            const modal = document.querySelector('.contextual-feedback-modal'), canvas = modal?.querySelector('[data-feedback-canvas]');
+            return modal?.matches(':modal') && !modal.querySelector('[data-feedback-add-screenshot]').disabled && canvas?.width > 0 && canvas?.height > 0;
+        });
+    };
+    const nativeFirefox = nativeSelectedCustomer && driver.report.environment.browser === 'firefox';
+    let selectedBox;
+    if (nativeFirefox) selectedBox = await selectFirefoxNativePublicHeading(page, driver, meta, target, waitForCapture);
+    else {
+        selectedBox = await target.boundingBox();
+        if (!selectedBox) throw new Error('Actual picker target must still be visible.');
+        await page.mouse.click(selectedBox.x + selectedBox.width / 2, selectedBox.y + selectedBox.height / 2);
+        await waitForCapture();
+    }
     const review = await inspectDialog(page, driver, meta, 'image-review', feedbackSelector, '.contextual-feedback-panel');
     check(driver, meta, 'actual retained image review preserves every original strong privacy layer and its comment', review.extra.bodyReviewing
         && review.data.root.background === 'rgba(15, 23, 42, 0.86)' && review.data.root.backdropFilter === 'blur(14px)'
@@ -473,6 +513,76 @@ async function captureReviewedHeading(page, driver, meta) {
     }
     const image = await page.locator('[data-feedback-canvas]').evaluate(canvas => ({ width: canvas.width, height: canvas.height, pixels: canvas.toDataURL() }));
     return { description, box: selectedBox, image };
+}
+
+async function selectFirefoxNativePublicHeading(page, driver, meta, target, waitForCapture) {
+    assert.equal(driver.report.slice, 10); assert.equal(meta.native, true); assert.equal(meta.prefix, 'outbox-feedback-image-system-');
+    const environment = driver.report.environment, pointer = driver.nativePointer;
+    assert.equal(environment.native, true); assert.equal(environment.browser, 'firefox'); assert.equal(environment.browserVersion, '150.0.2');
+    assert.equal(environment.role, 'kiwi-admin'); assert.equal(environment.locale, 'nl');
+    assert.equal(pointer?.display, ':96'); assert.equal(typeof pointer.compare, 'function');
+    const selector = 'section.history-card > h2[data-i18n="indexHtml.text.contact_geschiedenis_7d71e784"]';
+    await target.scrollIntoViewIfNeeded();
+    const proof = await page.evaluateHandle(async selector => {
+        const imports = Object.assign({}, ...[...document.querySelectorAll('script[type=importmap]')].map(script => JSON.parse(script.textContent).imports));
+        const key = Object.keys(imports).find(value => value.endsWith('/contextual-feedback/element-picker.js'));
+        const { findPickableElement } = await import(imports[key]);
+        const target = document.querySelector(selector), picker = document.querySelector('.contextual-feedback-picker-overlay'), events = [], controller = new AbortController();
+        const fields = [...document.querySelectorAll('input:not([type=hidden]):not([type=password]),select,textarea')]
+            .filter(node => !node.closest('.contextual-feedback-modal'));
+        const read = () => JSON.stringify({ customer: window.currentCustomer, context: window.kiwiCustomerWorkSession.getRequestContext(),
+            fields: fields.map(node => [node.id, node.value, node.checked, node.disabled, node.readOnly]) });
+        const before = read();
+        const measure = () => {
+            const r = target.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+            return { connected: target.isConnected, sameTarget: target === document.querySelector(selector), tag: target.tagName,
+                publicSource: target.getAttribute('data-i18n') === 'indexHtml.text.contact_geschiedenis_7d71e784'
+                    && target.textContent.trim() === 'Contact Geschiedenis' && !target.closest('[data-feedback-sensitive]'),
+                noninteractive: !target.closest('button,a,summary,[data-action],[contenteditable],[role=button]') && target.tabIndex < 0,
+                pickerActive: picker?.isConnected && picker === document.querySelector('.contextual-feedback-picker-overlay'),
+                ownedCenter: findPickableElement(document, x, y) === target,
+                bounds: { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height },
+                viewport: { innerWidth, innerHeight, outerWidth, outerHeight, dpr: devicePixelRatio, pinchScale: visualViewport?.scale } };
+        };
+        for (const type of ['pointermove', 'click']) addEventListener(type, event => events.push({ type, trusted: event.isTrusted,
+            pickerOverlayTarget: Boolean(picker && (event.target === picker || picker.contains(event.target))),
+            ownsExpectedTarget: Boolean(picker && (event.target === picker || picker.contains(event.target)))
+                && findPickableElement(document, event.clientX, event.clientY) === target,
+            clientX: event.clientX, clientY: event.clientY }), { capture: true, signal: controller.signal });
+        return { events, controller, read, before, measure };
+    }, selector);
+    const result = { method: 'Original public heading picker selection through existing owned genuine XTest pointer', selector };
+    try {
+        const measured = await proof.evaluate(value => value.measure()), bounds = measured.bounds;
+        assert.ok(measured.connected && measured.sameTarget && measured.publicSource && measured.noninteractive && measured.pickerActive && measured.ownedCenter);
+        assert.equal(measured.tag, 'H2');
+        assert.deepEqual(measured.viewport, { innerWidth: 720, innerHeight: 500, outerWidth: 720, outerHeight: 543, dpr: 2, pinchScale: 1 });
+        assert.ok(bounds.width > 0 && bounds.height > 0 && bounds.left >= 0 && bounds.top >= 0 && bounds.right <= 720 && bounds.bottom <= 500);
+        result.before = measured;
+        const parameters = { expectedWidth: measured.viewport.outerWidth * 2, expectedHeight: measured.viewport.outerHeight * 2 };
+        result.window = pointer.compare('query', parameters);
+        const point = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+        result.physicalPoint = physicalClientPoint(result.window.window, measured.viewport, point);
+        result.motion = pointer.compare('move', { ...parameters, point: result.physicalPoint });
+        assert.equal(result.motion.window.windowId, result.window.window.windowId);
+        await page.waitForFunction(value => value.events.some(event => event.type === 'pointermove'), proof, { timeout: 1000 });
+        result.motionEvent = await proof.evaluate(value => value.events.filter(event => event.type === 'pointermove').at(-1));
+        assert.ok(nativeReadonlyMotionOwnsTarget(result.motionEvent, point));
+        assert.deepEqual(await proof.evaluate(value => value.measure()), measured);
+        assert.equal(await proof.evaluate(value => value.before === value.read()), true);
+        result.click = pointer.compare('click', { ...parameters, point: result.physicalPoint });
+        assert.equal(result.click.window.windowId, result.window.window.windowId);
+        await page.waitForFunction(value => value.events.some(event => event.type === 'click'), proof, { timeout: 1000 });
+        result.clickEvent = await proof.evaluate(value => value.events.filter(event => event.type === 'click').at(-1));
+        assert.ok(result.clickEvent.trusted && result.clickEvent.ownsExpectedTarget);
+        await waitForCapture();
+        result.sameTaskAndOriginalFields = await proof.evaluate(value => value.before === value.read());
+        assert.equal(result.sameTaskAndOriginalFields, true, 'Completed source capture must restore the original task and fields after its temporary SDK redaction.');
+        driver.report.nativeFirefoxPublicHeadingPicker = result;
+        return { x: bounds.left, y: bounds.top, width: bounds.width, height: bounds.height };
+    } finally {
+        await proof.evaluate(value => value.controller.abort()).catch(() => {}); await proof.dispose();
+    }
 }
 
 async function inspectImageLifecycle(page, driver, meta, keepForSubmission = false) {
