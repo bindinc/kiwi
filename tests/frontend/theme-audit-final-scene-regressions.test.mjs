@@ -681,10 +681,10 @@ async function recordEditorOpeningHarness(options = {}) {
     const events = [], observations = [], done = new Error('Synthetic boundary: original record checks continue after opening');
     const rect = { x: 20, y: 40, width: 100, height: 40, right: 120, bottom: 80, ...options.bounds };
     let focused = false, opened = false;
-    const node = { disabled: options.disabled === true, offsetLeft: 20, offsetTop: 40, offsetWidth: 100, offsetHeight: 40,
+    const node = { id: 'editCustomerBtn', tagName: 'BUTTON', isConnected: true, disabled: options.disabled === true, offsetLeft: 20, offsetTop: 40, offsetWidth: 100, offsetHeight: 40,
         getBoundingClientRect: () => rect, matches: selector => selector === ':focus-visible' && focused && !options.hiddenFocus,
         contains: target => target === node };
-    const document = { activeElement: null, elementFromPoint: () => options.covered ? {} : node,
+    const document = { activeElement: null, body: {}, hasFocus: () => options.documentFocused !== false, elementFromPoint: () => options.covered ? {} : node,
         querySelector: selector => { assert.equal(selector, '#customerName'); return { textContent: 'Synthetic990970' }; } };
     const customer = { id: 990970, personId: '990970', credentialKey: 'theme-audit-records-component-2' };
     const window = { currentCustomer: customer, kiwiCustomerDetailSlice: { selectCustomer: async (id, detail) => {
@@ -700,7 +700,7 @@ async function recordEditorOpeningHarness(options = {}) {
         async tap() { opened = true; events.push('touch'); } };
     const page = { evaluate, keyboard: { async press(key) {
         events.push(key);
-        if (key === 'Tab') { document.activeElement = {}; focused = false; }
+        if (key === 'Tab') { document.activeElement = { id: options.activeId || 'resendMagazineBtn', tagName: 'BUTTON', textContent: 'Synthetic private marker must not be projected' }; focused = false; }
         else { assert.equal(key, 'Shift+Tab'); document.activeElement = options.lostFocus ? {} : node; focused = !options.lostFocus; }
     } }, locator(selector) {
         if (selector === '#editCustomerBtn') return invoker;
@@ -730,7 +730,8 @@ test('native Firefox A03 opens installed editor with genuine Tab/Shift+Tab/Enter
     assert.equal(result.caught, result.done, 'Original post-open source-record assertions remain in the execution path.');
     assert.equal(result.opened, true);
     assert.deepEqual(result.events, ['fresh-source-read', 'scroll-header', 'observe-records-after-header', 'scroll-invoker',
-        'setup-focus', 'Tab', 'Shift+Tab', 'observe-records-after-keyboard-editor-invoker', 'Enter']);
+        'setup-focus', 'observe-records-after-keyboard-editor-setup-focus', 'Tab', 'observe-records-after-keyboard-editor-after-tab',
+        'Shift+Tab', 'observe-records-after-keyboard-editor-after-shift-tab', 'observe-records-after-keyboard-editor-invoker', 'Enter']);
     const proof = result.observations.at(-1);
     assert.equal(proof.detail.geometry.focused, true); assert.equal(proof.detail.geometry.focusVisible, true);
     assert.equal(proof.detail.geometry.ownedCenter, true); assert.equal(proof.detail.geometry.disabled, false);
@@ -823,4 +824,31 @@ test('actual native hook still rejects unknown groups and failed remember identi
     await assert.rejects(inspect(owned, { group: 'unknown-group' })); assert.deepEqual(calls, []);
     await assert.rejects(inspect({ owned }, { group: 'shell-search-customer-history' }));
     assert.deepEqual(calls, ['A01']); assert.equal(owned.nativeResetPending, undefined);
+});
+
+test('native Firefox focus-stage diagnostic is awaited before the unchanged return-focus failure', async () => {
+    const result = await recordEditorOpeningHarness({ lostFocus: true, documentFocused: false });
+    assert.equal(result.opened, false); assert.match(result.caught.message, /Actual Tab\/Shift\+Tab must return/);
+    const stages = result.observations.filter(item => item.name.startsWith('records-after-keyboard-editor-'));
+    assert.deepEqual(stages.map(item => item.name), ['records-after-keyboard-editor-setup-focus',
+        'records-after-keyboard-editor-after-tab', 'records-after-keyboard-editor-after-shift-tab']);
+    assert.deepEqual(stages.map(item => item.detail.focusStage.targetFocused), [true, false, false]);
+    assert.equal(stages[0].detail.focusStage.activeId, 'editCustomerBtn');
+    assert.equal(stages[1].detail.focusStage.activeId, 'resendMagazineBtn');
+    assert.equal(stages[2].detail.focusStage.activeId, null);
+    assert.ok(stages.every(item => item.detail.focusStage.documentFocused === false));
+    assert.equal(result.events.includes('Enter'), false);
+    assert.equal(result.events.at(-1), 'observe-records-after-keyboard-editor-after-shift-tab');
+});
+
+test('native focus-stage diagnostic projects only public allowlisted IDs/tags and booleans', async () => {
+    const marker = 'synthetic-private-id-never-export';
+    const result = await recordEditorOpeningHarness({ activeId: marker });
+    assert.equal(result.caught, result.done);
+    const stages = result.observations.filter(item => item.detail.focusStage).map(item => item.detail.focusStage);
+    assert.equal(stages.length, 3); assert.equal(stages[1].activeId, null); assert.equal(stages[1].activeTag, 'BUTTON');
+    assert.equal(JSON.stringify(stages).includes(marker), false);
+    assert.equal(JSON.stringify(stages).includes('Synthetic private marker'), false);
+    for (const stage of stages) assert.deepEqual(Object.keys(stage).sort(), ['activeId', 'activeIsBody', 'activeTag',
+        'documentFocused', 'targetConnected', 'targetFocusVisible', 'targetFocusWithin', 'targetFocused'].sort());
 });

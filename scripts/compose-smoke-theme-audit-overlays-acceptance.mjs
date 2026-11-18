@@ -426,10 +426,17 @@ async function inspectOrdinaryVeilPixels(page, driver, meta, captures) {
 }
 
 async function captureReviewedHeading(page, driver, meta) {
-    const target = page.locator('#welcomeMessage h2');
+    const welcome = page.locator('#welcomeMessage h2');
+    const nativeSelectedCustomer = driver.report.slice === 10 && meta.native === true
+        && meta.prefix === 'outbox-feedback-image-system-' && !await welcome.isVisible();
+    const target = nativeSelectedCustomer
+        ? page.locator('section.history-card > h2[data-i18n="indexHtml.text.contact_geschiedenis_7d71e784"]')
+        : welcome;
+    if (nativeSelectedCustomer) assert.equal(await target.evaluate(node => Boolean(node.closest('[data-feedback-sensitive]'))), false,
+        'The native selected-customer capture must use the unchanged public history heading.');
     await target.scrollIntoViewIfNeeded();
     const box = await target.boundingBox();
-    if (!box) throw new Error('Actual safe welcome heading is required for production capture.');
+    if (!box) throw new Error('Actual safe public heading is required for production capture.');
     const description = await target.evaluate(async node => {
         const imports = Object.assign({}, ...[...document.querySelectorAll('script[type=importmap]')].map(script => JSON.parse(script.textContent).imports));
         const key = Object.keys(imports).find(value => value.endsWith('/contextual-feedback/selector.js'));

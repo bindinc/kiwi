@@ -152,7 +152,20 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
         assert.equal(state.report.environment.browser, 'firefox'); assert.equal(state.report.environment.native, true);
         assert.ok(state.nativeKernel); assert.equal(touch, false);
         const invoker = page.locator('#editCustomerBtn');
-        const focus = await keyboardFocus(page, invoker, 'after');
+        const focus = await keyboardFocus(page, invoker, 'after', async stage => {
+            const focusStage = await invoker.evaluate(node => {
+                const active = document.activeElement;
+                const publicIds = ['editCustomerBtn', 'resendMagazineBtn', 'editorialComplaintBtn', 'identifyCallerBtn',
+                    'agentProfileTrigger', 'searchPostalCode', 'searchHouseNumber'];
+                const publicTags = ['BODY', 'BUTTON', 'INPUT', 'A', 'SELECT', 'TEXTAREA', 'SUMMARY', 'DIALOG'];
+                return { documentFocused: document.hasFocus(), targetConnected: node.isConnected,
+                    targetFocused: active === node, targetFocusVisible: node.matches(':focus-visible'),
+                    targetFocusWithin: node.matches(':focus-within'), activeIsBody: active === document.body,
+                    activeId: publicIds.includes(active?.id) ? active.id : null,
+                    activeTag: publicTags.includes(active?.tagName) ? active.tagName : null };
+            });
+            await observe(page, state, 'records-after-keyboard-editor-' + stage, ['#editCustomerBtn'], { focusStage });
+        });
         const geometry = await invoker.evaluate(node => {
             const rect = node.getBoundingClientRect();
             const center = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
@@ -356,13 +369,16 @@ export function checkAfterObservation(name, data, detail, state) {
     }
 }
 
-async function keyboardFocus(page, locator, phase) {
+async function keyboardFocus(page, locator, phase, observeFocusStage = null) {
     await locator.scrollIntoViewIfNeeded();
     const before = await locator.boundingBox();
     const layoutBefore = phase === 'after' ? await locator.evaluate(node => ({ left: node.offsetLeft, top: node.offsetTop, width: node.offsetWidth, height: node.offsetHeight })) : null;
     await locator.focus();
+    if (observeFocusStage) await observeFocusStage('setup-focus');
     await page.keyboard.press('Tab');
+    if (observeFocusStage) await observeFocusStage('after-tab');
     await page.keyboard.press('Shift+Tab');
+    if (observeFocusStage) await observeFocusStage('after-shift-tab');
     const focused = await locator.evaluate(node => node === document.activeElement);
     assert.ok(focused, 'Actual Tab/Shift+Tab must return to the requested real control.');
     return { before, after: await locator.boundingBox(), boundary: 'Explicit setup focus followed by genuine native Tab/Shift+Tab; no forced click or simulated focus CSS.',
