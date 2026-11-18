@@ -125,7 +125,11 @@ export function finalNativeDateFocusBinding(release) {
     return { observedSource: { path: proof.observedSource.path, sha256: proof.observedSource.sha256 },
         entries: proof.entries.map(({ paired, review }) => ({
             paired: { path: paired.path, sha256: paired.sha256 }, review: { path: review.path, sha256: review.sha256 }
-        })) };
+        })),
+        ...(proof.nativeOS200 ? { nativeOS200: {
+            paired: { path: proof.nativeOS200.paired.path, sha256: proof.nativeOS200.paired.sha256 },
+            review: { path: proof.nativeOS200.review.path, sha256: proof.nativeOS200.review.sha256 }
+        } } : {}) };
 }
 
 function releaseId(release) {

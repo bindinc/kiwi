@@ -454,3 +454,23 @@ test('retained callback fixture owns a fresh authenticated document and preserve
     } finally { await rm(directory, { recursive: true, force: true });
         await rmdir(parent).catch(error => { if (error.code !== 'ENOTEMPTY') throw error; }); }
 });
+
+
+test('optional nativeOS200 proof remains an exact owner binding without changing the old absent-field shape', () => {
+    const value = release(); value.reference.nativeDateFocus = { observedSource: artifact('a'), entries: [{ paired: artifact('b'), review: artifact('c') }] };
+    const old = ownerProof(value); old.releaseId = finalReleaseIdentity(value);
+    old.bindings.nativeDateFocus = structuredClone(value.reference.nativeDateFocus);
+    validateOwnerVerification(old, value, old.releaseId);
+    value.reference.nativeDateFocus.nativeOS200 = { paired: artifact('d'), review: artifact('e') };
+    const bound = ownerProof(value); bound.releaseId = finalReleaseIdentity(value);
+    bound.bindings.nativeDateFocus = structuredClone(value.reference.nativeDateFocus);
+    validateOwnerVerification(bound, value, bound.releaseId);
+    assert.throws(() => validateOwnerVerification(old, value, old.releaseId));
+    for (const mutate of [proof => { proof.nativeOS200.paired.sha256 = token('f'); },
+        proof => { proof.nativeOS200.paired.path += '.changed'; }, proof => { proof.nativeOS200.review.sha256 = token('f'); },
+        proof => { proof.nativeOS200.review.path += '.changed'; }, proof => { delete proof.nativeOS200; }]) {
+        const changed = structuredClone(value); mutate(changed.reference.nativeDateFocus);
+        assert.notEqual(finalReleaseIdentity(changed), bound.releaseId);
+        assert.throws(() => validateOwnerVerification(bound, changed, bound.releaseId));
+    }
+});

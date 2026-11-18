@@ -290,3 +290,21 @@ test('optional native DATE evidence changes invalidate a previously verified rel
     assert.equal(finalReleaseIdentity(removed.release), legacyIdentity);
     assert.throws(() => summarizeFinalAudit(removed), /source verification differs/);
 });
+
+
+test('nested optional nativeOS200 proof participates in the existing release identity', async () => {
+    const { options } = setup();
+    options.release.reference.nativeDateFocus = { observedSource: artifact('source'), entries: [{ paired: artifact('pair'), review: artifact('review') }] };
+    const oldIdentity = finalReleaseIdentity(options.release);
+    const nativeOS200 = { paired: artifact('native-os200-pair'), review: artifact('native-os200-review') };
+    options.release.reference.nativeDateFocus.nativeOS200 = nativeOS200;
+    const adapter = createFinalAuditAdapter(options); await adapter.runCell(firstId);
+    const registry = adapter.snapshot(), identity = finalReleaseIdentity(registry.release); assert.notEqual(identity, oldIdentity);
+    for (const mutate of [proof => { proof.nativeOS200.paired.sha256 = 'c'.repeat(64); },
+        proof => { proof.nativeOS200.paired.path += '.changed'; }, proof => { proof.nativeOS200.review.sha256 = 'c'.repeat(64); },
+        proof => { proof.nativeOS200.review.path += '.changed'; }, proof => { delete proof.nativeOS200; }]) {
+        const changed = structuredClone(registry); mutate(changed.release.reference.nativeDateFocus);
+        assert.notEqual(finalReleaseIdentity(changed.release), identity);
+        assert.throws(() => summarizeFinalAudit(changed), /source verification differs/);
+    }
+});

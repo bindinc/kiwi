@@ -126,7 +126,7 @@ export function inputProfileRecordsFixture(sourceRoot) {
     return fixture;
 }
 
-export async function inspectRecordListsAfter(page, state, { observe, control, mutationSection = 'email', validityLabel = 'Geldigheid niet beschikbaar', touch = false, openNativeReadonlyEditor = null }) {
+export async function inspectRecordListsAfter(page, state, { observe, control, mutationSection = 'email', validityLabel = 'Geldigheid niet beschikbaar', touch = false, openNativeReadonlyEditor = null, nativeKeyboardOpening = false }) {
     assert.equal(state.phase, 'after');
     const fixture = state.recordFixture;
     await page.evaluate(async customer => window.kiwiCustomerDetailSlice.selectCustomer(customer.id,
@@ -147,6 +147,28 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
         assert.equal(state.phase, 'after'); assert.equal(state.suite, 'native-operational');
         assert.equal(state.report.environment.browser, 'firefox'); assert.ok(state.nativeKernel);
         await openNativeReadonlyEditor();
+    } else if (nativeKeyboardOpening) {
+        assert.equal(state.suite, 'records-after-component'); assert.equal(fixture.componentOnly, true);
+        assert.equal(state.report.environment.browser, 'firefox'); assert.equal(state.report.environment.native, true);
+        assert.ok(state.nativeKernel); assert.equal(touch, false);
+        const invoker = page.locator('#editCustomerBtn');
+        const focus = await keyboardFocus(page, invoker, 'after');
+        const geometry = await invoker.evaluate(node => {
+            const rect = node.getBoundingClientRect();
+            const center = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+            return { focused: node === document.activeElement, focusVisible: node.matches(':focus-visible'), disabled: node.disabled,
+                ownedCenter: Boolean(center && node.contains(center)),
+                bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height, right: rect.right, bottom: rect.bottom },
+                viewport: { width: innerWidth, height: innerHeight } };
+        });
+        assert.ok(geometry.focused && geometry.focusVisible && !geometry.disabled && geometry.ownedCenter,
+            'Native Firefox editor invoker must retain genuine keyboard focus and own its visible center.');
+        const bounds = geometry.bounds;
+        assert.ok(bounds.width > 0 && bounds.height > 0 && bounds.x >= 0 && bounds.y >= 0
+            && bounds.right <= geometry.viewport.width && bounds.bottom <= geometry.viewport.height,
+        'Native Firefox editor invoker must fit the actual zoomed viewport before Enter.');
+        await observe(page, state, 'records-after-keyboard-editor-invoker', ['#editCustomerBtn'], { focus, geometry });
+        await invoker.press('Enter');
     } else if (touch) await page.locator('#editCustomerBtn').tap(); else await page.locator('#editCustomerBtn').click();
     const dialog = page.locator('.customer-editor[open]');
     await dialog.locator('[data-customer-section=bank] .customer-editor-record-action').first().waitFor();

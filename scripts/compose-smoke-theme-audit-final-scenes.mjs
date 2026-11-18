@@ -598,7 +598,8 @@ async function genderAliases(handle) {
 async function customerScene(handle) {
     await criterion(handle, 'long-record-and-editable-editor', 'Accepted all-records renderer with local pending/error and retained raw writable draft', async () => {
         await handle.helpers.feedback.inspectRecordListsAfter(handle.page, handle.state, {
-            observe: handle.helpers.operational.observeOperational, control: handle.control, mutationSection: 'person' });
+            observe: handle.helpers.operational.observeOperational, control: handle.control, mutationSection: 'person',
+            nativeKeyboardOpening: handle.descriptor.native === true && handle.driver.browserName === 'firefox' });
         handle.child.check('Only the explicitly armed component write was locally rejected', handle.control.recordMutationGate.used(), true, metaFor(handle), 10);
         await closeCustomerEditor(handle);
     });
@@ -1065,6 +1066,10 @@ export async function createFinalSceneHooks({ release, verification }) {
         scenes: Object.fromEntries(finalAuditAreas.map(area => [area.id, async handle => runArea(handle.owned || handle, area.id)])),
         async inspectNative(handle, { group }) {
             const owned = handle.owned || handle; assert.ok(nativeAreas[group], 'Unknown native group.');
+            if (driver.contract?.nativeDateFocus?.nativeOS200 && group === driver.contract.nativeDateFocus.nativeOS200.group) {
+                owned.child.contract = driver.contract;
+                owned.state.referenceContract = driver.contract;
+            }
             owned.state.viewport = await owned.page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
             for (const area of nativeAreas[group]) {
                 if (area === 'A13') {

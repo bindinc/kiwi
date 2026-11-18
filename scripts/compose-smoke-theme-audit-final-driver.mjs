@@ -242,7 +242,95 @@ export async function verifyFinalNativeDateFocus(release, source) {
     return { kind: 'final-only-reference-bound-native-calendar-internal-focus', sourceCommit: release.source.commit,
         referenceSha256: refinedReference, browserVersion: '157.0.8103.38', entries,
         observedSource: proof.observedSource, originalHostGate: 'failed; preserved historical observation',
-        visualBoundary: 'Each current native-focus capture still needs independent whole-image review.' };
+        visualBoundary: 'Each current native-focus capture still needs independent whole-image review.',
+        ...(proof.nativeOS200 ? { nativeOS200: await verifyFinalNativeOS200DateFocus(proof.nativeOS200, source, release.source.commit) } : {}) };
+}
+
+// One physical native observation, independent of the ordinary157/DPR1 proof.
+export async function verifyFinalNativeOS200DateFocus(proof, source, sourceCommit) {
+    assert.deepEqual(Object.keys(proof).sort(), ['paired', 'review']);
+    const pair = JSON.parse(await artifact(proof.paired, 'Paired actual OS200 DATE observation'));
+    const review = JSON.parse(await artifact(proof.review, 'Independent actual OS200 DATE classification'));
+    assert.equal(review.marker, 'theme_audit'); assert.equal(pair.marker, 'theme_audit');
+    assert.equal(review.status, 'MATCHED_REFERENCE_NATIVE_OS200_INTERNAL_FOCUS_BEHAVIOR; ORIGINAL_A05_GATE_REMAINS_FAILED');
+    assert.ok(typeof review.reviewer === 'string' && review.reviewer.trim());
+    assert.deepEqual(review.pairedArtifact, proof.paired);
+    assert.equal(review.applicationArea, 'A05'); assert.equal(review.nativeGroup, 'subscription-service-native-date');
+    assert.deepEqual(review.applicationReport, pair.application.report);
+    assert.deepEqual(review.referenceReport, pair.referenceReport);
+    assert.equal(review.observedApplicationSource.sha256, '519893b7821d607f8d71efe35d5bbbf3aef9dc0cd53a231e1d0e05670ac1b3d4');
+    const observed = JSON.parse(await artifact(review.observedApplicationSource, 'Native24 complete UI source'));
+    assert.equal(observed.head, '7b0f734f71a38ae8363ecdef27bc829f8d774a7b');
+    assert.equal(observed.productionCount, 216); assert.equal(observed.source.length, 216);
+    assert.equal(observed.referenceSha256, refinedReference);
+    assert.deepEqual(canonical(source.source), canonical(observed.source), 'Native OS200 DATE requires the exact observed216 UI bodies.');
+    for (const entry of source.source) {
+        const bytes = await physicalFile(path.join(source.worktree, entry.path));
+        assert.equal(bytes.length, entry.bytes); assert.equal(sha256(bytes), entry.sha256);
+    }
+    const application = JSON.parse(await artifact(pair.application.report, 'Original failed native24 report'));
+    const reference = JSON.parse(await artifact(pair.referenceReport, 'Actual OS200 showcase report'));
+    const browser = { name: 'chromium', version: '158.0.8127.36', executable: '/usr/bin/google-chrome' };
+    assert.deepEqual(review.browser, browser); assert.deepEqual(reference.browser, browser);
+    assert.equal(application.environment.browser, browser.name); assert.equal(application.environment.browserVersion, browser.version);
+    assert.equal(application.application.commit, observed.head); assert.equal(pair.application.sourceCommit, observed.head);
+    assert.equal(pair.application.browserVersion, browser.version);
+    await artifact(reference.reference, 'Unchanged approved showcase body');
+    assert.equal(reference.reference.sha256, refinedReference); assert.equal(reference.referenceSha256After, refinedReference);
+    assert.equal(reference.status, 'observed-awaiting-physical-pair-and-independent-classification');
+    assert.deepEqual(reference.errors, []); assert.deepEqual(reference.initialFormValues, reference.finalFormValues);
+    const before = { innerWidth: 1050, innerHeight: 1093, outerWidth: 1050, outerHeight: 1180, dpr: 1, pinchScale: 1 };
+    const zoomed = { innerWidth: 525, innerHeight: 546, outerWidth: 1050, outerHeight: 1180, dpr: 2, pinchScale: 1 };
+    const geometry = { before, zoomed, increments: 5, nativeRatioVerified: true, reset: before, resetVerified: true };
+    assert.deepEqual(reference.geometry, geometry); assert.deepEqual(review.nativeGeometry, geometry);
+    assert.deepEqual(pair.application.beforeGeometry, before); assert.deepEqual(pair.application.zoomedGeometry, zoomed);
+    assert.equal(pair.resetVerified, true);
+    const zoom = application.checks.find(check => check.name === 'native 200% browser zoom verified'
+        && JSON.stringify(check.zoomed) === JSON.stringify(zoomed));
+    assert.ok(zoom && zoom.actual === true && zoom.expected === true && zoom.status === 'verified');
+    assert.deepEqual(zoom.before, before); assert.equal(zoom.increments, 5);
+    const prefix = 'subscription-service-native-date-';
+    const keyboard = application.checks.find(check => check.name === prefix + 'actual native Tab traverses subscription controls to Cancel within the visible viewport');
+    assert.ok(keyboard && keyboard.actual === false && keyboard.expected === true && keyboard.status === 'deviation');
+    assert.equal(keyboard.native, true); assert.equal(keyboard.locale, 'nl'); assert.equal(keyboard.prefix, prefix);
+    assert.deepEqual(keyboard.viewport, { width: 525, height: 546 });
+    assert.equal(review.applicationStopIndex, 55); assert.equal(review.referenceStopIndex, 3);
+    const stop = keyboard.path[55];
+    assert.deepEqual(stop, pair.application.rawDateStop55); assert.deepEqual(stop, review.rawApplicationStop);
+    assert.equal(stop.id, 'subStartDate'); assert.equal(stop.tag, 'INPUT'); assert.equal(stop.type, 'date');
+    assert.equal(stop.focused, false); assert.equal(stop.focusVisible, false); assert.equal(stop.focusWithin, true);
+    assert.equal(stop.outlineStyle, 'none'); assert.equal(stop.outlineWidth, 3);
+    assert.equal(stop.withinForm, true); assert.equal(stop.reachable, true); assert.equal(stop.cancel, false);
+    assert.equal(keyboard.path[0].id, 'werfsleutelInput'); assert.equal(keyboard.path.at(-1).cancel, true);
+    assert.equal(keyboard.path.filter(item => !item.focusVisible).length, 1);
+    assert.ok(keyboard.path.every((item, step) => item.withinForm && item.reachable
+        && (step === 55 || item.focused && item.focusVisible && item.focusWithin)));
+    const referenceStop = reference.steps[3];
+    assert.equal(reference.internalStops.length, 1); assert.deepEqual(reference.internalStops, pair.internalStops);
+    assert.deepEqual(reference.internalStops[0], referenceStop);
+    assert.deepEqual(referenceStop.state.active, { id: 'demo-start-date', tag: 'INPUT', type: 'date' });
+    assert.equal(referenceStop.state.host.focused, false); assert.equal(referenceStop.state.host.focusVisible, false);
+    assert.equal(referenceStop.state.host.focusWithin, true); assert.equal(referenceStop.state.host.outlineStyle, 'none');
+    assert.deepEqual(referenceStop.state.viewport, { width: 525, height: 546, dpr: 2, pinchScale: 1 });
+    const capture = application.captures.find(item => item.name === prefix + 'native-200-subscription-native-date-focus-step-55');
+    assert.ok(capture && capture.captureMethod === 'actual 1600x1200 Xvfb desktop via ffmpeg x11grab');
+    assert.equal(pair.application.image.path, path.join(path.dirname(pair.application.report.path), capture.filename));
+    assert.deepEqual([capture.geometry.viewportWidth, capture.geometry.viewportHeight,
+        capture.geometry.devicePixelRatio, capture.geometry.visualViewportScale], [525, 546, 2, 1]);
+    const referenceCapture = reference.captures.find(item => item.name === 'reference-date-stop-3');
+    assert.deepEqual(referenceCapture.image, referenceStop.image); assert.deepEqual(referenceCapture.geometry, zoomed);
+    assert.equal(referenceCapture.captureMethod, 'Actual1600x1200wholeX11desktop, no crop or protocolzoom substitution.');
+    assert.deepEqual(review.personallyViewedWholeImages, [pair.application.image, referenceStop.image]);
+    for (const image of review.personallyViewedWholeImages) {
+        const png = await artifact(image, 'Independently viewed whole nativeOS200 image');
+        assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+        assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1600, 1200]);
+    }
+    return { kind: 'physical-reference-bound-native-OS200-calendar-internal-focus', sourceCommit,
+        area: 'A05', group: 'subscription-service-native-date', browserVersion: browser.version,
+        geometry, step: 55, applicationStop: stop, observedSource: review.observedApplicationSource,
+        paired: proof.paired, review: proof.review, originalHostGate: 'failed; preserved historical observation',
+        visualBoundary: 'Every future current native whole image, full route and100% reset/task identity still require independent acceptance.' };
 }
 
 export async function verifyFinalRelease(release, { sourceRoot, toolingRoot, baseUrl }) {
@@ -412,7 +500,10 @@ export function createFinalDriver(configuration, driver) {
         async prepareNative(page, context, group, contract) {
             assert.ok(finalNativeGroups.includes(group));
             assert.ok(contract, 'Native preparation needs its measured reference contract.');
-            driver.contract = contract;
+            const verifiedNativeDate = configuration.verification?.nativeDateFocus;
+            const nativeContract = measured => verifiedNativeDate?.nativeOS200 && group === verifiedNativeDate.nativeOS200.group
+                ? { ...measured, nativeDateFocus: verifiedNativeDate } : measured;
+            driver.contract = nativeContract(contract);
             const descriptor = { id: group, locale: 'nl', role: 'kiwi-admin', viewport: { width: 1440, height: 1000 },
                 hasTouch: false, reducedMotion: 'reduce', native: true };
             let handle;
@@ -435,7 +526,7 @@ export function createFinalDriver(configuration, driver) {
                 },
                 inspect(geometry) {
                     assert.equal(verified, true, 'Actual native session proof must precede geometry and scene inspection.');
-                    driver.contract = geometry.contract;
+                    driver.contract = nativeContract(geometry.contract);
                     return hooks.inspectNative(handle, { driver, release, group, geometry });
                 },
                 finish: () => hooks.finishSession(handle, { driver, release })

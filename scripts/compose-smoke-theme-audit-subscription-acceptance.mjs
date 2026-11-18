@@ -173,8 +173,13 @@ export async function inspectSubscriptionKeyboard(page, driver, meta) {
             const image = await driver.capture(page, (meta.native ? 'native-200-' : 'after-') + 'subscription-native-date-focus-step-' + step, undefined,
                 nativeContract ? 'Actual native DATE internal Tab stop; unchanged host state and whole image. Final classification still requires independent current-image review.'
                     : 'Actual native DATE internal Tab stop diagnostic; full focus path and computed host outline recorded, no native-focus exemption.');
-            if (nativeContract && typeof image === 'string') nativeFocusImages.push({ step, path: image,
-                sha256: createHash('sha256').update(await readFile(image)).digest('hex') });
+            if (nativeContract && typeof image === 'string') {
+                const bytes = await readFile(image);
+                nativeFocusImages.push({ step, path: image, sha256: createHash('sha256').update(bytes).digest('hex'),
+                    ...(meta.native && nativeContract.nativeOS200 ? { capture: driver.report.captures?.at(-1),
+                        wholeNativeDesktop: bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a'
+                            && bytes.length >= 24 && bytes.readUInt32BE(16) === 1600 && bytes.readUInt32BE(20) === 1200 } : {}) });
+            }
         }
         if (item.cancel || !item.withinForm) break;
     }
@@ -202,6 +207,32 @@ export async function inspectSubscriptionKeyboard(page, driver, meta) {
             classification = { kind: 'reference-bound-native-calendar-internal-focus', step, control: '#subStartDate',
                 contract: nativeContract, actual: item, image, legacyHostFocusPassed,
                 independentCurrentWholeImageReview: 'not reviewed; visible native calendar indicator must be confirmed before cell acceptance' };
+        }
+    }
+    const nativeOS200 = nativeContract?.nativeOS200;
+    if (nativeOS200 && driver.report.slice === 10 && driver.report.phase === 'after' && meta.native === true
+        && meta.locale === 'nl' && meta.prefix === nativeOS200.group + '-'
+        && nativeOS200.area === 'A05' && nativeOS200.group === 'subscription-service-native-date'
+        && driver.report.application.commit === nativeOS200.sourceCommit
+        && driver.report.environment.native === true && driver.browserName === 'chromium'
+        && driver.report.environment.browserVersion === nativeOS200.browserVersion) {
+        const actualGeometry = await page.evaluate(() => ({ innerWidth, innerHeight, outerWidth, outerHeight,
+            dpr: devicePixelRatio, pinchScale: visualViewport?.scale }));
+        const step = nativeOS200.step, item = path[step], image = nativeFocusImages.find(image => image.step === step);
+        const nonHostStops = path.flatMap((stop, index) => stop.focusVisible ? [] : [index]);
+        const sameStop = item && Object.entries(nativeOS200.applicationStop).every(([key, value]) => JSON.stringify(item[key]) === JSON.stringify(value));
+        const otherStopsFocused = path.every((stop, index) => index === step || stop.focused && stop.focusVisible && stop.focusWithin);
+        const currentCapture = image?.capture;
+        const exactCapture = currentCapture?.captureMethod === 'actual 1600x1200 Xvfb desktop via ffmpeg x11grab'
+            && currentCapture.name === meta.prefix + 'native-200-subscription-native-date-focus-step-' + step
+            && currentCapture.geometry?.viewportWidth === 525 && currentCapture.geometry?.viewportHeight === 546
+            && currentCapture.geometry?.devicePixelRatio === 2 && currentCapture.geometry?.visualViewportScale === 1;
+        if (step === 55 && routePassed && otherStopsFocused && nonHostStops.length === 1 && nonHostStops[0] === step
+            && sameStop && JSON.stringify(actualGeometry) === JSON.stringify(nativeOS200.geometry.zoomed)
+            && image?.wholeNativeDesktop && exactCapture) {
+            classification = { kind: 'physical-reference-bound-native-OS200-calendar-internal-focus', step, control: '#subStartDate',
+                contract: nativeOS200, actual: item, image, legacyHostFocusPassed,
+                independentCurrentWholeImageReview: 'not reviewed; current wholeX11 native indicator, full route and100% reset/task identity remain required' };
         }
     }
     const finalClassification = Boolean(nativeContract);

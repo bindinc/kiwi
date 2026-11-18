@@ -1,3 +1,7 @@
+import { createHash } from 'node:crypto';
+import * as nodePath from 'node:path';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
@@ -548,4 +552,188 @@ test('actual native diagnostic snapshots changing name and stack getters once be
     ] });
     assert.equal(nameReads, 1); assert.equal(stackReads, 1);
     assert.equal(JSON.stringify(observed).includes(marker), false);
+});
+
+test('optional nativeOS200 proof binds release identity and preserves legacy native contract identity when absent', async () => {
+    const measured = contract(), group = 'subscription-service-native-date';
+    for (const verified of [undefined, { nativeDateFocus: { entries: [] } },
+        { nativeDateFocus: { entries: [], nativeOS200: { group, syntheticUnitOnly: true } } }]) {
+        const h = setup({ verification: verified });
+        let preparedContract;
+        const prepare = h.hooks.prepareSession;
+        h.hooks.prepareSession = async (...args) => { preparedContract = h.driver.contract; return prepare(...args); };
+        h.hooks.inspectNative = async (_handle, { geometry }) => {
+            if (verified?.nativeDateFocus?.nativeOS200) {
+                assert.equal(h.driver.contract.nativeDateFocus, verified.nativeDateFocus);
+                for (const key of Object.keys(geometry.contract)) assert.equal(h.driver.contract[key], geometry.contract[key]);
+            } else assert.equal(h.driver.contract, geometry.contract);
+        };
+        const context = await h.driver.newFinalContext({ ...descriptor(), native: true });
+        const native = await h.bridge.prepareNative(await context.newPage(), context, group, measured);
+        if (verified?.nativeDateFocus?.nativeOS200) {
+            assert.notEqual(preparedContract, measured);
+            assert.equal(preparedContract.nativeDateFocus, verified.nativeDateFocus);
+        } else assert.equal(preparedContract, measured, 'No optional OS200 proof means exact old contract object.');
+        await native.login();
+        await native.inspect({ contract: measured });
+        if (verified?.nativeDateFocus?.nativeOS200) assert.equal(h.driver.contract.nativeDateFocus, verified.nativeDateFocus);
+        else assert.equal(h.driver.contract, measured);
+        assert.equal(Object.hasOwn(measured, 'nativeDateFocus'), false);
+        await native.finish(); await context.close();
+    }
+});
+
+test('physical nativeOS200 verifier retains exact metadata, source, focus, geometry and image boundaries', async () => {
+    // Actual verifier body with synthetic artifact I/O seams, never physical or visual acceptance.
+    const source = readFileSync(new URL('../../scripts/compose-smoke-theme-audit-final-driver.mjs', import.meta.url), 'utf8');
+    const start = source.indexOf('export async function verifyFinalNativeOS200DateFocus(');
+    const end = source.indexOf('\nexport async function verifyFinalRelease(', start);
+    const body = source.slice(start, end).replace('export ', '');
+    const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+    function model() {
+        const before = { innerWidth: 1050, innerHeight: 1093, outerWidth: 1050, outerHeight: 1180, dpr: 1, pinchScale: 1 };
+        const zoomed = { innerWidth: 525, innerHeight: 546, outerWidth: 1050, outerHeight: 1180, dpr: 2, pinchScale: 1 };
+        const geometry = { before, zoomed, increments: 5, nativeRatioVerified: true, reset: before, resetVerified: true };
+        const pin = name => ({ path: '/synthetic-native-unit/' + name, sha256: hash });
+        const proof = { paired: pin('pair'), review: pin('review') };
+        const observedPin = { ...pin('source'), sha256: '519893b7821d607f8d71efe35d5bbbf3aef9dc0cd53a231e1d0e05670ac1b3d4' };
+        const browser = { name: 'chromium', version: '158.0.8127.36', executable: '/usr/bin/google-chrome' };
+        const image = pin('application.png'), referenceImage = pin('reference.png');
+        const appReport = pin('application'), refReport = pin('reference');
+        const path = Array.from({ length: 58 }, (_, index) => ({ id: index === 0 ? 'werfsleutelInput' : index === 55 ? 'subStartDate' : 'unit-' + index,
+            tag: 'INPUT', type: index === 55 ? 'date' : 'text', focused: index !== 55, focusVisible: index !== 55, focusWithin: true,
+            withinForm: true, reachable: true, cancel: index === 57, outlineStyle: index === 55 ? 'none' : 'solid', outlineWidth: index === 55 ? 3 : 2 }));
+        const stop = path[55];
+        const observed = { head: '7b0f734f71a38ae8363ecdef27bc829f8d774a7b', productionCount: 216,
+            referenceSha256: release().reference.refined.sha256,
+            source: Array.from({ length: 216 }, (_, index) => {
+                const bytes = Buffer.from('Synthetic source body ' + index);
+                return { path: 'assets/unit-' + index, sha256: digest(bytes), bytes: bytes.length };
+            }) };
+        const prefix = 'subscription-service-native-date-';
+        const capture = { name: prefix + 'native-200-subscription-native-date-focus-step-55', filename: 'application.png',
+            captureMethod: 'actual 1600x1200 Xvfb desktop via ffmpeg x11grab',
+            geometry: { viewportWidth: 525, viewportHeight: 546, devicePixelRatio: 2, visualViewportScale: 1 } };
+        const application = { environment: { browser: browser.name, browserVersion: browser.version }, application: { commit: observed.head },
+            checks: [{ name: 'native 200% browser zoom verified', actual: true, expected: true, status: 'verified', before, zoomed, increments: 5 },
+                { name: prefix + 'actual native Tab traverses subscription controls to Cancel within the visible viewport', actual: false, expected: true,
+                    status: 'deviation', native: true, locale: 'nl', prefix, viewport: { width: 525, height: 546 }, path }], captures: [capture] };
+        const referenceStop = { index: 3, state: { active: { id: 'demo-start-date', tag: 'INPUT', type: 'date' },
+            host: { focused: false, focusVisible: false, focusWithin: true, outlineStyle: 'none' },
+            viewport: { width: 525, height: 546, dpr: 2, pinchScale: 1 } }, image: referenceImage };
+        const reference = { browser, reference: release().reference.refined, referenceSha256After: release().reference.refined.sha256,
+            status: 'observed-awaiting-physical-pair-and-independent-classification', errors: [], initialFormValues: [], finalFormValues: [], geometry,
+            steps: [null, null, null, referenceStop], internalStops: [referenceStop],
+            captures: [{ name: 'reference-date-stop-3', image: referenceImage, geometry: zoomed,
+                captureMethod: 'Actual1600x1200wholeX11desktop, no crop or protocolzoom substitution.' }] };
+        const pair = { marker: 'theme_audit', application: { report: appReport, image, browserVersion: browser.version,
+            sourceCommit: observed.head, rawDateStop55: stop, beforeGeometry: before, zoomedGeometry: zoomed }, referenceReport: refReport,
+            resetVerified: true, internalStops: [referenceStop] };
+        const review = { marker: 'theme_audit', status: 'MATCHED_REFERENCE_NATIVE_OS200_INTERNAL_FOCUS_BEHAVIOR; ORIGINAL_A05_GATE_REMAINS_FAILED',
+            reviewer: 'Synthetic unit reviewer', pairedArtifact: proof.paired, applicationArea: 'A05', nativeGroup: 'subscription-service-native-date',
+            applicationReport: appReport, referenceReport: refReport, observedApplicationSource: observedPin, browser,
+            applicationStopIndex: 55, referenceStopIndex: 3, rawApplicationStop: stop, nativeGeometry: geometry,
+            personallyViewedWholeImages: [image, referenceImage] };
+        const png = Buffer.alloc(24); Buffer.from('89504e470d0a1a0a', 'hex').copy(png); png.writeUInt32BE(1600, 16); png.writeUInt32BE(1200, 20);
+        const artifacts = new Map([[proof.paired.path, pair], [proof.review.path, review], [observedPin.path, observed],
+            [appReport.path, application], [refReport.path, reference], [image.path, png], [referenceImage.path, png],
+            [reference.reference.path, Buffer.from('Synthetic immutable reference I/O seam')]]);
+        const state = { proof, observed, application, reference, pair, review, png, source: { worktree: '/synthetic-ui', source: structuredClone(observed.source) } };
+        state.run = async () => {
+            const realmAssert = { ...assert, deepEqual(a, b, message) { assert.deepEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)), message); } };
+            const verify = runInNewContext('(' + body + ')', { assert: realmAssert, path: nodePath, Buffer,
+                refinedReference: release().reference.refined.sha256, sha256: digest,
+                canonical: entries => entries.map(({ path, sha256, bytes }) => ({ path, sha256, bytes })).sort((a, b) => a.path.localeCompare(b.path)),
+                physicalFile: async filename => Buffer.from('Synthetic source body ' + filename.split('unit-')[1]),
+                artifact: async item => {
+                    assert.ok(artifacts.has(item.path));
+                    const declared = item.path === observedPin.path ? observedPin.sha256 : item.path === reference.reference.path ? reference.reference.sha256 : hash;
+                    assert.equal(item.sha256, declared, 'Exact artifact pin must be passed to physical I/O.');
+                    const value = artifacts.get(item.path); return Buffer.isBuffer(value) ? value : Buffer.from(JSON.stringify(value));
+                } });
+            return verify(state.proof, state.source, commit);
+        };
+        return state;
+    }
+    const good = await model().run();
+    assert.equal(good.step, 55); assert.equal(good.applicationStop.focusVisible, false);
+    const negatives = [
+        m => { m.proof.extra = true; }, m => { m.proof.review.sha256 = 'c'.repeat(64); },
+        m => { m.review.status = 'accepted'; }, m => { m.review.reviewer = ''; }, m => { m.review.applicationArea = 'A08'; },
+        m => { m.review.nativeGroup = 'article-cart-custom-calendar'; }, m => { m.observed.head = commit; },
+        m => { m.source.source[0].sha256 = hash; }, m => { m.observed.productionCount = 215; },
+        m => { m.application.environment.browserVersion = '157.0.8103.38'; }, m => { m.application.application.commit = commit; },
+        m => { m.reference.browser = { ...m.reference.browser, name: 'firefox' }; },
+        m => { m.reference.geometry = { ...m.reference.geometry, resetVerified: false }; },
+        m => { m.reference.geometry = { ...m.reference.geometry, nativeRatioVerified: false }; },
+        m => { m.reference.finalFormValues.push('Changed source value'); },
+        m => { m.reference.steps[3].state.viewport.dpr = 1; }, m => { m.reference.steps[3].state.viewport.pinchScale = 2; },
+        m => { m.application.checks[1].path[2].focused = false; }, m => { m.application.checks[1].path[2].focusVisible = false; },
+        m => { m.application.checks[1].path[2].reachable = false; }, m => { m.application.checks[1].path.at(-1).cancel = false; },
+        m => { m.application.checks[1].path[55].focusWithin = false; }, m => { m.application.checks[1].path[55].focused = true; },
+        m => { m.application.captures[0].captureMethod = 'browser protocol screenshot'; },
+        m => { m.png.writeUInt32BE(1599, 16); }, m => { m.pair.application.image.sha256 = 'd'.repeat(64); }
+    ];
+    for (const mutate of negatives) { const state = model(); mutate(state); await assert.rejects(state.run()); }
+});
+
+test('current nativeOS200 classification admits only the single exact DATE internal stop with wholeX11 capture', async () => {
+    const before = { innerWidth: 1050, innerHeight: 1093, outerWidth: 1050, outerHeight: 1180, dpr: 1, pinchScale: 1 };
+    const zoomed = { innerWidth: 525, innerHeight: 546, outerWidth: 1050, outerHeight: 1180, dpr: 2, pinchScale: 1 };
+    const bounds = { x: 33, y: 253.2578125, width: 443, height: 40, right: 476, bottom: 293.2578125 };
+    const stop = { id: 'subStartDate', tag: 'INPUT', type: 'date', name: null, withinForm: true, focusVisible: false, offerToggle: false,
+        focused: false, focusWithin: true, outline: 'rgb(15, 23, 42) none 3px', outlineWidth: 3, outlineStyle: 'none', bounds,
+        viewport: { width: 525, height: 546 }, reachable: true, cancel: false };
+    const directory = await mkdtemp(nodePath.join(tmpdir(), 'theme-audit-native-unit-'));
+    const file = nodePath.join(directory, 'synthetic-native-header.png');
+    try {
+        async function run(change = {}) {
+            const png = Buffer.alloc(24); Buffer.from('89504e470d0a1a0a', 'hex').copy(png);
+            png.writeUInt32BE(change.badImage ? 100 : 1600, 16); png.writeUInt32BE(1200, 20); await writeFile(file, png);
+            let step = -1; const captured = [], checks = [];
+            const geometry = { ...zoomed, ...change.geometry };
+            const page = { locator: () => ({ focus: async () => {} }), keyboard: { press: async () => { step++; } },
+                evaluate: async probe => {
+                    const date = step === 55, cancel = step === 57;
+                    const focused = date ? Boolean(change.hostFocused) : !(change.otherFocusLoss && step === 2);
+                    const node = { id: step === 0 ? 'werfsleutelInput' : date ? change.control || 'subStartDate' : 'unit-' + step,
+                        tagName: 'INPUT', type: date ? 'date' : 'text', getAttribute: () => null, closest: () => step > 57 ? null : {},
+                        getBoundingClientRect: () => ({ ...bounds, ...(change.unreachable && step === 2 ? { x: -8 } : {}) }),
+                        matches(selector) {
+                            if (selector === ':focus-within') return !(date && change.noFocusWithin);
+                            if (selector === ':focus-visible') return date ? false : !(change.otherFocusLoss && step === 2);
+                            if (selector === ':focus') return focused;
+                            return selector === '#subscriptionForm .form-actions [data-action="close-form"]' && cancel && !change.noCancel;
+                        } };
+                    return runInNewContext('(' + probe.toString() + ')()', { document: { activeElement: node },
+                        innerWidth: geometry.innerWidth, innerHeight: geometry.innerHeight, outerWidth: geometry.outerWidth, outerHeight: geometry.outerHeight,
+                        devicePixelRatio: geometry.dpr, visualViewport: { scale: geometry.pinchScale },
+                        getComputedStyle: () => ({ outline: date ? stop.outline : 'solid', outlineWidth: date ? '3px' : '2px', outlineStyle: date ? 'none' : 'solid' }) });
+                } };
+            const nativeOS200 = { area: change.area || 'A05', group: 'subscription-service-native-date', sourceCommit: commit,
+                browserVersion: '158.0.8127.36', step: change.proofStep ?? 55, applicationStop: stop, geometry: { before, zoomed, reset: before } };
+            const driver = { browserName: change.browser || 'chromium', contract: change.noProof ? {} : { nativeDateFocus: {
+                sourceCommit: commit, browserVersion: '157.0.8103.38', entries: [], nativeOS200 } },
+                report: { slice: 10, phase: 'after', application: { commit: change.sourceCommit || commit },
+                    environment: { native: true, browserVersion: change.version || nativeOS200.browserVersion }, captures: captured,
+                    subscriptionAcceptance: { interactions: [] } },
+                painted: async () => {}, capture: async (actualPage, name) => {
+                    assert.equal(actualPage, page); captured.push({ name: (change.prefix || 'subscription-service-native-date-') + name,
+                        captureMethod: change.protocolImage ? 'browser protocol screenshot' : 'actual 1600x1200 Xvfb desktop via ffmpeg x11grab',
+                        geometry: { viewportWidth: geometry.innerWidth, viewportHeight: geometry.innerHeight, devicePixelRatio: geometry.dpr, visualViewportScale: geometry.pinchScale } });
+                    return file;
+                }, check(name, actual, expected, detail) { checks.push({ name, actual, expected, detail }); assert.equal(actual, expected, name); } };
+            await inspectSubscriptionKeyboard(page, driver, { native: true, locale: change.locale || 'nl', prefix: change.prefix || 'subscription-service-native-date-' });
+            return checks[0];
+        }
+        const accepted = await run(); assert.equal(accepted.detail.legacyHostFocusPassed, false);
+        assert.equal(accepted.detail.nativeInternalFocus.actual.focusVisible, false);
+        assert.equal(accepted.detail.nativeInternalFocus.image.sha256, createHash('sha256').update(readFileSync(file)).digest('hex'));
+        assert.match(accepted.detail.nativeInternalFocus.independentCurrentWholeImageReview, /^not reviewed/);
+        for (const options of [{ noProof: true }, { area: 'A08' }, { prefix: 'article-cart-custom-calendar-' }, { browser: 'firefox' },
+            { version: '157.0.8103.38' }, { sourceCommit: 'c'.repeat(40) }, { locale: 'en' }, { geometry: { dpr: 1 } },
+            { geometry: { pinchScale: 2 } }, { geometry: { innerWidth: 526 } }, { geometry: { outerWidth: 1051 } },
+            { otherFocusLoss: true }, { unreachable: true }, { noCancel: true }, { noFocusWithin: true }, { hostFocused: true },
+            { control: 'other-date' }, { proofStep: 54 }, { badImage: true }, { protocolImage: true }]) await assert.rejects(run(options));
+    } finally { await rm(directory, { recursive: true, force: true }); }
 });

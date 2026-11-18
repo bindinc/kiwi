@@ -675,3 +675,105 @@ test('actual native A01 search, A02 search and A02 results return hydrate the sa
     assert.equal((await h.request()).kind, 'abort', 'A fourth request is outside this finite source path.');
     assert.deepEqual(inputs.map(node => node.value), ['1231AA', '1']);
 });
+
+// Actual installed-editor orchestration and browser probes; synthetic nodes are not rendered acceptance.
+async function recordEditorOpeningHarness(options = {}) {
+    const events = [], observations = [], done = new Error('Synthetic boundary: original record checks continue after opening');
+    const rect = { x: 20, y: 40, width: 100, height: 40, right: 120, bottom: 80, ...options.bounds };
+    let focused = false, opened = false;
+    const node = { disabled: options.disabled === true, offsetLeft: 20, offsetTop: 40, offsetWidth: 100, offsetHeight: 40,
+        getBoundingClientRect: () => rect, matches: selector => selector === ':focus-visible' && focused && !options.hiddenFocus,
+        contains: target => target === node };
+    const document = { activeElement: null, elementFromPoint: () => options.covered ? {} : node,
+        querySelector: selector => { assert.equal(selector, '#customerName'); return { textContent: 'Synthetic990970' }; } };
+    const customer = { id: 990970, personId: '990970', credentialKey: 'theme-audit-records-component-2' };
+    const window = { currentCustomer: customer, kiwiCustomerDetailSlice: { selectCustomer: async (id, detail) => {
+        assert.equal(id, customer.id); assert.equal(detail.sourceCustomer, customer); assert.equal(detail.requireFresh, true); events.push('fresh-source-read');
+    } }, kiwiCustomerWorkSession: { getRequestContext: () => ({ customerReference: customer }) } };
+    const realm = { document, window, innerWidth: 720, innerHeight: 500 };
+    const evaluate = async (callback, argument) => vm.runInNewContext('(' + callback.toString() + ')(argument)', { ...realm, argument });
+    const invoker = { async scrollIntoViewIfNeeded() { events.push('scroll-invoker'); }, async boundingBox() { return rect; },
+        async focus() { document.activeElement = node; focused = true; events.push('setup-focus'); },
+        async evaluate(callback) { return evaluate(callback, node); },
+        async press(key) { assert.equal(key, 'Enter'); assert.equal(document.activeElement, node); assert.equal(focused, true); opened = true; events.push('Enter'); },
+        async click() { events.push('pointer'); if (options.rejectPointer) throw new Error('Synthetic reproduced native Firefox pointer timeout'); opened = true; },
+        async tap() { opened = true; events.push('touch'); } };
+    const page = { evaluate, keyboard: { async press(key) {
+        events.push(key);
+        if (key === 'Tab') { document.activeElement = {}; focused = false; }
+        else { assert.equal(key, 'Shift+Tab'); document.activeElement = options.lostFocus ? {} : node; focused = !options.lostFocus; }
+    } }, locator(selector) {
+        if (selector === '#editCustomerBtn') return invoker;
+        if (selector === '#customerDetail') return { waitFor: async () => {} };
+        if (selector === '#customerDetail [data-action=close-customer-detail]') return { count: async () => 0 };
+        if (selector === '#customerWorkSessionBar') return { isVisible: async () => true };
+        if (selector === '#customerDetail .customer-header') return { scrollIntoViewIfNeeded: async () => events.push('scroll-header') };
+        assert.equal(selector, '.customer-editor[open]'); assert.equal(opened, true, 'Original record assertions run only after genuine invoker activation.');
+        return { locator: () => ({ first: () => ({ waitFor: async () => { throw done; } }) }) };
+    } };
+    const state = { phase: 'after', suite: options.legacyReadonly ? 'native-operational' : 'records-after-component',
+        recordFixture: { customer, componentOnly: !options.legacyReadonly }, nativeKernel: {},
+        report: { environment: { browser: 'firefox', native: true } } };
+    if (options.changeState) options.changeState(state);
+    const keyboardFocus = actualFunction('keyboardFocus', {}, nativeFeedbackSource);
+    const run = actualFunction('inspectRecordListsAfter', { keyboardFocus }, nativeFeedbackSource);
+    let caught;
+    try { await run(page, state, { control: {}, nativeKeyboardOpening: options.keyboard !== false, touch: options.touch === true,
+        ...(options.legacyReadonly ? { openNativeReadonlyEditor: async () => { opened = true; events.push('original-native-readonly-callback'); } } : {}),
+        observe: async (actualPage, actualState, name, selectors, detail) => { assert.equal(actualPage, page); assert.equal(actualState, state);
+            observations.push({ name, selectors, detail }); events.push('observe-' + name); } }); } catch (error) { caught = error; }
+    return { events, observations, opened, caught, done };
+}
+
+test('native Firefox A03 opens installed editor with genuine Tab/Shift+Tab/Enter after actual invoker evidence', async () => {
+    const result = await recordEditorOpeningHarness({ rejectPointer: true });
+    assert.equal(result.caught, result.done, 'Original post-open source-record assertions remain in the execution path.');
+    assert.equal(result.opened, true);
+    assert.deepEqual(result.events, ['fresh-source-read', 'scroll-header', 'observe-records-after-header', 'scroll-invoker',
+        'setup-focus', 'Tab', 'Shift+Tab', 'observe-records-after-keyboard-editor-invoker', 'Enter']);
+    const proof = result.observations.at(-1);
+    assert.equal(proof.detail.geometry.focused, true); assert.equal(proof.detail.geometry.focusVisible, true);
+    assert.equal(proof.detail.geometry.ownedCenter, true); assert.equal(proof.detail.geometry.disabled, false);
+    assert.equal(JSON.stringify(proof.detail.focus.layoutBefore), JSON.stringify(proof.detail.focus.layoutAfter));
+});
+
+test('native keyboard editor opening rejects other suites/browsers/input/source and unusable actual invokers', async () => {
+    for (const changeState of [state => { state.suite = 'feedback'; }, state => { state.report.environment.browser = 'chromium'; },
+        state => { state.report.environment.native = false; }, state => { state.nativeKernel = null; },
+        state => { state.recordFixture.componentOnly = false; }]) {
+        const result = await recordEditorOpeningHarness({ changeState }); assert.equal(result.opened, false); assert.ok(result.caught);
+    }
+    for (const options of [{ touch: true }, { hiddenFocus: true }, { lostFocus: true }, { covered: true }, { disabled: true },
+        { bounds: { x: -1 } }, { bounds: { y: -1 } }, { bounds: { right: 721 } }, { bounds: { bottom: 501 } },
+        { bounds: { width: 0 } }, { bounds: { height: 0 } }]) {
+        const result = await recordEditorOpeningHarness(options); assert.equal(result.opened, false); assert.ok(result.caught);
+    }
+});
+
+test('ordinary pointer, coarse touch and existing nativeReadonly opening retain their original branch', async () => {
+    for (const [options, expected] of [[{ keyboard: false }, 'pointer'], [{ keyboard: false, touch: true }, 'touch'],
+        [{ legacyReadonly: true }, 'original-native-readonly-callback']]) {
+        const result = await recordEditorOpeningHarness(options); assert.equal(result.caught, result.done);
+        assert.equal(result.events.at(-1), expected); assert.equal(result.events.includes('Tab'), false);
+        assert.equal(result.observations.some(item => item.name === 'records-after-keyboard-editor-invoker'), false);
+    }
+    const original = await recordEditorOpeningHarness({ keyboard: false, rejectPointer: true });
+    assert.equal(original.opened, false); assert.match(original.caught.message, /reproduced native Firefox pointer timeout/);
+});
+
+test('actual A03 caller opts only genuine native Firefox into the editor keyboard opening', async () => {
+    for (const [native, browserName, expected] of [[true, 'firefox', true], [true, 'chromium', false], [false, 'firefox', false], [false, 'chromium', false]]) {
+        const stop = new Error('Synthetic inspect seam'), options = [];
+        const handle = { page: {}, state: {}, descriptor: { native }, driver: { browserName }, control: {},
+            helpers: { operational: { observeOperational() {} }, feedback: { inspectRecordListsAfter: async (page, state, input) => {
+                assert.equal(page, handle.page); assert.equal(state, handle.state); options.push(input); throw stop;
+            } } } };
+        const run = actualFunction('customerScene', { criterion: async (h, id, state, action) => {
+            assert.equal(id, 'long-record-and-editable-editor'); await action();
+        } });
+        await assert.rejects(run(handle), error => error === stop);
+        assert.equal(options.length, 1); assert.equal(options[0].nativeKeyboardOpening, expected);
+        assert.equal(options[0].mutationSection, 'person'); assert.equal(options[0].control, handle.control);
+        assert.equal(options[0].observe, handle.helpers.operational.observeOperational);
+    }
+});
