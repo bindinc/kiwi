@@ -147,7 +147,7 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
         assert.equal(state.suite, 'records-after-component'); assert.equal(fixture.componentOnly, true);
         assert.equal(state.report.environment.browser, 'firefox'); assert.equal(state.report.environment.native, true);
         assert.ok(state.nativeKernel); assert.equal(touch, false); assert.equal(typeof openNativeComponentEditor, 'function');
-        await openNativeComponentEditor();
+        await openNativeComponentEditor('initial');
     } else if (openNativeReadonlyEditor) {
         assert.equal(state.phase, 'after'); assert.equal(state.suite, 'native-operational');
         assert.equal(state.report.environment.browser, 'firefox'); assert.ok(state.nativeKernel);
@@ -279,14 +279,19 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
     assert.ok(['person', 'email'].includes(mutationSection));
     const region = dialog.locator(`[data-customer-section="${mutationSection}"]`);
     const actions = region.locator('.customer-editor-record-action');
-    await actions.first().click();
+    const nativePersonSelection = Boolean(openNativeComponentEditor && mutationSection === 'person');
+    if (nativePersonSelection) {
+        await actions.first().scrollIntoViewIfNeeded(); await actions.first().press('Enter');
+    } else await actions.first().click();
     const fieldName = mutationSection === 'person' ? 'salutation' : 'emailAddress';
     const field = region.locator(`input[name="${fieldName}"]`);
     const changed = mutationSection === 'person' ? 'Geachte mevrouw' : 'changed@example.invalid';
     if (mutationSection === 'person') assert.equal(await field.inputValue(), 'Geachte heer', 'Writable raw source phrase must not become the readonly display alias.');
     await field.fill(changed);
     const selectedField = await field.elementHandle();
-    await actions.first().click();
+    if (nativePersonSelection) {
+        await actions.first().scrollIntoViewIfNeeded(); await actions.first().press('Enter');
+    } else await actions.first().click();
     assert.equal(await field.evaluate((node, original) => node === original, selectedField), true, 'Selecting the same record must preserve the actual draft controls.');
     assert.equal(await field.inputValue(), changed);
     if (mutationSection === 'email') {
@@ -326,9 +331,13 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
     assert.equal(await region.locator('button[type=submit]').isEnabled(), false, 'Uncertain save must require a fresh source reload before another mutation.');
     await observe(page, state, 'records-after-component-error-' + mutationSection, ['.customer-editor[open]'],
         { exactRawPayloadVerified: true, draftRetained: true, boundary: 'One exact locally fulfilled503 component PATCH. No source write, concurrency or actual role claim.' });
-    await dialog.locator('.form-header .btn-close').click();
+    if (nativePersonSelection) {
+        await dialog.locator('.form-header .btn-close').scrollIntoViewIfNeeded();
+        await dialog.locator('.form-header .btn-close').press('Enter');
+    } else await dialog.locator('.form-header .btn-close').click();
     await dialog.waitFor({ state: 'hidden' });
-    await page.locator('#editCustomerBtn').click();
+    if (nativePersonSelection) await openNativeComponentEditor('retained');
+    else await page.locator('#editCustomerBtn').click();
     await dialog.waitFor({ state: 'visible' });
     assert.equal(await field.inputValue(), changed, 'Retained editor reopen must preserve the failed draft without another source request.');
     assert.equal(control.recordReads.size, 2);

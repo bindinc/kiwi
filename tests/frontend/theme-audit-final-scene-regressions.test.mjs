@@ -696,6 +696,22 @@ async function recordEditorOpeningHarness(options = {}) {
     const window = { currentCustomer: customer, kiwiCustomerDetailSlice: { selectCustomer: async (id, detail) => {
         assert.equal(id, customer.id); assert.equal(detail.sourceCustomer, customer); assert.equal(detail.requireFresh, true); events.push('fresh-source-read');
     } }, kiwiCustomerWorkSession: { getRequestContext: () => ({ customerReference: customer }) } };
+    const mutationEvents = [], mutationNode = { value: options.mutationSection === 'email' ? 'first@example.invalid' : 'Geachte heer' };
+    const mutationField = { inputValue: async () => mutationNode.value, fill: async value => { mutationNode.value = value; },
+        elementHandle: async () => mutationNode, evaluate: async (callback, original) => callback(mutationNode, original) };
+    const mutationAction = { scrollIntoViewIfNeeded: async () => mutationEvents.push('scroll'),
+        press: async key => { assert.equal(key, 'Enter'); mutationEvents.push('Enter'); },
+        click: async () => { mutationEvents.push('click'); if (options.mutationSection === 'email' && mutationEvents.filter(x => x === 'click').length === 2) throw done; } };
+    const mutationRegion = { locator: selector => {
+        if (selector === '.customer-editor-record-action') return { first: () => mutationAction };
+        if (selector === 'button[type=submit]' && options.completePersonMutation) return {
+            press: async key => { assert.equal(key, 'Enter'); mutationEvents.push('submit'); }, isEnabled: async () => false };
+        return mutationField;
+    } };
+    const mutationClose = { isEnabled: async () => false, scrollIntoViewIfNeeded: async () => mutationEvents.push('close-scroll'),
+        press: async key => { assert.equal(key, 'Enter'); opened = false; mutationEvents.push('close-Enter'); },
+        click: async () => { opened = false; mutationEvents.push('close-click'); } };
+
     const realm = { document, window, innerWidth: 720, innerHeight: 500 };
     const evaluate = async (callback, argument) => vm.runInNewContext('(' + callback.toString() + ')(argument)', { ...realm, argument });
     const invoker = { async scrollIntoViewIfNeeded() { events.push('scroll-invoker'); }, async boundingBox() { return rect; },
@@ -721,18 +737,37 @@ async function recordEditorOpeningHarness(options = {}) {
         if (selector === '#customerDetail [data-action=close-customer-detail]') return { count: async () => 0 };
         if (selector === '#customerWorkSessionBar') return { isVisible: async () => true };
         if (selector === '#customerDetail .customer-header') return { scrollIntoViewIfNeeded: async () => events.push('scroll-header') };
+        if (options.mutationActions && selector === '.customer-editor [id]') return { evaluateAll: async () => [] };
         assert.equal(selector, '.customer-editor[open]'); assert.equal(opened, true, 'Original record assertions run only after genuine invoker activation.');
+        if (options.mutationActions) return { locator: selector => {
+            if (selector.startsWith('[data-customer-section=bank]')) return { first: () => ({ waitFor: async () => {} }) };
+            if (selector === '.form-header .btn-close') return mutationClose;
+            if (selector === 'section button:not([disabled])') return { count: async () => 0 };
+            return mutationRegion;
+        }, waitFor: async ({ state }) => { assert.equal(opened, state === 'visible'); mutationEvents.push('dialog-' + state); } };
+
         return { locator: () => ({ first: () => ({ waitFor: async () => { throw done; } }) }) };
     } };
+    if (options.completePersonMutation) page.waitForFunction = async callback => {
+        assert.ok(callback.toString().includes('customer-editor-feedback')); mutationEvents.push('wait-response');
+    };
     const state = { phase: 'after', suite: options.legacyReadonly ? 'native-operational' : 'records-after-component',
-        recordFixture: { customer, componentOnly: !options.legacyReadonly }, nativeKernel: {},
+        recordFixture: { customer, componentOnly: !options.legacyReadonly, ...(options.mutationActions ? { id: 990970, model: { version: 'synthetic-version', sections: {} } } : {}) }, nativeKernel: {},
         report: { environment: { browser: 'firefox', native: true } } };
+    if (options.mutationActions) state.api = '/kiwi/api/v1/';
     if (options.changeState) options.changeState(state);
     const keyboardFocus = actualFunction('keyboardFocus', {}, nativeFeedbackSource);
     const run = actualFunction('inspectRecordListsAfter', { keyboardFocus }, nativeFeedbackSource);
     let caught;
-    try { await run(page, state, { control: {},
-        ...(options.physicalComponent ? { openNativeComponentEditor: async () => { opened = true; events.push('original-component-physical-callback'); } } : {}), nativeKeyboardOpening: options.keyboard !== false, touch: options.touch === true,
+    try { await run(page, state, { mutationSection: options.mutationSection || 'person',
+        control: options.mutationActions ? { recordMutationGate: { arm: input => { mutationEvents.push('arm'); assert.equal(input.pathname, '/kiwi/api/v1/persons/990970/profile');
+            assert.equal(input.credentialKey, customer.credentialKey); assert.equal(input.expectedVersion, 'synthetic-version');
+            assert.equal(JSON.stringify(input.changes), JSON.stringify({ salutation: 'Geachte mevrouw' })); if (!options.completePersonMutation) throw done;
+        }, used: () => true }, recordMutationResponse: () => {}, releaseRecordMutation: () => mutationEvents.push('release-503'), recordReads: new Set(['source', 'editing']) } : {},
+        ...(options.physicalComponent ? { openNativeComponentEditor: async phase => {
+            assert.ok(['initial', 'retained'].includes(phase)); opened = true; events.push('original-component-physical-callback');
+            if (options.completePersonMutation) mutationEvents.push('physical-' + phase);
+        } } : {}), nativeKeyboardOpening: options.keyboard !== false, touch: options.touch === true,
         prepareNativeContent: options.missingNativePrepare ? null : async () => {
             events.push('prepare-public-content');
             if (options.emptyNativePrepare) return null;
@@ -742,7 +777,7 @@ async function recordEditorOpeningHarness(options = {}) {
         observe: async (actualPage, actualState, name, selectors, detail) => { assert.equal(actualPage, page); assert.equal(actualState, state);
             observations.push({ name, selectors, detail }); events.push('observe-' + name);
             if (options.afterEnterObservationThrows && name === 'records-after-keyboard-editor-after-enter') throw new Error('Synthetic observation failure'); } }); } catch (error) { caught = error; }
-    return { events, observations, opened, caught, done, disposed, listenerCount: listeners.size };
+    return { events, observations, opened, caught, done, disposed, listenerCount: listeners.size, mutationEvents, mutationValue: mutationNode.value };
 }
 
 test('native Firefox A03 opens installed editor with genuine Tab/Shift+Tab/Enter after actual invoker evidence', async () => {
@@ -928,7 +963,10 @@ async function physicalNativeContentHarness(options = {}) {
         assert.equal(h, handle); observations.push(name); events.push(name);
     } });
     let error, press;
-    try { press = await run(handle); } catch (caught) { error = caught; }
+    try {
+        if (options.recordEditor && options.phases) for (const phase of options.phases) await run(handle, phase);
+        else press = await run(handle);
+    } catch (caught) { error = caught; }
     return { error, press, events, observations, report, disposed, aborted,
         changeIdentity: () => { window.currentCustomer.credentialKey = 'changed-private-key-marker'; },
         changeLayout: () => { realm.innerWidth = 721; }, changeFocus: () => { documentFocused = false; }, restoreFocus: () => { documentFocused = true; } };
@@ -1374,4 +1412,41 @@ test('physical native record button uses existing owned pointer and trusted acti
         const bad = await physicalNativeContentHarness({ recordEditor: true, changeHandle }); assert.ok(bad.error); assert.deepEqual(bad.events, []);
     }
     const display = await physicalNativeContentHarness({ recordEditor: true, display: ':95' }); assert.ok(display.error); assert.deepEqual(display.events, []);
+});
+
+
+test('native Firefox component person draft selects the same real record twice by scroll and Enter before the original exact write gate', async () => {
+    const native = await recordEditorOpeningHarness({ physicalComponent: true, mutationActions: true });
+    assert.equal(native.caught, native.done); assert.deepEqual(native.mutationEvents, ['scroll', 'Enter', 'scroll', 'Enter', 'arm']);
+    assert.equal(native.mutationValue, 'Geachte mevrouw', 'Raw writable phrase and retained same-field draft remain unchanged.');
+    const ordinary = await recordEditorOpeningHarness({ keyboard: false, mutationActions: true });
+    assert.equal(ordinary.caught, ordinary.done); assert.deepEqual(ordinary.mutationEvents, ['click', 'click', 'arm']);
+    assert.equal(ordinary.mutationValue, 'Geachte mevrouw');
+    const email = await recordEditorOpeningHarness({ physicalComponent: true, mutationActions: true, mutationSection: 'email' });
+    assert.equal(email.caught, email.done); assert.deepEqual(email.mutationEvents, ['click', 'click']);
+    assert.equal(email.mutationValue, 'changed@example.invalid');
+});
+
+
+test('native person scenario preserves the original held503 draft and two source reads through keyboard close and second physical retained opening', async () => {
+    const run = await recordEditorOpeningHarness({ physicalComponent: true, mutationActions: true, completePersonMutation: true });
+    assert.equal(run.caught, undefined);
+    assert.deepEqual(run.mutationEvents, ['physical-initial', 'scroll', 'Enter', 'scroll', 'Enter', 'arm', 'submit',
+        'wait-response', 'release-503', 'wait-response', 'close-scroll', 'close-Enter', 'dialog-hidden', 'physical-retained', 'dialog-visible']);
+    assert.equal(run.mutationValue, 'Geachte mevrouw');
+    assert.deepEqual(run.observations.slice(-3).map(item => item.name), ['records-after-component-pending-person',
+        'records-after-component-error-person', 'records-after-component-reopened-person']);
+    assert.equal(run.observations.at(-1).detail.sourceReadCount, 2);
+});
+
+test('physical component activations admit exactly initial then retained with separate reports and never a third click', async () => {
+    const good = await physicalNativeContentHarness({ recordEditor: true, phases: ['initial', 'retained'] });
+    assert.equal(good.error, undefined); assert.equal(good.events.filter(event => event === 'click').length, 2);
+    assert.deepEqual(Array.from(good.report.nativeFirefoxRecordOpenings, item => item.phase), ['initial', 'retained']);
+    assert.equal(good.report.nativeFirefoxRetainedRecordOpening.sameTaskAndOriginalFields, true);
+    assert.equal(new Set(good.observations).size, 4, 'Initial and retained whole-frame names cannot overwrite each other.');
+    for (const phases of [['retained'], ['initial', 'initial'], ['initial', 'retained', 'retained']]) {
+        const bad = await physicalNativeContentHarness({ recordEditor: true, phases }); assert.ok(bad.error);
+        assert.equal(bad.events.filter(event => event === 'click').length, phases[0] === 'retained' ? 0 : phases.length - 1);
+    }
 });

@@ -600,7 +600,7 @@ async function customerScene(handle) {
         await handle.helpers.feedback.inspectRecordListsAfter(handle.page, handle.state, {
             observe: handle.helpers.operational.observeOperational, control: handle.control, mutationSection: 'person',
             openNativeComponentEditor: handle.descriptor.native === true && handle.driver.browserName === 'firefox'
-                ? () => openFirefoxNativeRecordEditor(handle) : null });
+                ? phase => openFirefoxNativeRecordEditor(handle, phase) : null });
         handle.child.check('Only the explicitly armed component write was locally rejected', handle.control.recordMutationGate.used(), true, metaFor(handle), 10);
         await closeCustomerEditor(handle);
     });
@@ -616,7 +616,7 @@ async function customerScene(handle) {
 }
 
 
-async function openFirefoxNativeRecordEditor(handle) {
+async function openFirefoxNativeRecordEditor(handle, phase = 'initial') {
     const { page, state, child, helpers } = handle;
     assert.equal(handle.sessionVerified, true); assert.equal(handle.nativeGroup, 'shell-search-customer-history');
     assert.equal(handle.descriptor.native, true); assert.equal(handle.descriptor.role, 'kiwi-admin'); assert.equal(handle.descriptor.locale, 'nl');
@@ -625,7 +625,9 @@ async function openFirefoxNativeRecordEditor(handle) {
     assert.equal(state.recordFixture.recordCount, 2); assert.equal(state.recordFixture.componentOnly, true);
     const pointer = state.nativeKernel?.pointer;
     assert.equal(pointer?.display, ':96'); assert.equal(typeof pointer.compare, 'function');
-    assert.equal(child.report.nativeFirefoxRecordOpening, undefined, 'Only one physical component editor opening is allowed.');
+    const openings = child.report.nativeFirefoxRecordOpenings || [];
+    assert.equal(phase, ['initial', 'retained'][openings.length], 'Only the original initial then retained component opening is allowed.');
+    assert.ok(openings.length < 2, 'No third component editor activation is allowed.');
     const selector = '#editCustomerBtn';
     await page.locator(selector).scrollIntoViewIfNeeded();
     const proof = await page.evaluateHandle(({ selector, customer }) => {
@@ -655,14 +657,18 @@ async function openFirefoxNativeRecordEditor(handle) {
         { capture: true, signal: controller.signal });
         return { events, controller, read, before, measure };
     }, { selector, customer: state.recordFixture.customer });
-    const result = child.report.nativeFirefoxRecordOpening = { method: 'Original component pointer activation through existing genuine XTest engine', selector, display: pointer.display };
+    const observationPhase = phase === 'initial' ? '' : '-retained';
+    const result = { phase, method: 'Original component pointer activation through existing genuine XTest engine', selector, display: pointer.display };
+    openings.push(result); child.report.nativeFirefoxRecordOpenings = openings;
+    if (phase === 'initial') child.report.nativeFirefoxRecordOpening = result;
+    else child.report.nativeFirefoxRetainedRecordOpening = result;
     try {
         const measured = await proof.evaluate(value => value.measure()), bounds = measured.bounds;
         assert.ok(measured.connected && measured.sameTarget && measured.exactButton && measured.enabled && measured.sameCanonicalIdentity && measured.ownedCenter);
         assert.deepEqual(measured.viewport, { innerWidth: 720, innerHeight: 500, outerWidth: 720, outerHeight: 543, dpr: 2, pinchScale: 1 });
         assert.ok(bounds.width > 0 && bounds.height > 0 && bounds.left >= 0 && bounds.top >= 0 && bounds.right <= 720 && bounds.bottom <= 500);
         result.before = measured;
-        await observeOperational(handle, 'native-firefox-record-button-ready', [selector], { nativeRecordOpening: result });
+        await observeOperational(handle, 'native-firefox-record-button' + observationPhase + '-ready', [selector], { nativeRecordOpening: result });
         assert.deepEqual(await proof.evaluate(value => value.measure()), measured);
         const parameters = { expectedWidth: measured.viewport.outerWidth * 2, expectedHeight: measured.viewport.outerHeight * 2 };
         result.window = pointer.compare('query', parameters);
@@ -683,7 +689,7 @@ async function openFirefoxNativeRecordEditor(handle) {
         result.sameTaskAndOriginalFields = await proof.evaluate(value => value.before === value.read());
         assert.equal(result.sameTaskAndOriginalFields, true, 'Opening may mount editor fields but must retain the exact original task and fields.');
         result.documentFocused = await page.evaluate(() => document.hasFocus()); assert.equal(result.documentFocused, true);
-        await observeOperational(handle, 'native-firefox-record-button-activated', [selector], { nativeRecordOpening: result });
+        await observeOperational(handle, 'native-firefox-record-button' + observationPhase + '-activated', [selector], { nativeRecordOpening: result });
     } finally {
         await proof.evaluate(value => value.controller.abort()).catch(() => {}); await proof.dispose();
     }
