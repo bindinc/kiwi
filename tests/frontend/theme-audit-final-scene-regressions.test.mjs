@@ -1131,6 +1131,9 @@ test('actual cart builder adds capture setup only for native context after the u
 });
 
 function restoreOriginalPointerModes(body) {
+    const followUpBlock = "    const followUp = page.locator('#dispFollowUpRequired');\n    const nativeFollowUp = state.phase === 'after' && state.suite === 'feedback' && state.report.slice === 10\n        && state.report.environment.native === true && state.report.environment.browser === 'firefox'\n        && state.report.environment.browserVersion === '150.0.2' && state.report.environment.role === 'kiwi-admin'\n        && state.viewport.width === 720 && state.viewport.height === 500 && state.nativeKernel?.pointer?.display === ':96';\n    if (nativeFollowUp) {\n        if (!await followUp.isChecked()) { await followUp.scrollIntoViewIfNeeded(); await followUp.press('Space'); }\n        assert.equal(await followUp.isChecked(), true, 'Original disposition follow-up choice must be checked before its fields are filled.');\n    } else await followUp.check();\n";
+    assert.equal(body.split(followUpBlock).length - 1, 1, 'Only the exact reviewed final native follow-up choice changed.');
+    body = body.replace(followUpBlock, "    await page.locator('#dispFollowUpRequired').check();\n");
     const captureLine = "    if (state.nativeKernel) await page.locator('#subscriptionQueuePanel').scrollIntoViewIfNeeded();\n";
     assert.equal(body.split(captureLine).length - 1, 3, 'Only three native initial-outbox capture placements changed.');
     body = body.replaceAll(captureLine, '');
@@ -1574,4 +1577,49 @@ test('native Firefox original article rest and hover use only owned trusted phys
         const bad = await physicalArticleHoverHarness({ phases }); assert.ok(bad.error);
         assert.equal(bad.calls.length, phases[0] === 'hover' ? 0 : 2 * (phases.length - 1));
     }
+});
+
+
+async function finalNativeFollowUpHarness(options = {}) {
+    const events = [], stop = new Error('Synthetic boundary at original follow-up notes fill'); let checked = options.checked === true;
+    const window = { callSession: { active: false, serviceNumber: 'SYNTHETIC', startTime: Date.now(), waitTime: 1, totalHoldTime: 0 },
+        kiwiCallAgentRuntime: { updateQueueDisplay() {}, endCallSession() { window.callSession.active = false; } } };
+    const checkbox = { isChecked: async () => checked, scrollIntoViewIfNeeded: async () => events.push('scroll-checkbox'),
+        press: async key => { assert.equal(key, 'Space'); events.push('Space'); if (!options.ineffectiveSpace) checked = true; },
+        check: async () => { events.push('original-check'); checked = true; } };
+    const page = { evaluate: async (callback, argument) => vm.runInNewContext('(' + callback.toString() + ')(argument)', { window, argument }),
+        locator: selector => {
+            if (selector === '#dispFollowUpRequired') return checkbox;
+            if (selector === '#dispFollowUpNotes') return { fill: async value => { assert.equal(value, 'Synthetic original long notes'); events.push('original-followup-fill'); throw stop; } };
+            return { press: async () => {}, evaluateAll: async callback => callback([{ value: 'original-option' }]), selectOption: async () => {}, fill: async () => {} };
+        } };
+    const state = { phase: 'after', suite: 'feedback', api: '/kiwi/api/v1/', viewport: { width: 720, height: 500 },
+        report: { slice: 10, environment: { native: true, browser: 'firefox', browserVersion: '150.0.2', role: 'kiwi-admin' } },
+        nativeKernel: { pointer: { display: ':96' } } };
+    if (options.changeState) options.changeState(state);
+    const gates = [], control = { gate: { arm: (method, pathname) => gates.push([method, pathname]) } };
+    const run = actualFunction('calls', { longName: 'Synthetic original caller', longText: 'Synthetic original long notes', fixtureId: 990901,
+        observe: async () => {}, finishOperationalQueueFixture: () => {}, startCall: async () => { window.callSession.active = true; },
+        flushCalls: async () => {}, idleSession: () => ({ active: false }) }, operationalSource);
+    let caught; try { await run(page, state, control); } catch (error) { caught = error; }
+    return { events, gates, caught, stop, checked };
+}
+
+test('original call/disposition function selects follow-up by real Space only for the exact final native Firefox case', async () => {
+    const good = await finalNativeFollowUpHarness(); assert.equal(good.caught, good.stop);
+    assert.deepEqual(good.events, ['scroll-checkbox', 'Space', 'original-followup-fill']); assert.equal(good.checked, true);
+    assert.deepEqual(good.gates.map(item => item[1]), ['/kiwi/api/v1/call-session/hold', '/kiwi/api/v1/call-session/resume',
+        '/kiwi/api/v1/call-session/end', '/kiwi/api/v1/agent-status']);
+    const already = await finalNativeFollowUpHarness({ checked: true }); assert.equal(already.caught, already.stop);
+    assert.deepEqual(already.events, ['original-followup-fill']);
+    for (const changeState of [s => { s.phase = 'before'; }, s => { s.suite = 'native-operational'; }, s => { s.report.slice = 9; },
+        s => { s.report.environment.native = false; }, s => { s.report.environment.browser = 'chromium'; },
+        s => { s.report.environment.browserVersion = '149'; }, s => { s.report.environment.role = 'kiwi-view'; },
+        s => { s.viewport.width = 640; }, s => { s.viewport.height = 478; }, s => { s.nativeKernel = null; },
+        s => { s.nativeKernel.pointer.display = ':95'; }]) {
+        const ordinary = await finalNativeFollowUpHarness({ changeState }); assert.equal(ordinary.caught, ordinary.stop);
+        assert.deepEqual(ordinary.events, ['original-check', 'original-followup-fill']); assert.deepEqual(ordinary.gates, good.gates);
+    }
+    const failed = await finalNativeFollowUpHarness({ ineffectiveSpace: true }); assert.notEqual(failed.caught, failed.stop);
+    assert.deepEqual(failed.events, ['scroll-checkbox', 'Space']); assert.equal(failed.checked, false);
 });

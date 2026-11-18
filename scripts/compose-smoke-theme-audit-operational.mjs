@@ -1008,7 +1008,15 @@ async function calls(page, state, control) {
     assert.ok(outcome, 'Source-installed conditional outcomes are available.');
     await page.locator('#dispOutcome').selectOption(outcome);
     await page.locator('#dispNotes').fill(longText);
-    await page.locator('#dispFollowUpRequired').check();
+    const followUp = page.locator('#dispFollowUpRequired');
+    const nativeFollowUp = state.phase === 'after' && state.suite === 'feedback' && state.report.slice === 10
+        && state.report.environment.native === true && state.report.environment.browser === 'firefox'
+        && state.report.environment.browserVersion === '150.0.2' && state.report.environment.role === 'kiwi-admin'
+        && state.viewport.width === 720 && state.viewport.height === 500 && state.nativeKernel?.pointer?.display === ':96';
+    if (nativeFollowUp) {
+        if (!await followUp.isChecked()) { await followUp.scrollIntoViewIfNeeded(); await followUp.press('Space'); }
+        assert.equal(await followUp.isChecked(), true, 'Original disposition follow-up choice must be checked before its fields are filled.');
+    } else await followUp.check();
     await page.locator('#dispFollowUpNotes').fill(longText);
     await page.locator('#dispFollowUpDate').fill('2026-12-01');
     await page.locator('#dispFollowUpDate').scrollIntoViewIfNeeded();

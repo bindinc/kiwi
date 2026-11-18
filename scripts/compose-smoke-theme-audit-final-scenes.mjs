@@ -1470,7 +1470,7 @@ const legacyFocusPath = 'scripts/compose-smoke-theme-audit-operational.mjs';
 const legacyFocusSha256s = [
     '6d312cd304824f9117434ed7e84ba2bc437883d0b87963b826e3b94b092f05a9',
     '6d92de17eec977297856200774f70f1abfed45ba37aee703c31d7afd6e342287',
-    '44c20bcb93e6e0f274dc88e3cbb4afa00bb25c8577fef9dea75d11c2b7c512ec'
+    'b9ae7ce2cb2179626479e4c651511f4bd4ce188b8744fb9c760300346689dc94'
 ];
 const legacyFocusName = 'Actual five-second first trigger focus is retained and visible';
 
