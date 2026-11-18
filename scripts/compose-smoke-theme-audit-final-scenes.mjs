@@ -1195,7 +1195,7 @@ async function inspectNativeArticleCart(handle) {
     const readCart = () => page.evaluate(() => ({ quantities: window.orderItems.map(item => item.quantity),
         subtotal: document.getElementById('orderSubtotal').textContent, total: document.getElementById('orderTotal').textContent }));
     const before = await readCart();
-    child.check('Native cart retains the declared two quantities before focus inspection', before.quantities, [5, 2], meta, 10);
+    child.check('Native cart retains the declared two quantities before focus inspection', JSON.stringify(before.quantities), '[5,2]', meta, 10);
     const list = page.locator('#orderItemsList'), buttons = list.locator('.order-item-remove');
     await list.scrollIntoViewIfNeeded();
     await page.keyboard.press('Tab'); await buttons.first().focus();
@@ -1222,7 +1222,7 @@ async function inspectNativeArticleCart(handle) {
             { ...meta, measured }, 10);
         await checkpoint(handle, 'native-cart-' + label + '-actual-keyboard-stop');
     }
-    child.check('Native cart focus inspection preserves both quantities and quote totals', await readCart(), before, meta, 10);
+    child.check('Native cart focus inspection preserves both quantities and quote totals', JSON.stringify(await readCart()), JSON.stringify(before), meta, 10);
 }
 
 async function inspectCancelConfirmation(handle) {

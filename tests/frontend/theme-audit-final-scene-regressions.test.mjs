@@ -1013,7 +1013,7 @@ function nativeCartPaintHarness(options = {}) {
     } }, locator: selector => { assert.equal(selector, '#orderItemsList'); return { scrollIntoViewIfNeeded: async () => events.push('list-scroll'),
         locator: query => { assert.equal(query, '.order-item-remove'); return { first: () => locators[0], nth: index => locators[index] }; } }; } };
     const handle = { descriptor: { native: true }, page, child: { painted: async actualPage => { assert.equal(actualPage, page); events.push('painted'); },
-        check: (name, actual, expected, meta) => { checks.push({ name, actual, meta }); assert.equal(JSON.stringify(actual), JSON.stringify(expected), name); } } };
+        check: (name, actual, expected, meta) => { checks.push({ name, actual, meta }); assert.equal(actual, expected, name); } } };
     const run = actualFunction('inspectNativeArticleCart', { metaFor: () => ({}), checkpoint: async (h, name) => {
         assert.equal(h, handle); captures.push(name); events.push(name);
     } });
