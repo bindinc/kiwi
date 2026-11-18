@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { execFileSync as runLocal } from 'node:child_process';
 import path from 'node:path';
 import { readFile, writeFile, mkdir, mkdtemp, rm, rmdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -720,7 +721,11 @@ async function recordEditorOpeningHarness(options = {}) {
     const run = actualFunction('inspectRecordListsAfter', { keyboardFocus }, nativeFeedbackSource);
     let caught;
     try { await run(page, state, { control: {}, nativeKeyboardOpening: options.keyboard !== false, touch: options.touch === true,
-        prepareNativeContent: options.missingNativePrepare ? null : async () => events.push('prepare-public-content'),
+        prepareNativeContent: options.missingNativePrepare ? null : async () => {
+            events.push('prepare-public-content');
+            if (options.emptyNativePrepare) return null;
+            return async key => { events.push('OS-' + key); if (key === 'Enter') await invoker.press(key); else await page.keyboard.press(key); };
+        },
         ...(options.legacyReadonly ? { openNativeReadonlyEditor: async () => { opened = true; events.push('original-native-readonly-callback'); } } : {}),
         observe: async (actualPage, actualState, name, selectors, detail) => { assert.equal(actualPage, page); assert.equal(actualState, state);
             observations.push({ name, selectors, detail }); events.push('observe-' + name); } }); } catch (error) { caught = error; }
@@ -732,8 +737,8 @@ test('native Firefox A03 opens installed editor with genuine Tab/Shift+Tab/Enter
     assert.equal(result.caught, result.done, 'Original post-open source-record assertions remain in the execution path.');
     assert.equal(result.opened, true);
     assert.deepEqual(result.events, ['fresh-source-read', 'scroll-header', 'observe-records-after-header', 'prepare-public-content', 'scroll-invoker',
-        'setup-focus', 'observe-records-after-keyboard-editor-setup-focus', 'Tab', 'observe-records-after-keyboard-editor-after-tab',
-        'Shift+Tab', 'observe-records-after-keyboard-editor-after-shift-tab', 'observe-records-after-keyboard-editor-invoker', 'Enter']);
+        'setup-focus', 'observe-records-after-keyboard-editor-setup-focus', 'OS-Tab', 'Tab', 'observe-records-after-keyboard-editor-after-tab',
+        'OS-Shift+Tab', 'Shift+Tab', 'observe-records-after-keyboard-editor-after-shift-tab', 'observe-records-after-keyboard-editor-invoker', 'OS-Enter', 'Enter']);
     const proof = result.observations.at(-1);
     assert.equal(proof.detail.geometry.focused, true); assert.equal(proof.detail.geometry.focusVisible, true);
     assert.equal(proof.detail.geometry.ownedCenter, true); assert.equal(proof.detail.geometry.disabled, false);
@@ -746,7 +751,7 @@ test('native keyboard editor opening rejects other suites/browsers/input/source 
         state => { state.recordFixture.componentOnly = false; }]) {
         const result = await recordEditorOpeningHarness({ changeState }); assert.equal(result.opened, false); assert.ok(result.caught);
     }
-    for (const options of [{ missingNativePrepare: true }, { touch: true }, { hiddenFocus: true }, { lostFocus: true }, { covered: true }, { disabled: true },
+    for (const options of [{ emptyNativePrepare: true }, { missingNativePrepare: true }, { touch: true }, { hiddenFocus: true }, { lostFocus: true }, { covered: true }, { disabled: true },
         { bounds: { x: -1 } }, { bounds: { y: -1 } }, { bounds: { right: 721 } }, { bounds: { bottom: 501 } },
         { bounds: { width: 0 } }, { bounds: { height: 0 } }]) {
         const result = await recordEditorOpeningHarness(options); assert.equal(result.opened, false); assert.ok(result.caught);
@@ -864,8 +869,8 @@ async function physicalNativeContentHarness(options = {}) {
     const target = { isConnected: true, tagName: 'H3', tabIndex: -1, textContent: 'Abonnementen',
         getBoundingClientRect: () => bounds, getAttribute: () => 'indexHtml.text.abonnementen_ba5e4d7c',
         closest: () => options.interactive ? {} : null, contains: hit => hit === target };
-    const window = { currentCustomer: { personId: '990970', credentialKey: 'synthetic-private-task-marker' },
-        kiwiCustomerWorkSession: { getRequestContext: () => ({ personId: '990970' }) } };
+    const window = { currentCustomer: { personId: '990970', credentialKey: 'synthetic-private-task-marker', sourceSystem: 'subscription-api' },
+        kiwiCustomerWorkSession: { getRequestContext: () => ({ customerReference: { personId: '990970', credentialKey: 'synthetic-private-task-marker' } }) } };
     const document = { querySelector: () => target, querySelectorAll: () => [], elementFromPoint: () => options.covered ? {} : target,
         hasFocus: () => documentFocused };
     const realm = { document, window, innerWidth: 720, innerHeight: 500, outerWidth: 720, outerHeight: 543,
@@ -874,7 +879,7 @@ async function physicalNativeContentHarness(options = {}) {
         }, addEventListener: (type, callback) => { listeners[type] = callback; } };
     let proof;
     const page = { locator: selector => ({ scrollIntoViewIfNeeded: async () => events.push('scroll-public-heading') }),
-        evaluate: async callback => vm.runInNewContext('(' + callback.toString() + ')()', realm),
+        evaluate: async (callback, argument) => vm.runInNewContext('(' + callback.toString() + ')(argument)', { ...realm, argument }),
         evaluateHandle: async (callback, argument) => {
             const value = vm.runInNewContext('(' + callback.toString() + ')(argument)', { ...realm, argument });
             proof = { value, evaluate: async callback => callback(value), dispose: async () => { disposed = true; } }; return proof;
@@ -888,20 +893,22 @@ async function physicalNativeContentHarness(options = {}) {
                 isTrusted: !(options.untrustedMotion && action === 'move'), clientX: 240, clientY: 115 });
             if (options.mutateTask && action === 'move') window.currentCustomer.credentialKey = 'changed-private-task-marker';
         }
-        return { action, window: { x: 0, y: 0, width: options.badWindow ? 700 : 1440, height: 1086 }, pointer: parameters.point || null };
+        return { action, window: { windowId: 42, x: 0, y: 0, width: options.badWindow ? 700 : 1440, height: 1086 }, pointer: parameters.point || null };
     };
     const report = { environment: { browserVersion: '150.0.2' } };
     const handle = { sessionVerified: true, nativeGroup: 'shell-search-customer-history', descriptor: { native: true, role: 'kiwi-admin', locale: 'nl' },
         driver: { browserName: 'firefox' }, page, child: { report }, state: { report, suite: 'records-after-component',
-            recordFixture: { id: 990970, recordCount: 2, componentOnly: true }, nativeKernel: { pointer: { display: options.display || ':96', compare } } },
+            recordFixture: { id: 990970, recordCount: 2, componentOnly: true, customer: { personId: '990970', credentialKey: 'synthetic-private-task-marker', sourceSystem: 'subscription-api' } }, nativeKernel: { pointer: { display: options.display || ':96', compare } } },
         helpers: { operational: { physicalClientPoint, nativeReadonlyMotionOwnsTarget } } };
     if (options.changeHandle) options.changeHandle(handle);
     const run = actualFunction('prepareFirefoxNativeContent', { observeOperational: async (h, name) => {
         assert.equal(h, handle); observations.push(name); events.push(name);
     } });
-    let error;
-    try { await run(handle); } catch (caught) { error = caught; }
-    return { error, events, observations, report, disposed, aborted };
+    let error, press;
+    try { press = await run(handle); } catch (caught) { error = caught; }
+    return { error, press, events, observations, report, disposed, aborted,
+        changeIdentity: () => { window.currentCustomer.credentialKey = 'changed-private-key-marker'; },
+        changeLayout: () => { realm.innerWidth = 721; }, changeFocus: () => { documentFocused = false; }, restoreFocus: () => { documentFocused = true; } };
 }
 
 test('native Firefox uses the existing physical path only to focus exact public noninteractive content, preserving task and cleanup', async () => {
@@ -945,10 +952,11 @@ test('native pointer API keeps launch environment inside main closure and leaves
     }
 });
 
-test('legacy focus source compatibility admits only the exact export-only operational body', async () => {
+test('legacy focus compatibility admits only the exact reviewed native-key extension', async () => {
     const body = await readFile(new URL('../../scripts/compose-smoke-theme-audit-operational.mjs', import.meta.url), 'utf8');
-    const originalBody = body.replace('export function nativePointerComparison(', 'function nativePointerComparison(');
-    assert.notEqual(body, originalBody);
+    const oldExported = restoreOriginalPointerModes(body);
+    assert.equal(sha(oldExported), '60a1c5ce3f1f3e64b1b7b8dc1a24fbd299b87b035e55085ca81a8138e22fb686');
+    const originalBody = oldExported.replace('export function nativePointerComparison(', 'function nativePointerComparison(');
     assert.equal(sha(originalBody), '6d92de17eec977297856200774f70f1abfed45ba37aee703c31d7afd6e342287');
     const pins = vm.runInNewContext(source.match(/const legacyFocusSha256s = (\[[\s\S]*?\n\]);/)[1]);
     assert.deepEqual(Array.from(pins), ['6d312cd304824f9117434ed7e84ba2bc437883d0b87963b826e3b94b092f05a9',
@@ -1055,5 +1063,69 @@ test('actual cart builder adds capture setup only for native context after the u
         assert.deepEqual(calls.filter(item => item[0] === '#articleQuantity').map(item => item[1]), ['5', 'Tab', '2', 'Tab']);
         assert.equal(calls.filter(item => item[0] === '[data-action=add-article-to-order]').length, 2);
         if (native) assert.ok(calls.findIndex(item => item[0] === 'native-only-captures') > calls.findIndex(item => item[1] === 'populated-quote'));
+    }
+});
+
+function restoreOriginalPointerModes(body) {
+    body = body.replace("    assert.ok(['query', 'move', 'click', 'key'].includes(action));\n    if (action === 'key') {\n        assert.ok(['Tab', 'Shift+Tab', 'Enter'].includes(parameters.key));\n        assert.ok(Number.isSafeInteger(parameters.expectedWindowId) && parameters.expectedWindowId > 0);\n    }", "    assert.ok(['query', 'move', 'click'].includes(action));");
+    body = body.replace("x.XKeysymToKeycode.argtypes=[ctypes.c_void_p,ctypes.c_ulong]; x.XKeysymToKeycode.restype=ctypes.c_ubyte\nt.XTestFakeKeyEvent.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_int,ctypes.c_ulong]\n", "");
+    body = body.replace(" if mode=='key':\n  if box['windowId']!=p['expectedWindowId']: raise RuntimeError('Native key must stay in the original owned browser window')\n  names={'Tab':[0xff09],'Shift+Tab':[0xffe1,0xff09],'Enter':[0xff0d]}\n  if p['key'] not in names: raise RuntimeError('Only the declared native editor keys are allowed')\n  codes=[x.XKeysymToKeycode(d,keysym) for keysym in names[p['key']]]\n  if not all(codes): raise RuntimeError('Native keycode unavailable')\n  for code in codes: t.XTestFakeKeyEvent(d,code,1,0)\n  for code in reversed(codes): t.XTestFakeKeyEvent(d,code,0,0)\n  x.XFlush(d); time.sleep(0.1)\n elif mode!='query':", " if mode!='query':");
+    return body;
+}
+
+test('native content press callback enforces the original OS-key order and retains geometry/source guards', async () => {
+    const h = await physicalNativeContentHarness(); assert.equal(h.error, undefined); assert.equal(typeof h.press, 'function');
+    for (const key of ['Tab', 'Shift+Tab', 'Enter']) await h.press(key);
+    assert.deepEqual(Array.from(h.report.nativeFirefoxContentFocus.keys, item => item.key), ['Tab', 'Shift+Tab', 'Enter']);
+    assert.equal(h.events.filter(event => event === 'key').length, 3);
+    for (const key of ['Space', 'Control+Tab', 'Escape', 'Return', '', null]) {
+        const before = h.events.length; await assert.rejects(h.press(key)); assert.equal(h.events.length, before);
+    }
+    for (const change of ['changeIdentity', 'changeLayout', 'changeFocus']) {
+        const bad = await physicalNativeContentHarness(); bad[change]();
+        await assert.rejects(bad.press('Tab')); assert.equal(bad.events.includes('key'), false);
+    }
+    assert.equal(JSON.stringify(h.report).includes('synthetic-private-task-marker'), false);
+});
+
+test('existing physical comparison dispatch bounds native keys before OS spawn and preserves all original pointer modes', async () => {
+    const body = await readFile(new URL('../../scripts/compose-smoke-theme-audit-operational.mjs', import.meta.url), 'utf8');
+    const calls = [], environment = { SYNTHETIC_PRIVATE: 'never-export-private-environment' };
+    const compare = actualFunction('nativePointerComparison', { execFileSync: (program, args, options) => {
+        assert.equal(program, 'python3'); assert.equal(options.env, environment); calls.push({ args, script: options.input });
+        return JSON.stringify({ action: args[1], window: { windowId: 42 }, pointer: { x: 1, y: 1 } });
+    } }, body);
+    for (const key of ['Tab', 'Shift+Tab', 'Enter']) compare({ launchEnvironment: environment }, 'key', { key, expectedWindowId: 42 });
+    const count = calls.length;
+    for (const key of ['Space', 'Control+Tab', 'Escape', 'Return', '', null]) assert.throws(() => compare({ launchEnvironment: environment }, 'key', { key, expectedWindowId: 42 }));
+    for (const expectedWindowId of [null, 0, -1, 1.2, Number.MAX_SAFE_INTEGER + 1]) assert.throws(() => compare({ launchEnvironment: environment }, 'key', { key: 'Tab', expectedWindowId }));
+    assert.equal(calls.length, count);
+    for (const action of ['query', 'move', 'click']) compare({ launchEnvironment: environment }, action, { expectedWidth: 1440, expectedHeight: 1086 });
+    assert.deepEqual(calls.slice(-3).map(item => item.args[1]), ['query', 'move', 'click']);
+    runLocal('python3', ['-c', 'import sys; compile(sys.stdin.read(), "existing-native-pointer.py", "exec")'], { input: calls[0].script });
+    assert.match(calls[0].script, /box\['windowId'\]!=p\['expectedWindowId'\]/);
+    assert.match(calls[0].script, /for code in reversed\(codes\): t.XTestFakeKeyEvent\(d,code,0,0\)/);
+    assert.equal(sha(restoreOriginalPointerModes(body)), '60a1c5ce3f1f3e64b1b7b8dc1a24fbd299b87b035e55085ca81a8138e22fb686');
+});
+
+
+test('native Shift+Tab may return from browser chrome only after the original Tab; initial/final focus and strict return policy stay', async () => {
+    const h = await physicalNativeContentHarness(); await h.press('Tab'); h.changeFocus();
+    await h.press('Shift+Tab');
+    assert.deepEqual(Array.from(h.report.nativeFirefoxContentFocus.keys, item => item.key), ['Tab', 'Shift+Tab']);
+    h.restoreFocus(); await h.press('Enter');
+    for (const sequence of [['Shift+Tab'], ['Enter'], ['Tab', 'Tab'], ['Tab', 'Enter'], ['Tab', 'Shift+Tab', 'Shift+Tab'],
+        ['Tab', 'Shift+Tab', 'Enter', 'Enter']]) {
+        const bad = await physicalNativeContentHarness();
+        for (const key of sequence.slice(0, -1)) await bad.press(key);
+        const before = bad.events.filter(event => event === 'key').length;
+        await assert.rejects(bad.press(sequence.at(-1)));
+        assert.equal(bad.events.filter(event => event === 'key').length, before);
+    }
+    const final = await physicalNativeContentHarness(); await final.press('Tab'); await final.press('Shift+Tab'); final.changeFocus();
+    await assert.rejects(final.press('Enter')); assert.equal(final.report.nativeFirefoxContentFocus.keys.length, 2);
+    for (const change of ['changeIdentity', 'changeLayout']) {
+        const bad = await physicalNativeContentHarness(); await bad.press('Tab'); bad.changeFocus(); bad[change]();
+        await assert.rejects(bad.press('Shift+Tab')); assert.equal(bad.report.nativeFirefoxContentFocus.keys.length, 1);
     }
 });

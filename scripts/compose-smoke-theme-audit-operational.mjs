@@ -1950,7 +1950,11 @@ export function physicalClientPoint(windowBox, viewport, point) {
 }
 
 export function nativePointerComparison(kernel, action, parameters) {
-    assert.ok(['query', 'move', 'click'].includes(action));
+    assert.ok(['query', 'move', 'click', 'key'].includes(action));
+    if (action === 'key') {
+        assert.ok(['Tab', 'Shift+Tab', 'Enter'].includes(parameters.key));
+        assert.ok(Number.isSafeInteger(parameters.expectedWindowId) && parameters.expectedWindowId > 0);
+    }
     const script = `import ctypes, json, sys, time
 x = ctypes.CDLL('libX11.so.6'); t = ctypes.CDLL('libXtst.so.6')
 x.XOpenDisplay.argtypes=[ctypes.c_char_p]; x.XOpenDisplay.restype=ctypes.c_void_p
@@ -1960,6 +1964,8 @@ x.XGetGeometry.argtypes=[ctypes.c_void_p,ctypes.c_ulong,ctypes.POINTER(ctypes.c_
 x.XTranslateCoordinates.argtypes=[ctypes.c_void_p,ctypes.c_ulong,ctypes.c_ulong,ctypes.c_int,ctypes.c_int,ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_ulong)]
 x.XQueryPointer.argtypes=[ctypes.c_void_p,ctypes.c_ulong,ctypes.POINTER(ctypes.c_ulong),ctypes.POINTER(ctypes.c_ulong),ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_uint)]
 x.XFree.argtypes=[ctypes.c_void_p]; x.XFlush.argtypes=[ctypes.c_void_p]; x.XCloseDisplay.argtypes=[ctypes.c_void_p]
+x.XKeysymToKeycode.argtypes=[ctypes.c_void_p,ctypes.c_ulong]; x.XKeysymToKeycode.restype=ctypes.c_ubyte
+t.XTestFakeKeyEvent.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_int,ctypes.c_ulong]
 t.XTestFakeMotionEvent.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_int,ctypes.c_int,ctypes.c_ulong]
 t.XTestFakeButtonEvent.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_int,ctypes.c_ulong]
 d=x.XOpenDisplay(None)
@@ -1985,7 +1991,16 @@ try:
   child=ctypes.c_ulong(); rx=ctypes.c_int(); ry=ctypes.c_int(); wx=ctypes.c_int(); wy=ctypes.c_int(); mask=ctypes.c_uint()
   if not x.XQueryPointer(d,root,ctypes.byref(rr),ctypes.byref(child),ctypes.byref(rx),ctypes.byref(ry),ctypes.byref(wx),ctypes.byref(wy),ctypes.byref(mask)): raise RuntimeError('Pointer query failed')
   return {'x':rx.value,'y':ry.value}
- if mode!='query':
+ if mode=='key':
+  if box['windowId']!=p['expectedWindowId']: raise RuntimeError('Native key must stay in the original owned browser window')
+  names={'Tab':[0xff09],'Shift+Tab':[0xffe1,0xff09],'Enter':[0xff0d]}
+  if p['key'] not in names: raise RuntimeError('Only the declared native editor keys are allowed')
+  codes=[x.XKeysymToKeycode(d,keysym) for keysym in names[p['key']]]
+  if not all(codes): raise RuntimeError('Native keycode unavailable')
+  for code in codes: t.XTestFakeKeyEvent(d,code,1,0)
+  for code in reversed(codes): t.XTestFakeKeyEvent(d,code,0,0)
+  x.XFlush(d); time.sleep(0.1)
+ elif mode!='query':
   px=int(p['point']['x']); py=int(p['point']['y'])
   if not (box['x']<=px<box['x']+box['width'] and box['y']<=py<box['y']+box['height']): raise RuntimeError('Physical point must stay inside owned browser')
   if mode=='move':

@@ -151,7 +151,8 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
         assert.equal(state.suite, 'records-after-component'); assert.equal(fixture.componentOnly, true);
         assert.equal(state.report.environment.browser, 'firefox'); assert.equal(state.report.environment.native, true);
         assert.ok(state.nativeKernel); assert.equal(touch, false);
-        assert.equal(typeof prepareNativeContent, 'function'); await prepareNativeContent();
+        assert.equal(typeof prepareNativeContent, 'function');
+        const pressNative = await prepareNativeContent(); assert.equal(typeof pressNative, 'function');
         const invoker = page.locator('#editCustomerBtn');
         const focus = await keyboardFocus(page, invoker, 'after', async stage => {
             const focusStage = await invoker.evaluate(node => {
@@ -166,7 +167,7 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
                     activeTag: publicTags.includes(active?.tagName) ? active.tagName : null };
             });
             await observe(page, state, 'records-after-keyboard-editor-' + stage, ['#editCustomerBtn'], { focusStage });
-        });
+        }, pressNative);
         const geometry = await invoker.evaluate(node => {
             const rect = node.getBoundingClientRect();
             const center = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
@@ -182,7 +183,7 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
             && bounds.right <= geometry.viewport.width && bounds.bottom <= geometry.viewport.height,
         'Native Firefox editor invoker must fit the actual zoomed viewport before Enter.');
         await observe(page, state, 'records-after-keyboard-editor-invoker', ['#editCustomerBtn'], { focus, geometry });
-        await invoker.press('Enter');
+        await pressNative('Enter');
     } else if (touch) await page.locator('#editCustomerBtn').tap(); else await page.locator('#editCustomerBtn').click();
     const dialog = page.locator('.customer-editor[open]');
     await dialog.locator('[data-customer-section=bank] .customer-editor-record-action').first().waitFor();
@@ -370,15 +371,15 @@ export function checkAfterObservation(name, data, detail, state) {
     }
 }
 
-async function keyboardFocus(page, locator, phase, observeFocusStage = null) {
+async function keyboardFocus(page, locator, phase, observeFocusStage = null, pressNative = null) {
     await locator.scrollIntoViewIfNeeded();
     const before = await locator.boundingBox();
     const layoutBefore = phase === 'after' ? await locator.evaluate(node => ({ left: node.offsetLeft, top: node.offsetTop, width: node.offsetWidth, height: node.offsetHeight })) : null;
     await locator.focus();
     if (observeFocusStage) await observeFocusStage('setup-focus');
-    await page.keyboard.press('Tab');
+    if (pressNative) await pressNative('Tab'); else await page.keyboard.press('Tab');
     if (observeFocusStage) await observeFocusStage('after-tab');
-    await page.keyboard.press('Shift+Tab');
+    if (pressNative) await pressNative('Shift+Tab'); else await page.keyboard.press('Shift+Tab');
     if (observeFocusStage) await observeFocusStage('after-shift-tab');
     const focused = await locator.evaluate(node => node === document.activeElement);
     assert.ok(focused, 'Actual Tab/Shift+Tab must return to the requested real control.');

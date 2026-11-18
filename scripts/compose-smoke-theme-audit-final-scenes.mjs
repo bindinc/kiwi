@@ -652,6 +652,7 @@ async function prepareFirefoxNativeContent(handle) {
         return { events, controller, read, before, measure };
     }, selector);
     const result = child.report.nativeFirefoxContentFocus = { method: 'Existing genuine XTest physical content focus', selector, display: pointer.display };
+    let keyParameters, expectedViewport;
     try {
         const measured = await proof.evaluate(value => value.measure()), bounds = measured.bounds;
         assert.ok(measured.connected && measured.sameTarget && measured.publicSource && measured.noninteractive && measured.ownedCenter);
@@ -663,6 +664,7 @@ async function prepareFirefoxNativeContent(handle) {
         assert.deepEqual(await proof.evaluate(value => value.measure()), measured);
         const parameters = { expectedWidth: measured.viewport.outerWidth * 2, expectedHeight: measured.viewport.outerHeight * 2 };
         result.window = pointer.compare('query', parameters);
+        keyParameters = parameters; expectedViewport = measured.viewport;
         const point = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
         result.physicalPoint = helpers.operational.physicalClientPoint(result.window.window, measured.viewport, point);
         result.motion = pointer.compare('move', { ...parameters, point: result.physicalPoint });
@@ -681,6 +683,24 @@ async function prepareFirefoxNativeContent(handle) {
     } finally {
         await proof.evaluate(value => value.controller.abort()).catch(() => {}); await proof.dispose();
     }
+    const keys = ['Tab', 'Shift+Tab', 'Enter']; let nextKey = 0;
+    return async key => {
+        assert.equal(key, keys[nextKey], 'Only the original native editor Tab, Shift+Tab, Enter order is allowed.');
+        const actual = await page.evaluate(customer => {
+            const current = window.currentCustomer, context = window.kiwiCustomerWorkSession.getRequestContext();
+            return { documentFocused: document.hasFocus(),
+                sameCanonicalIdentity: String(current?.personId) === customer.personId && current?.credentialKey === customer.credentialKey
+                    && current?.sourceSystem === customer.sourceSystem && context.customerReference?.personId === customer.personId
+                    && context.customerReference?.credentialKey === customer.credentialKey,
+                viewport: { innerWidth, innerHeight, outerWidth, outerHeight, dpr: devicePixelRatio, pinchScale: visualViewport?.scale } };
+        }, state.recordFixture.customer);
+        assert.ok(actual.sameCanonicalIdentity, 'Native key requires the original canonical source identity.');
+        if (key !== 'Shift+Tab') assert.equal(actual.documentFocused, true, 'Initial Tab and final Enter require focused content.');
+        assert.deepEqual(actual.viewport, expectedViewport, 'Native key requires the original verified OS200 geometry.');
+        const outcome = pointer.compare('key', { ...keyParameters, expectedWindowId: result.window.window.windowId, key });
+        result.keys ||= []; result.keys.push({ key, outcome, sameCanonicalIdentity: actual.sameCanonicalIdentity });
+        nextKey += 1;
+    };
 }
 
 async function addressScene(handle) {
@@ -1301,7 +1321,7 @@ const legacyFocusPath = 'scripts/compose-smoke-theme-audit-operational.mjs';
 const legacyFocusSha256s = [
     '6d312cd304824f9117434ed7e84ba2bc437883d0b87963b826e3b94b092f05a9',
     '6d92de17eec977297856200774f70f1abfed45ba37aee703c31d7afd6e342287',
-    '60a1c5ce3f1f3e64b1b7b8dc1a24fbd299b87b035e55085ca81a8138e22fb686'
+    '599b9f0b605c3fe21ad89097b7de099f30bca8b329834d56e37bc8ca2a37cd35'
 ];
 const legacyFocusName = 'Actual five-second first trigger focus is retained and visible';
 
