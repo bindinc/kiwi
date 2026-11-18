@@ -331,7 +331,6 @@ const nl = {
             "vooral_bekende_klanten_80_20_d72f4bfd": "Vooral bekende klanten (80/20)",
             "voornaam_575fbdf6": "Voornaam *",
             "vul_het_nabewerkingsscherm_in_om_klaar_te_zijn_voor_het_volgende_gesprek_230eaff9": "Vul het nabewerkingsscherm in om klaar te zijn voor het volgende gesprek",
-            "waar_klanten_zich_gehoord_voelen_3bc04244": "Waar klanten zich gehoord voelen.",
             "waarom_wilt_u_het_abonnement_opzeggen_65e30783": "Waarom wilt u het abonnement opzeggen?",
             "wacht_75f4e76c": "Wacht:",
             "wachtrij_simulatie_227ad37c": "Wachtrij Simulatie",

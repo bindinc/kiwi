@@ -10,6 +10,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Removed
 
+- Remove the slogan from the Kiwi welcome screen. [sc-207465]
+
+### Removed
+
 - Remove the completed Light & Shadow audit working documents from the source tree. [sc-206629]
 
 ## [v1.0.39] - 2026-11-18
