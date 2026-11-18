@@ -6,7 +6,7 @@ Implementation is tracked in [SC-206629](https://app.shortcut.com/bindincit/stor
 
 ### Shared foundation alignment — theme_audit 01
 
-The original palette migration below is historical scope. The [theme_audit index](theme_audit.md) broadens the contract to the reviewed showcase's layout, typography, spacing, component geometry and state hierarchy. Slice 01 establishes shared foundations; subsequent slices consume them, and slice 10 records rendered acceptance. Palette checks alone do not establish visual agreement.
+The original palette migration below is historical scope. The [completed theme audit](https://github.com/bindinc/kiwi/blob/v1.0.39/plans/theme_audit.md) broadens the contract to the reviewed showcase's layout, typography, spacing, component geometry and state hierarchy. Slice 01 establishes shared foundations; subsequent slices consume them, and slice 10 records rendered acceptance. Palette checks alone do not establish visual agreement.
 
 Shared work surfaces are flat, with square workflow/control corners and a restrained 4px corner for small layered components. The existing 6px trigger / 8px popover geometry of the separately approved delivery picker remains local to that component; circular radios, avatars and meaningful indicators retain their shape. Elevation is reserved for actual menus, dialogs, dropdowns and toasts; controls, ordinary cards and information sections have none.
 
