@@ -583,15 +583,15 @@ async function summaryReadHarness({ family = 'customer', enabled = true, selecte
     return { report, fixtures, projection, expectedPayload, request, transport };
 }
 
-test('native selected customer summary reuses the declared read projection and permits only two exact local POST reads', async () => {
+test('native selected customer summary reuses the declared read projection and permits only the three canonical native search reads', async () => {
     const h = await summaryReadHarness();
-    for (let index = 0; index < 2; index++) {
+    for (let index = 0; index < 3; index++) {
         const response = await h.request();
         assert.equal(response.kind, 'local');
         assert.deepEqual(response.value.json, { items: [h.projection] });
     }
-    assert.equal((await h.request()).kind, 'abort', 'The existing two-read fixture bound is retained.');
-    assert.equal(h.report.customerEvidence.interceptedFixtureRequests.length, 2);
+    assert.equal((await h.request()).kind, 'abort', 'A fourth read is outside the three declared native search renders.');
+    assert.equal(h.report.customerEvidence.interceptedFixtureRequests.length, 3);
     assert.ok(h.report.customerEvidence.interceptedFixtureRequests.every(item => item.exactSyntheticIdentityVerified));
     assert.equal(h.fixtures.personDetails.credentialKey, h.projection.credentialKey, 'Real source identity is retained instead of suppressing hydration.');
     assert.equal(h.projection.state, 'loaded'); assert.equal(h.projection.activeCount, 0);
@@ -632,4 +632,46 @@ test('native summary read denies wrong payload, method, identity, headers, query
     assert.equal((await mismatchedId.request()).kind, 'abort', 'The numeric selected source identity must also match.');
     const closed = await summaryReadHarness(); closed.transport.close();
     assert.equal((await closed.request()).kind, 'abort', 'Closed fixture ownership cannot serve a late summary.');
+});
+
+
+test('actual native A01 search, A02 search and A02 results return hydrate the same canonical source identity exactly three times', async () => {
+    const h = await summaryReadHarness();
+    const longCustomer = actualFunction('syntheticCustomer', {})();
+    const canonical = { ...longCustomer, id: 990970, personId: '990970', credentialKey: 'theme-audit-records-component-2',
+        sourceSystem: 'subscription-api', mandant: 'SYNTHETIC', lastName: 'Multiple records' };
+    const searchSource = await readFile(fileURLToPath(new URL('../../assets/js/app/slices/customer-search-slice.js', import.meta.url)), 'utf8');
+    const getRequest = actualFunction('getSubscriptionSummaryRequest', {}, searchSource);
+    const inputs = [{ id: 'searchPostalCode', value: '', checked: false }, { id: 'searchHouseNumber', value: '', checked: false }];
+    const browserState = { currentCustomer: null }, bodies = [];
+    const handle = { nativeGroup: 'shell-search-customer-history', state: { recordFixture: { customer: canonical } }, customer: h.fixtures,
+        child: { check: (name, actual, expected) => assert.deepEqual(actual, expected, name) } };
+    handle.page = { locator(selector) { return {
+        first() { return this; },
+        async fill(value) { const field = inputs.find(node => '#' + node.id === selector); assert.ok(field); field.value = value; },
+        async evaluateAll(callback) { return callback(inputs); },
+        async press(key) {
+            assert.equal(key, 'Enter');
+            if (selector === 'button[data-action="search-customer"]') {
+                const response = await h.request({ method: 'GET', suffix: 'api/v1/persons?postalCode=1231AA&houseNumber=1' });
+                assert.equal(response.kind, 'local');
+                const persons = response.value.json.items.map(getRequest).filter(Boolean);
+                const payload = { persons }; bodies.push(payload);
+                assert.equal((await h.request({ payload })).kind, 'local', 'Each of the three installed search renders owns the same exact read protocol.');
+            } else if (selector.includes('select-customer')) {
+                browserState.currentCustomer = handle.customer.personDetails;
+            } else throw new Error('Unexpected synthetic search action: ' + selector);
+        }
+    }; }, async evaluate(callback) { return callback(); } };
+    const globals = { syntheticCustomer: () => structuredClone(longCustomer), visible: async () => {}, metaFor: () => ({}), window: browserState };
+    const select = actualFunction('selectCustomer', globals);
+    const returnToResults = actualFunction('returnToSearchResults', globals);
+    await select(handle); // Existing A01 selected-context search.
+    await select(handle); // Existing A02 filter/table search.
+    await returnToResults(handle); // Existing A02 installed return-to-results search.
+    assert.equal(bodies.length, 3);
+    assert.ok(bodies.every(body => JSON.stringify(body) === JSON.stringify(h.expectedPayload)), 'No extra source identity or body field is admitted.');
+    assert.equal(h.fixtures.personSearchRequests, 3);
+    assert.equal((await h.request()).kind, 'abort', 'A fourth request is outside this finite source path.');
+    assert.deepEqual(inputs.map(node => node.value), ['1231AA', '1']);
 });

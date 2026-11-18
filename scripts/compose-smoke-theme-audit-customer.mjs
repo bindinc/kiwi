@@ -298,7 +298,8 @@ export async function installCustomerFixtures(page, driver) {
             const summary = fixtures.subscriptionSummary, selected = fixtures.personDetails;
             let payload = null;
             try { payload = request.postDataJSON(); } catch { /* An unmatched read protocol remains denied by the final owner. */ }
-            const exactRequest = request.method() === 'POST' && !url.search && subscriptionSummaryReads < 2
+            // Native A01 search, A02 search and its results-return action each hydrate this same source person.
+            const exactRequest = request.method() === 'POST' && !url.search && subscriptionSummaryReads < 3
                 && Boolean(request.headers()['x-csrf-token']) && (request.headers()['content-type'] || '').startsWith('application/json');
             const exactSelectedCustomer = selected && String(selected.id) === summary.personId
                 && selected.personId === summary.personId && selected.credentialKey === summary.credentialKey;
