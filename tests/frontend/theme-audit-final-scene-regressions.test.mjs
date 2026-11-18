@@ -1033,18 +1033,21 @@ test('legacy focus compatibility admits only the exact reviewed native-key exten
 });
 
 test('actual native matched-row rest capture positions the existing row without changing ordinary setup', async () => {
-    for (const native of [false, true]) {
+    for (const native of [false, true]) for (const browserName of ['chromium', 'firefox']) {
         const events = [], sheets = ['styles', 'article-search', 'delivery-date-picker', 'contextual-feedback', 'session-outbox'].map(name => '/assets/css/' + name + '.css');
         const row = { scrollIntoViewIfNeeded: async () => events.push('row-scroll'), hover: async () => events.push('hover'),
             evaluate: async () => ({ text: 'Synthetic same matched row', sheets }) };
         const field = { fill: async () => events.push('query'), press: async key => events.push(key) };
-        const handle = { descriptor: { native }, page: { locator: selector => selector === '#articleSaleForm' ? { isVisible: async () => true } : field,
+        const handle = { descriptor: { native }, driver: { browserName }, page: { locator: selector => selector === '#articleSaleForm' ? { isVisible: async () => true } : field,
             mouse: { move: async () => events.push('mouse-away') } }, child: { report: {}, check: (name, actual, expected) => assert.equal(actual, expected, name) } };
         const run = actualFunction('articleRowPaint', { cssNames: sheets.map(url => url.split('/').at(-1)), metaFor: () => ({}),
-            visible: async () => row, checkpoint: async (h, name) => { assert.equal(h, handle); events.push(name); } });
+            visible: async () => row, checkpoint: async (h, name) => { assert.equal(h, handle); events.push(name); },
+            moveFirefoxNativeArticlePointer: async (h, phase) => { assert.equal(h, handle); events.push('physical-' + phase); } });
         await run(handle);
         assert.equal(events.includes('row-scroll'), native);
-        assert.ok(events.indexOf('article-matched-row-rest') < events.indexOf('hover'));
+        const physical = native && browserName === 'firefox';
+        assert.ok(events.indexOf('article-matched-row-rest') < events.indexOf(physical ? 'physical-hover' : 'hover'));
+        assert.equal(events.includes('physical-rest'), physical); assert.equal(events.includes('mouse-away'), !physical);
         if (native) assert.ok(events.indexOf('row-scroll') < events.indexOf('article-matched-row-rest'));
     }
 });
@@ -1499,5 +1502,76 @@ test('actual subscription scenario selects keyboard radio setup only for after n
         await assert.rejects(run(page, driver, { native, sentinel: true }, {}), error => error === stop);
         assert.deepEqual(choices, [{ role: 'recipient', query: 'recipient', id: 990501, choice: expected },
             { role: 'requester', query: 'payer', id: 990502, choice: expected }]);
+    }
+});
+
+
+async function physicalArticleHoverHarness(options = {}) {
+    const calls = [], listeners = {}; let hovered = false, disposed = 0, aborted = 0, currentTarget;
+    const input = { id: 'articleSearch', isConnected: true, type: 'text', value: options.wrongQuery ? 'other' : 'Synthetic',
+        disabled: options.disabled === true, readOnly: false, contains: hit => hit === input,
+        getBoundingClientRect: () => ({ left: 40, right: 440, top: 40, bottom: 80, width: 400, height: 40 }) };
+    const row = { isConnected: true, tabIndex: 0, contains: hit => hit === row,
+        getBoundingClientRect: () => ({ left: 40, right: options.clipped ? 721 : 440, top: 120, bottom: 180, width: 400, height: 60 }),
+        getAttribute: name => ({ 'data-action': 'select-article', 'data-arg-article-id': options.wrongArticle ? '990602' : '990601', role: 'button' })[name],
+        closest: () => options.wrongOwner ? null : {}, matches: selector => selector === ':hover' && hovered };
+    const privateField = { id: 'synthetic-private-hover-field', value: 'synthetic-private-hover-value' };
+    const window = { currentCustomer: { credentialKey: 'synthetic-private-hover-key' }, orderItems: [],
+        kiwiCustomerWorkSession: { getRequestContext: () => ({ customerReference: { credentialKey: 'synthetic-private-hover-key' } }) } };
+    const document = { getElementById: () => input, querySelector: selector => selector === '#articleSearch' ? input : row,
+        querySelectorAll: () => [input, privateField], elementFromPoint: () => options.covered ? {} : currentTarget };
+    const realm = { document, window, innerWidth: 720, innerHeight: 500, outerWidth: 720, outerHeight: 543,
+        devicePixelRatio: options.dpr || 2, visualViewport: { scale: 1 },
+        AbortController: class extends AbortController { abort() { aborted++; super.abort(); } },
+        addEventListener: (name, callback) => { listeners[name] = callback; } };
+    const page = { evaluateHandle: async (callback, argument) => {
+        currentTarget = argument.selector === '#articleSearch' ? input : row;
+        const value = vm.runInNewContext('(' + callback.toString() + ')(argument)', { ...realm, argument });
+        return { evaluate: async callback => callback(value), dispose: async () => { disposed++; } };
+    }, waitForFunction: async (callback, proof) => assert.equal(await proof.evaluate(callback), true) };
+    const compare = (action, parameters) => {
+        assert.ok(['query', 'move'].includes(action), 'Article hover must never click or dispatch keys.'); calls.push(action);
+        if (action === 'move') {
+            hovered = currentTarget === row && !options.missingHover;
+            const rect = currentTarget.getBoundingClientRect();
+            listeners.pointermove({ type: 'pointermove', isTrusted: !options.untrusted, target: options.wrongHit ? {} : currentTarget,
+                clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 });
+            if (options.mutateTask) window.orderItems.push({ private: 'changed-synthetic-private-cart' });
+            if (options.mutateField) privateField.value = 'changed-synthetic-private-value';
+        }
+        return { action, window: { windowId: options.changedWindow && action === 'move' ? 43 : 42, x: 0, y: 0,
+            width: options.badWindow ? 700 : 1440, height: 1086 }, pointer: parameters.point || null };
+    };
+    const report = { environment: { browserVersion: '150.0.2' } };
+    const handle = { sessionVerified: true, nativeGroup: 'article-cart-custom-calendar', activeFamily: 'article',
+        descriptor: { native: true, role: 'kiwi-admin', locale: 'nl' }, driver: { browserName: 'firefox' }, page, child: { report },
+        state: { phase: 'after', suite: 'feedback', report, nativeKernel: { pointer: { display: ':96', compare } } },
+        helpers: { operational: { physicalClientPoint, nativeReadonlyMotionOwnsTarget } } };
+    if (options.changeHandle) options.changeHandle(handle);
+    const run = actualFunction('moveFirefoxNativeArticlePointer', {}); let error;
+    try { for (const phase of options.phases || ['rest', 'hover']) await run(handle, phase); } catch (caught) { error = caught; }
+    return { error, calls, report, disposed, aborted };
+}
+
+test('native Firefox original article rest and hover use only owned trusted physical motion with stable task and source row', async () => {
+    const good = await physicalArticleHoverHarness(); assert.equal(good.error, undefined);
+    assert.deepEqual(good.calls, ['query', 'move', 'query', 'move']); assert.equal(good.disposed, 2); assert.equal(good.aborted, 2);
+    assert.deepEqual(Array.from(good.report.nativeFirefoxArticlePointer, item => [item.phase, item.rowHovered, item.sameTaskAndFields]),
+        [['rest', false, true], ['hover', true, true]]);
+    for (const privateValue of ['synthetic-private-hover-key', 'synthetic-private-hover-field', 'synthetic-private-hover-value', 'credentialKey'])
+        assert.equal(JSON.stringify(good.report).includes(privateValue), false);
+    for (const options of [{ wrongQuery: true }, { wrongArticle: true }, { wrongOwner: true }, { disabled: true }, { clipped: true }, { covered: true },
+        { dpr: 1 }, { badWindow: true }, { changedWindow: true }, { untrusted: true }, { wrongHit: true }, { mutateTask: true }, { mutateField: true }, { missingHover: true }]) {
+        const bad = await physicalArticleHoverHarness(options); assert.ok(bad.error, JSON.stringify(options)); assert.equal(bad.disposed, bad.aborted);
+    }
+    for (const changeHandle of [h => { h.sessionVerified = false; }, h => { h.nativeGroup = 'shell-search-customer-history'; },
+        h => { h.descriptor.native = false; }, h => { h.descriptor.role = 'kiwi-view'; }, h => { h.descriptor.locale = 'en'; },
+        h => { h.driver.browserName = 'chromium'; }, h => { h.state.report.environment.browserVersion = '149'; },
+        h => { h.activeFamily = 'customer'; }, h => { h.state.phase = 'before'; }, h => { h.state.nativeKernel.pointer.display = ':95'; }]) {
+        const bad = await physicalArticleHoverHarness({ changeHandle }); assert.ok(bad.error); assert.deepEqual(bad.calls, []);
+    }
+    for (const phases of [['hover'], ['rest', 'rest'], ['rest', 'hover', 'hover']]) {
+        const bad = await physicalArticleHoverHarness({ phases }); assert.ok(bad.error);
+        assert.equal(bad.calls.length, phases[0] === 'hover' ? 0 : 2 * (phases.length - 1));
     }
 });

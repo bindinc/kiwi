@@ -886,8 +886,11 @@ async function articleRowPaint(handle) {
             }) };
     });
     if (handle.descriptor.native === true) await row.scrollIntoViewIfNeeded();
-    await page.mouse.move(0, 0); const resting = await read(); await checkpoint(handle, 'article-matched-row-rest');
-    await row.hover(); const hovered = await read(); await checkpoint(handle, 'article-matched-row-hover');
+    const physicalFirefox = handle.descriptor.native === true && handle.driver.browserName === 'firefox';
+    if (physicalFirefox) await moveFirefoxNativeArticlePointer(handle, 'rest'); else await page.mouse.move(0, 0);
+    const resting = await read(); await checkpoint(handle, 'article-matched-row-rest');
+    if (physicalFirefox) await moveFirefoxNativeArticlePointer(handle, 'hover'); else await row.hover();
+    const hovered = await read(); await checkpoint(handle, 'article-matched-row-hover');
     await page.locator('#articleSearch').press('ArrowDown'); const keyboard = await read(); await checkpoint(handle, 'article-matched-row-keyboard');
     child.report.articleRowPaint = { resting, hovered, keyboard,
         boundary: 'Actual matched same query/row. Computed borders/radii/order and full images require independent role/cascade review; no automatic parity from unchanged JS.' };
@@ -895,6 +898,67 @@ async function articleRowPaint(handle) {
     child.check('Matched row has five declared application stylesheets', cssNames.every(name => resting.sheets.some(url => {
         const stem = name.slice(0, -4); return new RegExp('/' + stem + '(?:-[\\w-]{7})?\\.css$').test(url); })), true, metaFor(handle), 10);
     await page.locator('#articleSearch').press('Escape');
+}
+
+async function moveFirefoxNativeArticlePointer(handle, phase) {
+    const { page, state, child, helpers } = handle;
+    assert.equal(handle.sessionVerified, true); assert.equal(handle.nativeGroup, 'article-cart-custom-calendar');
+    assert.equal(handle.descriptor.native, true); assert.equal(handle.descriptor.role, 'kiwi-admin'); assert.equal(handle.descriptor.locale, 'nl');
+    assert.equal(handle.driver.browserName, 'firefox'); assert.equal(state.report.environment.browserVersion, '150.0.2');
+    assert.equal(state.phase, 'after'); assert.equal(state.suite, 'feedback'); assert.equal(handle.activeFamily, 'article');
+    const pointer = state.nativeKernel?.pointer;
+    assert.equal(pointer?.display, ':96'); assert.equal(typeof pointer.compare, 'function');
+    const stages = child.report.nativeFirefoxArticlePointer || [];
+    assert.equal(phase, ['rest', 'hover'][stages.length]); assert.ok(stages.length < 2);
+    const rowSelector = '#articleDropdown .article-item[data-arg-article-id="990601"]';
+    const selector = phase === 'rest' ? '#articleSearch' : rowSelector;
+    const proof = await page.evaluateHandle(({ selector, rowSelector }) => {
+        const target = document.querySelector(selector), row = document.querySelector(rowSelector), input = document.getElementById('articleSearch');
+        const events = [], controller = new AbortController();
+        const fields = [...document.querySelectorAll('input:not([type=hidden]):not([type=password]),select,textarea')];
+        const read = () => JSON.stringify({ customer: window.currentCustomer, context: window.kiwiCustomerWorkSession.getRequestContext(),
+            cart: window.orderItems, fields: fields.map(node => [node.id, node.value, node.checked, node.disabled, node.readOnly]) });
+        const before = read();
+        const measure = () => {
+            const r = target.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { connected: target.isConnected && row.isConnected && input.isConnected,
+                sameTarget: target === document.querySelector(selector) && row === document.querySelector(rowSelector),
+                exactQuery: input.value === 'Synthetic' && input.type === 'text' && !input.disabled && !input.readOnly,
+                exactRow: row.getAttribute('data-action') === 'select-article' && row.getAttribute('data-arg-article-id') === '990601'
+                    && row.getAttribute('role') === 'button' && row.tabIndex === 0 && Boolean(row.closest('#articleSaleForm #articleDropdown')),
+                ownedCenter: Boolean(hit && (hit === target || target.contains(hit))),
+                bounds: { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height },
+                viewport: { innerWidth, innerHeight, outerWidth, outerHeight, dpr: devicePixelRatio, pinchScale: visualViewport?.scale } };
+        };
+        addEventListener('pointermove', event => events.push({ type: event.type, trusted: event.isTrusted,
+            ownsExpectedTarget: event.target === target || target.contains(event.target), clientX: event.clientX, clientY: event.clientY }),
+        { capture: true, signal: controller.signal });
+        return { events, controller, read, before, measure, row };
+    }, { selector, rowSelector });
+    const result = { phase, selector, method: 'Original rest and hover through existing genuine XTest pointer motion only' };
+    stages.push(result); child.report.nativeFirefoxArticlePointer = stages;
+    try {
+        const measured = await proof.evaluate(value => value.measure()), bounds = measured.bounds;
+        assert.ok(measured.connected && measured.sameTarget && measured.exactQuery && measured.exactRow && measured.ownedCenter);
+        assert.deepEqual(measured.viewport, { innerWidth: 720, innerHeight: 500, outerWidth: 720, outerHeight: 543, dpr: 2, pinchScale: 1 });
+        assert.ok(bounds.width > 0 && bounds.height > 0 && bounds.left >= 0 && bounds.top >= 0 && bounds.right <= 720 && bounds.bottom <= 500);
+        result.before = measured;
+        const parameters = { expectedWidth: measured.viewport.outerWidth * 2, expectedHeight: measured.viewport.outerHeight * 2 };
+        result.window = pointer.compare('query', parameters);
+        const point = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+        result.physicalPoint = helpers.operational.physicalClientPoint(result.window.window, measured.viewport, point);
+        result.motion = pointer.compare('move', { ...parameters, point: result.physicalPoint });
+        assert.equal(result.motion.window.windowId, result.window.window.windowId);
+        await page.waitForFunction(value => value.events.length > 0, proof, { timeout: 1000 });
+        result.motionEvent = await proof.evaluate(value => value.events.at(-1));
+        assert.ok(helpers.operational.nativeReadonlyMotionOwnsTarget(result.motionEvent, point));
+        assert.deepEqual(await proof.evaluate(value => value.measure()), measured);
+        result.sameTaskAndFields = await proof.evaluate(value => value.before === value.read()); assert.equal(result.sameTaskAndFields, true);
+        result.rowHovered = await proof.evaluate(value => value.row.matches(':hover'));
+        assert.equal(result.rowHovered, phase === 'hover', 'Actual row must paint its original rest then real hover state.');
+    } finally {
+        await proof.evaluate(value => value.controller.abort()).catch(() => {}); await proof.dispose();
+    }
 }
 
 async function articleScene(handle) {
