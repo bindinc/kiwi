@@ -58,7 +58,7 @@ async function lookup() {
 }
 async function choose() {
     await page.locator('#subRecipientAddressChoices').waitFor({ state: 'visible' });
-    await page.selectOption('#subRecipientAddressChoices', '0');
+    await page.locator('#subRecipientAddressChoices button[value="0"]').press('Enter');
 }
 
 try {
@@ -99,7 +99,7 @@ try {
     mode = 'choices';
     await page.fill('#subRecipientHouseNumber', '1A');
     await page.locator('#subRecipientAddressChoices').waitFor({ state: 'visible' });
-    await page.selectOption('#subRecipientAddressChoices', '1');
+    await page.locator('#subRecipientAddressChoices button[value="1"]').press('Enter');
     assert.equal(await validate(), true);
     assert.equal(await sessionId(), originalSession);
     console.log('PASS address edit, explicit reselection and revalidation retain the form session');

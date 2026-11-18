@@ -333,7 +333,78 @@ function testOpenMenuTracksHeaderReflowWithoutTriggerResize() {
     assert.equal(layoutObservers[1].disconnected, true);
 }
 
+function createDebugModalFixture(context) {
+    const classes = new Set();
+    const modal = { classList: { add: value => classes.add(value), remove: value => classes.delete(value), contains: value => classes.has(value) } };
+    const control = () => ({ isConnected: true, disabled: false, hidden: false, invisible: false, inert: false, focusCount: 0,
+        matches() { return this.disabled; }, getAttribute() { return null; },
+        closest() { return this.inert || this.hidden ? this : null; },
+        getClientRects() { return this.hidden ? [] : [{}]; },
+        focus() { this.focusCount++; context.document.activeElement = this; } });
+    const opener = control(), fallback = control(), field = control();
+    const document = { activeElement: opener, getElementById: id => id === 'debugModal' ? modal : id === 'agentProfileTrigger' ? fallback : null };
+    context.document = document;
+    context.callSession = { active: false };
+    context.isDebugModalEnabled = () => true;
+    context.getComputedStyle = node => ({ visibility: node.invisible ? 'hidden' : 'visible' });
+    return { modal, opener, fallback, field, document };
+}
+
+function testDebugModalReturnsToFirstLiveInvokerAcrossRepeatedOpens() {
+    const { context } = createRuntimeContext(), f = createDebugModalFixture(context);
+    context.kiwiCallAgentRuntime.openDebugModal();
+    f.document.activeElement = f.field;
+    context.kiwiCallAgentRuntime.openDebugModal();
+    context.kiwiCallAgentRuntime.closeDebugModal();
+    assert.equal(f.document.activeElement, f.opener);
+    assert.equal(f.opener.focusCount, 1); assert.equal(f.fallback.focusCount, 0);
+    assert.equal(f.modal.classList.contains('show'), false);
+    f.document.activeElement = f.field;
+    context.kiwiCallAgentRuntime.closeDebugModal();
+    assert.equal(f.document.activeElement, f.field, 'An already closed dialog cannot steal focus.');
+    context.kiwiCallAgentRuntime.openDebugModal();
+    context.kiwiCallAgentRuntime.closeDebugModal();
+    assert.equal(f.document.activeElement, f.field, 'A later opening owns its own invoker.');
+}
+
+function testDebugModalFallsBackWhenPriorInvokerCannotReceiveFocus() {
+    for (const property of ['isConnected', 'disabled', 'hidden', 'invisible', 'inert']) {
+        const { context } = createRuntimeContext(), f = createDebugModalFixture(context);
+        context.kiwiCallAgentRuntime.openDebugModal(); f.document.activeElement = f.field;
+        f.opener[property] = property === 'isConnected' ? false : true;
+        context.kiwiCallAgentRuntime.closeDebugModal();
+        assert.equal(f.document.activeElement, f.fallback, property);
+        assert.equal(f.opener.focusCount, 0); assert.equal(f.fallback.focusCount, 1);
+    }
+}
+
+function testDebugModalMissingClosedOrDisabledEntryDoesNotMoveFocus() {
+    const { context } = createRuntimeContext(), f = createDebugModalFixture(context);
+    context.kiwiCallAgentRuntime.closeDebugModal();
+    context.isDebugModalEnabled = () => false;
+    context.kiwiCallAgentRuntime.openDebugModal();
+    assert.equal(f.modal.classList.contains('show'), false); assert.equal(f.opener.focusCount, 0);
+    f.document.getElementById = () => null;
+    context.isDebugModalEnabled = () => true;
+    context.kiwiCallAgentRuntime.openDebugModal(); context.kiwiCallAgentRuntime.closeDebugModal();
+    assert.equal(f.document.activeElement, f.opener);
+}
+
+function testDebugModalCannotRestoreToAnUnavailableFallback() {
+    const { context } = createRuntimeContext(), f = createDebugModalFixture(context);
+    context.kiwiCallAgentRuntime.openDebugModal(); f.document.activeElement = f.field;
+    f.opener.isConnected = false; f.fallback.disabled = true;
+    context.kiwiCallAgentRuntime.closeDebugModal();
+    assert.equal(f.document.activeElement, f.field);
+    assert.equal(f.opener.focusCount, 0); assert.equal(f.fallback.focusCount, 0);
+    assert.equal(f.modal.classList.contains('show'), false);
+}
+
 function run() {
+    testDebugModalReturnsToFirstLiveInvokerAcrossRepeatedOpens();
+    testDebugModalFallsBackWhenPriorInvokerCannotReceiveFocus();
+    testDebugModalMissingClosedOrDisabledEntryDoesNotMoveFocus();
+    testDebugModalCannotRestoreToAnUnavailableFallback();
     testOpenMenuTracksHeaderReflowWithoutTriggerResize();
     testStatusMenuFitsShortViewportAndReturnsInternalFocus();
     testStatusMenuOutsideDismissalDoesNotStealFocus();

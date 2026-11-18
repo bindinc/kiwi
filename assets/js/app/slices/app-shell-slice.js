@@ -261,6 +261,45 @@ function revealCallActionAboveToast(documentRef, toast) {
     view.scrollBy({ top: distance, behavior: 'instant' });
 }
 
+function revealSubscriptionOfferKeyboardFocus(documentRef) {
+    const control = documentRef?.activeElement;
+    if (!control?.matches?.('button.subscription-offer-toggle:focus-visible') || !control.closest) return;
+    if (control.closest('dialog')) return;
+
+    const overlay = control.closest('.form-container, .form-lightbox');
+    const view = documentRef.defaultView;
+    if (!overlay?.scrollBy || !view?.getComputedStyle) return;
+    const overlayStyle = view.getComputedStyle(overlay);
+    const scrollable = ['auto', 'scroll'].includes(overlayStyle.overflowY)
+        && overlay.scrollHeight > overlay.clientHeight;
+    if (!scrollable) return;
+
+    const overlayBounds = overlay.getBoundingClientRect();
+    const clipTop = Math.max(0, overlayBounds.top + overlay.clientTop);
+    const clipBottom = Math.min(view.innerHeight, overlayBounds.top + overlay.clientTop + overlay.clientHeight);
+    const bounds = control.getBoundingClientRect();
+    const style = view.getComputedStyle(control);
+    const hasOutline = style.outlineStyle !== 'none' && style.outlineStyle !== 'hidden';
+    const outline = parseFloat(style.outlineWidth) || 0;
+    const offset = parseFloat(style.outlineOffset) || 0;
+    const outset = hasOutline ? Math.max(0, outline + offset) : 0;
+    const top = bounds.top - outset, bottom = bounds.bottom + outset;
+    if (top >= clipTop && bottom <= clipBottom) return;
+
+    const paddingTop = Math.max(0, parseFloat(overlayStyle.scrollPaddingTop) || 0);
+    const paddingBottom = Math.max(0, parseFloat(overlayStyle.scrollPaddingBottom) || 0);
+    const visibleTop = clipTop + paddingTop, visibleBottom = clipBottom - paddingBottom;
+    const fits = bounds.height > 0 && bounds.height + 2 * outset <= visibleBottom - visibleTop;
+    if (!fits) return;
+
+    // Native focus can leave part of a tall offer button outside Firefox's scrollport.
+    const distance = top < clipTop ? top - visibleTop : bottom - visibleBottom;
+    const remainingScroll = overlay.scrollHeight - overlay.clientHeight - overlay.scrollTop;
+    const delta = Math.max(-overlay.scrollTop, Math.min(distance, remainingScroll));
+    if (delta === 0) return;
+    overlay.scrollBy({ top: delta, behavior: 'instant' });
+}
+
 export function showToast(message, type = 'success', options = {}) {
     if (type === 'success' && globalThis.window?.kiwiOutbox?.consumeSaveNotice?.()) {
         message = 'Opgeslagen in outbox. Nog niet verwerkt.';
@@ -503,6 +542,7 @@ export function installGlobalListeners() {
     };
     listenersByEventType.focusin = () => {
         revealCallActionAboveToast(documentRef, documentRef.getElementById('toast'));
+        revealSubscriptionOfferKeyboardFocus(documentRef);
     };
 
     documentRef.addEventListener('keydown', listenersByEventType.keydown);

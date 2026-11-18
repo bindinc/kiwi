@@ -1,5 +1,13 @@
 # Slice 07 — Service workflows
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 07 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #151](https://github.com/bindinc/kiwi/pull/151) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Consistent service forms, warnings and draft recovery.** Integrated service-state baseline decisions retain the accepted branch, warning, pending/error and draft behavior. Current finite evidence does not imply backend persistence or provider correctness; the central record owns the final native-group/reset decisions.
+
+Validation and visual evidence: the [central slice 10 record](../../../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Audit marker: theme_audit
 
 Status: implemented and independently accepted for the service scope. The user merged PR #151 into main on 2026-11-12 at `bfb310d825299a2086d88e6c59dcf85f69e4d6f7`, from accepted closure head `771ab50`; historical evidence keeps its original source boundary. All slice 07-owned criteria have scoped evidence below. The shared toast/action obstruction is resolved by accepted slice 08 at `e0e5822`, with actual Chromium/Firefox 320px inline-error and immediate-retry evidence; its limits remain in the [slice 08 audit](../../../css/theme_audit-08-overlays-feedback-and-system-surfaces.md). Complete-interface acceptance belongs to slice 10. See the [audit index](../../../../plans/theme_audit.md) for the baseline, story, sequencing and evidence boundaries. Deliver the coherent service-form alignment as one implementation PR with its own worktree and changelog entry.
@@ -181,3 +189,14 @@ Do not alter accepted/declined winback behavior, offer selection, deceased-subsc
 ## Remaining unknowns and completion evidence
 
 The listed branches and service-form criteria have controlled local rendered, request, draft and address evidence above. There is no remaining implementation finding owned by slice 07. Final complete-interface acceptance under slice 10 and the shared toast/overlay gates owned by slice 08 remain distinct. Pushed closure and exact-head CI metadata are recorded in the PR and durable `closure-provenance.json`. No upstream persistence, merge or deployment is claimed; final regression must include later shared overlay changes.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+A06 service flows and A08 source/native dates; locally fulfilled fixtures do not establish upstream business persistence.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

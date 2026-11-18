@@ -1,5 +1,13 @@
 # theme_audit 08 — Overlays, feedback and system surfaces
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 08 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #152](https://github.com/bindinc/kiwi/pull/152) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Consistent ordinary backdrops, feedback surfaces and private image review.** The existing ordinary backdrop and protected image-review shield remain separate deliberate states. The floating entry now uses the existing inverse 3px focus ring inset by 5px, accepted in fresh boundary images. Original 600 footer and 760 horizontal workspace rules carry by exact source; accepted icon refinements preserve wrapped toolbar height. Original privacy renderer limits remain explicit.
+
+Validation and visual evidence: the [central slice 10 record](../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Audit marker: `theme_audit`. Status: accepted and user-merged into main on 2026-11-12 at `861b386f8d3013b4c4c8ed89b7ada4e8cc64e101`. The merged tree equals accepted documentation head `e036b49`; validated application source remains `e0e5822`. Source/rendered and final delivery reviews passed, including exact-head CI43231365422. Historical BEFORE keeps accepted07 `771ab50`; original audit baseline remains `c05973e`. No deployment or cleanup is implied.
 
 Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-206629. Depends on 01/02 and shell placement from 03; coordinate disposition/outbox overlays with 09 and form lightboxes with 04–07.
@@ -166,3 +174,22 @@ The approved datepicker remains a distinct popover with its existing tested keyb
 - Capture representative dialogs and permission/account states alongside their surrounding app context. Clearly label fixture-only states and do not claim complete privacy or accessibility acceptance from screenshots alone.
 
 Implement in a separate PR/worktree, serialize shared CSS/template edits, and retain a single changelog entry. Done requires visual, keyboard and applicable privacy evidence, with no unresolved high-impact regression.
+
+
+## Final integration follow-up - 2026-11-17
+
+Status: implementation prepared in draft PR #144; current rendered acceptance pending. The requester explicitly allows the floating feedback entry to overlap the New subscription and Article sale dialogs on mobile. Those two existing form containers are therefore excluded from the extra feedback gutter, allowing their normal available width. Other legacy dialogs retain their existing clearance. This changes layout only; feedback privacy, capture shielding, modal behavior, business rules and form state remain unchanged. Actual Chromium/Firefox narrow-width geometry, whole images, action reachability and the existing final privacy gates must verify this correction before final slice10 acceptance.
+
+
+The explicit visible-feedback width supplement is independently accepted (review b1717ba1f109fc0d23d0247132e4d10d912fd8a61f7def7fe5cb1869506126b7): all32 whole PNGs across8 original narrow form contexts were viewed. At390/320, both forms retain358/288px card widths when feedback becomes visible; padding stays16px and overflow stays zero. Actual source/role, focus and draft restoration checks pass. The original Firefox forward-Tab attempt remains failed; successful close access uses actual Shift+Tab. PR #144 is still unmerged/undeployed.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+A12–A13 overlays and feedback. The requested subscription/article width correction is independently accepted in all 8 actual visible-feedback contexts (b1717ba1); cards stay 358px at 390 and 288px at 320. Feedback may overlap those two forms.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

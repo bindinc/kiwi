@@ -8,6 +8,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+### Changed
+
+- Align remaining history/offer/debug focus, native address actions, mobile subscription/article dialogs and feedback focus with Light & Shadow; complete independently reviewed Chromium/Firefox acceptance across the original 78-cell matrix and scoped English, roles, touch, short-screen, privacy and genuine 200% zoom/reset checks while preserving business rules, identities, consent and drafts (`theme_audit` slice 10). [sc-206629]
+
 ## [v1.0.38] - 2026-11-17
 
 ### Fixed

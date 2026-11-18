@@ -1786,6 +1786,8 @@ function debugEndCall() {
 }
 
 // Debug Modal Functions
+let debugModalInvoker = null;
+
 function openDebugModal() {
     if (!isDebugModalEnabled()) {
         return;
@@ -1796,6 +1798,7 @@ function openDebugModal() {
         return;
     }
 
+    if (!modal.classList.contains('show')) debugModalInvoker = document.activeElement;
     modal.classList.add('show');
     
     // Update debug end call button visibility
@@ -1809,7 +1812,22 @@ function openDebugModal() {
 
 function closeDebugModal() {
     const modal = document.getElementById('debugModal');
+    if (!modal || !modal.classList.contains('show')) {
+        debugModalInvoker = null;
+        return;
+    }
     modal.classList.remove('show');
+    const candidates = [debugModalInvoker, document.getElementById('agentProfileTrigger')];
+    debugModalInvoker = null;
+    const invoker = candidates.find(node => {
+        const isLive = node?.isConnected && typeof node.focus === 'function'
+            && node !== document.body && node !== document.documentElement;
+        if (!isLive) return false;
+        const isEnabled = !node.matches(':disabled') && node.getAttribute('aria-disabled') !== 'true';
+        const isVisible = node.getClientRects().length > 0 && getComputedStyle(node).visibility === 'visible';
+        return isEnabled && isVisible && !node.closest('[hidden], [inert]');
+    });
+    invoker?.focus();
 }
 
 // Full Reset - Clear session-backed POC data and reload

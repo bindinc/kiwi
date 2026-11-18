@@ -1,5 +1,13 @@
 # theme_audit 03 — Shell, navigation and workspace hierarchy
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 03 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #146](https://github.com/bindinc/kiwi/pull/146) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Stable shell, fixed session action and distinct active-customer context.** The current shell/search/customer baseline cells are independently accepted in both engines at 1440, 390 and 320 px. Actual account-role presentation is separately scoped; no new session-reset or customer-identity behavior is introduced.
+
+Validation and visual evidence: the [central slice 10 record](../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Audit marker: `theme_audit`. Status: accepted for slice scope; implementation, rendered comparison and independent completion review passed. Final documentation CI is tracked in the PR. Before-state captures use the frozen accepted slice 02 runtime. Audit baseline: `c05973e`, 2026-11-09; implementation baseline: merged slice 02 at `851dc77`, 2026-11-10.
 
 Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-206629. Implement after slices 01 and 02. Implementation is authorized by the ten-slice task; merge and deployment require separate explicit authorization.
@@ -121,3 +129,14 @@ Because this slice touches `styles.css` and `index.html.twig`, integrate after 0
 - Use Docker Compose and slice 10's matrix. Run relevant shell/session tests and guardrails if their files change. Do not present a synthetic header fixture as proof of the complete working shell.
 
 Done means source, rendered comparison and preserved interaction evidence agree. An attractive empty screenshot alone does not complete this slice.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+A01 shell/profile and A13 debug Escape focus return; the actual new debug return passes in both browsers at all three widths.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

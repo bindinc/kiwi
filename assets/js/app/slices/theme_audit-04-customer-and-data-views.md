@@ -1,5 +1,13 @@
 # theme_audit 04 — Customer search, records and data views
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 04 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #147](https://github.com/bindinc/kiwi/pull/147) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Readable search/data views, independent records and safe address choices.** Current validation confirms the readonly gender alias already merged in PR #157. PR #144 adds scoped history focus, wrapped native address-choice buttons and offer reveal; it does not modify customer-editor.js. Actual 390/320 touch, 390x320 keyboard and production private-address capture evidence is accepted. Writable letter salutations, source identity, raw records and the user-approved unavailable-validity message remain intact.
+
+Validation and visual evidence: the [central slice 10 record](../../../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Audit marker: `theme_audit`. Status: accepted after independent source, visual and interaction review; PR #147 merged into the planning branch under explicit user authorization. Baseline: `c05973e`, 2026-11-09.
 
 Coordination: [evaluation and slice index](../../../../plans/theme_audit.md), SC-206629. Depends on 01/02 and the workspace framing from 03; establish reusable person/address presentation before workflow slices 05–07.
@@ -113,3 +121,19 @@ Do not expose private values merely to create prettier screenshots. Use known lo
 - Run relevant customer search/detail/editor/address and work-session suites plus palette guardrails when touched. Browser setup from existing smoke scripts may be reused, but do not execute their business mutations against real records.
 
 Record which states used actual application data versus isolated fixtures. Complete only when both visual consistency and retained critical interactions have evidence.
+
+
+## Final integration follow-up - 2026-11-17
+
+PR #144 source review identified one real Firefox320 deviation: native multirow address SELECT labels clipped the city suffix even though the original layout assertions passed. Only the ambiguous-candidate renderer now uses a native fieldset/legend and source-ordered secondary button actions with complete wrapping. Candidate values, same-index selection, validation/session guards and the separate house-addition SELECT remain unchanged. Whole private labels retain address sensitivity; the legend is public. Existing smoke interactions now use the actual native button action, and numeric text-line containment checks strengthen the existing wrapped-address-selection criterion. All47 address tests and independent source review pass. Fresh current wrapping, keyboard, draft and screenshot-privacy acceptance remain pending. The failed native SELECT image remains preserved.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+A02–A04 results, records and address/bank controls. Current Firefox320 address-choice wrapping has independent whole-image acceptance d6de1010; raw address/session/identity semantics remain preserved.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

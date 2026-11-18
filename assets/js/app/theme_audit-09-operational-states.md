@@ -1,5 +1,13 @@
 # theme_audit 09 — Align operational state presentation
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 09 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #154](https://github.com/bindinc/kiwi/pull/154) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Clear call, recording, ACW, history and outbox states.** The current integrated baseline and qualified finite carry preserve separate valid active-call/inactive-ACW states, actual role affordances, scoped short keyboard actions, motion preferences and outbox overlay/dirty-poll behavior. Debug Escape returns focus to its enabled invoker. Source-bound local fixtures do not prove upstream persistence.
+
+Validation and visual evidence: the [central slice 10 record](../../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Status: application acceptance passed on 2026-11-13; ready for review in PR154. All eight operational criteria and the additional record/control refinements have scoped source/rendered evidence. Final integrated interface acceptance follows icon PR155 and slice10. Merge and deployment remain separate.
 
 Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md). Reference: [Light & Shadow showcase](../../../plans/kiwi-light-and-shadow-theme-palette-showcase.html), especially its operational-state specimens, restrained surfaces, action hierarchy and spacing. The showcase has no complete call-console or outbox workflow; apply its shared visual rules without inventing equivalent business behavior.
@@ -232,3 +240,14 @@ Production code `b554f5b85eb575d97ad393f3b208aa21b7de98e5` passes all15 focused 
 Durable evidence: `/home/bartdeijkers/_worktrees/.kiwi-theme-audit/evidence/2026-11-17/gender-regression/`. Attempt01 remains a failed pre-login producer invocation; attempt02 changes only its existing login-helper argument order. Validation is actual native-auth local application UI with an intercepted synthetic readonly GET, not upstream persistence or production-policy proof. The source/runtime binding covers216 production bodies and six public configuration files; only the editor module differs from accepted155. No screenshot or customer data is committed.
 
 The changelog prepares `v1.0.38` for an explicitly approved follow-up preview release. Merge and tag publication remain pending authorization; immutable `v1.0.37` is preserved. This bounded correction does not complete final integrated slice10.
+
+
+## Final integration follow-up — 2026-11-17
+
+Status: this document's scoped implementation remains accepted and merged. Final integrated acceptance continues in [PR #144](https://github.com/bindinc/kiwi/pull/144), linked to [SC-206629](https://app.shortcut.com/bindincit/story/206629). The PR144 follow-ups are not merged or deployed.
+
+A09–A12 calls, history, outbox and feedback. Current async refresh and fresh-document retained-capture checks complete in all six original environments; independent whole-image review remains separate.
+
+Current Docker Compose baseline 17 completed all 78 original cells at 1440/390/320 in Chromium and Firefox with zero automated deviations, errors or blocked writes. This records observations, not complete independent visual acceptance. All216 production bodies and six public configurations are unchanged between application commit `052029b2` and tooling-only `7b6d6406`; all 44 helpers are explicitly frozen. The source review for debug focus is `b3b73404`; its existing runtime and final-scene tests pass. Full CI at 052029b2 passed (44116437798).
+
+Evidence is retained beside the worktrees in `.kiwi-theme-audit/evidence/2026-11-17/slice-10/actual-baseline-17` (terminal manifest `2509db6d`) and the adjacent independent-review directory. The latest genuine OS200% integration attempts remain failed/incomplete and are preserved; they do not supersede accepted historical scoped native checks. Remaining integrated review and finite supplements stay assigned to slice10. No screenshots or customer data are committed. Audit marker: `theme_audit`.

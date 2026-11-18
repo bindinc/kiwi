@@ -82,8 +82,8 @@
 }
 
 .contextual-feedback-button:focus-visible {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
+    outline: 3px solid var(--focus-inverse);
+    outline-offset: -5px;
 }
 
 .contextual-feedback-button svg {
@@ -117,7 +117,7 @@
 
 /* Keep the floating entry outside legacy task content and both focus outlines. */
 @media (max-width: 1560px) {
-    body:has(> #contextualFeedbackButton:not([hidden])) :is(.modal, div.form-container):not(dialog):not(dialog *) {
+    body:has(> #contextualFeedbackButton:not([hidden])) :is(.modal, div.form-container):not(#newSubscriptionForm, #articleSaleForm):not(dialog):not(dialog *) {
         padding-inline-end: max(var(--panel-padding), calc(60px + env(safe-area-inset-right, 0px)));
     }
 

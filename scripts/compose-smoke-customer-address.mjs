@@ -78,7 +78,7 @@ const assert = require('node:assert/strict');
         await page.fill('#editPostalCode', '1231AA');
         await page.fill('#editHouseNumber', '1');
         await page.waitForSelector('#editAddressChoices:not([hidden])');
-        await page.selectOption('#editAddressChoices', '1');
+        await page.locator('#editAddressChoices button[value="1"]').press('Enter');
         assert.equal(await page.inputValue('#editEmail'), 'edited-profile@example.invalid');
         const saved = page.waitForResponse(r => r.url().endsWith('/persons/1') && r.request().method() ===
             'PATCH');
@@ -170,7 +170,7 @@ const assert = require('node:assert/strict');
         assert.equal(await page.locator('#externalAddressCorrectionNote').isVisible(), true);
         await page.fill('#editPostalCode', '1231aa');
         await page.waitForSelector('#editAddressChoices:not([hidden])');
-        await page.selectOption('#editAddressChoices', '1');
+        await page.locator('#editAddressChoices button[value="1"]').press('Enter');
         await page.locator('#customerEditForm button[type="submit"]').click();
         await page.waitForSelector('#editCustomerForm', {
             state: 'hidden'

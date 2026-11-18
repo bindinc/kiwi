@@ -38,7 +38,7 @@ async function fill(prefix, postcode, number = '1') {
         const panel = await page.locator(`#${prefix}AddressStatus`).boundingBox();
         assert.ok(Math.abs(after.height - before.height) < 1, 'choices must not change row height');
         assert.ok(panel.y >= after.y + after.height, 'choices must appear below street and city');
-        await choices.selectOption('0');
+        await choices.locator('button[value="0"]').press('Enter');
         assert.equal(await choices.isVisible(), false);
     }
 }
@@ -132,8 +132,7 @@ try {
     assert.equal(await page.locator('#editAddressChoices').isVisible(), false);
     await page.fill('#editHouseNumber', '3');
     await page.waitForSelector('#editAddressChoices:not([hidden])');
-    await page.locator('#editAddressChoices').focus();
-    await page.keyboard.press('ArrowDown');
+    await page.locator('#editAddressChoices button[value="0"]').press('Enter');
     assert.equal(await page.locator('#editAddressChoices').isVisible(), false);
     assert.equal(await page.inputValue('#editHouseExt'), '');
     await page.locator('#editCity').locator('..').screenshot({ path: `${evidence}/address-choices-desktop.png` });
@@ -165,7 +164,7 @@ try {
         const values = { PostalCode: '1231AA', HouseNumber: '1', Address: 'Rembrandt', City: 'LOOSDRECHT' };
         for (const field of pair) await page.fill(`#edit${field}`, values[field]);
         await page.waitForSelector('#editAddressChoices:not([hidden])');
-        await page.selectOption('#editAddressChoices', '0');
+        await page.locator('#editAddressChoices button[value="0"]').press('Enter');
         assert.equal(await page.inputValue('#editPostalCode'), '1231AA');
         assert.equal(await page.inputValue('#editHouseNumber'), '1');
         assert.equal(await page.inputValue('#editAddress'), 'Rembrandtlaan');
@@ -184,7 +183,7 @@ try {
     await page.locator('#editAddressStatus').screenshot({ path: `${evidence}/address-alternatives-narrow.png` });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
     await page.setViewportSize({ width: 1440, height: 1100 });
-    await page.selectOption('#editAddressChoices', '0');
+    await page.locator('#editAddressChoices button[value="0"]').press('Enter');
     assert.equal(await page.inputValue('#editPostalCode'), '1231AA');
     await checkAdditionVariants('edit');
     console.log('PASS: all six input pairs and explicit postcode correction');

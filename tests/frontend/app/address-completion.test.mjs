@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { createAddressCompletion, endAddressSessions, normalizeAddressInput } from '../../../assets/js/app/address-completion.js';
+import { createAddressCompletion, endAddressSessions, initAddressCompletion, normalizeAddressInput } from '../../../assets/js/app/address-completion.js';
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 afterEach(() => endAddressSessions());
@@ -523,4 +523,89 @@ test('an unselected address is not reported invalid and its choices remain avail
     f.pending[1].resolve(confirmed());
     assert.equal(await checking, true);
     assert.equal(f.requests[1].payload.formSessionId, f.requests[0].payload.formSessionId);
+});
+
+
+test('native address actions apply the same source candidate index and retain full private text without submitting', async () => {
+    const events = new Map(), requests = [];
+    let focused = null;
+    function element(tag) {
+        const node = { tagName: tag.toUpperCase(), children: [], dataset: {}, attributes: new Map(), listeners: new Map(),
+            value: '', hidden: false, disabled: false, readOnly: false, labels: [], parentElement: null,
+            classList: { add() {} }, get isConnected() { return node === root || Boolean(node.parentElement?.isConnected); },
+            getClientRects: () => [{}],
+            getAttribute: name => node.attributes.get(name) ?? null,
+            setAttribute: (name, value) => node.attributes.set(name, value),
+            addEventListener: (name, listener) => node.listeners.set(name, listener),
+            append(...children) { for (const child of children) { child.parentElement = node; node.children.push(child); } },
+            replaceChildren(...children) { for (const child of node.children) child.parentElement = null; node.children = []; node.append(...children); },
+            after(child) { const parent = node.parentElement; child.parentElement = parent; parent.children.splice(parent.children.indexOf(node) + 1, 0, child); },
+            remove() { node.parentElement?.children.splice(node.parentElement.children.indexOf(node), 1); node.parentElement = null; },
+            contains: child => child === node || node.children.some(candidate => candidate.contains(child)),
+            closest(selector) {
+                if (selector === '[hidden]') return node.hidden ? node : node.parentElement?.closest(selector) ?? null;
+                if (selector === '.form-row' && node === row) return node;
+                if (selector === '[data-address-prefix]' && node === container) return node;
+                return node.parentElement?.closest(selector) ?? null;
+            },
+            querySelectorAll(selector) {
+                return node.children.flatMap(child => [
+                    ...(selector === '[data-address-prefix]' && child === container ? [child] : []), ...child.querySelectorAll(selector)
+                ]);
+            },
+            focus() { focused = node; } };
+        Object.defineProperty(node, 'innerHTML', { set() { throw new Error('Address text must never become HTML.'); } });
+        return node;
+    }
+    const root = element('form'), container = element('div'), row = element('div');
+    container.dataset.addressPrefix = 'unit'; root.append(container); container.append(row);
+    const suffixes = { postalCode: 'PostalCode', houseNumber: 'HouseNumber', addition: 'HouseExt', street: 'Address', city: 'City' };
+    const fields = Object.fromEntries(Object.entries(suffixes).map(([key, suffix]) => {
+        const field = element('input'); field.id = 'unit' + suffix; row.append(field); return [key, field];
+    }));
+    fields.postalCode.value = '1223CK'; fields.houseNumber.value = '2A';
+    const candidates = [
+        { postalCode: '1223CK', houseNumber: '2A', houseNumberAddition: '1', street: '<b>Source street</b>', city: 'Hilversum', verified: true },
+        { postalCode: '1223CK', houseNumber: '2A', houseNumberAddition: '2', street: 'Second source street', city: 'Hilversum', verified: true }
+    ];
+    const rawCandidates = JSON.stringify(candidates);
+    const find = (node, id) => node.id === id ? node : node.children.map(child => find(child, id)).find(Boolean);
+    const documentRef = { documentElement: { lang: 'nl' }, body: root, createElement: element,
+        getElementById: id => find(root, id), querySelector: () => null,
+        addEventListener: (name, listener) => events.set(name, listener) };
+    const windowRef = { crypto: { randomUUID: () => 'unit-address-session' }, addEventListener() {},
+        MutationObserver: class { observe() {} disconnect() {} },
+        fetch: async (url, options) => {
+            const payload = options.body ? JSON.parse(options.body) : null; requests.push({ url, method: options.method, payload });
+            return { ok: true, status: options.method === 'DELETE' ? 204 : 200,
+                json: async () => url.endsWith('/search') ? { candidates, complete: true }
+                    : { status: 'confirmed', address: payload } };
+        } };
+    const stop = initAddressCompletion({ documentRef, windowRef });
+    try {
+        events.get('input')({ target: fields.houseNumber });
+        await new Promise(resolve => setTimeout(resolve, 380)); await tick();
+        const group = documentRef.getElementById('unitAddressChoices');
+        assert.equal(group.tagName, 'FIELDSET'); assert.equal(group.hidden, false);
+        assert.equal(group.children[0].tagName, 'LEGEND');
+        assert.equal(group.children[0].getAttribute('data-feedback-public'), '');
+        const buttons = group.children.slice(1);
+        assert.deepEqual(buttons.map(button => button.value), ['0', '1']);
+        assert.equal(buttons[0].textContent, '<b>Source street</b> 2A 1 — 1223CK Hilversum');
+        for (const button of buttons) {
+            assert.equal(button.tagName, 'BUTTON'); assert.equal(button.type, 'button');
+            assert.equal(button.getAttribute('data-feedback-sensitive'), 'address');
+            assert.equal(button.listeners.has('keydown'), false, 'Native buttons own Enter and Space.');
+        }
+        buttons[1].listeners.get('click')();
+        assert.equal(fields.street.value, candidates[1].street); assert.equal(fields.city.value, 'HILVERSUM');
+        assert.equal(fields.addition.value, '2'); assert.equal(group.hidden, true); assert.equal(focused, fields.city);
+        focused = fields.postalCode; buttons[1].listeners.get('click')();
+        assert.equal(focused, fields.postalCode, 'A stale hidden action cannot move focus.');
+        assert.equal(await windowRef.kiwiAddressCompletion.validate(root), true);
+        assert.equal(requests.filter(request => request.url.endsWith('/validate')).length, 1);
+        assert.equal(requests.at(-1).payload.houseNumberAddition, '2');
+        assert.equal(requests.at(-1).payload.formSessionId, requests[0].payload.formSessionId);
+        assert.equal(JSON.stringify(candidates), rawCandidates);
+    } finally { stop(); }
 });
