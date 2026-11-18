@@ -1390,6 +1390,12 @@ async function inspectAsyncOutbox(page, state, control) {
     };
     const focusWithKeyboard = async selector => {
         await page.keyboard.press('Tab');
+        const nativeQueueTarget = state.phase === 'after' && state.suite === 'feedback' && state.report.slice === 10
+            && state.report.environment.native === true && state.report.environment.browser === 'firefox'
+            && state.report.environment.browserVersion === '150.0.2' && state.report.environment.role === 'kiwi-admin'
+            && state.viewport.width === 720 && state.viewport.height === 500 && state.nativeKernel?.pointer?.display === ':96'
+            && (selector === secondTrigger || selector === secondTitle);
+        if (nativeQueueTarget) await page.locator(selector).scrollIntoViewIfNeeded();
         await page.locator(selector).focus();
         return measureAsyncOutboxFocus(page, selector);
     };

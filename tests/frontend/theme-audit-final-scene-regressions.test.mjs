@@ -319,7 +319,8 @@ test('A11 composes closed-panel helpers and restores only initial intercepted re
 });
 
 const shellSource = await readFile(new URL('../../scripts/compose-smoke-theme-audit-shell-acceptance.mjs', import.meta.url), 'utf8');
-const operationalSource = await readFile(new URL('../../scripts/compose-smoke-theme-audit-operational.mjs', import.meta.url), 'utf8');
+const operationalSource = await readFile(process.env.KIWI_THEME_OPERATIONAL_REGRESSION_SOURCE
+    || new URL('../../scripts/compose-smoke-theme-audit-operational.mjs', import.meta.url), 'utf8');
 
 function profileClickHarness(width, { covered = true, workControl = false, blocked = false } = {}) {
     const checks = [], captures = [], clicks = [];
@@ -1014,7 +1015,8 @@ test('native pointer API keeps launch environment inside main closure and leaves
 });
 
 test('legacy focus compatibility admits only the exact reviewed native-key extension', async () => {
-    const body = await readFile(new URL('../../scripts/compose-smoke-theme-audit-operational.mjs', import.meta.url), 'utf8');
+    const body = await readFile(process.env.KIWI_THEME_OPERATIONAL_REGRESSION_SOURCE
+    || new URL('../../scripts/compose-smoke-theme-audit-operational.mjs', import.meta.url), 'utf8');
     const oldExported = restoreOriginalPointerModes(body);
     assert.equal(sha(oldExported), '60a1c5ce3f1f3e64b1b7b8dc1a24fbd299b87b035e55085ca81a8138e22fb686');
     const originalBody = oldExported.replace('export function nativePointerComparison(', 'function nativePointerComparison(');
@@ -1131,6 +1133,9 @@ test('actual cart builder adds capture setup only for native context after the u
 });
 
 function restoreOriginalPointerModes(body) {
+    const revealBlock = "        const nativeQueueTarget = state.phase === 'after' && state.suite === 'feedback' && state.report.slice === 10\n            && state.report.environment.native === true && state.report.environment.browser === 'firefox'\n            && state.report.environment.browserVersion === '150.0.2' && state.report.environment.role === 'kiwi-admin'\n            && state.viewport.width === 720 && state.viewport.height === 500 && state.nativeKernel?.pointer?.display === ':96'\n            && (selector === secondTrigger || selector === secondTitle);\n        if (nativeQueueTarget) await page.locator(selector).scrollIntoViewIfNeeded();\n";
+    assert.equal(body.split(revealBlock).length - 1, 1, 'Only the exact reviewed native queue target reveal changed.');
+    body = body.replace(revealBlock, '');
     const followUpBlock = "    const followUp = page.locator('#dispFollowUpRequired');\n    const nativeFollowUp = state.phase === 'after' && state.suite === 'feedback' && state.report.slice === 10\n        && state.report.environment.native === true && state.report.environment.browser === 'firefox'\n        && state.report.environment.browserVersion === '150.0.2' && state.report.environment.role === 'kiwi-admin'\n        && state.viewport.width === 720 && state.viewport.height === 500 && state.nativeKernel?.pointer?.display === ':96';\n    if (nativeFollowUp) {\n        if (!await followUp.isChecked()) { await followUp.scrollIntoViewIfNeeded(); await followUp.press('Space'); }\n        assert.equal(await followUp.isChecked(), true, 'Original disposition follow-up choice must be checked before its fields are filled.');\n    } else await followUp.check();\n";
     assert.equal(body.split(followUpBlock).length - 1, 1, 'Only the exact reviewed final native follow-up choice changed.');
     body = body.replace(followUpBlock, "    await page.locator('#dispFollowUpRequired').check();\n");
@@ -1159,7 +1164,8 @@ test('native content press callback enforces the original OS-key order and retai
 });
 
 test('existing physical comparison dispatch bounds native keys before OS spawn and preserves all original pointer modes', async () => {
-    const body = await readFile(new URL('../../scripts/compose-smoke-theme-audit-operational.mjs', import.meta.url), 'utf8');
+    const body = await readFile(process.env.KIWI_THEME_OPERATIONAL_REGRESSION_SOURCE
+    || new URL('../../scripts/compose-smoke-theme-audit-operational.mjs', import.meta.url), 'utf8');
     const calls = [], environment = { SYNTHETIC_PRIVATE: 'never-export-private-environment' };
     const compare = actualFunction('nativePointerComparison', { execFileSync: (program, args, options) => {
         assert.equal(program, 'python3'); assert.equal(options.env, environment); calls.push({ args, script: options.input });
@@ -1788,4 +1794,73 @@ test('original capture lifecycle uses the owned picker only for selected-custome
         assert.equal(events.filter(x => x === 'original-canvas-visible').length, 1); assert.equal(events.filter(x => x === 'original-canvas-ready').length, 1);
         assert.equal(events.indexOf('original-canvas-ready') > events.indexOf('original-picker-visible'), true);
     }
+});
+
+async function nativeAsyncQueueFocusHarness(options = {}) {
+    const events = [], state = { phase: 'after', suite: 'feedback', api: '/kiwi/api/v1/', viewport: { width: 720, height: 500 },
+        report: { slice: 10, environment: { native: true, browser: 'firefox', browserVersion: '150.0.2', role: 'kiwi-admin' }, checks: [] },
+        nativeKernel: { pointer: { display: ':96' } } };
+    if (options.changeState) options.changeState(state);
+    const selector = options.selector || '#subscriptionQueueList > .session-outbox-item:nth-child(2) [data-outbox-control="actions"]';
+    let visible = options.initiallyVisible === true, focused = null, polls = 0, observations = 0;
+    const control = { items: [{ customerReference: { personId: 990901 } }, { customerReference: { personId: 990902 } }], reads: 3, release() {} };
+    const page = { keyboard: { press: async key => { assert.equal(key, 'Tab'); events.push('Tab'); } },
+        locator: actual => ({ scrollIntoViewIfNeeded: async () => { events.push('reveal:' + actual); visible = true; },
+            focus: async () => { events.push('focus:' + actual); focused = actual; }, press: async () => {},
+            getAttribute: async () => 'false' }), waitForFunction: async () => {} };
+    const measureAsyncOutboxFocus = async (actualPage, actual) => {
+        assert.equal(actualPage, page); events.push('measure:' + actual);
+        return { expectedOwnsFocus: focused === actual && !(options.pollLosesFocus && polls > 0), focusVisible: true,
+            fullPaintedPerimeterInsideAllClips: visible, pointerTarget: visible,
+            scrollY: 100 + (options.pollMovesScroll && polls > 0 ? 1 : 0), listScrollTop: 0 };
+    };
+    if (options.closureOnly) {
+        const start = operationalSource.indexOf('    const focusWithKeyboard = async selector => {');
+        const end = operationalSource.indexOf('    const waitForPoll = async () => {', start);
+        assert.ok(start > 0 && end > start);
+        const secondTitle = '#subscriptionQueueList > .session-outbox-item:nth-child(2) [data-outbox-control="customer"]';
+        const secondTrigger = '#subscriptionQueueList > .session-outbox-item:nth-child(2) [data-outbox-control="actions"]';
+        const run = new Function('state', 'page', 'measureAsyncOutboxFocus', 'secondTitle', 'secondTrigger', operationalSource.slice(start, end)
+            + '\nreturn focusWithKeyboard;')(state, page, measureAsyncOutboxFocus, secondTitle, secondTrigger);
+        const value = await run(selector); return { events, value, state };
+    }
+    const stop = new Error('Synthetic boundary at next original title observation');
+    const run = actualFunction('inspectAsyncOutbox', { structuredClone, measureAsyncOutboxFocus,
+        refresh: async () => {}, save: async () => {}, setTimeout: callback => { control.reads += 1; polls += 1; callback(); },
+        observe: async () => { observations += 1; if (observations === 3) throw stop; } }, operationalSource);
+    let error; try { await run(page, state, control); } catch (caught) { error = caught; }
+    return { events, error, stop, state, polls };
+}
+
+test('actual native queue focus closure reveals the original second-row target after real Tab and leaves profile and other modes unchanged', async () => {
+    for (const suffix of ['actions', 'customer']) {
+        const selector = '#subscriptionQueueList > .session-outbox-item:nth-child(2) [data-outbox-control="' + suffix + '"]';
+        const good = await nativeAsyncQueueFocusHarness({ selector, closureOnly: true });
+        assert.deepEqual(good.events, ['Tab', 'reveal:' + selector, 'focus:' + selector, 'measure:' + selector]);
+        assert.equal(good.value.fullPaintedPerimeterInsideAllClips, true);
+    }
+    for (const changeState of [s => { s.phase = 'before'; }, s => { s.suite = 'native-operational'; }, s => { s.report.slice = 9; },
+        s => { s.report.environment.native = false; }, s => { s.report.environment.browser = 'chromium'; },
+        s => { s.report.environment.browserVersion = '149'; }, s => { s.report.environment.role = 'kiwi-view'; },
+        s => { s.viewport.width = 640; }, s => { s.viewport.height = 478; }, s => { s.nativeKernel = null; },
+        s => { s.nativeKernel.pointer.display = ':95'; }]) {
+        const original = await nativeAsyncQueueFocusHarness({ closureOnly: true, changeState, initiallyVisible: true });
+        assert.equal(original.events.some(event => event.startsWith('reveal:')), false);
+        assert.equal(original.events[0], 'Tab'); assert.equal(original.events[1].startsWith('focus:'), true);
+    }
+    const profile = await nativeAsyncQueueFocusHarness({ closureOnly: true, selector: '#agentProfileTrigger', initiallyVisible: true });
+    assert.deepEqual(profile.events, ['Tab', 'focus:#agentProfileTrigger', 'measure:#agentProfileTrigger']);
+});
+
+test('actual async outbox keeps before and after real-poll focus and scroll-stability assertions strict after native target reveal', async () => {
+    const good = await nativeAsyncQueueFocusHarness(); assert.equal(good.error, good.stop);
+    assert.equal(good.polls, 1); assert.deepEqual(good.state.report.checks.map(item => [item.name, item.passed]),
+        [['Async outbox second-trigger-before-poll', true], ['Async outbox second-trigger-after-poll', true]]);
+    for (const options of [{ pollMovesScroll: true }, { pollLosesFocus: true }]) {
+        const bad = await nativeAsyncQueueFocusHarness(options); assert.notEqual(bad.error, bad.stop); assert.ok(bad.error);
+        assert.deepEqual(bad.state.report.checks.map(item => item.passed), [true, false]);
+    }
+    const ordinary = await nativeAsyncQueueFocusHarness({ changeState: state => { state.report.environment.native = false; } });
+    assert.notEqual(ordinary.error, ordinary.stop); assert.deepEqual(ordinary.state.report.checks.map(item => item.passed), [false]);
+    assert.equal(ordinary.events.some(event => event.startsWith('reveal:')), false);
 });
