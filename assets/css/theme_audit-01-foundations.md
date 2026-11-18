@@ -1,5 +1,13 @@
 # theme_audit 01 — Shared visual foundations
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 01 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #143](https://github.com/bindinc/kiwi/pull/143) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Shared palette, typography, spacing and flat surfaces.** The integrated review compares actual component and whole-screen paint with the retained Light & Shadow specimens. Original lost temporary images remain historical; current retained evidence supplies the integrated observations.
+
+Validation and visual evidence: the [central slice 10 record](../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Status: implemented and independently reviewed; slice 01 acceptance passed. PR #143 was merged into the planning branch of PR #142 on 2026-11-09; this does not establish a merge to main or deployment. Audit date: 2026-11-09. Baseline: `c05973e` / merged PR #130. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629.
 
 ## Implementation record

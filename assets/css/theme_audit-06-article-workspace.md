@@ -1,5 +1,13 @@
 # Slice 06 — Article workspace
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 06 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #150](https://github.com/bindinc/kiwi/pull/150) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Aligned article search, cart and order workspace.** The article form keeps its full mobile width while the feedback entry remains usable. Fresh1561/1560/1559 observations in both engines accept rest/hover/focus, ordinary feedback opening, Escape and retained article draft. The fixture uses the existing operational customer capability; readonly source guards remain intact.
+
+Validation and visual evidence: the [central slice 10 record](../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Audit marker: theme_audit
 
 Status: implemented and independently accepted; user-merged PR #150 into main on 2026-11-12 at `7d5ece6128850b4fcba112c90b5a77794c7b7e3c`, from accepted head `0bb8182`. Historical source/evidence boundaries remain unchanged; no deployment was performed by this work. See the [audit index](../../plans/theme_audit.md) for baseline, sequencing and evidence boundaries.

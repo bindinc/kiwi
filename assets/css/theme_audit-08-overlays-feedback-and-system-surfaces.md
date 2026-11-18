@@ -1,5 +1,13 @@
 # theme_audit 08 — Overlays, feedback and system surfaces
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 08 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #152](https://github.com/bindinc/kiwi/pull/152) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Consistent ordinary backdrops, feedback surfaces and private image review.** The existing ordinary backdrop and protected image-review shield remain separate deliberate states. The floating entry now uses the existing inverse 3px focus ring inset by 5px, accepted in fresh boundary images. Original 600 footer and 760 horizontal workspace rules carry by exact source; accepted icon refinements preserve wrapped toolbar height. Original privacy renderer limits remain explicit.
+
+Validation and visual evidence: the [central slice 10 record](../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Audit marker: `theme_audit`. Status: accepted and user-merged into main on 2026-11-12 at `861b386f8d3013b4c4c8ed89b7ada4e8cc64e101`. The merged tree equals accepted documentation head `e036b49`; validated application source remains `e0e5822`. Source/rendered and final delivery reviews passed, including exact-head CI43231365422. Historical BEFORE keeps accepted07 `771ab50`; original audit baseline remains `c05973e`. No deployment or cleanup is implied.
 
 Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-206629. Depends on 01/02 and shell placement from 03; coordinate disposition/outbox overlays with 09 and form lightboxes with 04–07.

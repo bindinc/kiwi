@@ -1,5 +1,13 @@
 # theme_audit 04 — Customer search, records and data views
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 04 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #147](https://github.com/bindinc/kiwi/pull/147) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Readable search/data views, independent records and safe address choices.** Current validation confirms the readonly gender alias already merged in PR #157. PR #144 adds scoped history focus, wrapped native address-choice buttons and offer reveal; it does not modify customer-editor.js. Actual 390/320 touch, 390x320 keyboard and production private-address capture evidence is accepted. Writable letter salutations, source identity, raw records and the user-approved unavailable-validity message remain intact.
+
+Validation and visual evidence: the [central slice 10 record](../../../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Audit marker: `theme_audit`. Status: accepted after independent source, visual and interaction review; PR #147 merged into the planning branch under explicit user authorization. Baseline: `c05973e`, 2026-11-09.
 
 Coordination: [evaluation and slice index](../../../../plans/theme_audit.md), SC-206629. Depends on 01/02 and the workspace framing from 03; establish reusable person/address presentation before workflow slices 05–07.

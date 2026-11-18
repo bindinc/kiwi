@@ -1,5 +1,13 @@
 # theme_audit 09 — Align operational state presentation
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 09 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #154](https://github.com/bindinc/kiwi/pull/154) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Clear call, recording, ACW, history and outbox states.** The current integrated baseline and qualified finite carry preserve separate valid active-call/inactive-ACW states, actual role affordances, scoped short keyboard actions, motion preferences and outbox overlay/dirty-poll behavior. Debug Escape returns focus to its enabled invoker. Source-bound local fixtures do not prove upstream persistence.
+
+Validation and visual evidence: the [central slice 10 record](../../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Status: application acceptance passed on 2026-11-13; ready for review in PR154. All eight operational criteria and the additional record/control refinements have scoped source/rendered evidence. Final integrated interface acceptance follows icon PR155 and slice10. Merge and deployment remain separate.
 
 Parent plan: [theme_audit implementation slices](../../../plans/theme_audit.md). Reference: [Light & Shadow showcase](../../../plans/kiwi-light-and-shadow-theme-palette-showcase.html), especially its operational-state specimens, restrained surfaces, action hierarchy and spacing. The showcase has no complete call-console or outbox workflow; apply its shared visual rules without inventing equivalent business behavior.

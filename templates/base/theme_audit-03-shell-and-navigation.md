@@ -1,5 +1,13 @@
 # theme_audit 03 — Shell, navigation and workspace hierarchy
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 03 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #146](https://github.com/bindinc/kiwi/pull/146) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Stable shell, fixed session action and distinct active-customer context.** The current shell/search/customer baseline cells are independently accepted in both engines at 1440, 390 and 320 px. Actual account-role presentation is separately scoped; no new session-reset or customer-identity behavior is introduced.
+
+Validation and visual evidence: the [central slice 10 record](../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Audit marker: `theme_audit`. Status: accepted for slice scope; implementation, rendered comparison and independent completion review passed. Final documentation CI is tracked in the PR. Before-state captures use the frozen accepted slice 02 runtime. Audit baseline: `c05973e`, 2026-11-09; implementation baseline: merged slice 02 at `851dc77`, 2026-11-10.
 
 Coordination: [evaluation and slice index](../../plans/theme_audit.md), SC-206629. Implement after slices 01 and 02. Implementation is authorized by the ten-slice task; merge and deployment require separate explicit authorization.

@@ -1,5 +1,11 @@
 # theme_audit — Unify interface icons
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. The accepted line-icon refinement [PR #155](https://github.com/bindinc/kiwi/pull/155) is merged into main through [PR #154](https://github.com/bindinc/kiwi/pull/154), which merged on 2026-11-17 at `25d64d6db45a1bdf428fa0c5c5dfea597e5a2d20`. Final integrated acceptance belongs to [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629. This checkpoint does not authorize another merge, deployment or cleanup.
+
+Current actual baseline, English representatives, 390/320 touch, 390x320 affected states and the feedback viewport-edge repair retain the accepted restrained icon language. Exact account/workspace/privacy evidence carries only through its declared source/state equivalence; historical whole images are not relabeled as fresh captures. Final integrated acceptance passes within the recorded qualifications. The [central slice 10 record](../../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) contains the report/check/image hashes and the current 328-test/three-guard result. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. Original renderer, DATE, language and local-fixture limits remain explicit below and centrally.
+
 ## Authorized merge — 2026-11-17
 
 PR155 merged at `706c004e0bf0a54079dc5ab6b465ad2808eaaaab` into its existing base `codex/align-theme-operational-states` after explicit user authorization. All 216 production bodies equal accepted documentation head `754bb510` and tested source `769a9eee`. PR154 remains open to main; no deployment or cleanup occurred. The final integrated slice10 continues in PR144. The scoped acceptance and retained limits below remain unchanged.

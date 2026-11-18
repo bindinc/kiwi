@@ -10,7 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Changed
 
-- Add source-bound showcase and workflow acceptance tooling, controlled application states, operational, icon/locale/SVG, capture-restoration and per-record privacy checks, genuine native zoom/input validation, reference-bound native DATE focus classification and explicit final coverage tracking; preserve visible history/offer focus, complete inset feedback-button focus, debug-dialog focus return, wrapped native address-choice actions and full-width subscription/article dialogs with overlapping feedback entry; final integrated acceptance remains pending (`theme_audit` slice 10). [sc-206629]
+- Align remaining history/offer/debug focus, native address actions, mobile subscription/article dialogs and feedback focus with Light & Shadow; complete independently reviewed Chromium/Firefox acceptance across the original 78-cell matrix and scoped English, roles, touch, short-screen, privacy and genuine 200% zoom/reset checks while preserving business rules, identities, consent and drafts (`theme_audit` slice 10). [sc-206629]
 
 ## [v1.0.38] - 2026-11-17
 

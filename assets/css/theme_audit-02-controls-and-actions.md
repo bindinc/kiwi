@@ -1,5 +1,13 @@
 # theme_audit 02 — Shared controls, labels and actions
 
+## Integrated validation checkpoint — 2026-11-18
+
+Audit marker: `theme_audit`. Slice 02 is accepted and merged into main, directly or through its authorized planning/dependency merge, with the original [PR #145](https://github.com/bindinc/kiwi/pull/145) record. The current integration is reviewable in [PR #144](https://github.com/bindinc/kiwi/pull/144), SC-206629; this checkpoint does not authorize merge or deployment.
+
+**Consistent fields, native choices, labels and action hierarchy.** Current actual keyboard and component evidence retains the native choice semantics, unset consent and disabled states. The later feedback launcher focus repair is documented centrally; green contrast checks alone are not treated as visual agreement.
+
+Validation and visual evidence: the [central slice 10 record](../../scripts/theme_audit-10-visual-acceptance.md#integrated-acceptance-checkpoint--2026-11-18) maps the accepted 78 baseline decisions, current affected states and source-qualified finite evidence to exact report/image hashes. Its shared frontend suite passes 328 tests at `ba69853`; the same retained log records all three existing guards passing. Those are shared integration results, separate from this slice's historical checks below. Final integrated acceptance passes within the central record’s exact native-group, reset, task-preservation and source/paint qualifications. The central record preserves all language, fixture, privacy and renderer limits; earlier failed reports keep their original status.
+
 Status: implementation, independent source/rendered review and slice 02 acceptance passed on 2026-11-10. PR #145 was merged by the user into the planning branch at `851dc77` on 2026-11-10; no merge to main or deployment is established. Audit date: 2026-11-09; implementation validation: 2026-11-10. Baseline: `c05973e`. Coordination: [theme_audit index](../../plans/theme_audit.md), SC-206629. Depends on [slice 01](theme_audit-01-foundations.md).
 
 ## Implementation record
