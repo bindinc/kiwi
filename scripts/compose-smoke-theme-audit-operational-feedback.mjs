@@ -183,7 +183,32 @@ export async function inspectRecordListsAfter(page, state, { observe, control, m
             && bounds.right <= geometry.viewport.width && bounds.bottom <= geometry.viewport.height,
         'Native Firefox editor invoker must fit the actual zoomed viewport before Enter.');
         await observe(page, state, 'records-after-keyboard-editor-invoker', ['#editCustomerBtn'], { focus, geometry });
-        await pressNative('Enter');
+        const activation = await invoker.evaluateHandle(node => {
+            const receipt = { enterKeyDown: false, enterKeyUp: false, trustedClick: false };
+            const key = event => {
+                if (event.isTrusted && event.key === 'Enter' && node.contains(event.target)) {
+                    if (event.type === 'keydown') receipt.enterKeyDown = true;
+                    if (event.type === 'keyup') receipt.enterKeyUp = true;
+                }
+            };
+            const click = event => { if (event.isTrusted && node.contains(event.target)) receipt.trustedClick = true; };
+            node.addEventListener('keydown', key, { passive: true });
+            node.addEventListener('keyup', key, { passive: true });
+            node.addEventListener('click', click, { passive: true });
+            return { node, receipt, cleanup() {
+                node.removeEventListener('keydown', key); node.removeEventListener('keyup', key); node.removeEventListener('click', click);
+            } };
+        });
+        try {
+            await pressNative('Enter');
+            const activationReceipt = await activation.evaluate(({ node, receipt }) => ({ ...receipt,
+                documentFocused: document.hasFocus(), invokerFocused: document.activeElement === node,
+                openEditorCount: document.querySelectorAll('.customer-editor[open]').length,
+                bankActionCount: document.querySelectorAll('.customer-editor[open] [data-customer-section=bank] .customer-editor-record-action').length }));
+            await observe(page, state, 'records-after-keyboard-editor-after-enter', ['#editCustomerBtn'], { activationReceipt });
+        } finally {
+            try { await activation.evaluate(probe => probe.cleanup()); } finally { await activation.dispose(); }
+        }
     } else if (touch) await page.locator('#editCustomerBtn').tap(); else await page.locator('#editCustomerBtn').click();
     const dialog = page.locator('.customer-editor[open]');
     await dialog.locator('[data-customer-section=bank] .customer-editor-record-action').first().waitFor();

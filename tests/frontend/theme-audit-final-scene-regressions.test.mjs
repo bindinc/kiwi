@@ -682,12 +682,16 @@ test('actual native A01 search, A02 search and A02 results return hydrate the sa
 async function recordEditorOpeningHarness(options = {}) {
     const events = [], observations = [], done = new Error('Synthetic boundary: original record checks continue after opening');
     const rect = { x: 20, y: 40, width: 100, height: 40, right: 120, bottom: 80, ...options.bounds };
-    let focused = false, opened = false;
+    let focused = false, opened = false, disposed = false;
+    const listeners = new Map();
     const node = { id: 'editCustomerBtn', tagName: 'BUTTON', isConnected: true, disabled: options.disabled === true, offsetLeft: 20, offsetTop: 40, offsetWidth: 100, offsetHeight: 40,
         getBoundingClientRect: () => rect, matches: selector => selector === ':focus-visible' && focused && !options.hiddenFocus,
-        contains: target => target === node };
+        contains: target => target === node,
+        addEventListener(type, callback) { listeners.set(type, callback); },
+        removeEventListener(type, callback) { assert.equal(listeners.get(type), callback); listeners.delete(type); } };
     const document = { activeElement: null, body: {}, hasFocus: () => options.documentFocused !== false, elementFromPoint: () => options.covered ? {} : node,
-        querySelector: selector => { assert.equal(selector, '#customerName'); return { textContent: 'Synthetic990970' }; } };
+        querySelector: selector => { assert.equal(selector, '#customerName'); return { textContent: 'Synthetic990970' }; },
+        querySelectorAll: selector => { assert.ok(selector.startsWith('.customer-editor[open]')); return opened ? [{}] : []; } };
     const customer = { id: 990970, personId: '990970', credentialKey: 'theme-audit-records-component-2' };
     const window = { currentCustomer: customer, kiwiCustomerDetailSlice: { selectCustomer: async (id, detail) => {
         assert.equal(id, customer.id); assert.equal(detail.sourceCustomer, customer); assert.equal(detail.requireFresh, true); events.push('fresh-source-read');
@@ -697,7 +701,14 @@ async function recordEditorOpeningHarness(options = {}) {
     const invoker = { async scrollIntoViewIfNeeded() { events.push('scroll-invoker'); }, async boundingBox() { return rect; },
         async focus() { document.activeElement = node; focused = true; events.push('setup-focus'); },
         async evaluate(callback) { return evaluate(callback, node); },
-        async press(key) { assert.equal(key, 'Enter'); assert.equal(document.activeElement, node); assert.equal(focused, true); opened = true; events.push('Enter'); },
+        async evaluateHandle(callback) {
+            const value = await evaluate(callback, node);
+            return { evaluate: fn => evaluate(fn, value), dispose: async () => { disposed = true; } };
+        },
+        async press(key) { assert.equal(key, 'Enter'); assert.equal(document.activeElement, node); assert.equal(focused, true); if (options.enterThrows) throw new Error('Synthetic Enter dispatch failure');
+            for (const type of ['keydown', 'keyup', 'click']) listeners.get(type)?.({ type, key: options.unrelatedKey ? 'Escape' : 'Enter',
+                isTrusted: options.untrustedEnter !== true, target: options.otherTarget ? { textContent: 'Synthetic private marker' } : node });
+            opened = true; events.push('Enter'); },
         async click() { events.push('pointer'); if (options.rejectPointer) throw new Error('Synthetic reproduced native Firefox pointer timeout'); opened = true; },
         async tap() { opened = true; events.push('touch'); } };
     const page = { evaluate, keyboard: { async press(key) {
@@ -728,8 +739,9 @@ async function recordEditorOpeningHarness(options = {}) {
         },
         ...(options.legacyReadonly ? { openNativeReadonlyEditor: async () => { opened = true; events.push('original-native-readonly-callback'); } } : {}),
         observe: async (actualPage, actualState, name, selectors, detail) => { assert.equal(actualPage, page); assert.equal(actualState, state);
-            observations.push({ name, selectors, detail }); events.push('observe-' + name); } }); } catch (error) { caught = error; }
-    return { events, observations, opened, caught, done };
+            observations.push({ name, selectors, detail }); events.push('observe-' + name);
+            if (options.afterEnterObservationThrows && name === 'records-after-keyboard-editor-after-enter') throw new Error('Synthetic observation failure'); } }); } catch (error) { caught = error; }
+    return { events, observations, opened, caught, done, disposed, listenerCount: listeners.size };
 }
 
 test('native Firefox A03 opens installed editor with genuine Tab/Shift+Tab/Enter after actual invoker evidence', async () => {
@@ -738,8 +750,8 @@ test('native Firefox A03 opens installed editor with genuine Tab/Shift+Tab/Enter
     assert.equal(result.opened, true);
     assert.deepEqual(result.events, ['fresh-source-read', 'scroll-header', 'observe-records-after-header', 'prepare-public-content', 'scroll-invoker',
         'setup-focus', 'observe-records-after-keyboard-editor-setup-focus', 'OS-Tab', 'Tab', 'observe-records-after-keyboard-editor-after-tab',
-        'OS-Shift+Tab', 'Shift+Tab', 'observe-records-after-keyboard-editor-after-shift-tab', 'observe-records-after-keyboard-editor-invoker', 'OS-Enter', 'Enter']);
-    const proof = result.observations.at(-1);
+        'OS-Shift+Tab', 'Shift+Tab', 'observe-records-after-keyboard-editor-after-shift-tab', 'observe-records-after-keyboard-editor-invoker', 'OS-Enter', 'Enter', 'observe-records-after-keyboard-editor-after-enter']);
+    const proof = result.observations.find(item => item.name === 'records-after-keyboard-editor-invoker');
     assert.equal(proof.detail.geometry.focused, true); assert.equal(proof.detail.geometry.focusVisible, true);
     assert.equal(proof.detail.geometry.ownedCenter, true); assert.equal(proof.detail.geometry.disabled, false);
     assert.equal(JSON.stringify(proof.detail.focus.layoutBefore), JSON.stringify(proof.detail.focus.layoutAfter));
@@ -1246,5 +1258,30 @@ test('A13 native-only whole-frame checkpoint retains the actual live inline erro
         await run(handle, { accountPages: false });
         assert.deepEqual(events, ['restore', 'open', 'fill', 'focus', 'live-error', 'inspect-live-error',
             ...(native ? ['whole-live-error'] : []), 'close', 'confirmation']);
+    }
+});
+
+
+test('native Enter diagnostic records only trusted owned activation and always removes its scoped listeners', async () => {
+    const good = await recordEditorOpeningHarness(); assert.equal(good.caught, good.done);
+    const receipt = good.observations.at(-1); assert.equal(receipt.name, 'records-after-keyboard-editor-after-enter');
+    assert.equal(JSON.stringify(receipt.detail.activationReceipt), JSON.stringify({ enterKeyDown: true, enterKeyUp: true, trustedClick: true,
+        documentFocused: true, invokerFocused: true, openEditorCount: 1, bankActionCount: 1 }));
+    for (const options of [{ untrustedEnter: true }, { otherTarget: true }, { unrelatedKey: true }]) {
+        const run = await recordEditorOpeningHarness(options); assert.equal(run.caught, run.done);
+        const actual = run.observations.at(-1).detail.activationReceipt;
+        assert.equal(actual.enterKeyDown, false); assert.equal(actual.enterKeyUp, false);
+        assert.equal(actual.trustedClick, options.unrelatedKey === true);
+        assert.equal(JSON.stringify(actual).includes('Synthetic private marker'), false);
+        assert.equal(run.listenerCount, 0); assert.equal(run.disposed, true);
+    }
+    for (const options of [{ enterThrows: true }, { afterEnterObservationThrows: true }]) {
+        const failed = await recordEditorOpeningHarness(options); assert.ok(failed.caught); assert.notEqual(failed.caught, failed.done);
+        assert.equal(failed.listenerCount, 0); assert.equal(failed.disposed, true);
+    }
+    assert.equal(good.listenerCount, 0); assert.equal(good.disposed, true);
+    for (const options of [{ keyboard: false }, { keyboard: false, touch: true }, { legacyReadonly: true }]) {
+        const ordinary = await recordEditorOpeningHarness(options); assert.equal(ordinary.disposed, false);
+        assert.equal(ordinary.observations.some(item => item.name === 'records-after-keyboard-editor-after-enter'), false);
     }
 });
