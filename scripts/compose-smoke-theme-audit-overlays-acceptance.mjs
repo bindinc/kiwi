@@ -903,7 +903,16 @@ async function inspectPrivateErrorCapture(page, driver, meta, controls) {
     await page.locator('#editorialComplaintMagazine').selectOption(expectedComplaint.magazine);
     await page.locator('#editorialComplaintDescription').fill(expectedComplaint.description);
     await page.locator('#editorialComplaintEdition').fill(expectedComplaint.edition);
-    await page.locator('#editorialComplaintFollowup').check();
+    const followup = page.locator('#editorialComplaintFollowup');
+    const nativeFirefox = driver.report.slice === 10 && driver.report.phase === 'after' && meta.native === true
+        && meta.prefix === 'outbox-feedback-image-system-' && meta.locale === 'nl'
+        && driver.report.environment.browser === 'firefox' && driver.report.environment.browserVersion === '150.0.2'
+        && driver.report.environment.role === 'kiwi-admin' && meta.viewport.width === 720 && meta.viewport.height === 500
+        && driver.nativePointer?.display === ':96';
+    if (nativeFirefox) {
+        if (!await followup.isChecked()) { await followup.scrollIntoViewIfNeeded(); await followup.press('Space'); }
+        assert.equal(await followup.isChecked(), true, 'Original complaint follow-up must be checked before its exact local422 request.');
+    } else await followup.check();
     await page.locator('[data-action=submit-editorial-complaint]').press('Enter');
     await page.locator('#editorialComplaintForm .overlay-notification.error').filter({ hasText: privateError }).waitFor({ state: 'visible' });
     await page.waitForFunction(() => [...document.querySelectorAll('#editorialComplaintForm [data-service-commit]')].every(node => !node.disabled));

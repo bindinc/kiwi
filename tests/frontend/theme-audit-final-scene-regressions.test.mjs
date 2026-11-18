@@ -1942,3 +1942,61 @@ test('actual original feedback recovery uses Enter for only final native Firefox
         assert.equal(bad.checks.at(-1).passed, false); assert.equal(bad.events.includes('opener-Enter'), false);
     }
 });
+
+async function nativePrivateComplaintFollowupHarness(options = {}) {
+    const overlaySource = await readFile(process.env.KIWI_THEME_MULTIPART_REGRESSION_SOURCE
+        || new URL('../../scripts/compose-smoke-theme-audit-overlays-acceptance.mjs', import.meta.url), 'utf8');
+    const expectedComplaint = JSON.parse(JSON.stringify(vm.runInNewContext('(' + overlaySource.match(/const expectedComplaint = (\{[\s\S]*?\});/)[1] + ')')));
+    const events = [], checks = [], values = {}; let checked = options.checked === true;
+    const privateError = 'Synthetic original exact local422 private error';
+    const stop = new Error('Synthetic boundary after original exact private422 before unchanged image capture');
+    const controls = { privateErrors: 0 };
+    const checkbox = { isChecked: async () => checked, scrollIntoViewIfNeeded: async () => events.push('followup-scroll'),
+        press: async key => { assert.equal(key, 'Space'); events.push('followup-Space'); if (!options.ineffectiveSpace) checked = true; },
+        check: async () => { events.push('original-followup-check'); checked = true; } };
+    const page = { evaluate: async () => events.push('original-show-complaint-form'), locator: selector => {
+        if (selector === '#editorialComplaintFollowup') return checkbox;
+        if (selector === '#editorialComplaintMagazine') return { selectOption: async value => { values.magazine = value; events.push('original-magazine'); } };
+        if (selector === '#editorialComplaintDescription') return { fill: async value => { values.description = value; events.push('original-description'); } };
+        if (selector === '#editorialComplaintEdition') return { fill: async value => { values.edition = value; events.push('original-edition'); } };
+        if (selector === '[data-action=submit-editorial-complaint]') return { press: async key => {
+            assert.equal(key, 'Enter'); events.push('original-submit-Enter');
+            assert.deepEqual({ ...expectedComplaint, ...values, followup: checked }, expectedComplaint);
+            controls.privateErrors += 1; assert.equal(controls.privateErrors, 1);
+        } };
+        assert.equal(selector, '#editorialComplaintForm .overlay-notification.error');
+        return { filter: options => { assert.equal(options.hasText, privateError); return { waitFor: async () => events.push('original-private422-visible') }; } };
+    }, waitForFunction: async () => events.push('original-controls-restored') };
+    const driver = { nativePointer: { display: ':96' }, report: { slice: 10, phase: 'after', environment: { browser: 'firefox', browserVersion: '150.0.2', role: 'kiwi-admin' } } };
+    const meta = { native: true, prefix: 'outbox-feedback-image-system-', locale: 'nl', viewport: { width: 720, height: 500 } };
+    if (options.changeScope) options.changeScope(driver, meta);
+    const run = actualFunction('inspectPrivateErrorCapture', { expectedComplaint, privateError,
+        prepareGenericCustomer: async () => events.push('original-customer-setup'),
+        check: (driver, meta, name, passed) => { checks.push({ name, passed }); assert.equal(passed, true, name); },
+        inspectInlineNotice: async (actualPage, actualDriver, actualMeta, root, action, message) => {
+            assert.equal(actualPage, page); assert.equal(actualDriver, driver); assert.equal(actualMeta, meta);
+            assert.equal(root, '#editorialComplaintForm'); assert.equal(action, '[data-service-commit]'); assert.equal(message, privateError); throw stop;
+        } }, overlaySource);
+    let error; try { await run(page, driver, meta, controls); } catch (caught) { error = caught; }
+    return { error, stop, events, checks, controls, checked };
+}
+
+test('actual private-error capture selects only the final native Firefox follow-up checkbox by Space before its unchanged exact local422 boundary', async () => {
+    const good = await nativePrivateComplaintFollowupHarness(); assert.equal(good.error, good.stop);
+    assert.deepEqual(good.events, ['original-customer-setup', 'original-show-complaint-form', 'original-magazine', 'original-description', 'original-edition',
+        'followup-scroll', 'followup-Space', 'original-submit-Enter', 'original-private422-visible', 'original-controls-restored']);
+    assert.equal(good.checked, true); assert.equal(good.controls.privateErrors, 1);
+    assert.deepEqual(good.checks, [{ name: 'private inline error originates in the one exact actual controller local422', passed: true }]);
+    const already = await nativePrivateComplaintFollowupHarness({ checked: true }); assert.equal(already.error, already.stop);
+    assert.equal(already.events.includes('followup-scroll') || already.events.includes('followup-Space'), false); assert.equal(already.controls.privateErrors, 1);
+    for (const changeScope of [(d, m) => { d.report.slice = 8; }, (d, m) => { d.report.phase = 'before'; }, (d, m) => { m.native = false; },
+        (d, m) => { m.prefix = 'ordinary-'; }, (d, m) => { m.locale = 'en'; }, (d, m) => { d.report.environment.browser = 'chromium'; },
+        (d, m) => { d.report.environment.browserVersion = '149'; }, (d, m) => { d.report.environment.role = 'kiwi-view'; },
+        (d, m) => { m.viewport.width = 390; }, (d, m) => { m.viewport.height = 320; }, (d, m) => { d.nativePointer.display = ':95'; }]) {
+        const original = await nativePrivateComplaintFollowupHarness({ changeScope }); assert.equal(original.error, original.stop);
+        assert.equal(original.events.includes('original-followup-check'), true); assert.equal(original.events.includes('followup-Space'), false);
+        assert.equal(original.controls.privateErrors, 1);
+    }
+    const ineffective = await nativePrivateComplaintFollowupHarness({ ineffectiveSpace: true }); assert.ok(ineffective.error); assert.notEqual(ineffective.error, ineffective.stop);
+    assert.equal(ineffective.events.includes('original-submit-Enter'), false); assert.equal(ineffective.controls.privateErrors, 0); assert.deepEqual(ineffective.checks, []);
+});
