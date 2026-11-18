@@ -1864,3 +1864,81 @@ test('actual async outbox keeps before and after real-poll focus and scroll-stab
     assert.notEqual(ordinary.error, ordinary.stop); assert.deepEqual(ordinary.state.report.checks.map(item => item.passed), [false]);
     assert.equal(ordinary.events.some(event => event.startsWith('reveal:')), false);
 });
+
+async function nativeFeedbackRecoveryActionsHarness(options = {}) {
+    const overlaySource = await readFile(process.env.KIWI_THEME_MULTIPART_REGRESSION_SOURCE
+        || new URL('../../scripts/compose-smoke-theme-audit-overlays-acceptance.mjs', import.meta.url), 'utf8');
+    const { isDeepStrictEqual } = await import('node:util');
+    const events = [], checks = [], comment = 'Synthetic original feedback comment', pixels = 'synthetic-original-retained-png';
+    const feedbackSelector = '.contextual-feedback-modal', rejectionMessage = 'Feedback kon niet worden verstuurd.';
+    let fresh = false, reviewing = true;
+    const controls = { feedbackRequests: [], feedbackReleases: [() => events.push('release-original-held503')] };
+    const submit = kind => {
+        events.push(kind);
+        const item = { payload: controls.feedback.payload, files: [{ field: 'screenshot', sha256: 'a'.repeat(64) }, { field: 'originalScreenshot', sha256: 'b'.repeat(64) }] };
+        if (controls.feedbackRequests.length && options.changeHash) item.files[0].sha256 = 'c'.repeat(64);
+        if (controls.feedbackRequests.length && options.changePayload) item.payload = { ...item.payload, comment: 'different source draft' };
+        controls.feedbackRequests.push(item);
+        if (controls.feedbackRequests.length === 2) reviewing = false;
+    };
+    const retry = { press: async key => { if (key === 'Enter') submit(controls.feedbackRequests.length ? 'retry-Enter' : 'initial-Enter');
+        else { assert.equal(key, 'Shift+Tab'); events.push('original-Shift+Tab'); } }, click: async () => submit('retry-click'),
+        boundingBox: async () => ({ x: 20, y: 20, width: 100, height: 40 }), evaluate: async () => true };
+    const opener = { press: async key => { assert.equal(key, 'Enter'); events.push('opener-Enter'); fresh = true; },
+        click: async () => { events.push('opener-click'); fresh = true; }, evaluate: async () => true };
+    const modal = { isVisible: async () => true, waitFor: async () => {}, evaluate: async callback => {
+        const body = callback.toString();
+        if (body.includes('controlsDisabled')) return { busy: 'true', controlsDisabled: true, status: 'Sending' };
+        if (body.includes('errorContained')) return { errorContained: true, actionContained: true, textFits: true, overlap: 0 };
+        if (body.includes("classList.contains('has-screenshot')")) return false;
+        throw new Error('Unexpected original modal probe in finite source harness');
+    } };
+    const page = { locator: selector => {
+        if (selector === '[data-feedback-submit]') return retry;
+        if (selector === '#contextualFeedbackButton') return opener;
+        if (selector === feedbackSelector) return modal;
+        if (selector === 'body') return { evaluate: async () => reviewing };
+        if (selector === 'textarea[name=comment]') return { inputValue: async () => fresh ? '' : comment };
+        if (selector === '[data-feedback-canvas]') return { evaluate: async (callback, before) => { assert.equal(before, pixels); return true; } };
+        if (selector === '[data-feedback-error]') return { filter() { return this; }, waitFor: async () => {}, textContent: async () => rejectionMessage, isVisible: async () => true };
+        throw new Error('Unexpected original recovery selector in finite source harness');
+    }, keyboard: { press: async key => { assert.ok(['Escape', 'Tab'].includes(key)); events.push('original-key-' + key); } },
+        mouse: { click: async (x, y) => events.push(x === 2 && y === 2 ? 'original-backdrop-click' : 'original-disabled-pending-click') },
+        waitForFunction: async () => {} };
+    const driver = { nativePointer: { display: ':96' }, report: { slice: 10, phase: 'after', environment: { browser: 'firefox', browserVersion: '150.0.2', role: 'kiwi-admin' } } };
+    const meta = { native: true, locale: 'nl', prefix: 'outbox-feedback-image-system-', viewport: { width: 720, height: 500 } };
+    if (options.changeScope) options.changeScope(driver, meta);
+    const run = actualFunction('inspectFeedbackRecovery', { comment, feedbackSelector, isDeepStrictEqual,
+        inspectImageLifecycle: async () => { events.push('original-image-lifecycle'); return { description: { tag: 'h2' }, box: { x: 1, y: 2 }, dimensions: { width: 100, height: 30 }, pixels }; },
+        expectedFeedbackPayload: async () => ({ comment, severity: 'normal', category: 'bug' }),
+        waitForCount: async (values, count) => assert.equal(values.length, count),
+        check: (driver, meta, name, passed) => { checks.push({ name, passed }); assert.equal(passed, true, name); },
+        observe: async () => {}, inspectFocusedActions: async () => { events.push('original-reachable-outline'); } }, overlaySource);
+    let error; try { await run(page, driver, meta, controls, true); } catch (caught) { error = caught; }
+    return { error, events, checks, controls };
+}
+
+test('actual original feedback recovery uses Enter for only final native Firefox retry and callback-restored opener while retaining strict payload and PNG equality', async () => {
+    const good = await nativeFeedbackRecoveryActionsHarness(); assert.equal(good.error, undefined);
+    assert.ok(good.events.includes('retry-Enter') && good.events.includes('opener-Enter'));
+    assert.equal(good.events.indexOf('original-reachable-outline') < good.events.indexOf('retry-Enter'), true);
+    assert.equal(good.events.indexOf('retry-Enter') < good.events.indexOf('opener-Enter'), true);
+    assert.equal(good.events.at(-1), 'original-backdrop-click'); assert.equal(good.controls.feedbackRequests.length, 2);
+    assert.equal(good.controls.feedback.limit, 2); assert.equal(good.controls.feedback.outcome, 'success');
+    assert.equal(good.checks.every(check => check.passed), true);
+    assert.ok(good.checks.some(check => check.name === 'actual explicit feedback retry preserves semantic payload and both retained PNG hashes'));
+    assert.ok(good.checks.some(check => check.name === 'successful local feedback callback starts a fresh empty draft'));
+    for (const changeScope of [(d, m) => { d.report.slice = 8; }, (d, m) => { d.report.phase = 'before'; }, (d, m) => { m.native = false; },
+        (d, m) => { m.prefix = 'ordinary-'; }, (d, m) => { m.locale = 'en'; }, (d, m) => { d.report.environment.browser = 'chromium'; },
+        (d, m) => { d.report.environment.browserVersion = '149'; }, (d, m) => { d.report.environment.role = 'kiwi-view'; },
+        (d, m) => { m.viewport.width = 390; }, (d, m) => { m.viewport.height = 320; }, (d, m) => { d.nativePointer.display = ':95'; }]) {
+        const original = await nativeFeedbackRecoveryActionsHarness({ changeScope }); assert.equal(original.error, undefined);
+        assert.ok(original.events.includes('retry-click') && original.events.includes('opener-click'));
+        assert.equal(original.events.includes('retry-Enter') || original.events.includes('opener-Enter'), false);
+    }
+    for (const options of [{ changeHash: true }, { changePayload: true }]) {
+        const bad = await nativeFeedbackRecoveryActionsHarness(options); assert.ok(bad.error);
+        assert.equal(bad.checks.at(-1).name, 'actual explicit feedback retry preserves semantic payload and both retained PNG hashes');
+        assert.equal(bad.checks.at(-1).passed, false); assert.equal(bad.events.includes('opener-Enter'), false);
+    }
+});

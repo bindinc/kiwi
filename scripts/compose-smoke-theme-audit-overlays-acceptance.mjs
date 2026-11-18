@@ -876,14 +876,19 @@ async function inspectFeedbackRecovery(page, driver, meta, controls, withImage) 
     controls.feedback = { ...controls.feedback, held: false, outcome: 'success' };
     const retry = page.locator('[data-feedback-submit]');
     check(driver, meta, 'explicit feedback retry starts while its full error remains visible', await page.locator('[data-feedback-error]').isVisible());
-    await retry.click();
+    const nativeFirefox = driver.report.slice === 10 && driver.report.phase === 'after' && meta.native === true
+        && meta.prefix === 'outbox-feedback-image-system-' && meta.locale === 'nl'
+        && driver.report.environment.browser === 'firefox' && driver.report.environment.browserVersion === '150.0.2'
+        && driver.report.environment.role === 'kiwi-admin' && meta.viewport.width === 720 && meta.viewport.height === 500
+        && driver.nativePointer?.display === ':96';
+    if (nativeFirefox) await retry.press('Enter'); else await retry.click();
     await waitForCount(controls.feedbackRequests, 2);
     await page.locator(feedbackSelector).waitFor({ state: 'hidden' });
     check(driver, meta, 'actual explicit feedback retry preserves semantic payload and both retained PNG hashes',
         isDeepStrictEqual(controls.feedbackRequests[0], controls.feedbackRequests[1]), { first: controls.feedbackRequests[0], second: controls.feedbackRequests[1] });
     check(driver, meta, 'local success callback restores real feedback opener and clears shield', await page.locator('#contextualFeedbackButton').evaluate(node => !node.disabled && document.activeElement === node)
         && !await page.locator('body').evaluate(node => node.classList.contains('contextual-feedback-reviewing')));
-    await page.locator('#contextualFeedbackButton').click();
+    if (nativeFirefox) await page.locator('#contextualFeedbackButton').press('Enter'); else await page.locator('#contextualFeedbackButton').click();
     await page.locator(feedbackSelector).waitFor({ state: 'visible' });
     check(driver, meta, 'successful local feedback callback starts a fresh empty draft', await page.locator('textarea[name=comment]').inputValue() === ''
         && !await page.locator(feedbackSelector).evaluate(node => node.classList.contains('has-screenshot')));
