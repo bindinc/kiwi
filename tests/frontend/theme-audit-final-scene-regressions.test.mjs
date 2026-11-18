@@ -1450,3 +1450,54 @@ test('physical component activations admit exactly initial then retained with se
         assert.equal(bad.events.filter(event => event === 'click').length, phases[0] === 'retained' ? 0 : phases.length - 1);
     }
 });
+
+
+test('native person lookup uses actual existing-radio Space only when needed and preserves original lookup sequence', async () => {
+    const body = await readFile(new URL('../../scripts/compose-smoke-theme-audit-subscription.mjs', import.meta.url), 'utf8');
+    for (const keyboardChoice of [false, true]) for (const initiallyChecked of [false, true]) {
+        const events = []; let checked = initiallyChecked;
+        const roleState = { recipient: { selectedPerson: null } };
+        const radio = { isChecked: async () => checked, scrollIntoViewIfNeeded: async () => events.push('scroll-radio'),
+            check: async () => { checked = true; events.push('original-check'); },
+            press: async key => { assert.equal(key, 'Space'); checked = true; events.push('Space'); } };
+        const page = { locator: selector => {
+            if (selector.startsWith('input[name=')) return radio;
+            if (selector === '#recipientPersonSearch') return { evaluate: async () => true };
+            if (selector === '#recipientSearchQuery') return { fill: async value => { assert.equal(value, 'recipient'); events.push('fill-query'); } };
+            return { press: async key => { assert.equal(key, 'Enter'); events.push(selector === '#recipientSearchButton' ? 'search-Enter' : 'result-Enter');
+                if (selector !== '#recipientSearchButton') roleState.recipient.selectedPerson = { id: 990501 }; } };
+        }, waitForFunction: async (callback, argument) => {
+            assert.equal(vm.runInNewContext('(' + callback.toString() + ')(argument)', { subscriptionRoleState: roleState, argument }), true);
+            events.push('verify-original-selected-id');
+        } };
+        const run = actualFunction('selectPerson', {}, body);
+        await run(page, 'recipient', 'recipient', 990501, keyboardChoice);
+        assert.deepEqual(events, [...(keyboardChoice ? initiallyChecked ? [] : ['scroll-radio', 'Space'] : ['original-check']),
+            'fill-query', 'search-Enter', 'result-Enter', 'verify-original-selected-id']);
+    }
+    const events = [], page = { locator: () => ({ isChecked: async () => false,
+        scrollIntoViewIfNeeded: async () => events.push('scroll'), press: async () => events.push('Space') }) };
+    await assert.rejects(actualFunction('selectPerson', {}, body)(page, 'recipient', 'recipient', 990501, true), /requires the actual existing-person choice/);
+    assert.deepEqual(events, ['scroll', 'Space'], 'Unchecked or disabled actual radio never proceeds to lookup after an ineffective Space.');
+});
+
+test('actual subscription scenario selects keyboard radio setup only for after native Firefox and both original roles', async () => {
+    const body = await readFile(new URL('../../scripts/compose-smoke-theme-audit-subscription.mjs', import.meta.url), 'utf8');
+    for (const [phase, native, browserName, expected] of [['after', true, 'firefox', true], ['after', true, 'chromium', false],
+        ['after', false, 'firefox', false], ['before', true, 'firefox', false]]) {
+        const choices = [], stop = new Error('Synthetic boundary after both original person selections');
+        const page = { locator: selector => ({ first() { return this; }, waitFor: async () => {}, fill: async () => {}, selectOption: async () => {},
+            focus: async () => {}, inputValue: async () => '', press: async () => { if (selector === '#subPaymentAuto') throw stop; },
+            evaluate: async () => ({ focused: true, value: '2035-03-25', label: true, reachable: true }) }),
+            waitForFunction: async () => {}, evaluate: async () => true };
+        const driver = { browserName: 'unrelated-synthetic-engine-field', report: { environment: { browser: browserName } },
+            check: (name, actual, expected) => assert.equal(actual, expected, name) };
+        const run = actualFunction('runSubscriptionScenarios', { phase, offers: [], recipient: { id: 990501 }, payer: { id: 990502 },
+            observe: async () => {}, selectPerson: async (actualPage, role, query, id, choice) => {
+                assert.equal(actualPage, page); choices.push({ role, query, id, choice });
+            } }, body);
+        await assert.rejects(run(page, driver, { native, sentinel: true }, {}), error => error === stop);
+        assert.deepEqual(choices, [{ role: 'recipient', query: 'recipient', id: 990501, choice: expected },
+            { role: 'requester', query: 'payer', id: 990502, choice: expected }]);
+    }
+});

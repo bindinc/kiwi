@@ -1329,7 +1329,9 @@ function nativeFailureDiagnostic(error) {
         'compose-smoke-theme-audit-operational.mjs', 'compose-smoke-theme-audit-operational-feedback.mjs',
         'compose-smoke-theme-audit-shell-acceptance.mjs', 'compose-smoke-theme-audit-customer-acceptance.mjs',
         'compose-smoke-theme-audit-subscription-acceptance.mjs', 'compose-smoke-theme-audit-article-acceptance.mjs',
-        'compose-smoke-theme-audit-service-acceptance.mjs', 'compose-smoke-theme-audit-overlays-acceptance.mjs']);
+        'compose-smoke-theme-audit-service-acceptance.mjs', 'compose-smoke-theme-audit-overlays-acceptance.mjs',
+        'compose-smoke-theme-audit-subscription.mjs', 'compose-smoke-theme-audit-article.mjs',
+        'compose-smoke-theme-audit-service.mjs', 'compose-smoke-theme-audit-overlays.mjs']);
     const errorName = error?.name, rawStack = error?.stack;
     const frames = [], stack = typeof rawStack === 'string' ? rawStack : '';
     // The first line contains the error message; only bounded public source coordinates may leave this function.

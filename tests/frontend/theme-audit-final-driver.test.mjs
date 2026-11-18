@@ -737,3 +737,20 @@ test('current nativeOS200 classification admits only the single exact DATE inter
             { control: 'other-date' }, { proofStep: 54 }, { badImage: true }, { protocolImage: true }]) await assert.rejects(run(options));
     } finally { await rm(directory, { recursive: true, force: true }); }
 });
+
+
+test('native diagnostics retain exactly four known base helper coordinates while excluding private first line paths and near-match filenames', () => {
+    const diagnostic = actualNativeFailureDiagnostic(), marker = 'synthetic-private-base-helper-marker';
+    const names = ['subscription', 'article', 'service', 'overlays'];
+    const files = names.map(name => 'compose-smoke-theme-audit-' + name + '.mjs');
+    const stack = 'TimeoutError: ' + marker + '\n' + files.map((file, index) =>
+        '    at private_' + marker + ' (file:///private/' + marker + '/' + file + ':' + (224 + index) + ':5)').join('\n');
+    const result = JSON.parse(JSON.stringify(diagnostic({ name: 'TimeoutError', stack, message: marker, actual: marker, expected: marker })));
+    assert.deepEqual(result, { name: 'TimeoutError', frames: files.map((file, index) => ({ file, line: 224 + index, column: 5 })) });
+    for (const item of [marker, '/private/', 'file://', 'actual', 'expected', 'private_']) assert.equal(JSON.stringify(result).includes(item), false);
+    const rejected = ['compose-smoke-theme-audit-customer.mjs', 'evil-compose-smoke-theme-audit-subscription.mjs',
+        'compose-smoke-theme-audit-subscription-private.mjs', 'compose-smoke-theme-audit-subscription.mjs?private', 'private.mjs'];
+    const bad = diagnostic({ name: 'TimeoutError', stack: 'Error: ' + marker + '\n' + rejected.map(file =>
+        '    at private_' + marker + ' (file:///private/' + marker + '/' + file + ':1:2)').join('\n') });
+    assert.deepEqual(JSON.parse(JSON.stringify(bad)), { name: 'TimeoutError', frames: [] });
+});

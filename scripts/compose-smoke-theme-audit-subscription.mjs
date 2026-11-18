@@ -221,8 +221,12 @@ async function observe(page, driver, meta, state, selector, kind) {
     await driver.capture(page, (meta.native ? 'native-200-' : phase + '-') + 'subscription-' + state, undefined, kind);
 }
 
-async function selectPerson(page, role, query, id) {
-    await page.locator(`input[name="${role}Mode"][value="existing"]`).check();
+async function selectPerson(page, role, query, id, keyboardChoice = false) {
+    const radio = page.locator(`input[name="${role}Mode"][value="existing"]`);
+    if (keyboardChoice) {
+        if (!await radio.isChecked()) { await radio.scrollIntoViewIfNeeded(); await radio.press('Space'); }
+        if (!await radio.isChecked()) throw new Error('Native person lookup requires the actual existing-person choice to be checked.');
+    } else await radio.check();
     const details = page.locator('#' + role + 'PersonSearch');
     if (!await details.evaluate(node => node.open)) await details.locator(':scope > summary').press('Enter');
     await page.locator('#' + role + 'SearchQuery').fill(query);
@@ -235,6 +239,7 @@ export async function runSubscriptionScenarios(page, driver, meta, fixtures) {
     const actual = 'Actual local initial subscription form; synthetic catalogue is available but no product/person is selected.';
     const controlled = 'Actual subscription renderers with exact synthetic GET product/channel/person/source-date fixtures and local form-session cleanup; no transaction or server-permission acceptance.';
     const focused = phase === 'after' && !meta.native && !meta.sentinel && !meta.privacyDiagnostic && !meta.pointerSupplement;
+    const keyboardChoice = phase === 'after' && meta.native === true && driver.report.environment.browser === 'firefox';
     await page.locator('[data-action="show-new-subscription"]').first().press('Enter');
     await page.locator('#newSubscriptionForm').waitFor({ state: 'visible' });
     await observe(page, driver, meta, 'initial-top', '#newSubscriptionForm h2', actual);
@@ -275,14 +280,14 @@ export async function runSubscriptionScenarios(page, driver, meta, fixtures) {
         && !document.getElementById('subStartDate').disabled && document.getElementById('subStartDate').required
         && !document.getElementById('subStartDate').readOnly), true, meta, 5);
     if (focused) await inspectLookupStates(page, driver, meta, fixtures, controlled);
-    await selectPerson(page, 'recipient', 'recipient', recipient.id);
+    await selectPerson(page, 'recipient', 'recipient', recipient.id, keyboardChoice);
     await observe(page, driver, meta, 'selected-recipient', '#recipientSelectedPerson', controlled);
     if (!meta.sentinel) {
         await page.locator('#recipientPersonSearch > summary').press('Enter');
         await observe(page, driver, meta, 'open-recipient-lookup', '#recipientPersonSearch .subscription-person-search', controlled);
     }
     await page.locator('#requesterSameAsRecipient').press('Space');
-    await selectPerson(page, 'requester', 'payer', payer.id);
+    await selectPerson(page, 'requester', 'payer', payer.id, keyboardChoice);
     await observe(page, driver, meta, 'different-payer', '#requesterSelectedPerson', controlled);
     await page.locator('#subPaymentAuto').press('ArrowRight');
     await observe(page, driver, meta, 'payment-instruction', '#newSubscriptionForm .payment-methods', controlled);
