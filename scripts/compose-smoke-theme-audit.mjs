@@ -1314,6 +1314,30 @@ async function waitForNativeHeaderUncovered(page, finalGroup = null) {
     throw new Error('Actual native header remains obscured: ' + JSON.stringify({ probe, frames }));
 }
 
+function nativeFailureDiagnostic(error) {
+    const allowedNames = new Set(['Error', 'AssertionError', 'TimeoutError', 'TypeError', 'ReferenceError',
+        'RangeError', 'SyntaxError', 'AggregateError']);
+    const allowedFiles = new Set(['compose-smoke-theme-audit.mjs', 'compose-smoke-theme-audit-final-scenes.mjs',
+        'compose-smoke-theme-audit-operational.mjs', 'compose-smoke-theme-audit-operational-feedback.mjs',
+        'compose-smoke-theme-audit-shell-acceptance.mjs', 'compose-smoke-theme-audit-customer-acceptance.mjs',
+        'compose-smoke-theme-audit-subscription-acceptance.mjs', 'compose-smoke-theme-audit-article-acceptance.mjs',
+        'compose-smoke-theme-audit-service-acceptance.mjs', 'compose-smoke-theme-audit-overlays-acceptance.mjs']);
+    const errorName = error?.name, rawStack = error?.stack;
+    const frames = [], stack = typeof rawStack === 'string' ? rawStack : '';
+    // The first line contains the error message; only bounded public source coordinates may leave this function.
+    for (const frame of stack.split(/\r?\n/).slice(1)) {
+        const match = /^\s+at .*[\\/]([A-Za-z0-9_-]+\.mjs):(\d+):(\d+)\)?$/.exec(frame);
+        if (!match || !allowedFiles.has(match[1])) continue;
+        const line = Number(match[2]), column = Number(match[3]);
+        const validCoordinates = Number.isSafeInteger(line) && Number.isSafeInteger(column)
+            && line > 0 && column > 0 && line <= 1000000 && column <= 1000000;
+        if (!validCoordinates) continue;
+        frames.push({ file: match[1], line, column });
+        if (frames.length === 5) break;
+    }
+    return { name: allowedNames.has(errorName) ? errorName : 'Error', frames };
+}
+
 async function nativeZoomChecks(finalGroup = null) {
     const contract = slice >= 2 ? await referenceContract({ width: 1440, height: 1000 }, finalGroup) : null;
     const context = await browser.newContext({
@@ -1568,7 +1592,8 @@ try {
             for (const group of finalNativeGroups) {
                 try { await nativeZoomChecks(group); }
                 catch (error) {
-                    report.errors.push({ scenario: 'final-native-200-percent', group, message: 'Final native group failed; the attempt remains unverified.' });
+                    report.errors.push({ scenario: 'final-native-200-percent', group, message: 'Final native group failed; the attempt remains unverified.',
+                        diagnostic: nativeFailureDiagnostic(error) });
                     break;
                 }
             }

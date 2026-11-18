@@ -25,7 +25,7 @@ const descriptor = () => ({ id: 'synthetic-session', locale: 'nl', role: 'kiwi-a
 const contract = () => Object.fromEntries(['shell', 'customer', 'subscription', 'subscriptionTitle', 'subscriptionHeading',
     'subscriptionInput', 'subscriptionCaption', 'inputFocus', 'selectFocus'].map(key => [key, { syntheticUnitContract: true }]));
 
-function setup({ fail, outcome = 'verified', omitCriterion = false, navigateDuringPrepare = false, verification } = {}) {
+function setup({ fail, outcome = 'verified', omitCriterion = false, navigateDuringPrepare = false, verification, nativeError } = {}) {
     const calls = [], contexts = [], declaration = release();
     const operationalAfter = { phase: 'after', sourceCommit: commit, evidence: artifact('operational-after.json') };
     declaration.operationalAfter = operationalAfter;
@@ -64,6 +64,7 @@ function setup({ fail, outcome = 'verified', omitCriterion = false, navigateDuri
         async finishSession() { calls.push('finish'); },
         async inspectNative(handle, { group, geometry }) {
             calls.push(`native:${group}`); assert.equal(handle.descriptor.native, true);
+            if (nativeError) throw nativeError;
             assert.equal(driver.contract, geometry.contract);
         },
         scenes: Object.fromEntries(finalAuditAreas.map(area => [area.id, async (handle, { cell }) => {
@@ -287,8 +288,8 @@ test('wrong owner receipt identity and absent owner receipt cannot open native o
     assert.equal(trace.includes('receipt-verified'), false);
 });
 
-async function executeActualNativeMain({ geometryFailure, rejectSessionProof = false } = {}) {
-    const fixture = setup({ fail: rejectSessionProof ? 'verify' : undefined });
+async function executeActualNativeMain({ geometryFailure, rejectSessionProof = false, nativeError } = {}) {
+    const fixture = setup({ fail: rejectSessionProof ? 'verify' : undefined, nativeError });
     fixture.driver.browserName = 'firefox';
     const report = fixture.driver.report;
     report.errors = []; report.checks = [];
@@ -317,7 +318,8 @@ async function executeActualNativeMain({ geometryFailure, rejectSessionProof = f
     const dispatchEnd = source.indexOf('\n} catch (error)', dispatchStart);
     assert.ok(helperStart >= 0 && helperEnd > helperStart && dispatchStart > helperEnd && dispatchEnd > dispatchStart);
     const noop = async () => {};
-    const runtime = runInNewContext(`(async () => { ${source.slice(helperStart, helperEnd)}; ${source.slice(dispatchStart, dispatchEnd)} })`, {
+    const diagnosticSource = source.match(/function nativeFailureDiagnostic\(error\) \{[\s\S]*?\n\}/)?.[0] || '';
+    const runtime = runInNewContext(`(async () => { ${diagnosticSource}; ${source.slice(helperStart, helperEnd)}; ${source.slice(dispatchStart, dispatchEnd)} })`, {
         slice: 10, finalOnly: true, nativeZoom: true, browserName: 'firefox', browser, report,
         nativeOverlay: false, nativeSubscription: false, nativeArticle: false, nativeService: false, nativeCustomer: false,
         referenceContract: async () => contract(), finalDriver: fixture.bridge, finalNativeGroups, finalContextOptions,
@@ -460,4 +462,90 @@ test('native DATE classification requires the exact proved area and width in the
         { entries: [proof('A08')], extraFocusLoss: true },
         { entries: [proof('A08')], unreachable: true }
     ]) await assert.rejects(run(options), /final-only Tab route/);
+});
+
+
+function actualNativeFailureDiagnostic() {
+    const source = readFileSync(new URL('../../scripts/compose-smoke-theme-audit.mjs', import.meta.url), 'utf8');
+    const declaration = source.match(/function nativeFailureDiagnostic\(error\) \{[\s\S]*?\n\}/)?.[0];
+    assert.ok(declaration, 'The existing main must expose its actual safe diagnostic helper to this VM seam.');
+    return runInNewContext('(' + declaration + ')');
+}
+function privateNativeFailureFixture() {
+    const marker = 'synthetic-private-marker-never-export';
+    const error = new Error(marker);
+    error.name = 'TimeoutError';
+    error.actual = { customer: marker }; error.expected = { authorization: marker }; error.headers = { authorization: marker };
+    error.stack = `TimeoutError: ${marker} at /private/${marker}/compose-smoke-theme-audit.mjs:999:99\n`
+        + `    at privateFunction_${marker} (file:///private/${marker}/compose-smoke-theme-audit-operational-feedback.mjs:150:71)\n`
+        + `    at secret_${marker} (file:///private/${marker}/not-an-allowed-source.mjs:12:9)\n`
+        + `    at runArea (file:///private/${marker}/compose-smoke-theme-audit-final-scenes.mjs:594:3)\n`
+        + `Authorization: ${marker}\n`;
+    return { marker, error };
+}
+
+test('actual native diagnostic emits only enum and allowlisted source coordinates, never error text or private paths', () => {
+    const diagnostic = actualNativeFailureDiagnostic(), { marker, error } = privateNativeFailureFixture();
+    const observed = JSON.parse(JSON.stringify(diagnostic(error)));
+    assert.deepEqual(observed, { name: 'TimeoutError', frames: [
+        { file: 'compose-smoke-theme-audit-operational-feedback.mjs', line: 150, column: 71 },
+        { file: 'compose-smoke-theme-audit-final-scenes.mjs', line: 594, column: 3 }
+    ] });
+    const withCallLog = { ...error, stack: error.stack.split('\n')[0] + '\n'
+        + Array.from({ length: 30 }, () => '  waiting for the existing locator; no source metadata').join('\n')
+        + '\n' + error.stack.split('\n').slice(1).join('\n') };
+    assert.deepEqual(JSON.parse(JSON.stringify(diagnostic(withCallLog))), observed, 'Playwright call-log lines cannot hide the actual safe source frame.');
+    const serialized = JSON.stringify(observed);
+    for (const privatePart of [marker, 'file://', '/private/', 'Authorization', 'actual', 'expected', 'headers', 'privateFunction', 'not-an-allowed-source']) {
+        assert.equal(serialized.includes(privatePart), false, 'Only safe public frame fields may be exported.');
+    }
+    error.name = marker;
+    assert.equal(diagnostic(error).name, 'Error', 'Unrecognized names cannot carry private text.');
+    for (const value of [null, undefined, marker, { name: marker, stack: {} }]) {
+        assert.deepEqual(JSON.parse(JSON.stringify(diagnostic(value))), { name: 'Error', frames: [] });
+    }
+    error.stack = `at /private/compose-smoke-theme-audit.mjs:999:99\n`
+        + `    at unknown (/private/not-an-allowed-source.mjs:3:4)\n`
+        + `    at zero (/private/compose-smoke-theme-audit.mjs:0:4)\n`
+        + `    at huge (/private/compose-smoke-theme-audit.mjs:4:1000001)\n`
+        + Array.from({ length: 8 }, (_, index) => `    at known (/private/compose-smoke-theme-audit.mjs:${index + 1}:2)`).join('\n');
+    const bounded = JSON.parse(JSON.stringify(diagnostic(error)));
+    assert.equal(bounded.frames.length, 5);
+    assert.deepEqual(bounded.frames.map(frame => frame.line), [1, 2, 3, 4, 5], 'First-line, unknown-file and invalid-coordinate frames stay excluded.');
+});
+
+test('actual native main failure keeps safe diagnostic only and still stops later groups and closes its context', async () => {
+    const { marker, error } = privateNativeFailureFixture();
+    const result = await executeActualNativeMain({ nativeError: error });
+    assert.equal(result.contexts.length, 1); assert.equal(result.contexts[0].closes, 1);
+    assert.equal(result.calls.filter(value => value.startsWith('native:')).length, 1);
+    assert.ok(result.calls.includes('finish')); assert.ok(result.calls.includes('os-reset'));
+    assert.equal(result.driver.report.errors.length, 1);
+    assert.deepEqual(JSON.parse(JSON.stringify(result.driver.report.errors[0].diagnostic)), { name: 'TimeoutError', frames: [
+        { file: 'compose-smoke-theme-audit-operational-feedback.mjs', line: 150, column: 71 },
+        { file: 'compose-smoke-theme-audit-final-scenes.mjs', line: 594, column: 3 }
+    ] });
+    const serialized = JSON.stringify(result.driver.report);
+    for (const privatePart of [marker, 'Authorization', '/private/', 'privateFunction']) assert.equal(serialized.includes(privatePart), false);
+});
+
+
+test('actual native diagnostic snapshots changing name and stack getters once before validation', () => {
+    const diagnostic = actualNativeFailureDiagnostic(), marker = 'synthetic-private-getter-marker';
+    let nameReads = 0, stackReads = 0;
+    const error = {
+        get name() { nameReads++; return nameReads === 1 ? 'TimeoutError' : marker; },
+        get stack() {
+            stackReads++;
+            return stackReads === 1
+                ? `TimeoutError: ${marker}\n    at private_${marker} (file:///private/${marker}/compose-smoke-theme-audit-operational-feedback.mjs:150:71)`
+                : `Error: ${marker}\n    at private_${marker} (file:///private/${marker}/not-an-allowed-source.mjs:12:9)`;
+        }
+    };
+    const observed = JSON.parse(JSON.stringify(diagnostic(error)));
+    assert.deepEqual(observed, { name: 'TimeoutError', frames: [
+        { file: 'compose-smoke-theme-audit-operational-feedback.mjs', line: 150, column: 71 }
+    ] });
+    assert.equal(nameReads, 1); assert.equal(stackReads, 1);
+    assert.equal(JSON.stringify(observed).includes(marker), false);
 });
