@@ -1180,6 +1180,10 @@ async function buildArticleCart(handle) {
     await page.locator('[data-action=open-article-sale-form]').first().press('Enter');
     await visible(handle, '#articleSaleForm', 'Article opens through its actual customer guard');
     await page.locator('#articleSearch').fill('Synthetic');
+    if (handle.descriptor.native === true) await page.waitForFunction(() => {
+        const input = document.getElementById('articleSearch'), dropdown = document.getElementById('articleDropdown');
+        return Boolean(input && dropdown && input.getAttribute('aria-busy') !== 'true' && dropdown.getAttribute('aria-busy') !== 'true');
+    });
     await page.locator('#articleDropdown .browse-all-link').press('Enter');
     await visible(handle, '#allArticlesModal', 'Actual full catalogue opens');
     await helpers.article.observeArticle(page, child, meta, 'catalog', '#allArticlesModal');

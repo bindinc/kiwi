@@ -1285,3 +1285,44 @@ test('native Enter diagnostic records only trusted owned activation and always r
         assert.equal(ordinary.observations.some(item => item.name === 'records-after-keyboard-editor-after-enter'), false);
     }
 });
+
+
+test('native catalogue action awaits the installed current search busy owner while ordinary action sequencing is unchanged', async () => {
+    const searchSource = await readFile(new URL('../../assets/js/app/slices/article-search-slice.js', import.meta.url), 'utf8');
+    for (const native of [false, true]) {
+        const events = [], stop = new Error('Synthetic boundary at unchanged catalogue visibility assertion');
+        const attrs = () => { const values = new Map(); return { getAttribute: key => values.get(key) ?? null,
+            setAttribute: (key, value) => values.set(key, value), removeAttribute: key => values.delete(key) }; };
+        const input = attrs(), dropdown = attrs(), status = { textContent: '' };
+        const document = { getElementById: id => ({ articleSearch: input, articleDropdown: dropdown, articleSearchStatus: status })[id] || null };
+        const context = vm.createContext({ translateArticle: (_key, _values, fallback) => fallback });
+        vm.runInContext(['readBusyAttribute', 'restoreBusyAttribute', 'beginArticleSearchFeedback', 'finishArticleSearchFeedback']
+            .map(name => declaration(name, searchSource)).join('\n')
+            + '\nlet articleSearchFeedback = null; globalThis.busy = { begin: beginArticleSearchFeedback, finish: finishArticleSearchFeedback };', context);
+        const busy = context.busy; let currentOwner, olderOwner, readinessWaited = false;
+        const page = { locator: selector => ({ first() { return this; }, press: async key => {
+            assert.equal(key, 'Enter');
+            if (selector === '#articleDropdown .browse-all-link') {
+                assert.equal(readinessWaited, native); events.push('browse-original-Enter');
+            } else assert.equal(selector, '[data-action=open-article-sale-form]');
+        }, fill: async value => { assert.equal(selector, '#articleSearch'); assert.equal(value, 'Synthetic'); events.push('original-fill');
+            olderOwner = busy.begin(document); currentOwner = busy.begin(document);
+        } }), waitForFunction: async callback => {
+            readinessWaited = true; events.push('wait-source-readiness');
+            const read = () => vm.runInNewContext('(' + callback.toString() + ')()', { document });
+            assert.equal(read(), false);
+            busy.finish(olderOwner); assert.equal(read(), false, 'Older response completion cannot clear the current busy owner.');
+            busy.finish(currentOwner); assert.equal(read(), true);
+            input.setAttribute('aria-busy', 'true'); assert.equal(read(), false); input.removeAttribute('aria-busy');
+            dropdown.setAttribute('aria-busy', 'true'); assert.equal(read(), false); dropdown.removeAttribute('aria-busy');
+            const missing = vm.runInNewContext('(' + callback.toString() + ')()', { document: { getElementById: () => null } });
+            assert.equal(missing, false, 'Missing installed controls cannot masquerade as settled readiness.');
+        } };
+        const handle = { descriptor: { native }, page, child: {}, helpers: {} };
+        const run = actualFunction('buildArticleCart', { metaFor: () => ({}), visible: async (actual, selector) => {
+            assert.equal(actual, handle); if (selector === '#allArticlesModal') throw stop; assert.equal(selector, '#articleSaleForm');
+        } });
+        await assert.rejects(run(handle), error => error === stop);
+        assert.deepEqual(events, ['original-fill', ...(native ? ['wait-source-readiness'] : []), 'browse-original-Enter']);
+    }
+});
