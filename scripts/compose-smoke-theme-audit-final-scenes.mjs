@@ -1066,9 +1066,9 @@ export async function createFinalSceneHooks({ release, verification }) {
         scenes: Object.fromEntries(finalAuditAreas.map(area => [area.id, async handle => runArea(handle.owned || handle, area.id)])),
         async inspectNative(handle, { group }) {
             const owned = handle.owned || handle; assert.ok(nativeAreas[group], 'Unknown native group.');
-            if (driver.contract?.nativeDateFocus?.nativeOS200 && group === driver.contract.nativeDateFocus.nativeOS200.group) {
-                owned.child.contract = driver.contract;
-                owned.state.referenceContract = driver.contract;
+            if (owned.driver.contract?.nativeDateFocus?.nativeOS200 && group === owned.driver.contract.nativeDateFocus.nativeOS200.group) {
+                owned.child.contract = owned.driver.contract;
+                owned.state.referenceContract = owned.driver.contract;
             }
             owned.state.viewport = await owned.page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
             for (const area of nativeAreas[group]) {

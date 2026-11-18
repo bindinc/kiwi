@@ -777,3 +777,50 @@ test('actual A03 caller opts only genuine native Firefox into the editor keyboar
         assert.equal(options[0].observe, handle.helpers.operational.observeOperational);
     }
 });
+
+test('actual complete native hook uses its owned driver and propagates optional contract only for the exact group', async () => {
+    const start = source.indexOf('        async inspectNative(handle, { group }) {');
+    const end = source.indexOf('\n        }\n    };', start);
+    assert.ok(start >= 0 && end > start);
+    const method = source.slice(start, end + '\n        }'.length).trim();
+    const nativeAreas = vm.runInNewContext('(' + source.match(/const nativeAreas = (\{[\s\S]*?\n\});/)[1] + ')');
+    const optionalGroup = 'subscription-service-native-date';
+    for (const group of finalNativeGroups) for (const optional of [false, true]) for (const wrapped of [false, true]) {
+        const calls = [], original = { syntheticMeasuredReference: true };
+        const measured = { syntheticMeasuredReference: true, ...(optional ? { nativeDateFocus: { nativeOS200: { group: optionalGroup } } } : {}) };
+        const nativeTaskIdentity = () => {};
+        const owned = { driver: { contract: measured }, child: { contract: original }, state: { referenceContract: original },
+            observations: [], page: { evaluate: async (callback, operation) => {
+                if (callback === nativeTaskIdentity) { assert.equal(operation, 'remember'); calls.push('remember'); return { stored: true }; }
+                return vm.runInNewContext('(' + callback.toString() + ')()', { innerWidth: 525, innerHeight: 546 });
+            } } };
+        const inspect = vm.runInNewContext('({' + method + '}).inspectNative', { assert, nativeAreas, nativeTaskIdentity,
+            familyFor: actualFunction('familyFor', {}),
+            runArea: async (handle, area) => { assert.equal(handle, owned); calls.push(area); handle.observations.push(area); },
+            systemScene: async (handle, options) => { assert.equal(handle, owned); assert.equal(options.accountPages, false);
+                assert.equal(handle.recordMode, false); calls.push('A13'); handle.observations.push('A13'); }
+        });
+        const result = await inspect(wrapped ? { owned } : owned, { group, driver: { contract: { decoyMustNotBeUsed: true } } });
+        assert.equal(result, owned.observations);
+        assert.deepEqual(calls, [...nativeAreas[group], 'remember']);
+        assert.equal(owned.nativeResetPending, true, 'Existing reset/task identity obligation is retained.');
+        assert.equal(JSON.stringify(owned.state.viewport), JSON.stringify({ width: 525, height: 546 }));
+        assert.equal(owned.child.contract, optional && group === optionalGroup ? measured : original);
+        assert.equal(owned.state.referenceContract, optional && group === optionalGroup ? measured : original);
+        assert.equal(Object.hasOwn(original, 'nativeDateFocus'), false, 'The original measured reference is never mutated.');
+    }
+});
+
+test('actual native hook still rejects unknown groups and failed remember identity', async () => {
+    const start = source.indexOf('        async inspectNative(handle, { group }) {');
+    const end = source.indexOf('\n        }\n    };', start);
+    const method = source.slice(start, end + '\n        }'.length).trim();
+    const nativeTaskIdentity = () => {}, calls = [];
+    const owned = { driver: { contract: {} }, child: {}, state: {}, observations: [], page: { evaluate: async callback =>
+        callback === nativeTaskIdentity ? { stored: false } : { width: 525, height: 546 } } };
+    const inspect = vm.runInNewContext('({' + method + '}).inspectNative', { assert, nativeTaskIdentity,
+        nativeAreas: { 'shell-search-customer-history': ['A01'] }, runArea: async () => calls.push('A01') });
+    await assert.rejects(inspect(owned, { group: 'unknown-group' })); assert.deepEqual(calls, []);
+    await assert.rejects(inspect({ owned }, { group: 'shell-search-customer-history' }));
+    assert.deepEqual(calls, ['A01']); assert.equal(owned.nativeResetPending, undefined);
+});
