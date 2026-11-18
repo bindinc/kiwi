@@ -557,8 +557,14 @@ async function searchSummaries(page, state, observe, { diagnoseFocus = false, re
                 assert.equal(summary.range, `Toont 1-${count} van ${count}`); assert.equal(summary.renderedRowCount, count);
                 await page.evaluate(() => { window.__themeAuditSummaryQuery = JSON.stringify([...document.querySelectorAll('.search-card input')].map(node => [node.id, node.value])); });
                 for (const locale of ['en', 'nl']) {
-                    await page.locator('#agentProfileTrigger').click();
-                    await page.locator('[data-locale-option=' + locale + ']').click();
+                    if (state.nativeKernel) {
+                        await page.locator('#agentProfileTrigger').press('Enter');
+                        await page.locator('[data-locale-option=' + locale + ']').waitFor({ state: 'visible' });
+                        await page.locator('[data-locale-option=' + locale + ']').press('Enter');
+                    } else {
+                        await page.locator('#agentProfileTrigger').click();
+                        await page.locator('[data-locale-option=' + locale + ']').click();
+                    }
                     await page.locator('#searchSummary').scrollIntoViewIfNeeded();
                     const translated = await page.locator('#searchSummary').evaluate(node => ({
                         countText: node.querySelector('#resultCount').textContent.trim(), label: node.querySelector('#resultCountLabel').textContent.trim(),

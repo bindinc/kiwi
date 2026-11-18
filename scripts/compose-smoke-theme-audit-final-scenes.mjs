@@ -342,7 +342,9 @@ async function prepareOwnedSession({ page, context, descriptor, driver, release 
     if (descriptor.role === 'kiwi-view') { state.suite = 'actual-view'; child.report.requestedSuite = 'input-gates'; }
     assert.ok(['kiwi-admin', 'kiwi-view'].includes(descriptor.role), 'Unsupported final login role must not be simulated.');
     state.feedbackFixtures = helpers.feedback.readonlySourceFixtures();
-    if (records) state.recordFixture = helpers.feedback.recordListAfterFixture(driver.sourceRoot, 2, plan.areaId === 'A03');
+    const nativeRecordGroup = plan.nativeGroup === 'shell-search-customer-history';
+    const componentRecords = plan.areaId === 'A03' || nativeRecordGroup;
+    if (records || nativeRecordGroup) state.recordFixture = helpers.feedback.recordListAfterFixture(driver.sourceRoot, 2, componentRecords);
     handle.activeFamily = family; handle.recordMode = records;
     const requiredFamilies = new Set(plan.requiredFamilies);
     const transport = handle.transport = createFinalTransport(driver.baseUrl, () => handle.activeFamily, child.report, { calendarSourceRoot: driver.sourceRoot, overlay, records: () => handle.recordMode, privateError: () => handle.privateError === true });
@@ -494,7 +496,10 @@ function syntheticCustomer() {
 }
 
 async function selectCustomer(handle) {
-    const customer = syntheticCustomer();
+    const longCustomer = syntheticCustomer();
+    const customer = handle.nativeGroup === 'shell-search-customer-history'
+        ? { ...handle.state.recordFixture.customer, lastName: longCustomer.lastName }
+        : longCustomer;
     assert.ok(handle.customer, 'Customer transport must be prepared before navigation.');
     handle.customer.rows = [customer]; handle.customer.personDetails = customer;
     await handle.page.locator('#searchPostalCode').fill(customer.postalCode);

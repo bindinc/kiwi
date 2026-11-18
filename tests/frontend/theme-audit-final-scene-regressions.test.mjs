@@ -5,6 +5,7 @@ import path from 'node:path';
 import { readFile, writeFile, mkdir, mkdtemp, rm, rmdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { createCustomerWorkSession } from '../../assets/js/app/customer-work-session.js';
 import { createFinalDriver, finalNativeGroups } from '../../scripts/compose-smoke-theme-audit-final-driver.mjs';
 import { finalAuditAreas, finalReleaseIdentity } from '../../scripts/compose-smoke-theme-audit-final.mjs';
 import { finalScenePlan, createFinalTransport, finishFinalSceneSession, verifiedCriterionChecks,
@@ -441,4 +442,107 @@ test('A11 actual async helper still rejects a missing timer GET and lost focus a
     const lost = asyncOutboxHarness({ loseFocusAfterPoll: true });
     await assert.rejects(lost.run(), /Async outbox second-trigger-after-poll must preserve/);
     assert.equal(lost.state.report.checks.at(-1).passed, false);
+});
+
+
+test('native shell group prepares the later record fixture without routing initial customer search as records', async () => {
+    const h = setupHarness();
+    const descriptor = { id: 'shell-search-customer-history', native: true, locale: 'nl', role: 'kiwi-admin',
+        viewport: { width: 1440, height: 1000 }, hasTouch: false, reducedMotion: 'reduce' };
+    const context = await h.driver.newFinalContext(descriptor), page = await context.newPage();
+    const handle = await h.prepare({ page, context, descriptor, driver: h.driver, release: h.release }, h.owner, h.helpers,
+        { sourceCommit: h.release.source.commit });
+    assert.equal(handle.state.recordFixture.componentOnly, true);
+    assert.equal(handle.state.recordFixture.recordCount, 2);
+    assert.equal(handle.state.suite, 'feedback', 'Initial shell/search setup must keep its existing fixture owner.');
+    assert.equal(handle.recordMode, false);
+    assert.equal(handle.activeFamily, 'customer');
+    await finishFinalSceneSession(handle);
+});
+
+test('actual native shell selection keeps the record identity across the later fresh A03 read', async () => {
+    const longCustomer = actualFunction('syntheticCustomer', {})();
+    const recordCustomer = { ...longCustomer, id: 990970, personId: '990970', credentialKey: 'theme-audit-records-component-2',
+        sourceSystem: 'subscription-api', mandant: 'SYNTHETIC', lastName: 'Multiple records' };
+    for (const nativeGroup of ['shell-search-customer-history', null]) {
+        let sequence = 0;
+        const workSession = createCustomerWorkSession({ createSessionId: () => 'synthetic-unit-session-' + (++sequence) });
+        const handle = { nativeGroup, state: { recordFixture: { customer: recordCustomer } }, customer: {},
+            child: { check: (name, actual, expected) => assert.deepEqual(actual, expected, name) } };
+        const transitions = [];
+        handle.page = { locator(selector) { return { first() { return this; }, async fill() {}, async press(key) {
+            assert.equal(key, 'Enter');
+            if (selector.includes('select-customer')) {
+                const customer = handle.customer.personDetails, selection = workSession.startCustomerSelection(customer);
+                transitions.push(selection.previousContext);
+                assert.equal(workSession.confirmCustomer(selection, customer), true);
+            }
+        } }; }, async evaluate() { return String(workSession.getSnapshot().customerReference.personId); } };
+        const run = actualFunction('selectCustomer', { syntheticCustomer: () => structuredClone(longCustomer),
+            visible: async () => {}, metaFor: () => ({}) });
+        await run(handle); await run(handle);
+        const current = handle.customer.personDetails;
+        assert.equal(current.lastName, longCustomer.lastName, 'The original long-label presentation remains exercised.');
+        assert.deepEqual(transitions, [null, null]);
+        const recordRead = workSession.startCustomerSelection(recordCustomer);
+        if (nativeGroup) {
+            assert.equal(current.id, recordCustomer.id);
+            assert.equal(current.credentialKey, recordCustomer.credentialKey);
+            assert.equal(current.sourceSystem, recordCustomer.sourceSystem);
+            assert.equal(recordRead.previousContext, null, 'The real session model requires no reset POST for the native A03 fresh read.');
+        } else {
+            assert.equal(current.id, 990701, 'Every ordinary baseline keeps its original synthetic fixture.');
+            assert.equal(recordRead.previousContext.customerReference.personId, '990701', 'The regression still detects the historical cross-customer transition.');
+        }
+    }
+});
+
+const nativeFeedbackSource = await readFile(process.env.KIWI_THEME_FEEDBACK_REGRESSION_SOURCE
+    || fileURLToPath(new URL('../../scripts/compose-smoke-theme-audit-operational-feedback.mjs', import.meta.url)), 'utf8');
+for (const native of [false, true]) test('actual search summary keeps NL-EN-NL assertions with ' + (native ? 'native keyboard' : 'ordinary pointer') + ' locale activation', async () => {
+    let count = 0, locale = 'nl', menuOpen = false;
+    const activations = [], observations = [], inputs = [{ id: 'searchPostalCode', value: '' }, { id: 'searchHouseNumber', value: '' }];
+    const summaryLabel = () => locale === 'en' ? (count === 1 ? 'customer found' : 'customers found') : (count === 1 ? 'klant gevonden' : 'klanten gevonden');
+    const document = { querySelector(selector) {
+        if (selector === '#resultsTitle') return { textContent: (locale === 'en' ? 'Search results' : 'Zoekresultaten') + ': "1231AA 1"' };
+        if (selector === '#resultsRange') return { textContent: (locale === 'en' ? 'Showing' : 'Toont') + ' 1-' + count + (locale === 'en' ? ' of ' : ' van ') + count };
+        throw new Error('Unexpected synthetic summary selector: ' + selector);
+    }, querySelectorAll(selector) {
+        if (selector === '#paginatedResults .result-row') return Array.from({ length: count }, () => ({}));
+        assert.equal(selector, '.search-card input'); return inputs;
+    } };
+    const window = { displaySearchResults(customers) { count = customers.length; } };
+    const summary = { get innerText() { return count + ' ' + summaryLabel(); }, querySelector(selector) {
+        if (selector === '#resultCount') return { textContent: String(count) };
+        if (selector === '#resultCountLabel') return { textContent: summaryLabel(), getAttribute(name) {
+            assert.equal(name, 'data-i18n'); return count === 1 ? 'search.resultSummaryOne' : 'search.resultSummaryMany'; } };
+        throw new Error('Unexpected synthetic summary child: ' + selector);
+    } };
+    const activate = (selector, kind) => {
+        activations.push({ selector, kind });
+        if (native && kind === 'click') throw new Error('Native pointer setup cannot replace the declared keyboard path.');
+        if (selector === '#agentProfileTrigger') { menuOpen = !menuOpen; return; }
+        const chosen = /^\[data-locale-option=(en|nl)\]$/.exec(selector);
+        assert.ok(chosen && menuOpen, 'Only a genuinely opened locale choice may activate.');
+        locale = chosen[1]; menuOpen = false;
+    };
+    const page = { async evaluate(callback, argument) { return callback(argument); }, locator(selector) { return {
+        async fill(value) { const input = inputs.find(item => '#' + item.id === selector); assert.ok(input); input.value = value; },
+        async scrollIntoViewIfNeeded() {}, async isVisible() { return selector === '#searchSummary' && count > 0; },
+        async evaluate(callback) { return callback(summary); }, async click() { activate(selector, 'click'); },
+        async press(key) { assert.equal(key, 'Enter'); activate(selector, 'Enter'); },
+        async waitFor(options) { assert.equal(options.state, 'visible'); assert.equal(menuOpen, true); }
+    }; } };
+    const state = { phase: 'after', ...(native ? { nativeKernel: {} } : {}) };
+    const run = actualFunction('searchSummaries', { document, window, keyboardFocus: async () => ({ focused: true }) }, nativeFeedbackSource);
+    await run(page, state, async (page, state, name, selectors, detail) => observations.push({ name, ...detail }));
+    assert.equal(locale, 'nl'); assert.equal(menuOpen, false);
+    assert.equal(activations.length, 8);
+    assert.ok(activations.every(item => item.kind === (native ? 'Enter' : 'click')));
+    assert.deepEqual(inputs.map(item => item.value), ['1231AA', '1']);
+    for (const resultCount of [1, 3]) for (const language of ['en', 'nl']) {
+        const observed = observations.find(item => item.name === `feedback-search-summary-${resultCount}-${language}`);
+        assert.equal(observed.actualSummary.queryUnchanged, true);
+        assert.equal(observed.actualSummary.countText, String(resultCount));
+    }
 });
