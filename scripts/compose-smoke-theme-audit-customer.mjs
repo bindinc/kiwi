@@ -282,6 +282,7 @@ async function prepareCustomerEvidence(report) {
 
 export async function installCustomerFixtures(page, driver) {
     const fixtures = { rows: null, addresses: false, lookupMode: 'matched', releaseLookup: null };
+    let subscriptionSummaryReads = 0;
     fixtures.heldLookup = new Promise(resolve => { fixtures.markLookupHeld = resolve; });
     const report = driver.report;
     const apiPath = driver.baseUrl.pathname.replace(/\/$/, '') + '/api/v1/';
@@ -292,6 +293,24 @@ export async function installCustomerFixtures(page, driver) {
         if (fixtures.rows && request.method() === 'GET' && url.pathname === apiPath + 'persons') {
             fixtures.personSearchRequests = (fixtures.personSearchRequests || 0) + 1;
             return route.fulfill({ json: { items: fixtures.rows } });
+        }
+        if (fixtures.subscriptionSummary && url.pathname === apiPath + 'persons/subscription-summaries') {
+            const summary = fixtures.subscriptionSummary, selected = fixtures.personDetails;
+            let payload = null;
+            try { payload = request.postDataJSON(); } catch { /* An unmatched read protocol remains denied by the final owner. */ }
+            const exactRequest = request.method() === 'POST' && !url.search && subscriptionSummaryReads < 2
+                && Boolean(request.headers()['x-csrf-token']) && (request.headers()['content-type'] || '').startsWith('application/json');
+            const exactSelectedCustomer = selected && String(selected.id) === summary.personId
+                && selected.personId === summary.personId && selected.credentialKey === summary.credentialKey;
+            const person = Array.isArray(payload?.persons) && payload.persons.length === 1 ? payload.persons[0] : null;
+            const exactPayload = payload && Object.keys(payload).length === 1 && person
+                && Object.keys(person).sort().join(',') === 'credentialKey,personId'
+                && person.personId === summary.personId && person.credentialKey === summary.credentialKey;
+            if (!exactRequest || !exactSelectedCustomer || !exactPayload) return route.fallback();
+            subscriptionSummaryReads++;
+            report.customerEvidence.interceptedFixtureRequests.push({ method: 'POST', path: url.pathname,
+                exactSyntheticIdentityVerified: true, kind: 'Read-summary POST locally fulfilled only; no upstream request or business write.' });
+            return route.fulfill({ json: { items: [summary] } });
         }
         const isLookup = fixtures.addresses && request.method() === 'POST' && ['addresses/search', 'addresses/validate'].some(suffix => url.pathname === apiPath + suffix);
         const isCleanup = fixtures.addresses && request.method() === 'DELETE' && new RegExp('^' + apiPath + 'addresses/sessions/[a-zA-Z0-9-]+$').test(url.pathname);

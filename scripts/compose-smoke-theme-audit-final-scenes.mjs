@@ -4,7 +4,7 @@ import { copyFile, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { finalAuditAreas, finalNativeDateFocusBinding } from './compose-smoke-theme-audit-final.mjs';
-import { privacy09CalendarQuery, createPrivacy09Calendar } from './compose-smoke-theme-audit-operational-privacy.mjs';
+import { privacy09CalendarQuery, createPrivacy09Calendar, createPrivacy09Fixture } from './compose-smoke-theme-audit-operational-privacy.mjs';
 import { normalizeKnownJsImports } from './compose-smoke-theme-audit-shell-acceptance.mjs';
 
 // theme_audit: artifact candidate. This module never launches a browser, changes an app,
@@ -354,6 +354,11 @@ async function prepareOwnedSession({ page, context, descriptor, driver, release 
         if (requiredFamilies.has('customer')) {
             handle.finishCustomerSources = await helpers.customer.trackCustomerBehavior(page, child, { viewport: descriptor.viewport });
             handle.customer = await helpers.customer.installCustomerFixtures(transport.collect(page, 'customer'), child);
+            if (nativeRecordGroup) {
+                const customer = state.recordFixture.customer;
+                handle.customer.subscriptionSummary = { ...createPrivacy09Fixture(driver.sourceRoot).summary,
+                    personId: customer.personId, credentialKey: customer.credentialKey };
+            }
         }
         if (requiredFamilies.has('subscription')) {
             handle.subscription = await helpers.subscription.installSubscriptionFixtures(transport.collect(page, 'subscription'), child);

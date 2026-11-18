@@ -6,6 +6,7 @@ import { readFile, writeFile, mkdir, mkdtemp, rm, rmdir } from 'node:fs/promises
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createCustomerWorkSession } from '../../assets/js/app/customer-work-session.js';
+import { createPrivacy09Fixture } from '../../scripts/compose-smoke-theme-audit-operational-privacy.mjs';
 import { createFinalDriver, finalNativeGroups } from '../../scripts/compose-smoke-theme-audit-final-driver.mjs';
 import { finalAuditAreas, finalReleaseIdentity } from '../../scripts/compose-smoke-theme-audit-final.mjs';
 import { finalScenePlan, createFinalTransport, finishFinalSceneSession, verifiedCriterionChecks,
@@ -64,7 +65,8 @@ function setupHarness() {
             await context.route('**/*', route => route.fulfill({ json: { owner: 'operational' } }));
             return { release() {}, releaseRecordMutation() {} };
         } },
-        feedback: { readonlySourceFixtures: () => [], recordListAfterFixture: (root, count, component) => ({ recordCount: count, componentOnly: component }), checkAfterObservation() {} },
+        feedback: { readonlySourceFixtures: () => [], recordListAfterFixture: (root, count, component) => ({ recordCount: count, componentOnly: component,
+            customer: { personId: '990970', credentialKey: 'theme-audit-records-component-2' } }), checkAfterObservation() {} },
         customer: { trackCustomerBehavior: async () => async () => {}, installCustomerFixtures: install('customer') },
         subscription: { installSubscriptionFixtures: install('subscription'), releaseSubscriptionFixtures() {} },
         article: { prepareArticleEvidence: async () => {}, installArticleFixtures: install('article'), releaseArticleFixtures() {} },
@@ -73,6 +75,8 @@ function setupHarness() {
     };
     const prepare = actualFunction('prepareOwnedSession', { familyFor, finalScenePlan, nativeAreas, refinedReferenceSha256: refined,
         mkdir: async () => {}, readFile: async () => Buffer.alloc(0), createFinalTransport, finishFinalSceneSession,
+        createPrivacy09Fixture: () => ({ summary: { personId: '990990', credentialKey: 'theme-audit-privacy09', state: 'loaded',
+            activeCount: 0, activeSubscriptions: [], inactiveSubscription: null } }),
         scopedDriver: (driver, descriptor, directory) => ({ ...driver, evidenceDir: directory,
             report: { application: {}, checks: [], captures: [], observations: [], deniedRequests: [], errors: [], sourceErrors: [] }, saveReport: async () => {} }),
         registerFinalOverlays: async handle => { handle.child.report.overlayAcceptance = { registration: 'unit setup only' }; },
@@ -457,6 +461,10 @@ test('native shell group prepares the later record fixture without routing initi
     assert.equal(handle.state.suite, 'feedback', 'Initial shell/search setup must keep its existing fixture owner.');
     assert.equal(handle.recordMode, false);
     assert.equal(handle.activeFamily, 'customer');
+    assert.equal(handle.customer.subscriptionSummary.personId, handle.state.recordFixture.customer.personId);
+    assert.equal(handle.customer.subscriptionSummary.credentialKey, handle.state.recordFixture.customer.credentialKey);
+    assert.deepEqual(handle.customer.subscriptionSummary.activeSubscriptions, []);
+    assert.equal(handle.customer.subscriptionSummary.activeCount, 0);
     await finishFinalSceneSession(handle);
 });
 
@@ -545,4 +553,83 @@ for (const native of [false, true]) test('actual search summary keeps NL-EN-NL a
         assert.equal(observed.actualSummary.queryUnchanged, true);
         assert.equal(observed.actualSummary.countText, String(resultCount));
     }
+});
+
+
+const customerFixtureSource = await readFile(process.env.KIWI_THEME_CUSTOMER_REGRESSION_SOURCE
+    || fileURLToPath(new URL('../../scripts/compose-smoke-theme-audit-customer.mjs', import.meta.url)), 'utf8');
+async function summaryReadHarness({ family = 'customer', enabled = true, selected = true, records = false } = {}) {
+    const report = { deniedRequests: [], customerEvidence: { interceptedFixtureRequests: [] } };
+    const transport = createFinalTransport(baseUrl, family, report, { records });
+    const install = actualFunction('installCustomerFixtures', {}, customerFixtureSource);
+    const fixtures = await install(transport.collect({}, 'customer'), { baseUrl, report });
+    const customer = { id: 990970, personId: '990970', credentialKey: 'theme-audit-records-component-2' };
+    const projection = { ...createPrivacy09Fixture(fileURLToPath(new URL('../../', import.meta.url))).summary,
+        personId: customer.personId, credentialKey: customer.credentialKey };
+    if (enabled) fixtures.subscriptionSummary = projection;
+    if (selected) fixtures.personDetails = customer;
+    const expectedPayload = { persons: [{ personId: customer.personId, credentialKey: customer.credentialKey }] };
+    async function request({ method = 'POST', suffix = 'api/v1/persons/subscription-summaries',
+        headers = { 'content-type': 'application/json', 'x-csrf-token': 'synthetic-present' }, payload = expectedPayload,
+        malformed = false } = {}) {
+        const observed = { kind: null };
+        const request = { url: () => new URL(suffix, baseUrl).href, method: () => method, headers: () => headers,
+            postDataJSON() { if (malformed) throw new Error('Malformed synthetic unit JSON.'); return payload; } };
+        await transport.dispatch({ request: () => request,
+            async fulfill(value) { observed.kind = 'local'; observed.value = structuredClone(value); },
+            async abort() { observed.kind = 'abort'; }, async continue() { observed.kind = 'upstream'; } });
+        return observed;
+    }
+    return { report, fixtures, projection, expectedPayload, request, transport };
+}
+
+test('native selected customer summary reuses the declared read projection and permits only two exact local POST reads', async () => {
+    const h = await summaryReadHarness();
+    for (let index = 0; index < 2; index++) {
+        const response = await h.request();
+        assert.equal(response.kind, 'local');
+        assert.deepEqual(response.value.json, { items: [h.projection] });
+    }
+    assert.equal((await h.request()).kind, 'abort', 'The existing two-read fixture bound is retained.');
+    assert.equal(h.report.customerEvidence.interceptedFixtureRequests.length, 2);
+    assert.ok(h.report.customerEvidence.interceptedFixtureRequests.every(item => item.exactSyntheticIdentityVerified));
+    assert.equal(h.fixtures.personDetails.credentialKey, h.projection.credentialKey, 'Real source identity is retained instead of suppressing hydration.');
+    assert.equal(h.projection.state, 'loaded'); assert.equal(h.projection.activeCount, 0);
+});
+
+test('native summary read denies wrong payload, method, identity, headers, query and selected owner', async () => {
+    const person = { personId: '990970', credentialKey: 'theme-audit-records-component-2' };
+    const negatives = [
+        { name: 'wrong person', request: { payload: { persons: [{ ...person, personId: '990971' }] } } },
+        { name: 'wrong source key', request: { payload: { persons: [{ ...person, credentialKey: 'theme-audit-other-source' }] } } },
+        { name: 'numeric person ID', request: { payload: { persons: [{ ...person, personId: 990970 }] } } },
+        { name: 'empty persons', request: { payload: { persons: [] } } },
+        { name: 'duplicate persons', request: { payload: { persons: [person, person] } } },
+        { name: 'extra body key', request: { payload: { persons: [person], unexpected: true } } },
+        { name: 'extra person key', request: { payload: { persons: [{ ...person, unexpected: true }] } } },
+        { name: 'malformed JSON', request: { malformed: true } },
+        { name: 'missing CSRF', request: { headers: { 'content-type': 'application/json' } } },
+        { name: 'wrong content type', request: { headers: { 'content-type': 'text/plain', 'x-csrf-token': 'synthetic-present' } } },
+        ...['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE'].map(method => ({ name: method, request: { method } })),
+        { name: 'query', request: { suffix: 'api/v1/persons/subscription-summaries?extra=1' } },
+        { name: 'other Kiwi base', request: { suffix: '/kiwi-preview/api/v1/persons/subscription-summaries' } },
+        { name: 'other origin', request: { suffix: 'https://unexpected.invalid/kiwi/api/v1/persons/subscription-summaries' } },
+        { name: 'reset command', request: { suffix: 'api/v1/customer-work-sessions/reset' } },
+        { name: 'unarmed ordinary fixture', setup: { enabled: false } },
+        { name: 'no selected customer', setup: { selected: false } },
+        { name: 'operational owner', setup: { family: 'operational' } },
+        { name: 'subscription owner', setup: { family: 'subscription' } },
+        { name: 'records owner', setup: { records: true } }
+    ];
+    for (const scenario of negatives) {
+        const h = await summaryReadHarness(scenario.setup);
+        assert.equal((await h.request(scenario.request)).kind, 'abort', scenario.name);
+        assert.equal(h.report.customerEvidence.interceptedFixtureRequests.length, 0, scenario.name);
+    }
+    const otherSelected = await summaryReadHarness(); otherSelected.fixtures.personDetails.personId = '990971';
+    assert.equal((await otherSelected.request()).kind, 'abort', 'An armed summary cannot match a different current customer.');
+    const mismatchedId = await summaryReadHarness(); mismatchedId.fixtures.personDetails.id = 990971;
+    assert.equal((await mismatchedId.request()).kind, 'abort', 'The numeric selected source identity must also match.');
+    const closed = await summaryReadHarness(); closed.transport.close();
+    assert.equal((await closed.request()).kind, 'abort', 'Closed fixture ownership cannot serve a late summary.');
 });
