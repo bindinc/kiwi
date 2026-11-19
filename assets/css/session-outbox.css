@@ -13,8 +13,9 @@
 #sessionOutboxTitle { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-body); }
 #sessionOutboxTitle svg { width: 20px; height: 20px; color: var(--action); }
 #subscriptionQueueMeta { color: var(--text-muted); margin-bottom: 12px; }
-#sessionOutboxStatus { font-size: .8125rem; line-height: 1.5; color: var(--text-muted); margin: 0 0 12px; }
-#sessionOutboxStatus:empty { display: none; }
+#sessionOutboxStatus,
+#sessionOutboxLoading { font-size: .8125rem; line-height: 1.5; color: var(--text-muted); margin: 0 0 12px; }
+#sessionOutboxStatus:empty { margin: 0; }
 #sessionOutboxStatus.is-error { color: var(--danger); border-left: 2px solid; padding-left: 8px; }
 #subscriptionQueueList { display: block; gap: 0; max-height: 360px; scrollbar-gutter: stable; }
 .subscription-queue-item.session-outbox-item {
