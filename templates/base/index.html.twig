@@ -1610,7 +1610,10 @@
                     </div>
                     <div id="subscriptionQueueMeta" class="subscription-queue-summary">Nog geen aanvragen in beeld</div>
                     <div id="subscriptionQueueEmpty" class="empty-state-small subscription-queue-empty" hidden>Nog geen aanvragen in de wachtrij.</div>
-                    <p id="sessionOutboxLoading" hidden><label>Outbox laden… <progress></progress></label></p>
+                    <p id="sessionOutboxLoading" hidden>
+                        <span id="sessionOutboxLoadingLabel">Outbox laden…</span>
+                        <progress aria-labelledby="sessionOutboxLoadingLabel"></progress>
+                    </p>
                     <p id="sessionOutboxStatus" role="status"></p>
                     <div id="subscriptionQueueList" class="subscription-queue-list"></div>
                     <div id="sessionOutboxPages"></div>

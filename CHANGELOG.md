@@ -10,6 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Fixed
 
+- Give the slow initial outbox loading indicator an explicit accessible name. [sc-207553]
 - Keep the outbox steady during background refreshes, including when it is empty. [sc-207553]
 
 ### Removed
