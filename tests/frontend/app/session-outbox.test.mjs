@@ -38,8 +38,46 @@ assert.equal(command.arguments[0].requester.personId, 42);
 // A previous ready session must not replace the current subscription revision.
 const element = () => ({ dataset: {}, children: [], setAttribute() {}, append() {}, replaceChildren() {}, querySelector: () => null });
 const list = element();
-globalThis.document = { getElementById: id => id === 'subscriptionQueueList' ? list : null,
+const initialProgress = { hidden: true };
+const empty = { hidden: true };
+const statusClasses = new Set();
+const status = { textContent: '', classList: {
+    contains: name => statusClasses.has(name),
+    toggle: (name, enabled) => enabled ? statusClasses.add(name) : statusClasses.delete(name)
+} };
+const elements = {
+    subscriptionQueueList: list, subscriptionQueueEmpty: empty,
+    sessionOutboxLoading: initialProgress, sessionOutboxStatus: status
+};
+globalThis.document = { getElementById: id => elements[id] ?? null,
     createElement: element, createTextNode: text => text };
+const emptyResponse = { total: 0, items: [] };
+window.kiwiApi = { get: async () => emptyResponse };
+const firstLoad = refreshOutbox();
+assert.equal(initialProgress.hidden, true, 'a fast initial request starts without a loading indicator');
+assert.equal(status.textContent, '', 'ordinary loading is not announced through the status region');
+await firstLoad;
+assert.equal(empty.hidden, false);
+
+let finishEmptyRefresh;
+window.kiwiApi.get = () => new Promise(resolve => { finishEmptyRefresh = resolve; });
+const emptyRefresh = refreshOutbox();
+assert.equal(empty.hidden, false, 'the empty state remains visible during a background request');
+assert.equal(status.textContent, '', 'refreshing a known empty outbox leaves its status region quiet');
+assert.equal(initialProgress.hidden, true);
+finishEmptyRefresh(emptyResponse);
+await emptyRefresh;
+
+window.kiwiApi.get = async () => { throw new Error('Synthetic read failure'); };
+await refreshOutbox();
+assert.match(status.textContent, /Synthetic read failure/);
+assert.equal(status.classList.contains('is-error'), true);
+assert.equal(empty.hidden, false);
+window.kiwiApi.get = async () => emptyResponse;
+await refreshOutbox();
+assert.equal(status.textContent, '', 'a successful refresh clears the previous error');
+assert.equal(status.classList.contains('is-error'), false);
+
 const latest = { ...outbox, id: 9, revision: 4, status: 'pending', availableAt: new Date(Date.now() + 60000).toISOString(),
     capabilities: {}, summary: {customer: 'Test customer', changeCount: 1}, contributors: [] };
 window.kiwiApi = { get: async () => ({ total: 2, items: [latest, { ...latest, id: 7, status: 'ready' }] }) };

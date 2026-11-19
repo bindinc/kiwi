@@ -7,11 +7,13 @@ const newCustomerSessions = new Map();
 let editing = null;
 let saveNotice = false;
 let loading = false;
+let hasLoadedOutbox = false;
 let dirty = false;
 let polling = null;
 let editorController = null;
 let pageOffset = 0;
 const endpoint = '/api/v1/outbox-sessions';
+const initialLoadingDelayMs = 400;
 const labels = { pending: 'Wacht op verzending', paused: 'Gepauzeerd', ready: 'Klaar voor verwerking', processing: 'Wordt verwerkt', completed: 'Verwerkt', failed: 'Verwerking gestopt', uncertain: 'Uitkomst controleren', cancelled: 'Verwijderd' };
 
 export function isBusinessWrite(method, url) {
@@ -29,7 +31,9 @@ function api() { return globalThis.window?.kiwiApi; }
 function node(id) { return globalThis.document?.getElementById(id); }
 function message(text, error = false) {
     const target = node('sessionOutboxStatus');
-    if (target) { target.textContent = text; target.classList.toggle('is-error', error); }
+    if (!target) return;
+    if (target.textContent !== text) target.textContent = text;
+    target.classList.toggle('is-error', error);
 }
 
 export function prepareWrite(method, url, payload, context) {
@@ -334,9 +338,11 @@ export async function refreshOutbox() {
     const list = node('subscriptionQueueList');
     if (!list || !api() || loading) return;
     loading = true;
-    list.setAttribute('aria-busy', 'true');
-    const initialLoad = list.children.length === 0 && !node('sessionOutboxStatus')?.textContent;
-    if (initialLoad) message('Outbox laden…');
+    const initialLoad = !hasLoadedOutbox;
+    const status = node('sessionOutboxStatus');
+    const progress = initialLoad && !status?.classList.contains('is-error') ? node('sessionOutboxLoading') : null;
+    const progressTimer = progress ? setTimeout(() => { progress.hidden = false; }, initialLoadingDelayMs) : null;
+    if (initialLoad) list.setAttribute('aria-busy', 'true');
     try {
         const response = await api().get(`${endpoint}?limit=20&offset=${pageOffset}`, { skipCustomerContext: true });
         // Do not replace a menu while someone is choosing an action.
@@ -371,7 +377,7 @@ export async function refreshOutbox() {
             }});
             list.append(outboxSessionRow(item, labels[item.status] || item.status, () => reopen(item), actions, reportError));
         }
-        if (initialLoad || node('sessionOutboxStatus')?.classList.contains('is-error')) message('');
+        if (status?.classList.contains('is-error')) message('');
         if (restoreFocus) {
             const rows = [...list.children];
             const sameRow = rows.find(row => row.dataset.sessionId === focusedId);
@@ -394,9 +400,17 @@ export async function refreshOutbox() {
             if (pageOffset > 0) pages.append(button('Vorige', async () => { pageOffset -= 20; await refreshOutbox(); }));
             if (pageOffset + 20 < response.total) pages.append(button('Volgende', async () => { pageOffset += 20; await refreshOutbox(); }));
         }
+        hasLoadedOutbox = true;
     } catch (error) {
         message(`Outbox niet vernieuwd; getoonde gegevens kunnen verouderd zijn. ${error.message}`, true);
-    } finally { loading = false; list.setAttribute('aria-busy', 'false'); }
+    } finally {
+        if (progress) {
+            clearTimeout(progressTimer);
+            progress.hidden = true;
+        }
+        if (initialLoad) list.setAttribute('aria-busy', 'false');
+        loading = false;
+    }
 }
 
 async function loadHistoricalOrders() {

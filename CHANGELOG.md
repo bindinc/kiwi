@@ -8,6 +8,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep the outbox steady during background refreshes, including when it is empty. [sc-207553]
+
 ### Removed
 
 - Remove the slogan from the Kiwi welcome screen. [sc-207465]
