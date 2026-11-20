@@ -1,30 +1,4 @@
-FROM composer:2 AS vendor-dev
-
-WORKDIR /app
-
-COPY composer.json composer.lock symfony.lock ./
-RUN composer install \
-    --prefer-dist \
-    --no-interaction \
-    --no-progress \
-    --ignore-platform-req=ext-pdo_pgsql \
-    --no-scripts
-
-FROM composer:2 AS vendor-prod
-
-WORKDIR /app
-
-COPY composer.json composer.lock symfony.lock ./
-RUN composer install \
-    --no-dev \
-    --prefer-dist \
-    --no-interaction \
-    --no-progress \
-    --ignore-platform-req=ext-pdo_pgsql \
-    --no-scripts \
-    --optimize-autoloader
-
-FROM dunglas/frankenphp:1.13.2-php8.5.12-trixie AS runtime-base
+FROM dunglas/frankenphp:1.13.2-php8.5.12-trixie AS php-base
 
 # Reject stale upstream images that predate the PHP security fixes.
 RUN php -r 'exit(version_compare(PHP_VERSION, "8.5.12", ">=") ? 0 : 1);'
@@ -38,6 +12,29 @@ RUN apt-get update \
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
 WORKDIR /app
+
+# Resolve the lockfile against the same PHP and extensions that will run it.
+FROM php-base AS vendor-dev
+
+COPY composer.json composer.lock symfony.lock ./
+RUN composer install \
+    --prefer-dist \
+    --no-interaction \
+    --no-progress \
+    --no-scripts
+
+FROM php-base AS vendor-prod
+
+COPY composer.json composer.lock symfony.lock ./
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --no-interaction \
+    --no-progress \
+    --no-scripts \
+    --optimize-autoloader
+
+FROM php-base AS runtime-base
 
 COPY infra/docker/app/Caddyfile /etc/caddy/Caddyfile
 COPY infra/docker/app/php.ini /usr/local/etc/php/conf.d/kiwi.ini
