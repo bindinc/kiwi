@@ -591,6 +591,7 @@ export function resetCustomerWorkspace() {
     const dependencies = resolveDependencies();
     callDependency(dependencies, 'setCurrentCustomer', [null]);
     callDependency(dependencies, 'setSelectedOffer', [null]);
+    callDependency(dependencies, 'resetContactHistory');
 
     setElementDisplay('customerDetail', 'none');
     setElementDisplay('welcomeMessage', 'flex');

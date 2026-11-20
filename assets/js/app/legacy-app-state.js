@@ -493,9 +493,6 @@ function getCustomerWorkSessionSliceDependencies() {
             state.customers = [];
             setCurrentCustomer(null);
             state.selectedOffer = null;
-            state.contactHistoryState.currentPage = 1;
-            state.contactHistoryState.highlightId = null;
-            state.contactHistoryState.lastEntry = null;
 
             if (globalScope && typeof globalScope.clearSearchResults === 'function') {
                 globalScope.clearSearchResults();
@@ -581,6 +578,10 @@ function getAppShellSliceDependencies() {
         getContactHistoryState: () => state.contactHistoryState,
         pushContactHistory(customer, entry, options) {
             return invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'pushContactHistory', [customer, entry, options]) || null;
+        },
+        resetContactHistory() {
+            invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'resetContactHistoryViewState');
+            invokeSliceMethod(CONTACT_HISTORY_SLICE_NAMESPACE, 'displayContactHistory');
         },
         resetAllSubscriptionDuplicateStates: globalScope?.resetAllSubscriptionDuplicateStates || (() => {}),
         isCallSessionActive: () => Boolean(state.callSession && state.callSession.active),

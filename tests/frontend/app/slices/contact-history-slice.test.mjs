@@ -435,6 +435,35 @@ function testResetContactHistoryViewStateClearsTimerAndState() {
     });
 }
 
+function testHistoryStaysEmptyUntilAnotherCustomerIsOpened() {
+    withGlobalState(() => {
+        const historyPanel = { innerHTML: '' };
+        globalThis.document = { getElementById: () => historyPanel };
+        const previousCustomer = { id: 1, contactHistory: [{ id: 'old', description: 'Previous customer note' }] };
+        let currentCustomer = previousCustomer;
+        const state = { currentPage: 1, itemsPerPage: 6, highlightId: null, lastEntry: null };
+        configureContactHistorySliceDependencies(() => ({
+            getCurrentCustomer: () => currentCustomer,
+            getContactHistoryState: () => state
+        }));
+        displayContactHistory();
+        assert.match(historyPanel.innerHTML, /Previous customer note/);
+
+        currentCustomer = null;
+        resetContactHistoryViewState();
+        displayContactHistory();
+        pushContactHistory(previousCustomer, { description: 'Late previous customer note' }, { persist: false, highlight: true });
+        assert.match(historyPanel.innerHTML, /Selecteer een klant om geschiedenis te zien/);
+        assert.doesNotMatch(historyPanel.innerHTML, /customer note/);
+        assert.equal(state.lastEntry, null);
+
+        currentCustomer = { id: 2, contactHistory: [{ id: 'new', description: 'Next customer note' }] };
+        displayContactHistory();
+        assert.match(historyPanel.innerHTML, /Next customer note/);
+        assert.doesNotMatch(historyPanel.innerHTML, /previous customer note/i);
+    });
+}
+
 async function run() {
     testNativeTimelineDisclosureUpdatesAccessibleState();
     testRegistersItemSixteenActionsAndNamespace();
@@ -443,6 +472,7 @@ async function run() {
     testAddContactMomentResolvesCustomerById();
     testSubscriptionApiCustomerKeepsContactHistoryReadonlyAndEmpty();
     testResetContactHistoryViewStateClearsTimerAndState();
+    testHistoryStaysEmptyUntilAnotherCustomerIsOpened();
     console.log('contact history slice tests passed');
 }
 

@@ -258,7 +258,7 @@ export function pushContactHistory(customer, entry, options = {}) {
         displayContactHistory();
     }
 
-    if (contactHistoryState) {
+    if (contactHistoryState && isCurrentCustomer) {
         contactHistoryState.lastEntry = {
             id: normalizedEntry.id,
             type: normalizedEntry.type,
@@ -348,12 +348,19 @@ export function displayContactHistory() {
         return;
     }
 
+    if (!currentCustomer) {
+        const key = 'indexHtml.text.selecteer_een_klant_om_geschiedenis_te_zien_85c985bb';
+        const prompt = translateLabel(dependencies, key, 'Selecteer een klant om geschiedenis te zien');
+        historyContainer.innerHTML = `<div class="empty-state-small"><p data-i18n="${key}">${prompt}</p></div>`;
+        return;
+    }
+
     if (isSubscriptionApiCustomer(currentCustomer)) {
         historyContainer.innerHTML = `<div class="empty-state-small"><p>${translateLabel(dependencies, 'contactHistory.none', 'Geen contactgeschiedenis beschikbaar')}</p></div>`;
         return;
     }
 
-    const contactHistory = currentCustomer && Array.isArray(currentCustomer.contactHistory)
+    const contactHistory = Array.isArray(currentCustomer.contactHistory)
         ? currentCustomer.contactHistory
         : [];
     if (contactHistory.length === 0) {

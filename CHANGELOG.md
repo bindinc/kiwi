@@ -10,6 +10,7 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Fixed
 
+- Clear contact history when starting a new customer session and keep feedback settings in the current language when reopened. [sc-200164] [sc-202840]
 - Give the slow initial outbox loading indicator an explicit accessible name. [sc-207553]
 - Keep the outbox steady during background refreshes, including when it is empty. [sc-207553]
 
