@@ -69,13 +69,13 @@ function renderSettingsModal(documentRef) {
     modal.innerHTML = `
         <div class="contextual-feedback-settings-panel">
             <header class="contextual-feedback-panel-header">
-                <h2 id="contextualFeedbackSettingsTitle">${escapeHtml(feedbackText('settings.title'))}</h2>
-                <button type="button" class="contextual-feedback-close" data-feedback-settings-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">${interfaceIcon('close')}</button>
+                <h2 id="contextualFeedbackSettingsTitle" data-i18n="contextualFeedback.settings.title">${escapeHtml(feedbackText('settings.title'))}</h2>
+                <button type="button" class="contextual-feedback-close" data-feedback-settings-close data-i18n-aria-label="contextualFeedback.dialog.close" aria-label="${escapeHtml(feedbackText('dialog.close'))}">${interfaceIcon('close')}</button>
             </header>
             <div class="contextual-feedback-settings-form">
                 <p data-feedback-settings-load-status role="status">${escapeHtml(feedbackText('settings.loading'))}</p>
                 <p data-feedback-settings-load-error class="contextual-feedback-error" role="alert" data-feedback-sensitive="opaque-text"></p>
-                <button type="button" data-feedback-settings-retry hidden>${escapeHtml(feedbackText('settings.retry'))}</button>
+                <button type="button" data-feedback-settings-retry data-i18n="contextualFeedback.settings.retry" hidden>${escapeHtml(feedbackText('settings.retry'))}</button>
             </div>
         </div>`;
     documentRef.body.append(modal);
@@ -98,6 +98,10 @@ function wireSettingsModal({ modal, settingsUrl, documentRef, opener, onClose })
     function show(nextOpener = null) {
         if (!isCurrent()) return;
         if (nextOpener) returnFocus = nextOpener;
+        const roles = modal.querySelector('[data-feedback-settings-allowed-roles]');
+        if (roles) {
+            roles.textContent = feedbackText('settings.allowedRoles', { roles: roles.dataset.feedbackSettingsAllowedRoles });
+        }
         showFeedbackModal(modal);
         modal.querySelector('input')?.focus();
     }
@@ -134,7 +138,7 @@ function wireSettingsModal({ modal, settingsUrl, documentRef, opener, onClose })
         const status = modal.querySelector('[data-feedback-settings-load-status]');
         const errorBox = modal.querySelector('[data-feedback-settings-load-error]');
         const retry = modal.querySelector('[data-feedback-settings-retry]');
-        status.textContent = feedbackText('settings.loading');
+        setSettingsStatus(status, 'settings.loading');
         errorBox.textContent = '';
         retry.hidden = true;
         retry.disabled = true;
@@ -146,7 +150,7 @@ function wireSettingsModal({ modal, settingsUrl, documentRef, opener, onClose })
             if (modal.open) modal.querySelector('input')?.focus();
         } catch (error) {
             if (!isCurrent()) return;
-            status.textContent = '';
+            setSettingsStatus(status, null);
             errorBox.textContent = error instanceof Error ? error.message : feedbackText('settings.loadFailed');
             retry.hidden = false;
         } finally {
@@ -172,22 +176,22 @@ function wireSettingsModal({ modal, settingsUrl, documentRef, opener, onClose })
         for (const control of disabledStates.keys()) control.disabled = true;
         form.setAttribute('aria-busy', 'true');
         errorBox.textContent = '';
-        statusBox.textContent = feedbackText('settings.saving');
+        setSettingsStatus(statusBox, 'settings.saving');
 
         try {
             const nextSettings = await saveSettings(settingsUrl, payload);
             if (!isCurrent()) return;
-            statusBox.textContent = feedbackText('settings.saved');
+            setSettingsStatus(statusBox, 'settings.saved');
             form.querySelector('[name="webhookUrl"]').value = '';
             form.querySelector('[name="originalDataWebhookUrl"]').value = '';
-            form.querySelector('[data-webhook-configured]').textContent = configuredStatus(nextSettings.teamsWebhookConfigured);
+            setSettingsStatus(form.querySelector('[data-webhook-configured]'), configuredStatusKey(nextSettings.teamsWebhookConfigured));
             form.querySelector('[data-webhook-source]').textContent = nextSettings.teamsWebhookSource;
-            form.querySelector('[data-original-data-webhook-configured]').textContent = configuredStatus(nextSettings.originalDataWebhookConfigured);
+            setSettingsStatus(form.querySelector('[data-original-data-webhook-configured]'), configuredStatusKey(nextSettings.originalDataWebhookConfigured));
             form.querySelector('[data-original-data-webhook-source]').textContent = nextSettings.originalDataWebhookSource;
             if (feedbackButton) feedbackButton.hidden = !nextSettings.feedbackEnabled;
         } catch (error) {
             if (!isCurrent()) return;
-            statusBox.textContent = '';
+            setSettingsStatus(statusBox, null);
             errorBox.textContent = error instanceof Error ? error.message : feedbackText('settings.saveFailed');
         } finally {
             if (isCurrent()) {
@@ -244,84 +248,83 @@ function buildSettingsPayload(form) {
 }
 
 export function buildFeedbackSettingsHtml(settings) {
-    const webhookPlaceholder = settings.teamsWebhookConfigured
-        ? feedbackText('settings.keepWebhookPlaceholder')
-        : feedbackText('settings.webhookPlaceholder');
-    const originalWebhookPlaceholder = settings.originalDataWebhookConfigured
-        ? feedbackText('settings.keepOriginalWebhookPlaceholder')
-        : feedbackText('settings.originalWebhookPlaceholder');
+    const webhookPlaceholderKey = settings.teamsWebhookConfigured ? 'settings.keepWebhookPlaceholder' : 'settings.webhookPlaceholder';
+    const originalWebhookPlaceholderKey = settings.originalDataWebhookConfigured ? 'settings.keepOriginalWebhookPlaceholder' : 'settings.originalWebhookPlaceholder';
+    const webhookStatusKey = configuredStatusKey(settings.teamsWebhookConfigured);
+    const originalWebhookStatusKey = configuredStatusKey(settings.originalDataWebhookConfigured);
+    const roles = settings.allowedRoles.join(', ');
 
     return `
         <div class="contextual-feedback-settings-panel">
             <header class="contextual-feedback-panel-header">
                 <div>
-                    <h2 id="contextualFeedbackSettingsTitle">${escapeHtml(feedbackText('settings.title'))}</h2>
-                    <p>${escapeHtml(feedbackText('settings.subtitle'))}</p>
+                    <h2 id="contextualFeedbackSettingsTitle" data-i18n="contextualFeedback.settings.title">${escapeHtml(feedbackText('settings.title'))}</h2>
+                    <p data-i18n="contextualFeedback.settings.subtitle">${escapeHtml(feedbackText('settings.subtitle'))}</p>
                 </div>
-                <button type="button" class="contextual-feedback-close" data-feedback-settings-close aria-label="${escapeHtml(feedbackText('dialog.close'))}">${interfaceIcon('close')}</button>
+                <button type="button" class="contextual-feedback-close" data-feedback-settings-close data-i18n-aria-label="contextualFeedback.dialog.close" aria-label="${escapeHtml(feedbackText('dialog.close'))}">${interfaceIcon('close')}</button>
             </header>
             <form class="contextual-feedback-settings-form" data-feedback-settings-form>
                 <section>
-                    <h3>${escapeHtml(feedbackText('settings.feedbackButton'))}</h3>
+                    <h3 data-i18n="contextualFeedback.settings.feedbackButton">${escapeHtml(feedbackText('settings.feedbackButton'))}</h3>
                     <label class="contextual-feedback-switch">
                         <input type="checkbox" name="feedbackEnabled"${settings.feedbackEnabled ? ' checked' : ''}>
-                        <span>${escapeHtml(feedbackText('settings.enabled'))}</span>
+                        <span data-i18n="contextualFeedback.settings.enabled">${escapeHtml(feedbackText('settings.enabled'))}</span>
                     </label>
-                    <p>${escapeHtml(feedbackText('settings.allowedRoles', { roles: settings.allowedRoles.join(', ') }))}</p>
+                    <p data-feedback-settings-allowed-roles="${escapeHtml(roles)}">${escapeHtml(feedbackText('settings.allowedRoles', { roles }))}</p>
                 </section>
                 <section>
-                    <h3>${escapeHtml(feedbackText('settings.teamsConnector'))}</h3>
+                    <h3 data-i18n="contextualFeedback.settings.teamsConnector">${escapeHtml(feedbackText('settings.teamsConnector'))}</h3>
                     <div class="contextual-feedback-settings-status-row">
-                        <span>${escapeHtml(feedbackText('settings.status'))}</span>
-                        <strong data-webhook-configured>${escapeHtml(configuredStatus(settings.teamsWebhookConfigured))}</strong>
+                        <span data-i18n="contextualFeedback.settings.status">${escapeHtml(feedbackText('settings.status'))}</span>
+                        <strong data-webhook-configured data-i18n="contextualFeedback.${webhookStatusKey}">${escapeHtml(feedbackText(webhookStatusKey))}</strong>
                     </div>
                     <div class="contextual-feedback-settings-status-row">
-                        <span>${escapeHtml(feedbackText('settings.source'))}</span>
+                        <span data-i18n="contextualFeedback.settings.source">${escapeHtml(feedbackText('settings.source'))}</span>
                         <strong data-webhook-source>${escapeHtml(settings.teamsWebhookSource)}</strong>
                     </div>
                     <label>
-                        <span>${escapeHtml(feedbackText('settings.webhookUrl'))}</span>
-                        <input type="password" name="webhookUrl" autocomplete="off" placeholder="${escapeHtml(webhookPlaceholder)}">
+                        <span data-i18n="contextualFeedback.settings.webhookUrl">${escapeHtml(feedbackText('settings.webhookUrl'))}</span>
+                        <input type="password" name="webhookUrl" autocomplete="off" data-i18n-placeholder="contextualFeedback.${webhookPlaceholderKey}" placeholder="${escapeHtml(feedbackText(webhookPlaceholderKey))}">
                     </label>
                     <label class="contextual-feedback-switch">
                         <input type="checkbox" name="clearWebhookUrl">
-                        <span>${escapeHtml(feedbackText('settings.clearWebhook'))}</span>
+                        <span data-i18n="contextualFeedback.settings.clearWebhook">${escapeHtml(feedbackText('settings.clearWebhook'))}</span>
                     </label>
-                    <h3>${escapeHtml(feedbackText('settings.originalWorkflow'))}</h3>
+                    <h3 data-i18n="contextualFeedback.settings.originalWorkflow">${escapeHtml(feedbackText('settings.originalWorkflow'))}</h3>
                     <div class="contextual-feedback-settings-status-row">
-                        <span>${escapeHtml(feedbackText('settings.status'))}</span>
-                        <strong data-original-data-webhook-configured>${escapeHtml(configuredStatus(settings.originalDataWebhookConfigured))}</strong>
+                        <span data-i18n="contextualFeedback.settings.status">${escapeHtml(feedbackText('settings.status'))}</span>
+                        <strong data-original-data-webhook-configured data-i18n="contextualFeedback.${originalWebhookStatusKey}">${escapeHtml(feedbackText(originalWebhookStatusKey))}</strong>
                     </div>
                     <div class="contextual-feedback-settings-status-row">
-                        <span>${escapeHtml(feedbackText('settings.source'))}</span>
+                        <span data-i18n="contextualFeedback.settings.source">${escapeHtml(feedbackText('settings.source'))}</span>
                         <strong data-original-data-webhook-source>${escapeHtml(settings.originalDataWebhookSource)}</strong>
                     </div>
                     <label>
-                        <span>${escapeHtml(feedbackText('settings.originalWebhookUrl'))}</span>
-                        <input type="password" name="originalDataWebhookUrl" autocomplete="off" placeholder="${escapeHtml(originalWebhookPlaceholder)}">
+                        <span data-i18n="contextualFeedback.settings.originalWebhookUrl">${escapeHtml(feedbackText('settings.originalWebhookUrl'))}</span>
+                        <input type="password" name="originalDataWebhookUrl" autocomplete="off" data-i18n-placeholder="contextualFeedback.${originalWebhookPlaceholderKey}" placeholder="${escapeHtml(feedbackText(originalWebhookPlaceholderKey))}">
                     </label>
                     <label class="contextual-feedback-switch">
                         <input type="checkbox" name="clearOriginalDataWebhookUrl">
-                        <span>${escapeHtml(feedbackText('settings.clearOriginalWebhook'))}</span>
+                        <span data-i18n="contextualFeedback.settings.clearOriginalWebhook">${escapeHtml(feedbackText('settings.clearOriginalWebhook'))}</span>
                     </label>
                     <label>
-                        <span>${escapeHtml(feedbackText('settings.publicBaseUrl'))}</span>
+                        <span data-i18n="contextualFeedback.settings.publicBaseUrl">${escapeHtml(feedbackText('settings.publicBaseUrl'))}</span>
                         <input type="url" name="publicBaseUrl" value="${escapeHtml(settings.publicBaseUrl)}" required>
                     </label>
                     <div class="contextual-feedback-form-row">
                         <label>
-                            <span>${escapeHtml(feedbackText('settings.imageTtlDays'))}</span>
+                            <span data-i18n="contextualFeedback.settings.imageTtlDays">${escapeHtml(feedbackText('settings.imageTtlDays'))}</span>
                             <input type="number" name="imageTtlDays" min="1" max="14" step="1" value="${Number(settings.imageTtlDays)}" required>
                         </label>
                         <label>
-                            <span>${escapeHtml(feedbackText('settings.maxImageBytes'))}</span>
+                            <span data-i18n="contextualFeedback.settings.maxImageBytes">${escapeHtml(feedbackText('settings.maxImageBytes'))}</span>
                             <input type="number" name="maxImageBytes" min="1" max="10485760" step="1" value="${Number(settings.maxImageBytes)}" required>
                         </label>
                     </div>
                 </section>
                 <div class="contextual-feedback-actions">
-                    <button type="button" data-feedback-settings-close>${escapeHtml(feedbackText('settings.cancel'))}</button>
-                    <button type="submit">${escapeHtml(feedbackText('settings.save'))}</button>
+                    <button type="button" data-feedback-settings-close data-i18n="contextualFeedback.settings.cancel">${escapeHtml(feedbackText('settings.cancel'))}</button>
+                    <button type="submit" data-i18n="contextualFeedback.settings.save">${escapeHtml(feedbackText('settings.save'))}</button>
                 </div>
                 <p class="contextual-feedback-status" data-feedback-settings-status role="status"></p>
                 <p class="contextual-feedback-error" data-feedback-settings-error role="alert" data-feedback-sensitive="opaque-text"></p>
@@ -330,10 +333,18 @@ export function buildFeedbackSettingsHtml(settings) {
     `;
 }
 
-function configuredStatus(isConfigured) {
-    return isConfigured
-        ? feedbackText('settings.configured')
-        : feedbackText('settings.notConfigured');
+function configuredStatusKey(isConfigured) {
+    return isConfigured ? 'settings.configured' : 'settings.notConfigured';
+}
+
+function setSettingsStatus(element, key) {
+    if (key) {
+        element.setAttribute('data-i18n', `contextualFeedback.${key}`);
+        element.textContent = feedbackText(key);
+    } else {
+        element.removeAttribute('data-i18n');
+        element.textContent = '';
+    }
 }
 
 async function readJson(response) {

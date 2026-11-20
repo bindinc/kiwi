@@ -572,6 +572,7 @@ function testCustomerWorkspaceResetDoesNotEndTheCallSession() {
 
         let endCallCount = 0;
         let duplicateResetCount = 0;
+        let contactHistoryResetCount = 0;
         const currentCustomers = [];
         configureAppShellSliceDependencies(() => ({
             endCallSession() {
@@ -583,6 +584,10 @@ function testCustomerWorkspaceResetDoesNotEndTheCallSession() {
             resetAllSubscriptionDuplicateStates() {
                 duplicateResetCount += 1;
             },
+            resetContactHistory() {
+                assert.deepEqual(currentCustomers, [null], 'the old customer is cleared before rendering history');
+                contactHistoryResetCount += 1;
+            },
             setCurrentCustomer(customer) {
                 currentCustomers.push(customer);
             }
@@ -593,6 +598,7 @@ function testCustomerWorkspaceResetDoesNotEndTheCallSession() {
         assert.equal(endCallCount, 0);
         assert.deepEqual(currentCustomers, [null]);
         assert.equal(duplicateResetCount, 1);
+        assert.equal(contactHistoryResetCount, 1);
         assert.equal(visibleContainer.style.display, 'none');
         assert.equal(form.resetCount, 1);
         assert.equal(standaloneInput.value, '');
