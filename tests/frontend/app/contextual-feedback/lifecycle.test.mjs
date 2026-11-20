@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { openFeedbackDialog } from '../../../../assets/js/app/contextual-feedback/dialog.js';
 import { AnnotationCanvas } from '../../../../assets/js/app/contextual-feedback/annotation-canvas.js';
 import { initContextualFeedbackSettings } from '../../../../assets/js/app/contextual-feedback/settings-modal.js';
+import { setAppLocale } from '../../../../assets/js/app/slices/localization-slice.js';
+import i18n from '../../../../assets/js/i18n/index.js';
 import { registerHooks } from 'node:module';
 // Network rendering is outside these controller tests; no SDK call is made.
 const sdkHook = registerHooks({
@@ -462,6 +464,74 @@ async function settingsLoadFailureCanRetryAndRestoreOpener() {
     assert.equal(modal.querySelector('[name="publicBaseUrl"]').value, 'https://retained.example.test');
     resetLightboxDrafts(documentRef);
 }
+async function retainedSettingsFollowTheAppLanguageWithoutLosingEdits() {
+    const { documentRef, button } = setupSettings();
+    const previousLocale = i18n.getLocale();
+    globalThis.window = { i18n };
+    let loadCount = 0;
+    let submitted;
+    globalThis.fetch = async (_url, request) => {
+        if (request.method === 'GET') {
+            loadCount += 1;
+            return response(settings);
+        }
+        submitted = JSON.parse(request.body);
+        return response({ ...settings, teamsWebhookConfigured: true });
+    };
+    try {
+        setAppLocale('en');
+        await button.emit('click');
+        await settle();
+        const modal = settingsFor(documentRef);
+        const title = modal.querySelector('#contextualFeedbackSettingsTitle');
+        const closeButton = modal.querySelector('.contextual-feedback-close');
+        const form = modal.querySelector('form');
+        const draft = form.querySelector('[name="publicBaseUrl"]');
+        const enabled = form.querySelector('[name="feedbackEnabled"]');
+        const save = form.querySelector('[type="submit"]');
+        const roles = form.querySelector('[data-feedback-settings-allowed-roles]');
+        const configured = form.querySelector('[data-webhook-configured]');
+        const placeholder = form.querySelector('[name="webhookUrl"]');
+        const englishPlaceholder = placeholder.getAttribute('placeholder');
+        assert.equal(title.textContent, 'Feedback settings');
+        draft.value = 'https://retained.example.test';
+        enabled.checked = false;
+
+        await modal.emit('cancel');
+        setAppLocale('nl');
+        await button.emit('click');
+        assert.equal(title.textContent, 'Feedbackinstellingen');
+        assert.equal(closeButton.getAttribute('aria-label'), 'Sluiten');
+        assert.equal(save.textContent, 'Opslaan');
+        assert.match(roles.textContent, /^Toegestane rollen:/);
+        assert.equal(configured.textContent, 'Niet ingesteld');
+        assert.notEqual(placeholder.getAttribute('placeholder'), englishPlaceholder);
+        assert.equal(draft.value, 'https://retained.example.test');
+        assert.equal(enabled.checked, false);
+
+        await modal.emit('submit', { target: form });
+        assert.equal(submitted.publicBaseUrl, draft.value);
+        assert.equal(submitted.feedbackEnabled, false);
+        assert.equal(configured.textContent, 'Ingesteld');
+        await modal.emit('cancel');
+        setAppLocale('en');
+        await button.emit('click');
+        assert.equal(settingsFor(documentRef), modal);
+        assert.equal(modal.querySelector('form'), form);
+        assert.equal(title.textContent, 'Feedback settings');
+        assert.equal(closeButton.getAttribute('aria-label'), 'Close');
+        assert.equal(save.textContent, 'Save');
+        assert.match(roles.textContent, /^Allowed roles:/);
+        assert.equal(configured.textContent, 'Configured');
+        assert.equal(placeholder.getAttribute('placeholder'), englishPlaceholder);
+        assert.equal(draft.value, 'https://retained.example.test');
+        assert.equal(enabled.checked, false);
+        assert.equal(loadCount, 1);
+    } finally {
+        resetLightboxDrafts(documentRef);
+        i18n.setLocale(previousLocale);
+    }
+}
 async function oldFeatureSubmissionCannotUnlockNewOpener() {
     const { documentRef, button } = setup();
     button.setAttribute('id', 'contextualFeedbackButton');
@@ -503,6 +573,7 @@ try {
     await obsoleteCaptureFailureCannotRevealOrRefocusNewDialog();
     await staleSettingsLoadAndSaveCannotMutateNewSession();
     await settingsLoadFailureCanRetryAndRestoreOpener();
+    await retainedSettingsFollowTheAppLanguageWithoutLosingEdits();
     await oldFeatureSubmissionCannotUnlockNewOpener();
 } finally {
     globalThis.FormData = originalFormData;
