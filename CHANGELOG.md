@@ -8,18 +8,21 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+## [v1.0.40] - 2026-11-20
+
 ### Fixed
 
-- Clear contact history when starting a new customer session and keep feedback settings in the current language when reopened. [sc-200164] [sc-202840]
+- Clear contact history when starting a new customer session and keep feedback settings in the current language when reopened. Install Docker dependencies using the application PHP runtime. [sc-200164] [sc-202840]
 - Give the slow initial outbox loading indicator an explicit accessible name. [sc-207553]
 - Keep the outbox steady during background refreshes, including when it is empty. [sc-207553]
+
+### Changed
+
+- Upgrade Symfony YAML from 7.4 to 8.1. [PR #153](https://github.com/bindinc/kiwi/pull/153)
 
 ### Removed
 
 - Remove the slogan from the Kiwi welcome screen. [sc-207465]
-
-### Removed
-
 - Remove the completed Light & Shadow audit working documents from the source tree. [sc-206629]
 
 ## [v1.0.39] - 2026-11-18
@@ -539,7 +542,9 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 - Configure cert-manager values for CRDs, add Gateway API ACME issuers, and install the issuer chart during addons
 - Update deploy-app to wait for all kiwi deployments after applying kustomize overlays
 
-[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.38...HEAD
+[Unreleased]: https://github.com/bindinc/kiwi/compare/v1.0.40...HEAD
+[v1.0.40]: https://github.com/bindinc/kiwi/compare/v1.0.39...v1.0.40
+[v1.0.39]: https://github.com/bindinc/kiwi/compare/v1.0.38...v1.0.39
 [v1.0.38]: https://github.com/bindinc/kiwi/compare/v1.0.37...v1.0.38
 [v1.0.37]: https://github.com/bindinc/kiwi/compare/v1.0.36...v1.0.37
 [v1.0.36]: https://github.com/bindinc/kiwi/compare/v1.0.35...v1.0.36
