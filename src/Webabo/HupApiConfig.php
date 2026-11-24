@@ -22,6 +22,7 @@ final readonly class HupApiConfig
         public ?string $clientId,
         public ?string $clientSecret,
         public ?string $scope,
+        public bool $preview = false,
     ) {
     }
 

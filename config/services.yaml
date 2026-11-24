@@ -5,6 +5,7 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     env(APP_VERSION): 'dev'
+    env(KIWI_HUP_PREVIEW): '0'
     env(TRUSTED_PROXIES): '127.0.0.1'
     app.session.table_name: 'kiwi_http_sessions'
     app.session.ttl_seconds: 43200
@@ -38,6 +39,21 @@ services:
     App\Command\CleanupCustomerAuditCommand:
         arguments:
             $retentionDays: '%app.customer_audit.retention_days%'
+
+    webabo.offers_config:
+        class: App\Webabo\HupApiConfigProvider
+        arguments:
+            $previewSection: 'hup_preview_offers'
+
+    webabo.offers_tokens:
+        class: App\Webabo\WebaboAccessTokenProvider
+        arguments:
+            $configProvider: '@webabo.offers_config'
+
+    App\Webabo\WebaboOfferClient:
+        arguments:
+            $configProvider: '@webabo.offers_config'
+            $accessTokenProvider: '@webabo.offers_tokens'
 
     App\Webabo\WebaboSalesCodeCombinationProviderInterface: '@App\Webabo\WebaboSalesCodeCombinationClient'
     App\Webabo\WebaboStartDateProviderInterface: '@App\Webabo\WebaboStartDateClient'

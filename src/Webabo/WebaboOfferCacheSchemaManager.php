@@ -26,7 +26,7 @@ final class WebaboOfferCacheSchemaManager
         try {
             $this->renameLegacyCacheTableIfNeeded();
 
-            return $this->connection->createSchemaManager()->tablesExist([self::CACHE_TABLE]);
+            return $this->connection->createSchemaManager()->tablesExist([$this->cacheTable()]);
         } catch (Exception) {
             return false;
         }
@@ -42,7 +42,7 @@ final class WebaboOfferCacheSchemaManager
         $schemaTool = new SchemaTool($this->entityManager);
         $metadata = [$this->entityManager->getClassMetadata(WebaboOffer::class)];
         $tableExists = $this->hasCacheTable();
-        $sql = $this->filterManagedSchemaSql($schemaTool->getUpdateSchemaSql($metadata, true));
+        $sql = $this->filterManagedSchemaSql($schemaTool->getUpdateSchemaSql($metadata));
 
         if ([] === $sql) {
             return [
@@ -61,8 +61,17 @@ final class WebaboOfferCacheSchemaManager
         ];
     }
 
+    private function cacheTable(): string
+    {
+        return $this->entityManager->getClassMetadata(WebaboOffer::class)->getTableName();
+    }
+
     private function renameLegacyCacheTableIfNeeded(): void
     {
+        if (self::CACHE_TABLE !== $this->cacheTable()) {
+            return;
+        }
+
         $schemaManager = $this->connection->createSchemaManager();
         $hasCanonicalTable = $schemaManager->tablesExist([self::CACHE_TABLE]);
         $hasLegacyTable = $schemaManager->tablesExist([self::LEGACY_CACHE_TABLE]);
@@ -84,10 +93,11 @@ final class WebaboOfferCacheSchemaManager
      */
     private function filterManagedSchemaSql(array $sql): array
     {
-        $managedTableNames = [
-            self::CACHE_TABLE,
-            self::LEGACY_CACHE_TABLE,
-        ];
+        $cacheTable = $this->cacheTable();
+        $managedTableNames = [$cacheTable];
+        if (self::CACHE_TABLE === $cacheTable) {
+            $managedTableNames[] = self::LEGACY_CACHE_TABLE;
+        }
 
         return array_values(array_filter($sql, static function (string $statement) use ($managedTableNames): bool {
             $normalizedStatement = strtolower($statement);

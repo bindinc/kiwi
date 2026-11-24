@@ -51,6 +51,7 @@ final class WebaboSalesCodeCombinationClient implements WebaboSalesCodeCombinati
                     'Authorization' => sprintf('Bearer %s', $accessToken),
                 ],
                 'timeout' => 15.0,
+                ...($config->preview ? ['max_redirects' => 0] : []),
             ]);
         } catch (TransportExceptionInterface $exception) {
             throw new \RuntimeException(sprintf(
