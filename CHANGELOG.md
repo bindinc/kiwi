@@ -8,6 +8,8 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+## [v1.0.41] - 2026-11-24
+
 ### Added
 
 - Separate Preview's offer endpoint, read credentials and offer cache from the active catalog. [sc-207820]
