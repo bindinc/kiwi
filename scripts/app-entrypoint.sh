@@ -149,8 +149,11 @@ if [ "$should_sync_webabo_offers" = "1" ]; then
   if [ "$OIDC_MODE" = "fallback" ]; then
     printf '[app-entrypoint] Skipping Webabo offer sync on start because fallback OIDC mode does not provide live Webabo credentials.\n'
   else
-    printf '[app-entrypoint] Synchronizing Webabo offers into webabo_offers_cache.\n'
-    if ! php bin/console app:webabo:sync-offers --no-interaction; then
+    printf '[app-entrypoint] Synchronizing Webabo offers into the configured catalog.\n'
+    case "${KIWI_HUP_PREVIEW:-0}" in
+      1|true|yes|on) set -- --preview ;;
+    esac
+    if ! php bin/console app:webabo:sync-offers --no-interaction "$@"; then
       printf '[app-entrypoint] Webabo offer sync failed. The app will continue to start, but the Nieuw Abonnement search may stay empty until the sync succeeds.\n' >&2
     fi
   fi

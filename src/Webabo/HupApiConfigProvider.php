@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Webabo;
 
 use App\Config\ClientSecretsLoader;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class HupApiConfigProvider
 {
@@ -12,6 +13,9 @@ final class HupApiConfigProvider
 
     public function __construct(
         private readonly ClientSecretsLoader $clientSecretsLoader,
+        #[Autowire('%env(bool:KIWI_HUP_PREVIEW)%')]
+        private readonly bool $preview = false,
+        private readonly string $previewSection = 'hup_preview',
     ) {
     }
 
@@ -21,7 +25,13 @@ final class HupApiConfigProvider
             return $this->config;
         }
 
-        $section = $this->clientSecretsLoader->getSection('hup');
+        $sectionName = $this->preview ? $this->previewSection : 'hup';
+        $section = $this->clientSecretsLoader->getSection($sectionName);
+        if ([] === $section && $this->preview) {
+            throw new \RuntimeException(sprintf('Preview configuration section "%s" is missing.', $sectionName));
+        }
+
+        $ppaBaseUrl = $this->normalizeOptionalString($section['ppa_base_url'] ?? null);
         $tokenUrl = trim((string) ($section['hup_oidc_token'] ?? ''));
         $webaboBaseUrl = trim((string) ($section['webabo_base_url'] ?? ''));
 
@@ -33,6 +43,14 @@ final class HupApiConfigProvider
             throw new \RuntimeException('Webabo base URL ontbreekt in de client secrets configuratie.');
         }
 
+        if ($this->preview) {
+            $this->requireHttpsUrl($sectionName, 'hup_oidc_token', $tokenUrl);
+            $this->requireHttpsUrl($sectionName, 'webabo_base_url', $webaboBaseUrl);
+            if ('hup_preview' === $sectionName) {
+                $this->requireHttpsUrl($sectionName, 'ppa_base_url', $ppaBaseUrl);
+            }
+        }
+
         $credentials = $this->extractCredentials($section);
         if ([] === $credentials) {
             throw new \RuntimeException('HUP client secrets configuratie bevat geen bruikbare credentials.');
@@ -40,7 +58,7 @@ final class HupApiConfigProvider
 
         $this->config = new HupApiConfig(
             webaboBaseUrl: $webaboBaseUrl,
-            ppaBaseUrl: $this->normalizeOptionalString($section['ppa_base_url'] ?? null),
+            ppaBaseUrl: $ppaBaseUrl,
             tokenUrl: $tokenUrl,
             authorizationUrl: trim((string) ($section['hup_oidc_auth'] ?? '')),
             credentials: $credentials,
@@ -49,6 +67,7 @@ final class HupApiConfigProvider
             clientId: $this->normalizeOptionalString($section['client_id'] ?? null),
             clientSecret: $this->normalizeOptionalString($section['client_secret'] ?? null),
             scope: $this->normalizeOptionalString($section['scope'] ?? null),
+            preview: $this->preview,
         );
 
         return $this->config;
@@ -119,6 +138,15 @@ final class HupApiConfigProvider
         }
 
         return [];
+    }
+
+    private function requireHttpsUrl(string $section, string $key, ?string $url): void
+    {
+        $parts = parse_url($url ?? '');
+        $hasHttpsOrigin = 'https' === ($parts['scheme'] ?? null) && !empty($parts['host']);
+        if (!$hasHttpsOrigin || isset($parts['user']) || isset($parts['query']) || isset($parts['fragment'])) {
+            throw new \RuntimeException(sprintf('A base HTTPS URL is required for %s.%s.', $section, $key));
+        }
     }
 
     private function normalizeOptionalString(mixed $value): ?string

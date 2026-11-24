@@ -23,15 +23,20 @@ final class WebaboOfferClient
     {
         $config = $this->configProvider->getConfig();
         $offers = [];
+        $url = rtrim($config->webaboBaseUrl, '/').'/offers';
+        $sourceHost = parse_url($url, PHP_URL_HOST);
 
         foreach ($config->getCredentials() as $credential) {
             $credentialContext = $credential->toContextPayload('webabo-api');
 
-            foreach ($this->requestOffers($credential->name, false) as $offer) {
+            foreach ($this->requestOffers($credential->name, $url, $config->preview, false) as $offer) {
                 foreach ($credentialContext as $contextKey => $contextValue) {
                     $offer[$contextKey] = $contextValue;
                 }
 
+                if ($config->preview) {
+                    $offer['sourceHost'] = $sourceHost;
+                }
                 $offers[] = $offer;
             }
         }
@@ -42,11 +47,9 @@ final class WebaboOfferClient
     /**
      * @return list<array<string, mixed>>
      */
-    private function requestOffers(string $credentialName, bool $isRetry): array
+    private function requestOffers(string $credentialName, string $url, bool $preview, bool $isRetry): array
     {
-        $config = $this->configProvider->getConfig();
         $accessToken = $this->accessTokenProvider->getAccessToken($credentialName);
-        $url = rtrim($config->webaboBaseUrl, '/').'/offers';
 
         try {
             $response = $this->httpClient->request('GET', $url, [
@@ -55,6 +58,7 @@ final class WebaboOfferClient
                     'Authorization' => sprintf('Bearer %s', $accessToken),
                 ],
                 'timeout' => 15.0,
+                ...($preview ? ['max_redirects' => 0] : []),
             ]);
         } catch (TransportExceptionInterface $exception) {
             throw new \RuntimeException(sprintf(
@@ -67,7 +71,7 @@ final class WebaboOfferClient
         if (401 === $statusCode && !$isRetry) {
             $this->accessTokenProvider->invalidateCachedToken($credentialName);
 
-            return $this->requestOffers($credentialName, true);
+            return $this->requestOffers($credentialName, $url, $preview, true);
         }
 
         $payload = json_decode($response->getContent(false), true);

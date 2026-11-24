@@ -154,6 +154,21 @@ cached offers are refreshed with their `credentialKey`.
 
 The legacy alias `app:webabo:sync-werfsleutels` remains available for existing scripts.
 
+For isolated Preview routing, set `KIWI_HUP_PREVIEW=1` only on the Preview
+deployment. The mounted configuration needs two sections with the same layout
+as `hup`:
+
+- `hup_preview` supplies the Preview PPA and WebAbo base URLs, token endpoint and
+  read credentials for customer, address, sales code and start date lookups.
+- `hup_preview_offers` supplies the WebAbo base URL, token endpoint and read
+  credentials used exclusively for `GET /offers`. Keep credential keys and
+  mandant mappings consistent between the sections.
+
+Run `app:webabo:sync-offers --preview` on the Preview deployment. Preview reads
+and synchronizes `webabo_offers_preview_cache` and records the upstream host
+in each cached offer's raw payload. Keep the unqualified sync command on the
+active deployment for the existing `webabo_offers_cache` table.
+
 After a successful sync, `/api/v1/webabo/offers` prefers the
 PostgreSQL cache. If the cache table does not exist yet, or has not been filled
 yet, Kiwi now returns an empty result until the Webabo sync succeeds.

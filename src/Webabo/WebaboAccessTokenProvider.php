@@ -113,7 +113,7 @@ final class WebaboAccessTokenProvider
                 'body' => $body,
                 'timeout' => $duration,
                 'max_duration' => null === $deadline ? 0 : $duration,
-                'max_redirects' => null === $deadline ? 20 : 0,
+                'max_redirects' => null === $deadline && !$config->preview ? 20 : 0,
             ]);
         } catch (TransportExceptionInterface $exception) {
             throw new \RuntimeException(sprintf(
