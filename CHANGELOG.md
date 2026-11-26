@@ -8,6 +8,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ## [Unreleased]
 
+### Fixed
+
+- Use AbelT WebAbo for Preview sales code combinations and subscription start dates until their PPA migration. [sc-207820]
+
 ## [v1.0.41] - 2026-11-24
 
 ### Added

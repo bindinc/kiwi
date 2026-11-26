@@ -62,15 +62,15 @@ final class PreviewAbelRoutingTest extends KernelTestCase
         unlink($this->configPath);
     }
 
-    public function testOnlyOfferFetchUsesTestEnvironmentAndItsReadToken(): void
+    public function testPreviewCatalogLookupsUseAbelTAndCustomerSearchUsesAbelO(): void
     {
         $container = $this->bootPreview([
             ['POST', 'https://test-auth.example.test/token', '{"access_token":"test-reader","expires_in":3600}'],
             ['GET', 'https://webabo-test.example.test/webabo/offers', '[{"salesCode":"PREVIEW","title":"Preview fixture"}]', 'test-reader'],
             ['POST', 'https://dev-auth.example.test/token', '{"access_token":"dev-reader","expires_in":3600}'],
             ['GET', 'https://ppa-dev.example.test/subscription/public/personsearch', '{"content":[]}', 'dev-reader'],
-            ['GET', 'https://webabo-dev.example.test/webabo/offers/salescodecombinations?productCode=GUIDE&refDate=2026-11-24', '[]', 'dev-reader'],
-            ['GET', 'https://webabo-dev.example.test/webabo/subscriptions/start-dates?productCode=GUIDE&variantCode=EDIT', '{"startDate":"2026-12-01"}', 'dev-reader'],
+            ['GET', 'https://webabo-test.example.test/webabo/offers/salescodecombinations?productCode=GUIDE&refDate=2026-11-24', '[]', 'test-reader'],
+            ['GET', 'https://webabo-test.example.test/webabo/subscriptions/start-dates?productCode=GUIDE&variantCode=EDIT', '{"startDate":"2026-12-01"}', 'test-reader'],
             ['POST', 'https://dev-auth.example.test/token', '{"access_token":"address-reader","expires_in":3600}'],
             ['POST', 'https://webabo-dev.example.test/webabo/addresses/search?limit=20', '[]', 'address-reader'],
         ]);

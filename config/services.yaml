@@ -55,6 +55,16 @@ services:
             $configProvider: '@webabo.offers_config'
             $accessTokenProvider: '@webabo.offers_tokens'
 
+    App\Webabo\WebaboSalesCodeCombinationClient:
+        arguments:
+            $configProvider: '@webabo.offers_config'
+            $accessTokenProvider: '@webabo.offers_tokens'
+
+    App\Webabo\WebaboStartDateClient:
+        arguments:
+            $configProvider: '@webabo.offers_config'
+            $tokens: '@webabo.offers_tokens'
+
     App\Webabo\WebaboSalesCodeCombinationProviderInterface: '@App\Webabo\WebaboSalesCodeCombinationClient'
     App\Webabo\WebaboStartDateProviderInterface: '@App\Webabo\WebaboStartDateClient'
 

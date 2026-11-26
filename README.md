@@ -158,11 +158,13 @@ For isolated Preview routing, set `KIWI_HUP_PREVIEW=1` only on the Preview
 deployment. The mounted configuration needs two sections with the same layout
 as `hup`:
 
-- `hup_preview` supplies the Preview PPA and WebAbo base URLs, token endpoint and
-  read credentials for customer, address, sales code and start date lookups.
-- `hup_preview_offers` supplies the WebAbo base URL, token endpoint and read
-  credentials used exclusively for `GET /offers`. Keep credential keys and
-  mandant mappings consistent between the sections.
+- `hup_preview` supplies the AbelO PPA base URL and read authentication for
+  customer lookups. The existing address provider uses the WebAbo base URL
+  in this section.
+- `hup_preview_offers` supplies the AbelT WebAbo base URL and read authentication
+  for offers, sales code combinations and start dates. The latter two use AbelT
+  until their planned move to the AbelO PPA Subscription API in January 2027.
+  Keep credential keys and mandant mappings consistent between the sections.
 
 Run `app:webabo:sync-offers --preview` on the Preview deployment. Preview reads
 and synchronizes `webabo_offers_preview_cache` and records the upstream host
