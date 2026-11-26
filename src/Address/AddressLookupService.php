@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace App\Address;
 
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 final class AddressLookupService
 {
     public function __construct(
         private readonly PostnlAddressClient $postnl,
-        private readonly WebaboAddressClient $webabo,
+        private readonly AbelAddressClient $abel,
         private readonly AddressSessionStore $sessions,
         private readonly LoggerInterface $logger,
+        #[Autowire('%env(bool:KIWI_HUP_PREVIEW)%')]
+        private readonly bool $preview = false,
     ) {
     }
 
@@ -44,20 +47,25 @@ final class AddressLookupService
                 return ['status' => 'unavailable'];
             }
         }
+        $provider = $this->preview ? 'ppa' : 'webabo';
         try {
-            $candidates = $this->webabo->search($query, $budget, $includeCandidates);
+            $candidates = $this->abel->search($query, $budget, $includeCandidates);
             $result = $includeCandidates ? self::choices($query, $candidates, true) : self::match($query, $candidates, allowStreetCompletion: true);
             $alternative = $query->withoutPostcode();
             if ($includeCandidates && 'not_found' === $result['status'] && null !== $alternative) {
-                $candidates = $this->webabo->search($alternative, $budget, true);
+                $candidates = $this->abel->search($alternative, $budget, true);
                 $result = self::choices($alternative, $candidates, true);
                 $result['postcodeRelaxed'] = true;
             }
-            $this->log('webabo', $result['status'], $started);
+            if ($this->preview && $includeCandidates) {
+                // PPA finds existing customer addresses and cannot enumerate every house-number addition.
+                $result['complete'] = false;
+            }
+            $this->log($provider, $result['status'], $started);
 
             return $result;
         } catch (ProviderFailure $failure) {
-            $this->log('webabo', $failure->reason, $started);
+            $this->log($provider, $failure->reason, $started);
 
             return ['status' => 'unavailable'];
         }

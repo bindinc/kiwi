@@ -10,6 +10,10 @@ Release dates use GitHub publication dates when available, otherwise annotated t
 
 ### Fixed
 
+- Use AbelO PPA exact person search for the Preview address fallback and return address fields only. [sc-207820]
+
+### Fixed
+
 - Use AbelT WebAbo for Preview sales code combinations and subscription start dates until their PPA migration. [sc-207820]
 
 ## [v1.0.41] - 2026-11-24

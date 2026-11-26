@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
-use App\Address\{AddressLookupService, AddressQuery, AddressSessionStore, PostnlAddressClient, WebaboAddressClient};
+use App\Address\{AbelAddressClient, AddressLookupService, AddressQuery, AddressSessionStore, PostnlAddressClient};
 use App\Config\ClientSecretsLoader;
 use App\Http\ApiProblemException;
 use App\Webabo\{HupApiConfigProvider, WebaboAccessTokenProvider};
@@ -29,15 +29,17 @@ final class AddressLookupTest extends TestCase
         mkdir($this->directory);
         $this->previousConfig = getenv('KIWI_CLIENT_SECRETS_PATH');
         putenv('KIWI_CLIENT_SECRETS_PATH='.$this->directory.'/fixture.json');
+        $hup = [
+            'webabo_base_url' => 'https://webabo.invalid', 'hup_oidc_token' => 'https://identity.invalid/token',
+            'credentials' => [
+                'first' => ['username' => 'test-one', 'password' => '<password>', 'client_search' => false],
+                'second' => ['username' => 'test-two', 'password' => '<password>', 'divisionid' => 'TEST'],
+            ],
+        ];
         file_put_contents($this->directory.'/fixture.json', json_encode([
             'postnl' => ['api_key' => '<api-key>'],
-            'hup' => [
-                'webabo_base_url' => 'https://webabo.invalid', 'hup_oidc_token' => 'https://identity.invalid/token',
-                'credentials' => [
-                    'first' => ['username' => 'test-one', 'password' => '<password>', 'client_search' => false],
-                    'second' => ['username' => 'test-two', 'password' => '<password>'],
-                ],
-            ],
+            'hup' => $hup,
+            'hup_preview' => ['ppa_base_url' => 'https://ppa-dev.invalid/subscription'] + $hup,
         ], JSON_THROW_ON_ERROR));
     }
 
@@ -68,7 +70,7 @@ final class AddressLookupTest extends TestCase
         return ['postalCode' => '1231AA', 'houseNumber' => 1, 'houseNumberAddition' => '', 'streetName' => 'Rembrandtlaan', 'cityName' => 'Loosdrecht'];
     }
 
-    private function service(array $responses): AddressLookupService
+    private function service(array $responses, bool $preview = false): AddressLookupService
     {
         $http = new MockHttpClient(function ($method, $url, $options) use (&$responses) {
             $this->requests[] = compact('method', 'url', 'options');
@@ -79,13 +81,19 @@ final class AddressLookupTest extends TestCase
             return array_shift($responses);
         });
         $loader = new ClientSecretsLoader($this->directory);
-        $config = new HupApiConfigProvider($loader);
+        $config = new HupApiConfigProvider($loader, $preview);
         $logger = new class($this->logs) extends AbstractLogger {
             public function __construct(private array &$entries) {}
             public function log($level, string|\Stringable $message, array $context = []): void { $this->entries[] = $context; }
         };
 
-        return new AddressLookupService(new PostnlAddressClient($loader, $http), new WebaboAddressClient($config, new WebaboAccessTokenProvider($config, $http), $http), new AddressSessionStore(), $logger);
+        return new AddressLookupService(
+            new PostnlAddressClient($loader, $http),
+            new AbelAddressClient($config, new WebaboAccessTokenProvider($config, $http), $http),
+            new AddressSessionStore(),
+            $logger,
+            $preview,
+        );
     }
 
     public function testConfirmedBufferRejectsInventedAdditionWithoutAnotherProviderCall(): void
@@ -353,6 +361,50 @@ final class AddressLookupTest extends TestCase
         self::assertSame('https://webabo.invalid/addresses/search?limit=20', $this->requests[6]['url']);
         self::assertSame(['zipcode' => '1231AA', 'houseNo' => '1 A 2'], json_decode($this->requests[6]['options']['body'], true));
         self::assertStringContainsString('test-two', $this->requests[5]['options']['body']);
+    }
+
+    public function testPreviewFallbackUsesExactPpaSearchAndOnlyReturnsAddresses(): void
+    {
+        $service = $this->service([
+            $this->response([], 503),
+            $this->response(['access_token' => '<token>']),
+            $this->response(['content' => [[
+                'personId' => 'synthetic-person',
+                'name' => 'Synthetic name',
+                'postCode' => '1231 AA',
+                'houseNo' => '1A',
+                'street' => 'Rembrandtlaan',
+                'city' => 'Loosdrecht',
+                'isoCountryCode' => 'NL',
+            ]], 'totalPages' => 1, 'totalElements' => 1]),
+        ], preview: true);
+        $result = $service->search($this->query(), self::UUID, new Session(new MockArraySessionStorage()), true);
+
+        self::assertSame('matched', $result['status']);
+        self::assertFalse($result['complete']);
+        self::assertSame([[
+            'postalCode' => '1231AA', 'houseNumber' => '1A', 'houseNumberAddition' => '',
+            'street' => 'Rembrandtlaan', 'city' => 'LOOSDRECHT', 'countryCode' => 'NL', 'verified' => true,
+        ]], $result['candidates']);
+        self::assertCount(3, $this->requests);
+        self::assertStringContainsString('test-two', $this->requests[1]['options']['body']);
+        self::assertSame('GET', $this->requests[2]['method']);
+        self::assertSame('https://ppa-dev.invalid/subscription/public/personsearch?postcode=1231AA&houseno=1&divisionid=TEST&exactmatch=true&pagesize=20', $this->requests[2]['url']);
+        self::assertSame('ppa', $this->logs[1]['provider']);
+    }
+
+    public function testPreviewFallbackDoesNotAutomaticallyConfirmAnAddressFromTruncatedPersonSearch(): void
+    {
+        $service = $this->service([
+            $this->response([], 503),
+            $this->response(['access_token' => '<token>']),
+            $this->response(['content' => [[
+                'postCode' => '1231AA', 'houseNo' => '1', 'street' => 'Rembrandtlaan', 'city' => 'Loosdrecht',
+            ]], 'totalPages' => 2, 'totalElements' => 21]),
+        ], preview: true);
+
+        self::assertSame(['status' => 'unavailable'], $service->search($this->query(), self::UUID, new Session(new MockArraySessionStorage())));
+        self::assertSame('truncated_response', $this->logs[1]['outcome']);
     }
 
     /** @dataProvider webaboCompletionCases */

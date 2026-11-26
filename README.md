@@ -159,8 +159,8 @@ deployment. The mounted configuration needs two sections with the same layout
 as `hup`:
 
 - `hup_preview` supplies the AbelO PPA base URL and read authentication for
-  customer lookups. The existing address provider uses the WebAbo base URL
-  in this section.
+  customer lookups and the address fallback. The fallback searches existing
+  customer addresses through `GET /public/personsearch` with `exactmatch=true`.
 - `hup_preview_offers` supplies the AbelT WebAbo base URL and read authentication
   for offers, sales code combinations and start dates. The latter two use AbelT
   until their planned move to the AbelO PPA Subscription API in January 2027.
