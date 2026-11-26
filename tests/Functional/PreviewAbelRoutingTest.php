@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Address\AbelAddressClient;
 use App\Address\AddressQuery;
 use App\Address\LookupBudget;
-use App\Address\WebaboAddressClient;
 use App\Command\SyncWebaboOffersCommand;
 use App\Entity\WebaboOffer;
 use App\Repository\WebaboOfferRepository;
@@ -36,7 +36,6 @@ final class PreviewAbelRoutingTest extends KernelTestCase
         $this->configPath = (string) tempnam(sys_get_temp_dir(), 'kiwi-preview-routing-');
 
         $abelO = [
-            'webabo_base_url' => 'https://webabo-dev.example.test/webabo',
             'ppa_base_url' => 'https://ppa-dev.example.test/subscription',
             'hup_oidc_token' => 'https://dev-auth.example.test/token',
             'username' => 'fixture-reader',
@@ -62,7 +61,7 @@ final class PreviewAbelRoutingTest extends KernelTestCase
         unlink($this->configPath);
     }
 
-    public function testPreviewCatalogLookupsUseAbelTAndCustomerSearchUsesAbelO(): void
+    public function testPreviewCatalogLookupsUseAbelTAndPersonSearchUsesAbelO(): void
     {
         $container = $this->bootPreview([
             ['POST', 'https://test-auth.example.test/token', '{"access_token":"test-reader","expires_in":3600}'],
@@ -72,7 +71,7 @@ final class PreviewAbelRoutingTest extends KernelTestCase
             ['GET', 'https://webabo-test.example.test/webabo/offers/salescodecombinations?productCode=GUIDE&refDate=2026-11-24', '[]', 'test-reader'],
             ['GET', 'https://webabo-test.example.test/webabo/subscriptions/start-dates?productCode=GUIDE&variantCode=EDIT', '{"startDate":"2026-12-01"}', 'test-reader'],
             ['POST', 'https://dev-auth.example.test/token', '{"access_token":"address-reader","expires_in":3600}'],
-            ['POST', 'https://webabo-dev.example.test/webabo/addresses/search?limit=20', '[]', 'address-reader'],
+            ['GET', 'https://ppa-dev.example.test/subscription/public/personsearch?postcode=1234AB&houseno=1&exactmatch=true&pagesize=20', '{"content":[]}', 'address-reader'],
         ]);
 
         $offers = $container->get(WebaboOfferClient::class)->fetchOffers();
@@ -80,7 +79,7 @@ final class PreviewAbelRoutingTest extends KernelTestCase
         $container->get(PersonSearchClient::class)->search([]);
         $container->get(WebaboSalesCodeCombinationClient::class)->fetchCombinations('default', 'GUIDE', new \DateTimeImmutable('2026-11-24'));
         $container->get(WebaboStartDateClient::class)->fetchStartDate('default', 'GUIDE', 'EDIT');
-        $container->get(WebaboAddressClient::class)->search(new AddressQuery('1234AB', '1', ''), new LookupBudget());
+        $container->get(AbelAddressClient::class)->search(new AddressQuery('1234AB', '1', ''), new LookupBudget());
     }
 
     public function testMissingPreviewOffersConfigDoesNotUseActiveCredentials(): void

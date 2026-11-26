@@ -34,20 +34,22 @@ final class HupApiConfigProvider
         $ppaBaseUrl = $this->normalizeOptionalString($section['ppa_base_url'] ?? null);
         $tokenUrl = trim((string) ($section['hup_oidc_token'] ?? ''));
         $webaboBaseUrl = trim((string) ($section['webabo_base_url'] ?? ''));
+        $usesPpa = 'hup_preview' === $sectionName;
 
         if ('' === $tokenUrl) {
             throw new \RuntimeException('HUP token URL ontbreekt in de client secrets configuratie.');
         }
 
-        if ('' === $webaboBaseUrl) {
+        if (!$usesPpa && '' === $webaboBaseUrl) {
             throw new \RuntimeException('Webabo base URL ontbreekt in de client secrets configuratie.');
         }
 
         if ($this->preview) {
             $this->requireHttpsUrl($sectionName, 'hup_oidc_token', $tokenUrl);
-            $this->requireHttpsUrl($sectionName, 'webabo_base_url', $webaboBaseUrl);
-            if ('hup_preview' === $sectionName) {
+            if ($usesPpa) {
                 $this->requireHttpsUrl($sectionName, 'ppa_base_url', $ppaBaseUrl);
+            } else {
+                $this->requireHttpsUrl($sectionName, 'webabo_base_url', $webaboBaseUrl);
             }
         }
 

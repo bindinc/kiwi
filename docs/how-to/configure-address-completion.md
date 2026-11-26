@@ -27,10 +27,11 @@ existing OIDC and `hup` sections intact. All replicas must receive the same prot
 configuration. Restart/redeploy after a configuration change through the normal
 approved deployment workflow; no secret or deployment change is included in this PR.
 
-With no PostNL key configured, the application still starts and uses Webabo. The
-first usable configured HUP credential is used, regardless of person-search support,
-mandant or title. Authentication failures permit the next configured credential;
-401 refreshes its token once. No additional Webabo credential is needed.
+With no PostNL key configured, active Kiwi uses its existing Webabo address fallback.
+Preview uses AbelO PPA exact person search with the configured read credentials.
+Preview skips credentials with person search explicitly disabled and scopes the
+query to the credential's division when configured. Authentication failures permit
+the next configured credential. A 401 refreshes its token once.
 
 ### Interactive SOPS entry
 
@@ -79,7 +80,7 @@ from the local Flux/kind acceptance environment. Both Kiwi deployments mount
 - All routes use the deployment prefix, including `/kiwi-preview`.
 
 PostNL is tried first. Missing configuration, transport errors, 401/403, 429, 5xx and
-malformed responses permit Webabo fallback. Empty or ambiguous valid results do not.
+malformed responses permit the configured fallback. Empty or ambiguous valid results do not.
 PostNL 400 is an integration error. Each external call, including HUP authentication,
 is capped at three seconds within a ten-second total lookup budget.
 
